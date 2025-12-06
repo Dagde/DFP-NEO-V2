@@ -2778,12 +2778,24 @@ const App: React.FC = () => {
             const isStbyResource = event?.resourceId?.startsWith('STBY') || 
                                    event?.resourceId?.startsWith('BNF-STBY');
             
-            if (isDutySup || isStbyFlightNumber || isStbyResource) {
-                console.log('⏭️ Skipping STBY event:', {
+            // Skip deployment events
+            const isDeployment = event?.type === 'deployment';
+            
+            // Include flight, FTD, ground, and CPT events for PT-051 creation
+            const isValidEventType = event?.type === 'flight' || 
+                                    event?.type === 'ftd' || 
+                                    event?.type === 'ground' || 
+                                    event?.type === 'cpt';
+            
+            if (isDutySup || isStbyFlightNumber || isStbyResource || isDeployment || !isValidEventType) {
+                console.log('⏭️ Skipping event:', {
                     flightNumber: event?.flightNumber,
+                    type: event?.type,
                     resourceId: event?.resourceId,
                     date: event?.date,
-                    reason: isDutySup ? 'DUTY SUP' : 'STBY allocation'
+                    reason: isDutySup ? 'DUTY SUP' : 
+                           isStbyFlightNumber || isStbyResource ? 'STBY allocation' : 
+                           isDeployment ? 'Deployment' : 'Invalid event type'
                 });
                 return;
             }
@@ -2792,6 +2804,19 @@ const App: React.FC = () => {
             const trainees: string[] = [];
             if (event.student) trainees.push(event.student);
             if (event.pilot && event.flightType === 'Solo') trainees.push(event.pilot);
+            if (event.attendees && Array.isArray(event.attendees)) {
+                trainees.push(...event.attendees);
+            }
+            
+            // Log event types being processed for PT-051 creation
+            if (trainees.length > 0) {
+                console.log(`📋 Processing ${event.type} event for PT-051:`, {
+                    flightNumber: event.flightNumber,
+                    type: event.type,
+                    date: event.date,
+                    trainees: trainees
+                });
+            }
             
             // For each trainee, check if PT-051 exists
             trainees.forEach(traineeFullName => {
