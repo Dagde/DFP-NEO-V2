@@ -2760,11 +2760,21 @@ const App: React.FC = () => {
         
         // FORWARD CHECK: Create PT-051s for events that don't have them
         activeDfpEvents.forEach(event => {
-            // Skip DUTY SUP and STBY events
-            const isDutySup = event.flightNumber?.includes('Duty Sup');
-            const isStby = event.flightNumber?.toUpperCase().includes('STBY');
+            // Skip DUTY SUP events
+            const isDutySup = event?.flightNumber?.includes('Duty Sup');
             
-            if (isDutySup || isStby) {
+            // Skip events on STBY line (both by flight number and resource allocation)
+            const isStbyFlightNumber = event?.flightNumber?.toUpperCase().includes('STBY');
+            const isStbyResource = event?.resourceId?.startsWith('STBY') || 
+                                   event?.resourceId?.startsWith('BNF-STBY');
+            
+            if (isDutySup || isStbyFlightNumber || isStbyResource) {
+                console.log('⏭️ Skipping STBY event:', {
+                    flightNumber: event?.flightNumber,
+                    resourceId: event?.resourceId,
+                    date: event?.date,
+                    reason: isDutySup ? 'DUTY SUP' : 'STBY allocation'
+                });
                 return;
             }
             
