@@ -1477,8 +1477,18 @@ const App: React.FC = () => {
     
     // Current User State (for permission checking)
     // Default to Joe Bloggs (Super Admin) - in production this would come from authentication
-    const currentUser = instructorsData.find(inst => inst.name === 'Bloggs, Joe') || instructorsData[0];
+    const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
+    const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
+    
+    // User change handler
+    const handleUserChange = (userName: string) => {
+        setCurrentUserName(userName);
+        const newUser = instructorsData.find(inst => inst.name === userName);
+        if (newUser) {
+            setCurrentUserId(newUser.idNumber);
+        }
+    };
     // Find the highest permission level - prioritize Super Admin, then Admin, etc.
     const getHighestPermission = (permissions?: string[]): 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor' => {
         if (!permissions || permissions.length === 0) return 'Staff';
@@ -3200,7 +3210,7 @@ updates.forEach(update => {
     
     const handleAuthorise = (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean) => {
         const now = new Date().toISOString();
-        const authoSigner = "Bloggs, Joe"; // Mocked user for the supervisor
+        const authoSigner = currentUserName; // Current logged in user
         
         let wasFullyAuthed = false;
         let eventThatWasUpdated: ScheduleEvent | null = null;
@@ -4047,7 +4057,7 @@ updates.forEach(update => {
     }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
 
     const handleSelectMyProfile = () => {
-        const user = instructorsData.find(i => i.name === 'Bloggs, Joe');
+        const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
             setSelectedPersonForProfile(user);
             handleNavigation('Instructors');
@@ -4060,14 +4070,14 @@ updates.forEach(update => {
     };
 
     const handleSelectMyCurrency = () => {
-        const user = instructorsData.find(i => i.name === 'Bloggs, Joe');
+        const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
             handleNavigateToCurrency(user);
         }
     };
 
     const handleSelectMySct = () => {
-        const user = instructorsData.find(i => i.name === 'Bloggs, Joe'); // Mocked user
+        const user = instructorsData.find(i => i.name === currentUserName); // Current logged in user
         if (user) {
             setInstructorForSct(user);
             setShowSctRequest(true);
@@ -4446,9 +4456,9 @@ updates.forEach(update => {
                 });
                 
                 return <MyDashboard 
-                            userName="Joe Bloggs"
-                            userRank="FLTLT"
-                            events={eventsForDate.filter(e => e.instructor === 'Bloggs, Joe')}
+                            userName={currentUser?.name ? currentUser.name.split(', ').reverse().join(' ') : 'Joe Bloggs'}
+                            userRank={currentUser?.rank || 'FLTLT'}
+                            events={eventsForDate.filter(e => e.instructor === currentUserName)}
                             onSelectEvent={handleOpenModal}
                             onNavigate={handleNavigation}
                             onSelectMyProfile={handleSelectMyProfile}
@@ -4879,6 +4889,15 @@ updates.forEach(update => {
                 onBuildDfpClick={handleBuildDfp}
                 isSupervisor={true}
                 onPublish={handlePublish}
+                currentUserName={currentUserName}
+                currentUserRank={currentUser?.rank || 'FLTLT'}
+                instructorsList={instructorsData.map(inst => ({
+                    name: inst.name,
+                    rank: inst.rank,
+                    unit: inst.unit,
+                    pin: inst.pin || '1111'
+                }))}
+                onUserChange={handleUserChange}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header

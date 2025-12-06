@@ -40,7 +40,7 @@ const formatDate = (dateString: string | undefined): string => {
 const MyDashboard: React.FC<MyDashboardProps> = ({ userName, userRank, events, onSelectEvent, onNavigate, onSelectMyProfile, onSelectMyCurrency, onSelectMySct, sctRequests, pt051Assessments, onSelectPt051 }) => {
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
     
-    const mySctRequests = sctRequests.filter(req => req.name === 'Bloggs, Joe');
+    const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));
     
     // Get incomplete PT-051 assessments assigned to current user (not yet edited/saved)
     const incompletePt051s = React.useMemo(() => {

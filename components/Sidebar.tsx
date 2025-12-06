@@ -14,6 +14,10 @@ interface SidebarProps {
     onBuildDfpClick: () => void;
     isSupervisor: boolean;
     onPublish: () => void;
+    currentUserName: string;
+    currentUserRank: string;
+    instructorsList: Array<{name: string; rank: string; unit?: string; pin?: string}>;
+    onUserChange: (userName: string) => void;
 }
 
 const formatCourseName = (name: string): string => {
@@ -23,9 +27,17 @@ const formatCourseName = (name: string): string => {
   return name.replace(' ', '');
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
+  
+  // User selector state
+  const [showUserSelector, setShowUserSelector] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<{name: string; rank: string; unit?: string; pin?: string} | null>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [enteredPin, setEnteredPin] = useState('');
+  const [pinError, setPinError] = useState('');
   
   // --- Staff Menu State & Logic ---
   const [isStaffMenuOpen, setIsStaffMenuOpen] = useState(false);
@@ -84,6 +96,55 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     onArchiveCourse(courseNumber);
     setShowRemoveCourseFlyout(false);
   };
+
+  // User selector handlers
+  const handleUserSelect = (user: {name: string; rank: string; unit?: string; pin?: string}) => {
+    if (user.name === currentUserName) {
+      setShowUserSelector(false);
+      return;
+    }
+    setSelectedUser(user);
+    setShowPinModal(true);
+    setEnteredPin('');
+    setPinError('');
+  };
+
+  const handlePinSubmit = () => {
+    if (selectedUser && enteredPin === selectedUser.pin) {
+      onUserChange(selectedUser.name);
+      setShowPinModal(false);
+      setShowUserSelector(false);
+      setSelectedUser(null);
+      setEnteredPin('');
+      setPinError('');
+    } else {
+      setPinError('Invalid PIN');
+    }
+  };
+
+  // Filter and group users
+  const filteredUsers = instructorsList.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.rank.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.unit && user.unit.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const groupedUsers = filteredUsers.reduce((acc, user) => {
+    const unit = user.unit || 'Unassigned';
+    if (!acc[unit]) acc[unit] = [];
+    acc[unit].push(user);
+    return acc;
+  }, {} as Record<string, typeof filteredUsers>);
+
+  const unitOrder = ['1FTS', 'CFS', '2FTS'];
+  const sortedUnits = Object.keys(groupedUsers).sort((a, b) => {
+    const aIndex = unitOrder.indexOf(a);
+    const bIndex = unitOrder.indexOf(b);
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    return a.localeCompare(b);
+  });
 
   const courses = Object.entries(courseColors);
   const maxRowsPerColumn = 5;
@@ -284,7 +345,73 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             {/* No audit buttons - moved to header */}
 
           <div className="p-4 border-t border-gray-700 flex-shrink-0 flex justify-between items-center text-xs text-gray-500">
-            <span className="truncate">FLTLT Joe Bloggs</span>
+            {/* User Selector */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserSelector(!showUserSelector)}
+                className="flex items-center space-x-1 text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                <span className="truncate">{currentUserRank} {currentUserName}</span>
+                <svg 
+                  className={`h-3 w-3 transform transition-transform ${showUserSelector ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown */}
+              {showUserSelector && (
+                <div className="absolute bottom-full left-0 mb-2 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-50">
+                  <div className="p-3 border-b border-gray-700">
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                    <svg className="absolute left-5 top-5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto">
+                    {sortedUnits.map(unit => (
+                      <div key={unit}>
+                        <div className="px-3 py-2 bg-gray-900 border-b border-gray-700 sticky top-0">
+                          <span className="text-xs font-semibold text-gray-400 uppercase">{unit}</span>
+                        </div>
+                        {groupedUsers[unit].map(user => (
+                          <button
+                            key={user.name}
+                            onClick={() => handleUserSelect(user)}
+                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-700 transition-colors flex items-center justify-between ${
+                              user.name === currentUserName ? 'bg-gray-700 text-sky-400' : 'text-gray-300'
+                            }`}
+                          >
+                            <span>{user.rank} {user.name}</span>
+                            {user.name === currentUserName && (
+                              <svg className="h-4 w-4 text-sky-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-2 border-t border-gray-700">
+                    <button onClick={() => setShowUserSelector(false)} className="w-full px-3 py-1 text-sm text-gray-400 hover:text-gray-300">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <span>v1.0.0</span>
           </div>
         </div>
@@ -302,6 +429,62 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             onArchive={handleArchiveCourse}
             activeCourses={courseColors}
         />
+      )}
+
+      {/* PIN Confirmation Modal */}
+      {showPinModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/70 z-[90] flex items-center justify-center" onClick={() => setShowPinModal(false)}>
+          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-white mb-4">Confirm User Switch</h2>
+              
+              <div className="mb-6">
+                <p className="text-gray-300 mb-2">
+                  Switch from <span className="font-semibold text-sky-400">{currentUserRank} {currentUserName}</span> to:
+                </p>
+                <p className="font-semibold text-white text-lg">
+                  {selectedUser.rank} {selectedUser.name}
+                </p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Enter PIN for {selectedUser.name}:
+                </label>
+                <input
+                  type="password"
+                  value={enteredPin}
+                  onChange={(e) => setEnteredPin(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handlePinSubmit()}
+                  placeholder="Enter PIN"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                  autoFocus
+                />
+                {pinError && <p className="mt-2 text-sm text-red-400">{pinError}</p>}
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setSelectedUser(null);
+                    setEnteredPin('');
+                    setPinError('');
+                  }}
+                  className="px-4 py-2 text-gray-400 hover:text-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePinSubmit}
+                  className="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-700"
+                >
+                  Switch User
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
