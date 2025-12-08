@@ -10,6 +10,10 @@ interface PrioritiesViewWithMenuProps {
   onUpdatePercentages: (newPercentages: Map<string, number>) => void;
   availableAircraftCount: number;
   onUpdateAircraftCount: (count: number) => void;
+  availableFtdCount: number;
+  onUpdateFtdCount: (count: number) => void;
+  availableCptCount: number;
+  onUpdateCptCount: (count: number) => void;
   flyingStartTime: number;
   onUpdateFlyingStartTime: (time: number) => void;
   flyingEndTime: number;

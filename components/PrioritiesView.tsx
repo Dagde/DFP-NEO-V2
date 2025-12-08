@@ -14,6 +14,10 @@ interface PrioritiesViewProps {
   onUpdatePercentages: (newPercentages: Map<string, number>) => void;
   availableAircraftCount: number;
   onUpdateAircraftCount: (count: number) => void;
+  availableFtdCount: number;
+  onUpdateFtdCount: (count: number) => void;
+  availableCptCount: number;
+  onUpdateCptCount: (count: number) => void;
   flyingStartTime: number;
   onUpdateFlyingStartTime: (time: number) => void;
   flyingEndTime: number;
@@ -58,6 +62,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onUpdatePercentages,
   availableAircraftCount,
   onUpdateAircraftCount,
+  availableFtdCount,
+  onUpdateFtdCount,
+  availableCptCount,
+  onUpdateCptCount,
   flyingStartTime,
   onUpdateFlyingStartTime,
   flyingEndTime,
@@ -416,6 +424,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <div>
                             <label htmlFor="aircraft-count" className="block text-sm font-medium text-gray-400">Available Aircraft</label>
                             <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
+                        </div>
+                        <div>
+                            <label htmlFor="ftd-count" className="block text-sm font-medium text-gray-400">FTD Available</label>
+                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
+                        </div>
+                        <div>
+                            <label htmlFor="cpt-count" className="block text-sm font-medium text-gray-400">CPT Available</label>
+                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-400">Day Flying Window</label>

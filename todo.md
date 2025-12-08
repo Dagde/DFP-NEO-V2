@@ -1,7 +1,11 @@
-# Remedial Staff Allocation Fix
+# Add FTD and CPT Available Windows to Build Factors
 
-## Tasks to Complete
-[x] Examine how remedial packages store staff allocation data
-[ ] Modify Remedial Priority Queue to auto-populate staff from package creation
-[x] Update display logic to show allocated staff from Individual LMP
-[ ] Test the automatic staff allocation display
+## Tasks
+- [x] Locate the Build Factors window component
+- [x] Add state variables for FTD and CPT available counts in App.tsx
+- [x] Add props to PrioritiesView interface for FTD and CPT counts
+- [x] Add FTD available input field below Aircraft
+- [x] Add CPT available input field below FTD
+- [x] Update PrioritiesView component calls with new props
+- [ ] Test the implementation
+- [ ] Build and commit changes

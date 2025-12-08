@@ -1550,7 +1550,9 @@ const App: React.FC = () => {
         tomorrow.setDate(tomorrow.getDate() + 1);
         return getLocalDateString(tomorrow);
     });
-    const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
+    const [availableAircraftCount, setAvailableAircraftCount] = useState(24);
+    const [availableFtdCount, setAvailableFtdCount] = useState(4);
+    const [availableCptCount, setAvailableCptCount] = useState(4);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
@@ -1660,8 +1662,8 @@ const App: React.FC = () => {
     
     const ftdCount = school === 'ESL' ? 5 : 4;
     const buildResources = useMemo(() => {
-        // PC-21 count is minimum 20, or matches availableAircraftCount if it exceeds 20
-        const pc21Count = Math.max(20, availableAircraftCount);
+        // PC-21 count is fixed at 24
+        const pc21Count = 24;
         
         // Check for deployment events that overlap with the current date
         let deploymentCount = 0;
@@ -4339,7 +4341,7 @@ updates.forEach(update => {
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
                            traineesData={traineesData}
-                           airframeCount={20}
+                           airframeCount={24}
                            standbyCount={4}
                            ftdCount={ftdCount}
                            cptCount={4}
@@ -4560,7 +4562,7 @@ updates.forEach(update => {
                             resources={buildResources}
                             instructors={instructorsData.map(i => i.name)}
                             traineesData={traineesData}
-                            airframeCount={20}
+                            airframeCount={24}
                             standbyCount={4}
                             ftdCount={ftdCount}
                             cptCount={4}
@@ -4596,6 +4598,10 @@ updates.forEach(update => {
                     onUpdatePercentages={setCoursePercentages}
                     availableAircraftCount={availableAircraftCount}
                     onUpdateAircraftCount={setAvailableAircraftCount}
+                    availableFtdCount={availableFtdCount}
+                    onUpdateFtdCount={setAvailableFtdCount}
+                    availableCptCount={availableCptCount}
+                    onUpdateCptCount={setAvailableCptCount}
                     flyingStartTime={flyingStartTime}
                     onUpdateFlyingStartTime={setFlyingStartTime}
                     flyingEndTime={flyingEndTime}
