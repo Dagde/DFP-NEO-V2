@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body class="bg-gray-800 text-white">
+    <div id="root">
+        <h1 class="text-4xl text-center mt-10">Test Page - If you see this, HTML is working</h1>
+        <div id="react-test" class="text-center mt-5"></div>
+    </div>
+    
+    <script src="https://unpkg.com/react@19/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@19/umd/react-dom.development.js"></script>
+    <script>
+        const { createElement } = React;
+        const { createRoot } = ReactDOM;
+        
+        const TestApp = () => {
+            return createElement('div', { className: 'text-2xl text-green-400' }, 
+                'React is working! 🚀'
+            );
+        };
+        
+        const root = createRoot(document.getElementById('react-test'));
+        root.render(createElement(TestApp));
+    </script>
+</body>
+</html>

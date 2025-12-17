@@ -1,0 +1,7 @@
+{
+  "name": "Daily Flying Program",
+  "description": "A web-based application for programming and visualizing flight schedules for a civilian flight school, inspired by military scheduling boards. It features a drag-and-drop timeline interface, flight detail flyouts, and dynamic tile creation.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
