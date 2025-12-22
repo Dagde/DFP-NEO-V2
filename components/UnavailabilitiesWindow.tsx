@@ -106,8 +106,8 @@ const UnavailabilitiesWindow: React.FC<UnavailabilitiesWindowProps> = ({ instruc
         });
         return { 
             staffUnavailabilities: staff.sort((a,b) => a.name.localeCompare(b.name)), 
-            traineeUnavailabilities: trainees.sort((a,b) => a.name.localeCompare(b.name)),
-            pausedTrainees: paused.sort((a,b) => a.name.localeCompare(b.name))
+            traineeUnavailabilities: trainees.sort((a,b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')),
+            pausedTrainees: paused.sort((a,b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'))
         };
     }, [instructorsData, traineesData, date]);
 

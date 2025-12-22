@@ -162,8 +162,8 @@ const UnavailabilityReportModal: React.FC<UnavailabilityReportModalProps> = ({
         
         return { 
             unavailableStaff: staff.sort((a,b) => a.name.localeCompare(b.name)), 
-            unavailableTrainees: traineesUnavailable.sort((a,b) => a.name.localeCompare(b.name)),
-            pausedTrainees: paused.sort((a,b) => a.name.localeCompare(b.name))
+            unavailableTrainees: traineesUnavailable.sort((a,b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')),
+            pausedTrainees: paused.sort((a,b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'))
         };
     }, [instructors, trainees, date, events]);
 

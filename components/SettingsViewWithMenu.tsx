@@ -45,6 +45,7 @@ interface SettingsViewWithMenuProps {
     onUpdateTimezoneOffset: (offset: number) => void;
     showDepartureDensityOverlay: boolean;
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
+    onUpdateTraineeLMPs: (updater: (prev: Map<string, any[]>) => Map<string, any[]>) => void;
     courseColors: { [key: string]: string };
 }
 

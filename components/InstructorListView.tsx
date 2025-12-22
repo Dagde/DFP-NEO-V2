@@ -135,7 +135,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               if (rankA !== rankB) {
                   return rankA - rankB;
               }
-              return a.name.localeCompare(b.name);
+              return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
           });
   }, [instructorsData]);
 
@@ -153,7 +153,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
 
-  const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => a.name.localeCompare(b.name)), [instructorsData]);
+  const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 

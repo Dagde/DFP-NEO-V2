@@ -40,22 +40,22 @@ export const CourseSelectionDialog: React.FC<CourseSelectionDialogProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-semibold mb-4">{dialogTitle}</h3>
-        <p className="text-gray-600 mb-4">{dialogMessage}</p>
-        
+      <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
+        <h3 className="text-lg font-semibold mb-4 text-white">{dialogTitle}</h3>
+        <p className="text-gray-300 mb-4">{dialogMessage}</p>
+
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
             Course:
           </label>
           <select
             value={selectedCourse}
             onChange={(e) => setSelectedCourse(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="">Select a course...</option>
+            <option value="" className="text-gray-400">Select a course...</option>
             {courses.map((course) => (
-              <option key={course.id} value={course.id}>
+              <option key={course.id} value={course.id} className="text-white">
                 {course.name}
               </option>
             ))}
@@ -65,7 +65,7 @@ export const CourseSelectionDialog: React.FC<CourseSelectionDialogProps> = ({
         <div className="flex justify-end space-x-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+            className="px-4 py-2 text-gray-300 bg-gray-600 rounded-md hover:bg-gray-500 transition-colors"
           >
             Cancel
           </button>
@@ -75,7 +75,7 @@ export const CourseSelectionDialog: React.FC<CourseSelectionDialogProps> = ({
             className={`px-4 py-2 rounded-md transition-colors ${
               selectedCourse
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
             }`}
           >
             Assign Course

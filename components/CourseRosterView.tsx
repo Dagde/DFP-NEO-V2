@@ -99,20 +99,47 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     }, [selectedPersonForProfile, onProfileOpened]);
 
     const groupedTrainees = useMemo(() => {
+        console.log('🟢 ========== COURSE ROSTER GROUPING START ==========');
+        console.log('🟢 Input traineesData length:', traineesData.length);
+        console.log('🟢 Input traineesData sample:', traineesData.slice(0, 5));
+        
         const groups: { [course: string]: Trainee[] } = {};
 
-        traineesData.forEach(trainee => {
+        traineesData.forEach((trainee, index) => {
+            console.log(`🟢 Processing trainee ${index}:`, {
+                idNumber: trainee.idNumber,
+                name: trainee.name,
+                fullName: trainee.fullName,
+                course: trainee.course,
+                isPaused: trainee.isPaused
+            });
+            
+            if (!trainee.course) {
+                console.warn('🟢 Trainee missing course:', trainee);
+                return; // Skip trainees without course
+            }
+            
             if (!groups[trainee.course]) {
                 groups[trainee.course] = [];
+                console.log(`🟢 Created new group for course: ${trainee.course}`);
             }
             groups[trainee.course].push(trainee);
         });
 
+        console.log('🟢 Groups created:', Object.keys(groups));
+        console.log('🟢 Group counts:', Object.keys(groups).reduce((acc, course) => {
+            acc[course] = groups[course].length;
+            return acc;
+        }, {}));
+
         // Sort trainees within each group alphabetically by name
         for (const course in groups) {
-            groups[course].sort((a, b) => a.name.localeCompare(b.name));
+            console.log(`🟢 Sorting course ${course} with ${groups[course].length} trainees`);
+            groups[course].sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
         }
 
+        console.log('🟢 Final grouped trainees:', groups);
+        console.log('🟢 ========== COURSE ROSTER GROUPING END ==========');
         return groups;
     }, [traineesData]);
 

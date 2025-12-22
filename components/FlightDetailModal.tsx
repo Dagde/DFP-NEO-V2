@@ -408,7 +408,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const coursesStruct = useMemo(() => {
         return courses.map(courseName => ({
             name: courseName,
-            trainees: traineesData.filter(t => t.course === courseName).sort((a,b) => a.name.localeCompare(b.name))
+            trainees: traineesData.filter(t => t.course === courseName).sort((a,b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'))
         }));
     }, [courses, traineesData]);
 

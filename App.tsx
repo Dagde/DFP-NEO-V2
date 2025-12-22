@@ -7553,6 +7553,7 @@ updates.forEach(update => {
                     ftdTurnaround={ftdTurnaround}
                     onUpdateFtdTurnaround={setFtdTurnaround}
                     cptTurnaround={cptTurnaround}
+                       onUpdateTraineeLMPs={setTraineeLMPs}
                     onUpdateCptTurnaround={setCptTurnaround}
                     currentUserPermission={currentUserPermission}
                     maxDispatchPerHour={maxDispatchPerHour}

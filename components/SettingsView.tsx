@@ -18,6 +18,7 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
+import { INITIAL_SYLLABUS_DETAILS } from '../mockData';
 
 
 declare var XLSX: any;
@@ -55,6 +56,7 @@ interface SettingsViewProps {
     onUpdateMaxCrewDutyPeriod: (value: number) => void;
     showDepartureDensityOverlay: boolean;
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
+    onUpdateTraineeLMPs: (updater: (prev: Map<string, any[]>) => Map<string, any[]>) => void;
     flightTurnaround: number;
     onUpdateFlightTurnaround: (value: number) => void;
     ftdTurnaround: number;
@@ -122,6 +124,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onUpdateTimezoneOffset,
     showDepartureDensityOverlay,
     onUpdateShowDepartureDensityOverlay,
+    onUpdateTraineeLMPs,
        courseColors
 }) => {
     // --- STATE ---
@@ -797,6 +800,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const isPaused = getValueFromRow(row, ['Is Paused', 'isPaused']);
         if (isPaused !== undefined) parsed.isPaused = parseBoolean(isPaused);
         
+        // Enhanced LMP field parsing - try multiple column variations including Column F
+          const lmpType = getStr(row, ['LMP', 'LMP Type', 'lmp', 'lmpType', 'lmp_type', 'Column F', 'F']) ||
+                         getStr(Object.fromEntries(
+                             Object.entries(row).filter(([key]) => 
+                                 key.trim().toLowerCase() === 'f' || 
+                                 key.toLowerCase().includes('lmp')
+                             )
+                         ), Object.keys(row).find(k => k.trim() === 'F') || '');
+        if (lmpType) {
+            parsed.lmpType = lmpType;
+            console.log('\ud83d\udfe0 LMP Type:', lmpType);
+        }
+
         if (parsed.name && parsed.course) {
             parsed.fullName = `${parsed.name} – ${parsed.course}`;
             console.log('🟠 Constructed fullName:', parsed.fullName);
@@ -956,6 +972,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         console.log('🔵 New trainees added count:', newToAdd.length);
         
         onBulkUpdateTrainees(finalTrainees);
+           
+           // Update traineeLMPs for new trainees based on their lmpType
+           console.log("\ud83d\udd35 Updating traineeLMPs for new trainees...");
+           onUpdateTraineeLMPs && onUpdateTraineeLMPs((prevLMPs: Map<string, any[]>) => {
+               const newLMPs = new Map(prevLMPs);
+               
+               newToAdd.forEach(trainee => {
+                   if (trainee.fullName && trainee.lmpType) {
+                       console.log(`\ud83d\udd35 Adding LMP data for ${trainee.fullName} with type ${trainee.lmpType}`);
+                       // For now, use INITIAL_SYLLABUS_DETAILS as default LMP data
+                       // In the future, this could be customized based on lmpType
+                       newLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+                   }
+               });
+               
+               console.log(`\ud83d\udd35 Updated traineeLMPs with ${newToAdd.length} new entries`);
+               return newLMPs;
+           });
         console.log('🔵 ========== CUSTOM BULK UPDATE END ==========');
     };
 

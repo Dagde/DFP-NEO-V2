@@ -142,7 +142,7 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             });
         });
 
-        return unavailableList.sort((a, b) => a.name.localeCompare(b.name));
+        return unavailableList.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
     }, [instructorsData, traineesData, date]);
     
     const formatMilitaryTime = (timeString: string | undefined): string => {
@@ -382,7 +382,7 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             const daysSinceFlightA = daysSince(a.lastFlightDate);
             const daysSinceFlightB = daysSince(b.lastFlightDate);
             if (daysSinceFlightA !== daysSinceFlightB) return daysSinceFlightB - daysSinceA;
-            return a.name.localeCompare(b.name);
+            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
         };
         
         Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
@@ -475,7 +475,7 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
                 }
             }
         });
-        return waitingList.sort((a,b) => a.trainee.name.localeCompare(b.trainee.name));
+        return waitingList.sort((a,b) => (a.trainee?.name ?? 'Unknown').localeCompare(b.trainee?.name ?? 'Unknown'));
     }, [traineesData, traineeLMPs, scores]);
 
 

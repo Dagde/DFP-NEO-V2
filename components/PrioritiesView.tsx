@@ -361,7 +361,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 }
             });
         });
-        return list.sort((a, b) => a.trainee.name.localeCompare(b.trainee.name));
+        return list.sort((a, b) => (a.trainee?.name ?? 'Unknown').localeCompare(b.trainee?.name ?? 'Unknown'));
     }, [traineesData, traineeLMPs, scores, syllabusDetails]);
 
 
