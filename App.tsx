@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+   import { safeProcessTrainees } from './utils/traineeDataValidator';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import LogbookView from './components/LogbookView';
@@ -2799,11 +2800,19 @@ const App: React.FC = () => {
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
     const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+    const [traineesData, setTraineesData] = useState<Trainee[]>(safeProcessTrainees(ESL_DATA.trainees));
     
     // Current User State (for permission checking)
     // Default to Joe Bloggs (Super Admin) - in production this would come from authentication
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
+
+       // Safe wrapper for setTraineesData that always validates data
+       const safeSetTraineesData = useCallback((newTrainees: Trainee[] | ((prev: Trainee[]) => Trainee[])) => {
+           setTraineesData(prev => {
+               const updatedTrainees = typeof newTrainees === 'function' ? newTrainees(prev) : newTrainees;
+               return safeProcessTrainees(updatedTrainees);
+           });
+       }, []);
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
@@ -3854,7 +3863,7 @@ const App: React.FC = () => {
     };
     
     const handleAddTrainee = useCallback((newTrainee: Trainee) => {
-        setTraineesData(prev => [...prev, newTrainee]);
+        safeSetTraineesData(prev => [...prev, newTrainee]);
         
         // Initialize Individual LMP based on trainee's lmpType
         const lmpType = newTrainee.lmpType || 'BPC+IPC';
@@ -3987,7 +3996,7 @@ const App: React.FC = () => {
 
         const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
         setInstructorsData(data.instructors);
-        setTraineesData(data.trainees);
+        safeSetTraineesData(data.trainees);
         setEvents(data.events);
         setCourses(data.courses);
         setScores(data.scores);
@@ -4012,6 +4021,13 @@ const App: React.FC = () => {
         const todayStr = getLocalDateString();
         setPublishedSchedules({ [todayStr]: initialData.events.filter(e => e.date === todayStr) });
     }, [school]);
+
+    // Keep coursePriorities synchronized with courses
+    useEffect(() => {
+        const updatedPriorities = courses.map(course => course.name);
+        setCoursePriorities(updatedPriorities);
+        console.log('🔄 Updated coursePriorities from courses:', updatedPriorities);
+    }, [courses]);
 
 
     const handleDateChange = (increment: number) => {
@@ -5544,19 +5560,61 @@ updates.forEach(update => {
     }, []);
 
     const handleBulkUpdateTrainees = useCallback((updatedTrainees: Trainee[]) => {
-        const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
+        console.log('🔵 ========== BULK UPLOAD START ==========');
+        console.log('🔵 Incoming trainees count:', updatedTrainees.length);
+        console.log('🔵 Incoming trainees data:', updatedTrainees);
         
-        setTraineesData(prevTrainees => {
+        // Validate incoming data
+        const validIncomingTrainees = updatedTrainees.filter(t => t != null);
+        console.log('🔵 Valid incoming trainees after null filter:', validIncomingTrainees.length);
+        
+        const updatedMap = new Map(validIncomingTrainees.map(t => [t.idNumber, t]));
+        console.log('🔵 Updated trainees map size:', updatedMap.size);
+        
+        safeSetTraineesData(prevTrainees => {
+            console.log('🔵 Previous trainees count:', prevTrainees.length);
+            console.log('🔵 Previous trainees sample:', prevTrainees.slice(0, 3));
+            
             const existingIds = new Set(prevTrainees.map(t => t.idNumber));
-            const updatedExisting = prevTrainees.map(t => updatedMap.get(t.idNumber) || t);
-            const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
-            return [...updatedExisting, ...newToAdd];
+            console.log('🔵 Existing IDs count:', existingIds.size);
+            
+            const updatedExisting = prevTrainees.map(t => {
+                const updated = updatedMap.get(t.idNumber);
+                if (updated) {
+                    console.log('🔵 Updating existing trainee:', t.idNumber, 'from:', t.name, 'to:', updated.name);
+                    return updated;
+                }
+                return t;
+            });
+            
+            const newToAdd = validIncomingTrainees.filter(ut => !existingIds.has(ut.idNumber));
+            console.log('🔵 New trainees to add:', newToAdd.length);
+            console.log('🔵 New trainees to add data:', newToAdd);
+            
+            const finalTrainees = [...updatedExisting, ...newToAdd];
+            console.log('🔵 Final trainees count:', finalTrainees.length);
+            console.log('🔵 Final trainees by course:', finalTrainees.reduce((acc, t) => {
+                acc[t.course || 'No Course'] = (acc[t.course || 'No Course'] || 0) + 1;
+                return acc;
+            }, {}));
+            console.log('🔵 ========== BULK UPLOAD END ==========');
+            
+            return finalTrainees;
         });
     }, []);
 
     const handleReplaceTrainees = useCallback((newTrainees: Trainee[]) => {
+        console.log('🔴 ========== REPLACE TRAINEES START ==========');
+        console.log('🔴 New trainees count:', newTrainees.length);
+        console.log('🔴 New trainees sample:', newTrainees.slice(0, 5));
+        console.log('🔴 New trainees by course:', newTrainees.reduce((acc, t) => {
+            acc[t.course || 'No Course'] = (acc[t.course || 'No Course'] || 0) + 1;
+            return acc;
+        }, {}));
+        
         setTraineesData(newTrainees);
         setSuccessMessage('Trainees successfully replaced!');
+        console.log('🔴 ========== REPLACE TRAINEES END ==========');
     }, []);
     
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
@@ -5591,6 +5649,27 @@ updates.forEach(update => {
                 course.name === courseName ? { ...course, startDate: newStartDate } : course
             )
         );
+    };
+
+    const handleAddCourse = (newCourse: Course) => {
+        setCourses(prevCourses => {
+            const updatedCourses = [...prevCourses, newCourse];
+            console.log('📚 Added new course:', newCourse.name);
+            return updatedCourses;
+        });
+        
+        // Also update course colors for the new course
+        setCourseColors(prev => ({
+            ...prev,
+            [newCourse.name]: newCourse.color
+        }));
+        
+        // And course percentages
+        setCoursePercentages(prev => {
+            const updated = new Map(prev);
+            updated.set(newCourse.name, Math.floor(100 / (prev.size + 1)));
+            return updated;
+        });
     };
 
     const handleSetIsMultiSelectMode = (enabled: boolean) => {
@@ -6785,17 +6864,32 @@ updates.forEach(update => {
                             date={date}
                             onDateChange={handleDateChange}
                             events={eventsForStaffTraineeSchedule}
-                            trainees={[...traineesData]
-                                .sort((a, b) => {
-                                    // First sort by course
-                                    if (a.course !== b.course) {
-                                        return a.course.localeCompare(b.course);
-                                    }
-                                    // Then sort alphabetically by name within the same course
-                                    return a.name.localeCompare(b.name);
-                                })
-                                .map(t => t.fullName)
-                            }
+                            trainees={(() => {
+                                // Clean and validate trainee data first
+                                const cleanedTrainees = [...traineesData]
+                                    .filter(t => t != null) // Remove null/undefined records
+                                    .map(t => ({
+                                        ...t,
+                                        name: t?.name ?? t?.fullName ?? 'Unknown',
+                                        fullName: t?.fullName ?? t?.name ?? 'Unknown',
+                                        course: t?.course ?? 'No Course'
+                                    }));
+                                
+                                return cleanedTrainees
+                                    .sort((a, b) => {
+                                        // First sort by course with safe comparison
+                                        const courseA = a.course ?? 'No Course';
+                                        const courseB = b.course ?? 'No Course';
+                                        if (courseA !== courseB) {
+                                            return courseA.localeCompare(courseB);
+                                        }
+                                        // Then sort alphabetically by name with safe comparison
+                                        const nameA = a.name ?? a.fullName ?? 'Unknown';
+                                        const nameB = b.name ?? b.fullName ?? 'Unknown';
+                                        return nameA.localeCompare(nameB);
+                                    })
+                                    .map(t => t.fullName);
+                            })()}
                             traineesData={traineesData}
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
@@ -7467,6 +7561,7 @@ updates.forEach(update => {
                     onUpdateTimezoneOffset={setTimezoneOffset}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onUpdateShowDepartureDensityOverlay={setShowDepartureDensityOverlay}
+                    courseColors={courseColors}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 

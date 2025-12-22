@@ -17,6 +17,7 @@ import PermissionsManagerWindow from './PermissionsManagerWindow';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
+import { CourseSelectionDialog } from './CourseSelectionDialog';
 
 
 declare var XLSX: any;
@@ -64,6 +65,7 @@ interface SettingsViewProps {
     activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions';
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
+    courseColors: { [key: string]: string };
 }
 
 const FolderIcon = () => (
@@ -98,6 +100,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     phraseBank, onUpdatePhraseBank,
     onNavigate,
     masterCurrencies,
+    coursePriorities,
     currencyRequirements,
     sctEvents,
     onUpdateSctEvents,
@@ -118,7 +121,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     timezoneOffset,
     onUpdateTimezoneOffset,
     showDepartureDensityOverlay,
-    onUpdateShowDepartureDensityOverlay
+    onUpdateShowDepartureDensityOverlay,
+       courseColors
 }) => {
     // --- STATE ---
     
@@ -154,6 +158,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     // Data Loader State
     const [repoFiles, setRepoFiles] = useState<{ id: string; name: string; folderId: string }[]>([]);
+    const [showCourseSelection, setShowCourseSelection] = useState(false);
+    const [pendingTrainees, setPendingTrainees] = useState<Trainee[]>([]);
+    const [updateMode, setUpdateMode] = useState<'bulk' | 'minor'>('bulk');
     const [folders] = useState([
         { id: 'instructor_loads', name: 'Instructor Loads' },
         { id: 'trainee_loads', name: 'Trainee Loads' },
@@ -165,6 +172,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         { id: 'staff_data', name: 'Staff Data' },
         { id: 'staff_logbook', name: 'Logbook', isSub: true },
     ]);
+
+    // Generate course options for selection dialog
+    const courseOptions = useMemo(() => {
+        if (!courseColors || typeof courseColors !== 'object') {
+            console.warn('courseColors is not available:', courseColors);
+            return [];
+        }
+        const courseList = Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
+        console.log('🎯 Available courses for selection:', courseList);
+        return courseList.map(course => ({
+            id: course,
+            name: course
+        }));
+    }, [courseColors]);
     const [showUpload, setShowUpload] = useState(false);
     const [fileToUpload, setFileToUpload] = useState<File | null>(null);
     const [showSelectDestination, setShowSelectDestination] = useState(false);
@@ -717,18 +738,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const parseTraineeRow = (row: any): Partial<Trainee> | null => {
+        console.log('🟠 ========== PARSE TRAINEE ROW START ==========');
+        console.log('🟠 Input row:', row);
+        console.log('🟠 Available columns:', Object.keys(row));
+        
         const idValue = getNum(row, ['PMKeys/ID', 'idNumber']);
-        if (idValue === undefined) return null;
+        console.log('🟠 Extracted ID:', idValue);
+        if (idValue === undefined) {
+            console.log('🟠 Row rejected: No ID found');
+            return null;
+        }
 
         const parsed: Partial<Trainee> = { idNumber: idValue };
 
-        const surname = getStr(row, ['Surname', 'Last Name']);
-        const firstname = getStr(row, ['First Name', 'Firstname', 'Given Name']);
+        // Try multiple field name variations for names
+        const surname = getStr(row, ['Surname', 'Last Name', 'surname', 'last_name', 'lastName']);
+        const firstname = getStr(row, ['First Name', 'Firstname', 'Given Name', 'first_name', 'firstName', 'givenName']);
+        console.log('🟠 Name parts - Surname:', surname, 'Firstname:', firstname);
+        
         if (surname && firstname) {
             parsed.name = `${surname}, ${firstname}`;
+            console.log('🟠 Constructed name:', parsed.name);
+        } else {
+            // Fallback: try to find any field with "name" in it
+            const allColumns = Object.keys(row);
+            const nameColumn = allColumns.find(col => 
+                col.toLowerCase().includes('name') && row[col] && row[col].toString().trim()
+            );
+            if (nameColumn) {
+                parsed.name = row[nameColumn].toString().trim();
+                console.log('🟠 Fallback name from column:', nameColumn, 'value:', parsed.name);
+            } else {
+                console.log('🟠 Missing name parts - using ID as fallback');
+                parsed.name = `Trainee ${idValue}`;
+            }
         }
 
-        const course = getStr(row, ['Course']); if (course) parsed.course = course;
+        // Try multiple field name variations for course
+        const course = getStr(row, ['Course', 'course', 'COURSE', 'class', 'Class']); 
+        if (course) {
+            parsed.course = course;
+            console.log('🟠 Course:', course);
+        } else {
+            console.log('🟠 No course found - using default');
+            parsed.course = 'No Course';
+        }
+        
         const rank = getStr(row, ['Rank']); if (rank) parsed.rank = rank as TraineeRank;
         const service = getStr(row, ['Service']); if (service) parsed.service = service as 'RAAF' | 'RAN' | 'ARA';
         const unit = getStr(row, ['Unit']); if (unit) parsed.unit = unit;
@@ -744,8 +799,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         if (parsed.name && parsed.course) {
             parsed.fullName = `${parsed.name} – ${parsed.course}`;
+            console.log('🟠 Constructed fullName:', parsed.fullName);
+        } else {
+            console.log('🟠 Cannot construct fullName - missing name or course');
         }
         
+        console.log('🟠 Final parsed trainee:', parsed);
+        console.log('🟠 ========== PARSE TRAINEE ROW END ==========');
         return parsed;
     };
 
@@ -789,8 +849,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onReplaceInstructors(finalRows as Instructor[]);
                 break;
             case 'trainee_loads':
+                console.log('🔴 ========== BULK UPDATE TRAINEES START ==========');
+                console.log('🔴 Raw rows count:', rows.length);
+                console.log('🔴 Raw rows sample:', rows.slice(0, 3));
+                
                 finalRows = rows.map(parseTraineeRow).filter(t => t && t.idNumber);
-                onReplaceTrainees(finalRows as Trainee[]);
+                console.log('🔴 Parsed trainees count:', finalRows.length);
+                console.log('🔴 Parsed trainees sample:', finalRows.slice(0, 3));
+                console.log('🔴 Current traineesData count:', traineesData.length);
+                
+                // Use UPDATE instead of REPLACE to preserve existing trainees
+                handleBulkUpdateWithCourseSelection(finalRows as Trainee[], 'bulk');
+                console.log('🔴 ========== BULK UPDATE TRAINEES END ==========');
                 break;
             case 'lmp_loads':
                 finalRows = rows.map(parseLmpRow).filter(s => s && s.code);
@@ -868,6 +938,85 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
     };
     
+    // Custom bulk update function that preserves existing trainees instead of replacing them
+    // Custom bulk update function that preserves existing trainees instead of replacing them
+    const handleSafeBulkUpdateTrainees = (updatedTrainees: Trainee[]) => {
+        console.log('🔵 ========== CUSTOM BULK UPDATE START ==========');
+        console.log('🔵 Updated trainees count:', updatedTrainees.length);
+        console.log('🔵 Current traineesData count:', traineesData.length);
+        
+        const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
+        const existingIds = new Set(traineesData.map(t => t.idNumber));
+        const updatedExisting = traineesData.map(t => updatedMap.get(t.idNumber) || t);
+        const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
+        
+        const finalTrainees = [...updatedExisting, ...newToAdd];
+        console.log('🔵 Final trainees count:', finalTrainees.length);
+        console.log('🔵 Updated existing count:', updatedExisting.length);
+        console.log('🔵 New trainees added count:', newToAdd.length);
+        
+        onBulkUpdateTrainees(finalTrainees);
+        console.log('🔵 ========== CUSTOM BULK UPDATE END ==========');
+    };
+
+    // Course selection handlers
+    const handleCourseSelection = (courseId: string) => {
+        console.log(`\ud83d\udd35 Selected course for ${updateMode} update:`, courseId);
+        
+        // Assign the selected course to all pending trainees
+        const traineesWithCourse = pendingTrainees.map(trainee => ({
+            ...trainee,
+            course: courseId,
+            fullName: trainee.name ? `${trainee.name} – ${courseId}` : trainee.idNumber
+        }));
+        
+        console.log(`\ud83d\udd35 Updated ${traineesWithCourse.length} trainees with course: ${courseId}`);
+        
+        // Now proceed with the update
+        if (updateMode === 'bulk') {
+            handleSafeBulkUpdateTrainees(traineesWithCourse);
+        } else {
+            // For minor update, add to existing trainees
+            const finalUpdatedList = [...traineesData];
+            traineesWithCourse.forEach(trainee => {
+                const index = finalUpdatedList.findIndex(t => t.idNumber === trainee.idNumber);
+                if (index !== -1) {
+                    finalUpdatedList[index] = trainee;
+                }
+            });
+            onBulkUpdateTrainees([...finalUpdatedList, ...traineesWithCourse.filter(t => !finalUpdatedList.some(et => et.idNumber === t.idNumber))]);
+        }
+        
+        // Reset state
+        setShowCourseSelection(false);
+        setPendingTrainees([]);
+        setUpdateMode('bulk');
+    };
+
+    const handleCourseSelectionCancel = () => {
+        console.log('\ud83d\udd35 Course selection cancelled');
+        setShowCourseSelection(false);
+        setPendingTrainees([]);
+        setUpdateMode('bulk');
+    };
+
+    // Modified bulk update that prompts for course selection
+    const handleBulkUpdateWithCourseSelection = (trainees: Trainee[], mode: 'bulk' | 'minor' = 'bulk') => {
+        if (!courseOptions.length) {
+            console.warn('\ud83d\udd35 No courses available for selection');
+            onShowSuccess('No courses available. Please add courses first.');
+            return;
+        }
+        
+        console.log(`\ud83d\udd35 Initiating ${mode} update with course selection`);
+        console.log('\ud83d\udd35 Pending trainees:', trainees.length);
+        console.log('\ud83d\udd35 Available courses:', courseOptions.map(c => c.name));
+        
+        setPendingTrainees(trainees);
+        setUpdateMode(mode);
+        setShowCourseSelection(true);
+    };
+
     const finishMinorUpdate = () => {
         setIsMinorUpdateInProgress(false);
         if (!fileToProcess) return;
@@ -884,12 +1033,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onBulkUpdateInstructors([...finalUpdatedList, ...newRecords]);
                 break;
             case 'trainee_loads':
+                 console.log('🔴 ========== MINOR UPDATE TRAINEES START ==========');
+                 console.log('🔴 Current traineesData count:', traineesData.length);
+                 console.log('🔴 Updated records count:', updatedRecords.length);
+                 console.log('🔴 New records count:', newRecords.length);
+                 console.log('🔴 Updated records sample:', updatedRecords.slice(0, 3));
+                 console.log('🔴 New records sample:', newRecords.slice(0, 3));
+                 
                  finalUpdatedList = [...traineesData];
                  updatedRecords.forEach(ur => {
                     const index = finalUpdatedList.findIndex(t => t.idNumber === ur.idNumber);
-                    if (index !== -1) finalUpdatedList[index] = ur;
+                    if (index !== -1) {
+                        console.log('🔴 Updating trainee:', ur.idNumber, ur.name);
+                        finalUpdatedList[index] = ur;
+                    } else {
+                        console.log('🔴 Trainee not found for update:', ur.idNumber);
+                    }
                 });
-                onBulkUpdateTrainees([...finalUpdatedList, ...newRecords]);
+                console.log('🔴 Final list count before update:', finalUpdatedList.length);
+                // Use course selection for new records in minor update
+                const allRecordsToUpdate = [...finalUpdatedList, ...newRecords];
+                if (newRecords.length > 0) {
+                    handleBulkUpdateWithCourseSelection(newRecords as Trainee[], 'minor');
+                } else {
+                    // Only existing records were updated, no course selection needed
+                    onBulkUpdateTrainees([...finalUpdatedList]);
+                }
+                console.log('🔴 ========== MINOR UPDATE TRAINEES END ==========');
                 break;
             case 'lmp_loads':
                 const updatedMap = new Map(updatedRecords.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
@@ -1588,6 +1758,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {showNewRecordConfirm && unmatchedRowData && <NewRecordConfirmationFlyout rowData={unmatchedRowData} onConfirm={handleConfirmNewRecord} onCancel={handleRejectNewRecord} />}
             {showUpdateError && <UpdateErrorFlyout message={updateErrorMessage} onClose={() => setShowUpdateError(false)} />}
             {showUpdateSummary && <UpdateSummaryFlyout summary={updateSummary} onClose={() => setShowUpdateSummary(false)} />}
+            <CourseSelectionDialog
+                isOpen={showCourseSelection}
+                courses={courseOptions}
+                onSelect={handleCourseSelection}
+                onCancel={handleCourseSelectionCancel}
+                mode={updateMode}
+            />
         </>
     );
 };

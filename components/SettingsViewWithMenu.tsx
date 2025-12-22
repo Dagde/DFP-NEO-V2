@@ -45,6 +45,7 @@ interface SettingsViewWithMenuProps {
     onUpdateTimezoneOffset: (offset: number) => void;
     showDepartureDensityOverlay: boolean;
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
+    courseColors: { [key: string]: string };
 }
 
 type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone';
