@@ -78,6 +78,7 @@ import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
 import PT051View from './components/PT051View';
 import AuthorisationFlyout from './components/AuthorisationFlyout';
+import { useAutocompleteDisabled } from './hooks/useAutocompleteDisabled';
 // FIX: Corrected import to be a named import as per module export.
 import { SettingsViewWithMenu } from './components/SettingsViewWithMenu';
 import AuthorisationView from './components/AuthorisationView';
@@ -98,6 +99,7 @@ import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleV
 
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { filterSyllabusByLMPType } from './utils/syllabusFilter';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
 
 // --- PT-051 STRUCTURE ---
@@ -2743,6 +2745,9 @@ function generateDfpInternal(
 
 
 const App: React.FC = () => {
+       // Disable password/autocomplete prompts throughout the entire application
+       useAutocompleteDisabled();
+       
        // Default zoom level (fixed at 1 since zoom functionality was removed)
        const zoomLevel = 1;
 
@@ -6959,12 +6964,7 @@ updates.forEach(update => {
                                 if (isNewTrainee) {
                                     // Initialize Individual LMP for new trainee
                                     const lmpType = data.lmpType || 'BPC+IPC';
-                                    const masterLMP = syllabusDetails.filter(item => {
-                                        if (lmpType === 'BPC+IPC') {
-                                            return !item.lmpType || item.lmpType === 'Master LMP';
-                                        }
-                                        return item.courses.includes(lmpType);
-                                    });
+                                    const masterLMP = filterSyllabusByLMPType(syllabusDetails, lmpType);
                                     
                                     if (masterLMP.length > 0) {
                                         setTraineeLMPs(prev => {

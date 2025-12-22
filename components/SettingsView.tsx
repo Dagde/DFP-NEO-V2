@@ -19,6 +19,7 @@ import { logAudit } from '../utils/auditLogger';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
 import { INITIAL_SYLLABUS_DETAILS } from '../mockData';
+import { filterSyllabusByLMPType } from '../utils/syllabusFilter';
 
 
 declare var XLSX: any;
@@ -983,7 +984,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        console.log(`\ud83d\udd35 Adding LMP data for ${trainee.fullName} with type ${trainee.lmpType}`);
                        // For now, use INITIAL_SYLLABUS_DETAILS as default LMP data
                        // In the future, this could be customized based on lmpType
-                       newLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+                       // Filter syllabus events by LMP type to get only relevant events
+                          const lmpSpecificSyllabus = filterSyllabusByLMPType(INITIAL_SYLLABUS_DETAILS, trainee.lmpType);
+                          console.log(`\ud83d\udd35 Filtered ${lmpSpecificSyllabus.length} events for LMP type ${trainee.lmpType}`);
+                          newLMPs.set(trainee.fullName, lmpSpecificSyllabus);
                    }
                });
                
