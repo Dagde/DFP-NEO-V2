@@ -6,6 +6,7 @@ import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
+import { VisualAdjustGuide } from './VisualAdjustGuide';
    
 
 interface ScheduleViewProps {
@@ -54,6 +55,9 @@ interface ScheduleViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
+  isVisualAdjustMode?: boolean;
+  visualAdjustEvent?: ScheduleEvent | null;
+  onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -118,6 +122,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds, unavailabilityConflicts,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, baselineEvents,
+    isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
     showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange
@@ -915,6 +920,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     )}
                     
                     {renderEvents()}
+                    
+                    {/* Visual Adjust Guide */}
+                    {isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && (
+                        <VisualAdjustGuide
+                            event={visualAdjustEvent}
+                            onTimeChange={onVisualAdjustTimeChange}
+                            scheduleStartHour={START_HOUR}
+                            scheduleEndHour={END_HOUR}
+                        />
+                    )}
                     
                     {isOracleMode && oraclePreviewEvent && (
                         <>

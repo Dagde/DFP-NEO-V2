@@ -2995,6 +2995,10 @@ const App: React.FC = () => {
     const [isMagnifierEnabled, setIsMagnifierEnabled] = useState(false);
     const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
     const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+    
+    // Visual Adjust state
+    const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
@@ -3959,8 +3963,45 @@ const App: React.FC = () => {
         // console.log('🔴 Conflict check complete. Conflicting event IDs:', Array.from(conflictingEventIds));
         // console.log('🔴 ========== CONFLICT CHECK END ==========');
 
-        // TWR DI Validation Rule\n        // console.log('\ud83d\udd34 ========== TWR DI VALIDATION CHECK START ==========');\n        for (const event of eventsForDate) {\n            // Only validate flight events\n            if (event.type !== 'flight' || !event.flightNumber) {\n                continue;\n            }\n\n            // Get the Master LMP for this event\n            const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);\n            if (!syllabusItem || syllabusItem.twrDiReqd !== 'YES') {\n                // TWR DI not required, skip this validation rule\n                continue;\n            }\n\n            // console.log(`\ud83d\udd34 Checking TWR DI coverage for flight: ${event.flightNumber} (${event.id})`);\n            // console.log(`\ud83d\udd34 Flight time: ${event.startTime} - ${event.startTime + event.duration}`);\n\n            // Find TWR DI events scheduled on the TWR DI resource line\n            const twrDiEvents = eventsForDate.filter(e => \n                e.eventCategory === 'twr_di' && \n                e.type === 'flight'\n            );\n\n            // console.log(`\ud83d\udd34 Found ${twrDiEvents.length} TWR DI events`);\n\n            // Check if any TWR DI event provides full coverage\n            let hasValidCoverage = false;\n            for (const twrDiEvent of twrDiEvents) {\n                const twrDiStartTime = twrDiEvent.startTime;\n                const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;\n                const flightStartTime = event.startTime;\n                const flightEndTime = event.startTime + event.duration;\n\n                // console.log(`\ud83d\udd34 Checking TWR DI event ${twrDiEvent.flightNumber}: ${twrDiStartTime} - ${twrDiEndTime}`);\n\n                // Check if TWR DI event fully covers the flight event\n                if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {\n                    // console.log(`\ud83d\udd34 \u2705 Valid TWR DI coverage found`);\n                    hasValidCoverage = true;\n                    break;\n                }\n            }\n\n            if (!hasValidCoverage) {\n                // console.log(`\ud83d\udd34 \u274c NO valid TWR DI coverage for flight: ${event.flightNumber} (${event.id})`);\n                conflictingEventIds.add(event.id);\n            }\n        }\n        // console.log('\ud83d\udd34 ========== TWR DI VALIDATION CHECK END ==========');
-        return conflictingEventIds;
+        // TWR DI Validation Rule
+        for (const event of eventsForDate) {
+            // Only validate flight events
+            if (event.type !== 'flight' || !event.flightNumber) {
+                continue;
+            }
+
+            // Get the Master LMP for this event
+            const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);
+            if (!syllabusItem || syllabusItem.twrDiReqd !== 'YES') {
+                // TWR DI not required, skip this validation rule
+                continue;
+            }
+
+            // Find TWR DI events scheduled on the TWR DI resource line
+            const twrDiEvents = eventsForDate.filter(e => 
+                e.eventCategory === 'twr_di' && 
+                e.type === 'flight'
+            );
+
+            // Check if any TWR DI event provides full coverage
+            let hasValidCoverage = false;
+            for (const twrDiEvent of twrDiEvents) {
+                const twrDiStartTime = twrDiEvent.startTime;
+                const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
+                const flightStartTime = event.startTime;
+                const flightEndTime = event.startTime + event.duration;
+
+                // Check if TWR DI event fully covers the flight event
+                if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {
+                    hasValidCoverage = true;
+                    break;
+                }
+            }
+
+            if (!hasValidCoverage) {
+                conflictingEventIds.add(event.id);
+            }
+        }        return conflictingEventIds;
     }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, syllabusDetails]);
 
     /**
@@ -3982,8 +4023,45 @@ const App: React.FC = () => {
             }
         }
 
-        // TWR DI Validation Rule for Next Day Build\n        for (const event of nextDayBuildEvents) {\n            // Only validate flight events\n            if (event.type !== 'flight' || !event.flightNumber) {\n                continue;\n            }\n\n            // Get the Master LMP for this event\n            const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);\n            if (!syllabusItem || syllabusItem.twrDiReqd !== 'YES') {\n                // TWR DI not required, skip this validation rule\n                continue;\n            }\n\n            // Find TWR DI events scheduled on the TWR DI resource line\n            const twrDiEvents = nextDayBuildEvents.filter(e => \n                e.eventCategory === 'twr_di' && \n                e.type === 'flight'\n            );\n\n            // Check if any TWR DI event provides full coverage\n            let hasValidCoverage = false;\n            for (const twrDiEvent of twrDiEvents) {\n                const twrDiStartTime = twrDiEvent.startTime;\n                const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;\n                const flightStartTime = event.startTime;\n                const flightEndTime = event.startTime + event.duration;\n\n                // Check if TWR DI event fully covers the flight event\n                if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {\n                    hasValidCoverage = true;\n                    break;\n                }\n            }\n\n            if (!hasValidCoverage) {\n                conflictingEventIds.add(event.id);\n            }\n        }
+        // TWR DI Validation Rule for Next Day Build
+        for (const event of nextDayBuildEvents) {
+            // Only validate flight events
+            if (event.type !== 'flight' || !event.flightNumber) {
+                continue;
+            }
 
+            // Get the Master LMP for this event
+            const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);
+            if (!syllabusItem || syllabusItem.twrDiReqd !== 'YES') {
+                // TWR DI not required, skip this validation rule
+                continue;
+            }
+
+            // Find TWR DI events scheduled on the TWR DI resource line
+            const twrDiEvents = nextDayBuildEvents.filter(e => 
+                e.eventCategory === 'twr_di' && 
+                e.type === 'flight'
+            );
+
+            // Check if any TWR DI event provides full coverage
+            let hasValidCoverage = false;
+            for (const twrDiEvent of twrDiEvents) {
+                const twrDiStartTime = twrDiEvent.startTime;
+                const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
+                const flightStartTime = event.startTime;
+                const flightEndTime = event.startTime + event.duration;
+
+                // Check if TWR DI event fully covers the flight event
+                if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {
+                    hasValidCoverage = true;
+                    break;
+                }
+            }
+
+            if (!hasValidCoverage) {
+                conflictingEventIds.add(event.id);
+            }
+        }
         return conflictingEventIds;
     }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
 
@@ -4873,6 +4951,19 @@ const App: React.FC = () => {
            
            logAudit(pageName, "Delete", description, changes);
         setSelectedEvent(null);
+    };
+    
+    // Visual Adjust handlers
+    const handleVisualAdjustStart = (event: ScheduleEvent) => {
+        setIsVisualAdjustMode(true);
+        setVisualAdjustEvent(event);
+    };
+    
+    const handleVisualAdjustEnd = (event: ScheduleEvent) => {
+        setIsVisualAdjustMode(false);
+        setVisualAdjustEvent(null);
+        // Update the event with new times
+        handleSaveEvents([event], false);
     };
     
     // SCT & REMEDIAL AUTO-ADD SYSTEM
@@ -7130,6 +7221,18 @@ updates.forEach(update => {
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
                                console.log('Availability updated:', record);
                            }}
+                           isVisualAdjustMode={isVisualAdjustMode}
+                           visualAdjustEvent={visualAdjustEvent}
+                           onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
+                               if (visualAdjustEvent) {
+                                   const updatedEvent = {
+                                       ...visualAdjustEvent,
+                                       startTime,
+                                       duration: endTime - startTime
+                                   };
+                                   setVisualAdjustEvent(updatedEvent);
+                               }
+                           }}
                         />;
                 return <InstructorScheduleView 
                             date={date}
@@ -8244,6 +8347,8 @@ updates.forEach(update => {
                     isAddingTile={isAddingTile}
                        formationCallsigns={formationCallsigns}
                        currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}
+                    onVisualAdjustStart={handleVisualAdjustStart}
+                    onVisualAdjustEnd={handleVisualAdjustEnd}
                 />
             )}
             

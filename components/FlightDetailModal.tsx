@@ -114,6 +114,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
     const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
     const [visualAdjustEndTime, setVisualAdjustEndTime] = useState(event.startTime + event.duration);
+    
+    // Sync visual adjust times when event changes (from parent drag updates)
+    useEffect(() => {
+        if (isVisualAdjustMode) {
+            setVisualAdjustStartTime(event.startTime);
+            setVisualAdjustEndTime(event.startTime + event.duration);
+        }
+    }, [event.startTime, event.duration, isVisualAdjustMode]);
     const [crew, setCrew] = useState<CrewMember[]>([{
         flightType: event.flightType,
         instructor: event.instructor || '',
