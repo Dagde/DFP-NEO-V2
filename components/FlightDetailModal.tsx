@@ -4,6 +4,7 @@ import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAn
 import { v4 as uuidv4 } from 'uuid';
 import CancelConfirmationFlyout from './CancelConfirmationFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
+import { VisualAdjustModal } from './VisualAdjustModal';
 
 interface EventDetailModalProps {
   event: ScheduleEvent;
@@ -43,6 +44,8 @@ interface EventDetailModalProps {
   isAddingTile?: boolean;
     formationCallsigns?: FormationCallsign[];
     currentLocation?: string;
+    onVisualAdjustStart?: (event: ScheduleEvent) => void;
+    onVisualAdjustEnd?: (event: ScheduleEvent) => void;
 }
 
 interface CrewMember {
@@ -80,7 +83,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '' }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -108,6 +111,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [startTime, setStartTime] = useState(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
     const [area, setArea] = useState(event.area || 'A');
     const [aircraftCount, setAircraftCount] = useState(1);
+    const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
+    const [visualAdjustEndTime, setVisualAdjustEndTime] = useState(event.startTime + event.duration);
     const [crew, setCrew] = useState<CrewMember[]>([{
         flightType: event.flightType,
         instructor: event.instructor || '',
@@ -956,6 +962,27 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
     };
 
+    const handleVisualAdjust = () => {
+        console.log("Visual Adjust clicked");
+        setIsVisualAdjustMode(true);
+        if (onVisualAdjustStart) {
+            onVisualAdjustStart(event);
+        }
+    };
+
+    const handleVisualAdjustContinue = () => {
+        setIsVisualAdjustMode(false);
+        const updatedEvent = {
+            ...event,
+            startTime: visualAdjustStartTime,
+            duration: visualAdjustEndTime - visualAdjustStartTime
+        };
+        if (onVisualAdjustEnd) {
+            onVisualAdjustEnd(updatedEvent);
+        }
+        setStartTime(formatTime(visualAdjustStartTime));
+        setDuration(visualAdjustEndTime - visualAdjustStartTime);
+    };
     const handleSave = () => {
         const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
             let eventColor = event.color;
@@ -1426,6 +1453,18 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
         </div>
     );
 };    
+    if (isVisualAdjustMode) {
+        return (
+            <VisualAdjustModal
+                event={event}
+                startTime={visualAdjustStartTime}
+                endTime={visualAdjustEndTime}
+                onContinue={handleVisualAdjustContinue}
+                onClose={() => setIsVisualAdjustMode(false)}
+            />
+        );
+    }
+
     return (
         <>
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
@@ -1828,7 +1867,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             )}
                             <div className="flex-grow" /> {/* Spacer */}
                             {isEditing ? (
+                                   <>
                                 <button onClick={handleSave} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-sky-600 hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save</button>
+                                       <button onClick={handleVisualAdjust} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-purple-600 hover:bg-purple-700">Visual Adjust</button>
+                                   </>
                             ) : (
                                 <button onClick={() => setIsEditing(true)} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-gray-600 hover:bg-gray-700">Edit</button>
                             )}
