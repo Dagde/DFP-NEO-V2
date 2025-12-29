@@ -510,8 +510,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             // Set default duration to 1.2 for Staff CAT
             if (!duration) setDuration(1.2);
         } else if (eventCategory === 'twr_di') {
+            // TWR DI defaults to Solo
+            setCrew(prev => prev.map(c => ({ ...c, flightType: 'Solo' })));
             // Set default duration to 1.2 for TWR DI
             if (!duration) setDuration(1.2);
+            // Set default start time to 0800
+            setStartTime('08:00');
         }
     }, [eventCategory]);
 
