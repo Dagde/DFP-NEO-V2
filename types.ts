@@ -279,6 +279,10 @@ export interface Pt051Assessment {
   overallResult: 'P' | 'F' | null;
   dcoResult?: 'DCO' | 'DPCO' | 'DNCO' | '';
   overallComments?: string;
+  // Add timing fields to preserve time data
+  startTime?: number; // in hours (e.g., 9.5 for 9:30)
+  duration?: number;  // in hours
+  endTime?: number;   // in hours
   scores: {
     element: string;
     grade: Pt051Grade | null;

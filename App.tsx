@@ -6,7 +6,7 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
    import { seedTestAuditLogs } from './utils/seedAuditLogs';
-   import { logAudit } from './utils/auditLogger';
+   import { logAudit, setCurrentUser } from './utils/auditLogger';
    import { debouncedAuditLog } from './utils/auditDebounce';
 
 
@@ -3012,6 +3012,14 @@ const App: React.FC = () => {
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
+    
+    // Set current user for audit logging
+    useEffect(() => {
+        if (currentUser) {
+            const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
+            setCurrentUser(userString);
+        }
+    }, [currentUser]);
     
     // User change handler
     const handleUserChange = (userName: string) => {
@@ -7465,6 +7473,12 @@ updates.forEach(update => {
                                 trainee={selectedTraineeForHateSheet}
                                 lmpScores={scores.get(selectedTraineeForHateSheet.fullName) || []}
                                 assessments={traineeAssessments}
+                                pt051Events={traineeAssessments}
+                                userProfile={currentUser}
+                                refreshEvents={() => {
+                                    // Refresh events by calling the existing refresh functions
+                                    loadEventsForDate(selectedDate, selectedCourse);
+                                }}
                                 onSelectLmpScore={(score) => {
                                     setSelectedScoreForDetail(score);
                                     handleNavigation('ScoreDetail');
@@ -7525,6 +7539,58 @@ updates.forEach(update => {
                                 onBackToRoster={() => {
                                     setSelectedPersonForProfile(selectedTraineeForHateSheet);
                                     handleNavigation('CourseRoster');
+                                }}
+                                onInsertPt051={(insertIndex: number, targetDate: string) => {
+                                    // Create a new PT-051 assessment
+                                    const newAssessment: Pt051Assessment = {
+                                        id: uuidv4(),
+                                        traineeFullName: selectedTraineeForHateSheet!.fullName,
+                                        eventId: `inserted-pt051-${Date.now()}`,
+                                        flightNumber: 'PT-051 Assessment',
+                                        date: targetDate,
+                                        instructorName: '',
+                                        overallGrade: null,
+                                        overallResult: null,
+                                        scores: ALL_ELEMENTS.map(element => ({
+                                            element,
+                                            grade: null,
+                                            comment: ''
+                                        })),
+                                        isCompleted: false
+                                    };
+                                    
+                                    // Create a mock event for the PT-051 with proper time structure
+                                    const mockEvent: ScheduleEvent = {
+                                        id: newAssessment.eventId,
+                                        flightNumber: newAssessment.flightNumber,
+                                        date: targetDate,
+                                        startTime: 9, // 9 AM (in hours)
+                                        duration: 2, // 2 hours
+                                        type: 'flight', // Changed from 'ground' to enable Core Dimensions
+                                        status: 'Scheduled',
+                                        instructor: '',
+                                        crew: [],
+                                        location: '',
+                                        syllabusId: '',
+                                        syllabusCode: '',
+                                        remarks: '',
+                                        isCompleted: false,
+                                        buildId: '',
+                                        isOracleGenerated: false,
+                                        priority: 0,
+                                        // Add additional fields that might be needed
+                                        student: selectedTraineeForHateSheet!.fullName,
+                                        syllabus: newAssessment.flightNumber,
+                                        aircraft: '',
+                                        notes: ''
+                                    };
+                                    
+                                    // Log the insertion to audit trail
+                                    logAudit('Performance History', 'Insert', `Inserted PT-051 for ${selectedTraineeForHateSheet!.fullName} at position ${insertIndex} on ${targetDate}`);
+                                    
+                                    // Set the event and navigate to PT-051 view
+                                    setEventForPt051(mockEvent);
+                                    handleNavigation('PT051');
                                 }}
                             />;
                 }
@@ -8149,6 +8215,41 @@ updates.forEach(update => {
                         onBack={() => {
                             handleNavigation('HateSheet');
                         }}
+                        onEventUpdate={(updatedEvent) => {
+                            // Update the eventForPt051 state when event is modified
+                            console.log('Updating eventForPt051 with:', updatedEvent);
+                            setEventForPt051(updatedEvent);
+                            
+                            // Also update the main events array if this event exists there
+                            setEvents(prevEvents => {
+                                const eventExists = prevEvents.some(e => e.id === updatedEvent.id);
+                                if (eventExists) {
+                                    return prevEvents.map(e => 
+                                        e.id === updatedEvent.id ? updatedEvent : e
+                                    );
+                                }
+                                return prevEvents;
+                            });
+                        }}
+                        onDeleteAssessment={(assessmentId) => {
+                            console.log('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
+                            // Find and delete the PT-051 assessment
+                            const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+                            console.log('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
+                            setPt051Assessments(prev => {
+                                const newMap = new Map(prev);
+                                const deleted = newMap.delete(assessmentKey);
+                                console.log('🗑️ App.tsx: Assessment deleted from map:', deleted);
+                                return newMap;
+                            });
+                            
+                            // Log PT-051 deletion to audit trail
+                            console.log('📋 App.tsx: Logging to audit...');
+                            logAudit('Performance History', 'Delete', `Deleted PT-051 for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
+                            console.log('✅ App.tsx: Audit logged successfully');
+                            
+                            setSuccessMessage('PT-051 Assessment Deleted!');
+                        }}
                         onSave={(assessment, isAutoSave) => {
                             // Mark assessment as completed when saved (not auto-save)
                             const updatedAssessment = {
@@ -8181,6 +8282,7 @@ updates.forEach(update => {
                         syllabusDetails={syllabusDetails}
                         registerDirtyCheck={registerDirtyCheck}
                         phraseBank={phraseBank} // Pass phraseBank prop
+                        currentUserPin={currentUser?.pin || '1111'}
                     />;
                 }
                 console.error('❌ PT051 View Error - Missing context:', {
