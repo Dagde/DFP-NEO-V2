@@ -6,14 +6,21 @@ interface VisualAdjustGuideProps {
     onTimeChange: (startTime: number, endTime: number) => void;
     scheduleStartHour?: number;
     scheduleEndHour?: number;
+    pixelsPerHour?: number;
+    totalWidth?: number;
 }
 
 export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
     event,
     onTimeChange,
     scheduleStartHour = 0,
-    scheduleEndHour = 24
+    scheduleEndHour = 24,
+    pixelsPerHour = 200,
+    totalWidth
 }) => {
+    console.log('VisualAdjustGuide rendered with event:', event);
+    console.log('pixelsPerHour:', pixelsPerHour);
+    
     const [isDraggingStart, setIsDraggingStart] = useState(false);
     const [isDraggingEnd, setIsDraggingEnd] = useState(false);
     const [currentStartTime, setCurrentStartTime] = useState(event.startTime);
@@ -24,20 +31,16 @@ export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
     
     // Calculate pixel position from time
     const timeToPixels = (time: number): number => {
-        if (!containerRef.current) return 0;
-        const containerWidth = containerRef.current.offsetWidth;
         const relativeTime = time - scheduleStartHour;
-        return (relativeTime / scheduleHours) * containerWidth;
+        return relativeTime * pixelsPerHour;
     };
 
     // Calculate time from pixel position
     const pixelsToTime = (pixels: number): number => {
-        if (!containerRef.current) return scheduleStartHour;
-        const containerWidth = containerRef.current.offsetWidth;
-        const relativeTime = (pixels / containerWidth) * scheduleHours;
+        const relativeTime = pixels / pixelsPerHour;
         const time = scheduleStartHour + relativeTime;
-        // Round to nearest 0.25 (15 minutes)
-        return Math.round(time * 4) / 4;
+        // Round to nearest 5 minutes (5/60 = 0.0833... hours, so multiply by 12)
+        return Math.round(time * 12) / 12;
     };
 
     const handleMouseDown = (isStart: boolean) => (e: React.MouseEvent) => {
@@ -89,12 +92,15 @@ export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
 
     const startX = timeToPixels(currentStartTime);
     const endX = timeToPixels(currentEndTime);
+    
+    console.log('Guide positions - startX:', startX, 'endX:', endX);
+    console.log('Current times - start:', currentStartTime, 'end:', currentEndTime);
 
     return (
         <div 
             ref={containerRef}
             className="absolute inset-0 pointer-events-none"
-            style={{ zIndex: 1000 }}
+            style={{ zIndex: 100 }}
         >
             {/* Start time vertical line */}
             <div

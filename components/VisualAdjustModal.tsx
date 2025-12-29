@@ -23,8 +23,8 @@ export const VisualAdjustModal: React.FC<VisualAdjustModalProps> = ({
     onClose
 }) => {
     return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-end pr-4" onClick={onClose}>
-            <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 transform transition-all animate-fade-in p-4 w-64 mr-8" onClick={e => e.stopPropagation()}>
+        <div className="fixed top-4 right-4 z-50">
+            <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 transform transition-all animate-fade-in p-4 w-64">
                 <h3 className="text-sm font-bold text-white mb-3">Visual Adjust</h3>
                 <div className="space-y-3">
                     <div>

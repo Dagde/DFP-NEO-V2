@@ -978,10 +978,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 
     const handleVisualAdjust = () => {
         console.log("Visual Adjust clicked");
-        setIsVisualAdjustMode(true);
+        // Call parent callback FIRST before changing local state
         if (onVisualAdjustStart) {
             onVisualAdjustStart(event);
         }
+        // Then set local state
+        setIsVisualAdjustMode(true);
     };
 
     const handleVisualAdjustContinue = () => {

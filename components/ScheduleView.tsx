@@ -40,6 +40,9 @@ interface ScheduleViewProps {
   baselineEvents?: ScheduleEvent[];
   isOracleMode: boolean;
   oraclePreviewEvent: ScheduleEvent | null;
+  isVisualAdjustMode?: boolean;
+  visualAdjustEvent?: ScheduleEvent | null;
+  onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
   onOracleMouseDown: (startTime: number, resourceId: string) => void;
   onOracleMouseMove: (startTime: number, resourceId: string) => void;
   onOracleMouseUp: () => void;
@@ -928,6 +931,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             onTimeChange={onVisualAdjustTimeChange}
                             scheduleStartHour={START_HOUR}
                             scheduleEndHour={END_HOUR}
+                            pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                         />
                     )}
                     

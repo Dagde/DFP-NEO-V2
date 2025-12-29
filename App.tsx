@@ -4955,15 +4955,18 @@ const App: React.FC = () => {
     
     // Visual Adjust handlers
     const handleVisualAdjustStart = (event: ScheduleEvent) => {
+        console.log('Visual Adjust Start - Event:', event);
         setIsVisualAdjustMode(true);
         setVisualAdjustEvent(event);
+        console.log('Visual Adjust Mode set to true');
     };
     
     const handleVisualAdjustEnd = (event: ScheduleEvent) => {
         setIsVisualAdjustMode(false);
         setVisualAdjustEvent(null);
-        // Update the event with new times
-        handleSaveEvents([event], false);
+        // Update the selected event so the modal shows the new times
+        setSelectedEvent(event);
+        // The event has already been updated in the events array during dragging
     };
     
     // SCT & REMEDIAL AUTO-ADD SYSTEM
@@ -7225,12 +7228,22 @@ updates.forEach(update => {
                            visualAdjustEvent={visualAdjustEvent}
                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
                                if (visualAdjustEvent) {
+                                   const newDuration = endTime - startTime;
                                    const updatedEvent = {
                                        ...visualAdjustEvent,
                                        startTime,
-                                       duration: endTime - startTime
+                                       duration: newDuration
                                    };
                                    setVisualAdjustEvent(updatedEvent);
+                                   
+                                   // Update the actual event in the events array
+                                   setEvents(prevEvents => 
+                                       prevEvents.map(e => 
+                                           e.id === visualAdjustEvent.id 
+                                               ? { ...e, startTime, duration: newDuration }
+                                               : e
+                                       )
+                                   );
                                }
                            }}
                         />;
@@ -7558,6 +7571,28 @@ updates.forEach(update => {
                             onOracleMouseDown={handleOracleMouseDown}
                             onOracleMouseMove={handleOracleMouseMove}
                             onOracleMouseUp={handleOracleMouseUp}
+                            isVisualAdjustMode={isVisualAdjustMode}
+                            visualAdjustEvent={visualAdjustEvent}
+                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
+                                if (visualAdjustEvent) {
+                                    const newDuration = endTime - startTime;
+                                    const updatedEvent = {
+                                        ...visualAdjustEvent,
+                                        startTime,
+                                        duration: newDuration
+                                    };
+                                    setVisualAdjustEvent(updatedEvent);
+                                    
+                                    // Update the actual event in the next day events array
+                                    setNextDayBuildEvents(prevEvents => 
+                                        prevEvents.map(e => 
+                                            e.id === visualAdjustEvent.id 
+                                                ? { ...e, startTime, duration: newDuration }
+                                                : e
+                                        )
+                                    );
+                                }
+                            }}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu 
@@ -8271,7 +8306,7 @@ updates.forEach(update => {
             {selectedEvent && (
                 <EventDetailModal
                     key={`${selectedEvent.id}-${selectedEvent.instructor || 'no-instructor'}`}
-                    event={selectedEvent}
+                    event={isVisualAdjustMode && visualAdjustEvent ? visualAdjustEvent : selectedEvent}
                     onClose={() => {
                         setSelectedEvent(null);
                         setOracleContextForModal(null);
@@ -8558,4 +8593,4 @@ updates.forEach(update => {
 };
 
 export default App;
-// Force rebuild 1766929254
+// Force rebuild visual-adjust-5min-intervals

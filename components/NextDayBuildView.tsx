@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } 
 import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
+import { VisualAdjustGuide } from './VisualAdjustGuide';
 
 
 interface NextDayBuildViewProps {
@@ -37,6 +38,9 @@ interface NextDayBuildViewProps {
   oraclePreviewEvent: ScheduleEvent | null;
   onOracleMouseDown: (startTime: number, resourceId: string) => void;
   onOracleMouseMove: (startTime: number, resourceId: string) => void;
+  isVisualAdjustMode?: boolean;
+  visualAdjustEvent?: ScheduleEvent | null;
+  onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
   onOracleMouseUp: () => void;
 }
 
@@ -82,7 +86,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, traineesData,
-    isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp
+    isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
+    isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -697,6 +702,17 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     {renderDaylightLines()}
                     {renderCategorySeparators()}
                     {renderEvents()}
+                    
+                    {/* Visual Adjust Guide */}
+                    {isVisualAdjustMode && visualAdjustEvent && onVisualAdjustTimeChange && (
+                        <VisualAdjustGuide
+                            event={visualAdjustEvent}
+                            onTimeChange={onVisualAdjustTimeChange}
+                            scheduleStartHour={START_HOUR}
+                            scheduleEndHour={END_HOUR}
+                            pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
+                        />
+                    )}
                     
                      {isOracleMode && oraclePreviewEvent && (
                         <>
