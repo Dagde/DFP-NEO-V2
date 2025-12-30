@@ -1,11 +1,28 @@
 import React from 'react';
 import AuditButton from './AuditButton';
+import CoursesManagementView from './CoursesManagementView';
+import { Course } from '../types';
+import { NewCourseData } from './AddCourseFlyout';
 
 interface TrainingRecordsViewProps {
-    // Add any props that might be needed
+    courses: Course[];
+    courseColors: { [key: string]: string };
+    archivedCourses: { [key: string]: string };
+    onAddCourse: (data: NewCourseData) => void;
+    onDeleteCourse: (courseName: string, archive: boolean) => void;
+    onNavigateToCourseRoster: (courseName: string) => void;
+    onNavigateToArchivedCourses: () => void;
 }
 
-const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = () => {
+const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
+    courses,
+    courseColors,
+    archivedCourses,
+    onAddCourse,
+    onDeleteCourse,
+    onNavigateToCourseRoster,
+    onNavigateToArchivedCourses
+}) => {
     return (
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
@@ -17,25 +34,16 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = () => {
                     <AuditButton pageName="Training Records" />
                 </div>
             </div>
-            <div className="flex-1 p-6 overflow-y-auto">
-                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
-                    <h2 className="text-xl font-semibold text-white mb-4">Training Records Management</h2>
-                    <p className="text-gray-300 mb-6">
-                        This page will contain training records functionality. Features to be implemented:
-                    </p>
-                    <ul className="list-disc list-inside text-gray-300 space-y-2">
-                        <li>View individual training records</li>
-                        <li>Export training records</li>
-                        <li>Filter and search records</li>
-                        <li>Record completion status</li>
-                        <li>Training compliance tracking</li>
-                    </ul>
-                    <div className="mt-8 p-4 bg-gray-700/50 rounded-md">
-                        <p className="text-gray-400 text-sm">
-                            Training Records page placeholder - functionality to be implemented based on requirements.
-                        </p>
-                    </div>
-                </div>
+            <div className="flex-1 overflow-hidden">
+                <CoursesManagementView
+                    courses={courses}
+                    courseColors={courseColors}
+                    archivedCourses={archivedCourses}
+                    onAddCourse={onAddCourse}
+                    onDeleteCourse={onDeleteCourse}
+                    onNavigateToCourseRoster={onNavigateToCourseRoster}
+                    onNavigateToArchivedCourses={onNavigateToArchivedCourses}
+                />
             </div>
         </div>
     );

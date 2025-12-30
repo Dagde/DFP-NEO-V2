@@ -4421,6 +4421,63 @@ const App: React.FC = () => {
         setPublishedSchedules({ [todayStr]: initialData.events.filter(e => e.date === todayStr) });
     }, [school]);
 
+    // Training Records Handlers
+    const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
+        // Add to courseColors
+        setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
+        
+        // Add to courses array
+        const newCourse: Course = {
+            name: data.number,
+            color: data.color,
+            startDate: data.startDate,
+            gradDate: data.gradDate,
+            raafStart: data.raafStart,
+            navyStart: data.navyStart,
+            armyStart: data.armyStart
+        };
+        setCourses(prev => [...prev, newCourse]);
+        
+        setSuccessMessage(`Course ${data.number} added successfully!`);
+    };
+
+    const handleDeleteCourseFromTrainingRecords = async (courseName: string, archive: boolean) => {
+        const color = courseColors[courseName];
+        if (!color) return;
+
+        if (archive) {
+            // Archive the course
+            const newActive = { ...courseColors };
+            delete newActive[courseName];
+            setCourseColors(newActive);
+            setArchivedCourses(prev => ({ ...prev, [courseName]: color }));
+            
+            // Remove from courses array
+            setCourses(prev => prev.filter(c => c.name !== courseName));
+            
+            setSuccessMessage(`Course ${courseName} archived successfully!`);
+        } else {
+            // Permanently delete the course
+            const newActive = { ...courseColors };
+            delete newActive[courseName];
+            setCourseColors(newActive);
+            
+            // Remove from courses array
+            setCourses(prev => prev.filter(c => c.name !== courseName));
+            
+            setSuccessMessage(`Course ${courseName} deleted permanently!`);
+        }
+    };
+
+    const handleNavigateToCourseRosterFromTrainingRecords = (courseName: string) => {
+        // Navigate to Course Roster view
+        handleNavigation('CourseRoster');
+    };
+
+    const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
+        // Navigate to Course Roster view which has the archived courses toggle
+        handleNavigation('CourseRoster');
+    };
 
     const handleDateChange = (increment: number) => {
         const currentDate = new Date(`${date}T00:00:00Z`);
@@ -7848,7 +7905,15 @@ updates.forEach(update => {
                             onUpdateStartDate={handleUpdateStartDate}
                         />;
             case 'TrainingRecords':
-                return <TrainingRecordsView />;
+                return <TrainingRecordsView 
+                    courses={courses}
+                    courseColors={courseColors}
+                    archivedCourses={archivedCourses}
+                    onAddCourse={handleAddCourseFromTrainingRecords}
+                    onDeleteCourse={handleDeleteCourseFromTrainingRecords}
+                    onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
+                    onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                />;
             case 'ProgramData':
                  return <ProgramDataView
                             date={buildDfpDate}
