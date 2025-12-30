@@ -29,6 +29,7 @@ const ALL_COLORS = [
 ];
 
 const courseTypes = ['ADF', 'FIC', 'WSO', 'IFIC', 'OFI', 'Pilot Conversion'];
+const suffixOptions = ['', 'GS'];
 
 const Dropdown: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; children: React.ReactNode; id: string }> = ({ label, value, onChange, children, id }) => (
     <div>
@@ -48,6 +49,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
     const [courseType, setCourseType] = useState('ADF');
     const [cseCourseNumber, setCseCourseNumber] = useState('');
     const [manualCourseNumber, setManualCourseNumber] = useState('');
+    const [suffix, setSuffix] = useState('');
     
     const [startDate, setStartDate] = useState('');
     const [gradDate, setGradDate] = useState('');
@@ -95,14 +97,14 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
                 alert('Please select an ADF course number.');
                 return;
             }
-            finalCourseName = `ADF${cseCourseNumber}`;
+            finalCourseName = `ADF${cseCourseNumber}${suffix}`;
         } else {
             const trimmedManualNumber = manualCourseNumber.trim();
             if (!trimmedManualNumber) {
                 alert('Please enter a course number.');
                 return;
             }
-            finalCourseName = `${courseType} ${trimmedManualNumber}`;
+            finalCourseName = `${courseType} ${trimmedManualNumber}${suffix}`;
         }
 
         if (Object.keys(existingCourses).includes(finalCourseName)) {
@@ -140,7 +142,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
                 </div>
 
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <Dropdown label="Course Type" id="course-type" value={courseType} onChange={e => setCourseType(e.target.value)}>
                            {courseTypes.map(type => <option key={type} value={type}>{type}</option>)}
                         </Dropdown>
@@ -166,6 +168,14 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
                                 />
                             </div>
                         )}
+
+                        <Dropdown label="Suffix" id="suffix" value={suffix} onChange={e => setSuffix(e.target.value)}>
+                            {suffixOptions.map(option => (
+                                <option key={option} value={option}>
+                                    {option || 'None'}
+                                </option>
+                            ))}
+                        </Dropdown>
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-400">Allocated Colour</label>
