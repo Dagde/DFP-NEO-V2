@@ -703,21 +703,21 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     const renderCurrentTimeIndicator = () => {
         // Create timezone-adjusted date string for comparison
-        const getLocalDateStringFromTime = (date: Date): string => {
-            // Apply timezone offset
-            const offsetMs = timezoneOffset * 60 * 60 * 1000;
-            const adjustedDate = new Date(date.getTime() + offsetMs);
-            
-            const year = adjustedDate.getUTCFullYear();
-            const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+        // Since currentTime is already timezone-adjusted, we need to get the date from it
+        const getLocalDateStringFromAdjustedTime = (date: Date): string => {
+            // The date parameter is already timezone-adjusted, so just extract UTC components
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         };
         
-        const todayStr = getLocalDateStringFromTime(new Date());
+        // Use the timezone-adjusted currentTime to get today's string
+        const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
         if (date !== todayStr) return null;
         
         const now = currentTime;
+        // Use UTC methods since currentTime is already timezone-adjusted
         const currentHour = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
         if (currentHour < START_HOUR || currentHour > END_HOUR) return null;
         const leftPosition = (currentHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
