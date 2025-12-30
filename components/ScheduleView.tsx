@@ -702,12 +702,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const renderCurrentTimeIndicator = () => {
-        // Use timezone-adjusted date for comparison
-        const todayStr = currentTime.toISOString().split('T')[0];
+        // Create timezone-adjusted date string for comparison
+        const getLocalDateStringFromTime = (date: Date): string => {
+            // Apply timezone offset
+            const offsetMs = timezoneOffset * 60 * 60 * 1000;
+            const adjustedDate = new Date(date.getTime() + offsetMs);
+            
+            const year = adjustedDate.getUTCFullYear();
+            const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        const todayStr = getLocalDateStringFromTime(new Date());
         if (date !== todayStr) return null;
         
         const now = currentTime;
-        const currentHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+        const currentHour = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
         if (currentHour < START_HOUR || currentHour > END_HOUR) return null;
         const leftPosition = (currentHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
         return (
