@@ -7244,14 +7244,21 @@ updates.forEach(update => {
                                    };
                                    setVisualAdjustEvent(updatedEvent);
                                    
-                                   // Update the actual event in the events array
-                                   setEvents(prevEvents => 
-                                       prevEvents.map(e => 
-                                           e.id === visualAdjustEvent.id 
-                                               ? { ...e, startTime, duration: newDuration }
-                                               : e
-                                       )
-                                   );
+                                   // Update the actual event in the publishedSchedules
+                                   setPublishedSchedules(prevSchedules => {
+                                       const updatedSchedules = { ...prevSchedules };
+                                       const dateKey = date;
+                                       
+                                       if (updatedSchedules[dateKey]) {
+                                           updatedSchedules[dateKey] = updatedSchedules[dateKey].map(e => 
+                                               e.id === visualAdjustEvent.id 
+                                                   ? { ...e, startTime, duration: newDuration }
+                                                   : e
+                                           );
+                                       }
+                                       
+                                       return updatedSchedules;
+                                   });
                                }
                            }}
                         />;
