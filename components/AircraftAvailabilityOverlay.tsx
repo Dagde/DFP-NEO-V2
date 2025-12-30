@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
-import { calculateDailyAverageAvailability, formatDate } from '../utils/aircraftAvailabilityUtils';
+import { calculateDailyAverageAvailability, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
 
 import { logAudit } from '../utils/auditLogger';
 interface AircraftAvailabilityOverlayProps {
@@ -44,12 +44,12 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             })));
             setCurrentAvailable(data.snapshots[data.snapshots.length - 1]?.available || plannedAvailability);
         } else {
-            // Initialize with planned availability
+            // Initialize with planned availability at start of day (0001)
             const initialSnapshot: AircraftAvailabilitySnapshot = {
-                timestamp: (() => { const dayStart = new Date(currentDate); dayStart.setHours(8, 0, 0, 0); return dayStart; })(),
+                timestamp: (() => { const dayStart = new Date(currentDate); dayStart.setHours(0, 0, 1, 0); return dayStart; })(),
                 available: plannedAvailability,
                 total: totalAircraft,
-                notes: 'Initial planned availability'
+                notes: 'Initial planned availability at start of day'
             };
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
@@ -69,7 +69,15 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     // Save and calculate average whenever snapshots change
     useEffect(() => {
         if (snapshots.length > 0) {
-            const avg = calculateDailyAverageAvailability(snapshots, dayFlyingStart, dayFlyingEnd);
+            // Convert snapshots to timeline format for calculation
+            const timeline = convertSnapshotsToTimeline(snapshots);
+            
+            // Calculate average only using data within flying window
+            const avg = calculateDailyAverageAvailability(
+                timeline, 
+                dayFlyingStart.replace(':', ''), 
+                dayFlyingEnd.replace(':', '')
+            );
 
             const record: DailyAvailabilityRecord = {
                 date: formatDate(currentDate),
@@ -326,8 +334,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 continue;
             }
             
-               const startX = snapshotX;
-               const endX = i === filteredSnapshots.length - 1 ? currentTimeX : getXPosition(filteredSnapshots[i + 1].timestamp);
+            // For the first snapshot, start from the beginning of the day (0 hours)
+            const startX = i === 0 ? 0 : snapshotX;
+            const endX = i === filteredSnapshots.length - 1 ? currentTimeX : getXPosition(filteredSnapshots[i + 1].timestamp);
             const y = getYPosition(snapshot.available);
             
             // Only log specific lines to reduce spam
