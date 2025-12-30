@@ -1168,8 +1168,20 @@ const generateDataSet = (location: 'ESL' | 'PEA') => {
     // Simulate Scores/Progress
     const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
 
-    // Generate Events for today
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Generate Events for today (timezone-aware to match App.tsx logic)
+    const getLocalDateString = (date: Date = new Date()): string => {
+        // Apply timezone offset (same as App.tsx - default UTC+11)
+        const timezoneOffset = 11; // Default to UTC+11 (AEDT)
+        const offsetMs = timezoneOffset * 60 * 60 * 1000;
+        const adjustedDate = new Date(date.getTime() + offsetMs);
+        
+        const year = adjustedDate.getUTCFullYear();
+        const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    const todayStr = getLocalDateString();
     let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
     
     // Add Historical Events

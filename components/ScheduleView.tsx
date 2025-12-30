@@ -134,7 +134,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
+    // Initialize with timezone-adjusted time
+    const [currentTime, setCurrentTime] = useState(() => {
+        const now = new Date();
+        const offsetMs = timezoneOffset * 60 * 60 * 1000;
+        return new Date(now.getTime() + offsetMs);
+    });
     const isInitialLoad = useRef(true);
     const prevZoomLevelRef = useRef(zoomLevel);
 
@@ -156,6 +161,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         
         return () => clearInterval(interval);
     }, [timezoneOffset]);
+    
+    
 
     const [draggingState, setDraggingState] = useState<{
         mainEventId: string;
@@ -178,7 +185,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
 
     useEffect(() => {
-        const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
+        const timerId = setInterval(() => {
+            const now = new Date();
+            const offsetMs = timezoneOffset * 60 * 60 * 1000;
+            const adjustedTime = new Date(now.getTime() + offsetMs);
+            setCurrentTime(adjustedTime);
+        }, 1000);
         
         // Global drag handlers
         const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -714,13 +726,16 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         
         // Use the timezone-adjusted currentTime to get today's string
         const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
+        
         if (date !== todayStr) return null;
         
         const now = currentTime;
         // Use UTC methods since currentTime is already timezone-adjusted
         const currentHour = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
         if (currentHour < START_HOUR || currentHour > END_HOUR) return null;
+        
         const leftPosition = (currentHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+        
         return (
             <div 
                 className="absolute top-0 h-full z-[30] pointer-events-none"
