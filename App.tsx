@@ -88,6 +88,7 @@ import { PostFlightView } from './components/PostFlightView';
 import TraineeLmpView from './components/TraineeLmpView';
 import AddRemedialPackageFlyout from './components/AddRemedialPackageFlyout';
 import CourseProgressView from './components/CourseProgressView';
+import TrainingRecordsView from './components/TrainingRecordsView';
 import NightFlyingInfoFlyout from './components/NightFlyingInfoFlyout';
 import NeoRemedyFlyout from './components/NeoRemedyFlyout';
 import UnavailabilityReportModal from './components/UnavailabilityReportModal';
@@ -7846,6 +7847,8 @@ updates.forEach(update => {
                             onUpdateGradDate={handleUpdateGradDate}
                             onUpdateStartDate={handleUpdateStartDate}
                         />;
+            case 'TrainingRecords':
+                return <TrainingRecordsView />;
             case 'ProgramData':
                  return <ProgramDataView
                             date={buildDfpDate}

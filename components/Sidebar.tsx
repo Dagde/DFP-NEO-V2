@@ -85,6 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     // Staff and Trainee are now handled manually below
     { id: 'Syllabus', label: 'Syllabus' },
     { id: 'CourseProgress', label: 'Course Progress' },
+    { id: 'TrainingRecords', label: 'Training Records' },
   ];
   
   const handleSaveCourse = (data: NewCourseData) => {
@@ -253,7 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           
           {views.map(view => (
               <button key={view.id} onClick={() => onNavigate(view.id)} className={`w-full text-left px-4 py-1 text-sm font-medium flex items-center space-x-3 btn-aluminium-brushed rounded-md ${activeView === view.id && !isAnyDashboardActive ? 'active' : ''}`}>
-                <span>{view.label}</span>
+                <span className={view.id === 'TrainingRecords' ? 'text-xs' : ''}>{view.label}</span>
               </button>
           ))}
           
