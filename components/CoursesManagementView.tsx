@@ -27,7 +27,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const [showPinDialog, setShowPinDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
 
-    // Group courses by type
+    // Group courses by type (only active courses, not archived)
     const groupedCourses = useMemo(() => {
         const groups: { [key: string]: Course[] } = {
             'ADF': [],
@@ -39,7 +39,10 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
             'Other': []
         };
 
-        courses.forEach(course => {
+        // Filter out archived courses
+        const activeCourses = courses.filter(course => courseColors.hasOwnProperty(course.name));
+
+        activeCourses.forEach(course => {
             if (course.name.startsWith('ADF')) {
                 groups['ADF'].push(course);
             } else if (course.name.startsWith('FIC')) {
@@ -65,7 +68,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         });
 
         return groups;
-    }, [courses]);
+    }, [courses, courseColors]);
 
     const handleDeleteClick = async (courseName: string) => {
         setCourseToDelete(courseName);

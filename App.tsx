@@ -89,6 +89,7 @@ import TraineeLmpView from './components/TraineeLmpView';
 import AddRemedialPackageFlyout from './components/AddRemedialPackageFlyout';
 import CourseProgressView from './components/CourseProgressView';
 import TrainingRecordsView from './components/TrainingRecordsView';
+import ArchivedCoursesView from './components/ArchivedCoursesView';
 import NightFlyingInfoFlyout from './components/NightFlyingInfoFlyout';
 import NeoRemedyFlyout from './components/NeoRemedyFlyout';
 import UnavailabilityReportModal from './components/UnavailabilityReportModal';
@@ -4475,8 +4476,41 @@ const App: React.FC = () => {
     };
 
     const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
-        // Navigate to Course Roster view which has the archived courses toggle
-        handleNavigation('CourseRoster');
+        // Navigate to Archived Courses view
+        handleNavigation('ArchivedCourses');
+    };
+
+    const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
+        const color = archivedCourses[courseName];
+        if (!color) return;
+
+        // Remove from archived courses
+        const newArchived = { ...archivedCourses };
+        delete newArchived[courseName];
+        setArchivedCourses(newArchived);
+
+        // Add back to active courses
+        setCourseColors(prev => ({ ...prev, [courseName]: color }));
+
+        // Add back to courses array (recreate from mock data)
+        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
+        if (courseFromMockData) {
+            setCourses(prev => [...prev, courseFromMockData]);
+        }
+
+        setSuccessMessage(`Course ${courseName} unarchived successfully!`);
+    };
+
+    const handleDeleteCourseFromArchivedView = async (courseName: string) => {
+        // Remove from archived courses
+        const newArchived = { ...archivedCourses };
+        delete newArchived[courseName];
+        setArchivedCourses(newArchived);
+
+        // Remove from courses array if it exists there
+        setCourses(prev => prev.filter(c => c.name !== courseName));
+
+        setSuccessMessage(`Course ${courseName} deleted permanently!`);
     };
 
     const handleDateChange = (increment: number) => {
@@ -7913,6 +7947,13 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                />;
+            case 'ArchivedCourses':
+                return <ArchivedCoursesView 
+                    archivedCourses={archivedCourses}
+                    onUnarchiveCourse={handleUnarchiveCourseFromArchivedView}
+                    onDeleteCourse={handleDeleteCourseFromArchivedView}
+                    onNavigateBack={() => handleNavigation('TrainingRecords')}
                 />;
             case 'ProgramData':
                  return <ProgramDataView
