@@ -18,7 +18,7 @@ const RestoreCourseConfirmation: React.FC<RestoreCourseConfirmationProps> = ({ c
                 </div>
 
                 <div className="p-6 space-y-4">
-                    <p className="text-gray-300">Are you sure you want to restore <span className="font-bold text-white">CSE {courseNumber}</span> to the active courses list?</p>
+                    <p className="text-gray-300">Are you sure you want to restore <span className="font-bold text-white">ADF{courseNumber}</span> to the active courses list?</p>
                 </div>
 
                 <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">

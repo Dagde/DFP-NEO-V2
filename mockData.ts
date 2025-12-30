@@ -748,13 +748,13 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
 
 // --- COURSE PROGRESS & SCORE SIMULATION ---
 const courseProgressRanges: { [key: string]: { start: string; end: string } } = {
-  'CSE 301': { start: 'BIF4', end: 'BGF23' },
-  'CSE 302': { start: 'BGF15', end: 'BIF4' },
-  'CSE 303': { start: 'BGF6', end: 'BGF17' },
+  'ADF301': { start: 'BIF4', end: 'BGF23' },
+  'ADF302': { start: 'BGF15', end: 'BIF4' },
+  'ADF303': { start: 'BGF6', end: 'BGF17' },
   'FIC 210': { start: 'BGF1', end: 'BGF5' },
   'FIC211': { start: 'BGF1', end: 'BGF10' },
-  'CSE 304': { start: 'BGF1', end: 'BGF10' },
-  'CSE 305': { start: 'BGF5', end: 'BGF15' },
+  'ADF304': { start: 'BGF1', end: 'BGF10' },
+  'ADF305': { start: 'BGF5', end: 'BGF15' },
   'IFF 6': { start: 'BIF1', end: 'BIF5' },
 };
 
@@ -1132,16 +1132,16 @@ const generateHistoricalEvents = (instructors: Instructor[], trainees: Trainee[]
 // --- EXPORTED DATA ---
 
 const eslCourses: Course[] = [
-    { name: 'CSE 301', color: 'bg-sky-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 15, navyStart: 5, armyStart: 5 },
-    { name: 'CSE 302', color: 'bg-purple-400/50', startDate: '2025-07-01', gradDate: '2026-04-01', raafStart: 18, navyStart: 7, armyStart: 0 },
-    { name: 'CSE 303', color: 'bg-yellow-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 20, navyStart: 5, armyStart: 0 },
+    { name: 'ADF301', color: 'bg-sky-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 15, navyStart: 5, armyStart: 5 },
+    { name: 'ADF302', color: 'bg-purple-400/50', startDate: '2025-07-01', gradDate: '2026-04-01', raafStart: 18, navyStart: 7, armyStart: 0 },
+    { name: 'ADF303', color: 'bg-yellow-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 20, navyStart: 5, armyStart: 0 },
     { name: 'FIC 210', color: 'bg-pink-400/50', startDate: '2025-10-01', gradDate: '2026-04-01', raafStart: 4, navyStart: 0, armyStart: 0 },
        { name: 'FIC211', color: 'bg-orange-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
    ];
 
 const peaCourses: Course[] = [
-    { name: 'CSE 304', color: 'bg-teal-400/50', startDate: '2023-02-15', gradDate: '2023-07-20', raafStart: 12, navyStart: 0, armyStart: 0 },
-    { name: 'CSE 305', color: 'bg-indigo-400/50', startDate: '2023-04-10', gradDate: '2023-10-05', raafStart: 10, navyStart: 2, armyStart: 0 },
+    { name: 'ADF304', color: 'bg-teal-400/50', startDate: '2023-02-15', gradDate: '2023-07-20', raafStart: 12, navyStart: 0, armyStart: 0 },
+    { name: 'ADF305', color: 'bg-indigo-400/50', startDate: '2023-04-10', gradDate: '2023-10-05', raafStart: 10, navyStart: 2, armyStart: 0 },
     { name: 'IFF 6', color: 'bg-cyan-400/50', startDate: '2023-06-01', gradDate: '2023-08-15', raafStart: 4, navyStart: 0, armyStart: 0 },
        { name: 'FIC211', color: 'bg-orange-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
 ];

@@ -22,9 +22,10 @@ interface SidebarProps {
 
 const formatCourseName = (name: string): string => {
   if (name.startsWith('Course ')) {
-    return name.replace('Course ', 'CSE');
+    return name.replace('Course ', 'ADF');
   }
-  return name.replace(' ', '');
+  // Replace CSE with ADF for display, remove spaces
+  return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange }) => {

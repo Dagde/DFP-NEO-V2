@@ -28,7 +28,7 @@ const ALL_COLORS = [
     'bg-blue-400/50',     // Blue
 ];
 
-const courseTypes = ['CSE', 'FIC', 'WSO', 'IFIC', 'OFI', 'Pilot Conversion'];
+const courseTypes = ['ADF', 'FIC', 'WSO', 'IFIC', 'OFI', 'Pilot Conversion'];
 
 const Dropdown: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; children: React.ReactNode; id: string }> = ({ label, value, onChange, children, id }) => (
     <div>
@@ -45,7 +45,7 @@ const Dropdown: React.FC<{ label: string; value: string | number; onChange: (e: 
 );
 
 const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, existingCourses }) => {
-    const [courseType, setCourseType] = useState('CSE');
+    const [courseType, setCourseType] = useState('ADF');
     const [cseCourseNumber, setCseCourseNumber] = useState('');
     const [manualCourseNumber, setManualCourseNumber] = useState('');
     
@@ -64,9 +64,10 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
 
     const cseCourseNumberOptions = useMemo(() => {
         const options = [];
+        // Accept both CSE and ADF prefixes for backward compatibility
         const existingCseNumbers = Object.keys(existingCourses)
-            .filter(name => name.startsWith('CSE '))
-            .map(name => name.replace('CSE ', ''));
+            .filter(name => name.startsWith('CSE ') || name.startsWith('ADF'))
+            .map(name => name.replace(/^(CSE|ADF)\s*/i, ''));
             
         for (let i = 290; i <= 500; i++) {
             if (!existingCseNumbers.includes(String(i))) {
@@ -79,7 +80,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
     const studentNumberOptions = useMemo(() => Array.from({ length: 41 }, (_, i) => i), []);
     
     useEffect(() => {
-        if (courseType === 'CSE' && cseCourseNumberOptions.length > 0) {
+        if (courseType === 'ADF' && cseCourseNumberOptions.length > 0) {
             setCseCourseNumber(String(cseCourseNumberOptions[0]));
         } else {
             setCseCourseNumber('');
@@ -89,12 +90,12 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
     const handleSave = () => {
         let finalCourseName: string;
 
-        if (courseType === 'CSE') {
+        if (courseType === 'ADF') {
             if (!cseCourseNumber) {
-                alert('Please select a CSE course number.');
+                alert('Please select an ADF course number.');
                 return;
             }
-            finalCourseName = `CSE ${cseCourseNumber}`;
+            finalCourseName = `ADF${cseCourseNumber}`;
         } else {
             const trimmedManualNumber = manualCourseNumber.trim();
             if (!trimmedManualNumber) {
@@ -144,7 +145,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
                            {courseTypes.map(type => <option key={type} value={type}>{type}</option>)}
                         </Dropdown>
 
-                        {courseType === 'CSE' ? (
+                        {courseType === 'ADF' ? (
                              <Dropdown label="Course Number" id="course-number" value={cseCourseNumber} onChange={e => setCseCourseNumber(e.target.value)}>
                                 {cseCourseNumberOptions.length > 0 ? (
                                     cseCourseNumberOptions.map(n => <option key={n} value={n}>{n}</option>)
