@@ -2959,7 +2959,7 @@ const App: React.FC = () => {
     // Timezone offset state (in hours, e.g., +11 for AEDT)
     const [timezoneOffset, setTimezoneOffset] = useState<number>(() => {
         const saved = localStorage.getItem('timezoneOffset');
-        return saved ? parseFloat(saved) : 0;
+        return saved ? parseFloat(saved) : 11; // Default to UTC+11 (AEDT)
     });
 
     // Validation Settings State
@@ -7347,6 +7347,7 @@ updates.forEach(update => {
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
                            traineesData={traineesData}
+                           timezoneOffset={timezoneOffset}
                            airframeCount={24}
                            standbyCount={4}
                            ftdCount={availableFtdCount}

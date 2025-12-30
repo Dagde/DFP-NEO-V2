@@ -16,6 +16,7 @@ interface ScheduleViewProps {
   resources: string[];
   instructors: string[];
   traineesData: Trainee[];
+  timezoneOffset?: number;
   airframeCount: number;
   standbyCount: number;
   ftdCount: number;
@@ -128,13 +129,33 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange
+    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
     const isInitialLoad = useRef(true);
     const prevZoomLevelRef = useRef(zoomLevel);
+
+    // Update current time when timezone offset changes
+    useEffect(() => {
+        const updateTime = () => {
+            const now = new Date();
+            // Apply timezone offset
+            const offsetMs = timezoneOffset * 60 * 60 * 1000;
+            const adjustedTime = new Date(now.getTime() + offsetMs);
+            setCurrentTime(adjustedTime);
+        };
+
+        // Update immediately
+        updateTime();
+        
+        // Update every second
+        const interval = setInterval(updateTime, 1000);
+        
+        return () => clearInterval(interval);
+    }, [timezoneOffset]);
 
     const [draggingState, setDraggingState] = useState<{
         mainEventId: string;
@@ -681,7 +702,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     const renderCurrentTimeIndicator = () => {
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Use timezone-adjusted date for comparison
+        const todayStr = currentTime.toISOString().split('T')[0];
         if (date !== todayStr) return null;
         
         const now = currentTime;
