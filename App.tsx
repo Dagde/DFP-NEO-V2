@@ -3439,6 +3439,15 @@ const App: React.FC = () => {
         localStorage.setItem('timezoneOffset', timezoneOffset.toString());
     }, [timezoneOffset]);
 
+    // Update current date when timezone changes
+    useEffect(() => {
+        const currentDateStr = getLocalDateString();
+        if (date !== currentDateStr) {
+            console.log('\ud83d\udcc5 Updating current date from', date, 'to', currentDateStr, 'due to timezone change');
+            setDate(currentDateStr);
+        }
+    }, [timezoneOffset]); // Re-run when timezone changes
+
     // FTD available count is now managed by user input in PrioritiesView
     // Default initialization is handled in useState declaration
 

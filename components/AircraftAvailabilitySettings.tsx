@@ -188,13 +188,13 @@ const AircraftAvailabilitySettings: React.FC<AircraftAvailabilitySettingsProps> 
         const recalc = isToday 
             ? calculateCurrentDayAvailability(
                 timeline,
-                record.dayFlyingStart ? record.dayFlyingStart.replace(":", "") : "0800",
-                record.dayFlyingEnd ? record.dayFlyingEnd.replace(":", "") : "1700"
+                record.dayFlyingStart || "08:00",
+                record.dayFlyingEnd || "17:00"
               )
             : calculateDailyAverageAvailability(
                 timeline,
-                record.dayFlyingStart ? record.dayFlyingStart.replace(":", "") : "0800",
-                record.dayFlyingEnd ? record.dayFlyingEnd.replace(":", "") : "1700"
+                record.dayFlyingStart || "08:00",
+                record.dayFlyingEnd || "17:00"
               );
 
         const now = new Date();
@@ -351,13 +351,13 @@ const AircraftAvailabilitySettings: React.FC<AircraftAvailabilitySettingsProps> 
                                 const calculatedValue = isToday 
                                     ? calculateCurrentDayAvailability(
                                         timeline,
-                                        record.dayFlyingStart ? record.dayFlyingStart.replace(":", "") : "0800",
-                                        record.dayFlyingEnd ? record.dayFlyingEnd.replace(":", "") : "1700"
+                                        record.dayFlyingStart || "08:00",
+                                        record.dayFlyingEnd || "17:00"
                                       )
                                     : calculateDailyAverageAvailability(
                                         timeline,
-                                        record.dayFlyingStart ? record.dayFlyingStart.replace(":", "") : "0800",
-                                        record.dayFlyingEnd ? record.dayFlyingEnd.replace(":", "") : "1700"
+                                        record.dayFlyingStart || "08:00",
+                                        record.dayFlyingEnd || "17:00"
                                       );
                                 
                                 return (
