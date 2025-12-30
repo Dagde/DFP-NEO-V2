@@ -297,10 +297,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                 <div>
                     <h1 className="text-2xl font-bold text-white">Performance History</h1>
                     <p className="text-sm text-gray-400">{trainee.rank} {trainee.name || trainee.fullName} - {trainee.course}</p>
-                    {/* Debug display */}
-                    <div className="text-xs text-yellow-400 mt-1">
-                        DEBUG: Dragging={isDragging ? 'YES' : 'NO'} | Highlighted Row={highlightedIndex !== null ? highlightedIndex + 1 : 'NONE'}
-                    </div>
+                    
                 </div>
                    <div className="flex items-center gap-2">
                 <button
