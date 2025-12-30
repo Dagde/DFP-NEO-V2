@@ -8,6 +8,7 @@ import CurrencyBuilderView from './components/CurrencyBuilderView';
    import { seedTestAuditLogs } from './utils/seedAuditLogs';
    import { logAudit, setCurrentUser } from './utils/auditLogger';
    import { debouncedAuditLog } from './utils/auditDebounce';
+   import DarkMessageModal from './components/DarkMessageModal';
 
 
 // Import types
@@ -2982,6 +2983,43 @@ const App: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
+    // Dark Message Modal utility functions
+    const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info') => {
+        return new Promise<void>((resolve) => {
+            setDarkMessageModal({
+                type: 'alert',
+                title,
+                message,
+                variant,
+                onConfirm: () => {
+                    setDarkMessageModal(null);
+                    resolve();
+                }
+            });
+        });
+    };
+
+    const showDarkConfirm = (message: string, title: string = 'Confirm', variant: 'error' | 'warning' | 'info' | 'success' = 'warning'): Promise<boolean> => {
+        return new Promise((resolve) => {
+            setDarkMessageModal({
+                type: 'confirm',
+                title,
+                message,
+                variant,
+                onConfirm: () => {
+                    setDarkMessageModal(null);
+                    resolve(true);
+                },
+                onCancel: () => {
+                    setDarkMessageModal(null);
+                    resolve(false);
+                },
+                confirmText: 'Yes',
+                cancelText: 'Cancel'
+            });
+        });
+    };
+
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => getLocalDateString());
@@ -2995,6 +3033,18 @@ const App: React.FC = () => {
     const [isMagnifierEnabled, setIsMagnifierEnabled] = useState(false);
     const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
     const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+    
+    // Dark Message Modal state
+    const [darkMessageModal, setDarkMessageModal] = useState<{
+        type: 'alert' | 'confirm';
+        title: string;
+        message: string;
+        variant?: 'error' | 'warning' | 'info' | 'success';
+        onConfirm?: () => void;
+        onCancel?: () => void;
+        confirmText?: string;
+        cancelText?: string;
+    } | null>(null);
     
     // Visual Adjust state
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
@@ -4628,7 +4678,7 @@ const App: React.FC = () => {
                 );
                 
                 if (!dayNightCheck.isAllowed) {
-                    alert(`❌ DAY/NIGHT SEPARATION VIOLATION DETECTED!\n\n${dayNightCheck.reason}\n\nThis is a hard rule that cannot be violated. The event will not be saved.`);
+                    showDarkAlert(`\u274c DAY/NIGHT SEPARATION VIOLATION DETECTED!\n\n${dayNightCheck.reason}\n\nThis is a hard rule that cannot be violated. The event will not be saved.`, "Day/Night Separation Violation", "error");
                     console.log('SAVE BLOCKED - Day/Night separation violation:', dayNightCheck.reason);
                     return; // Block the save
                 }
@@ -5719,7 +5769,7 @@ const App: React.FC = () => {
         if(nextDayBuildEvents.length > 0) {
             setShowPublishConfirm(true);
         } else {
-            alert("No DFP has been built to publish. Please run 'Build DFP' first.");
+            showDarkAlert("No DFP has been built to publish. Please run 'Build DFP' first.", 'Publish Error', 'warning');
         }
     };
 
@@ -8695,6 +8745,20 @@ updates.forEach(update => {
                     }}
                     currencyNames={['Instrument', 'Night', 'Multi-Engine', 'Formation']}
                     sctEvents={sctEvents}
+                />
+            )}
+            
+            {/* Dark Message Modal for replacing browser alerts and confirms */}
+            {darkMessageModal && (
+                <DarkMessageModal
+                    type={darkMessageModal.type}
+                    title={darkMessageModal.title}
+                    message={darkMessageModal.message}
+                    variant={darkMessageModal.variant}
+                    onConfirm={darkMessageModal.onConfirm}
+                    onCancel={darkMessageModal.onCancel}
+                    confirmText={darkMessageModal.confirmText}
+                    cancelText={darkMessageModal.cancelText}
                 />
             )}
         </div>

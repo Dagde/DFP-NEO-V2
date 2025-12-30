@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Trainee, Score, Pt051Assessment } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
+import { showDarkConfirm } from './DarkMessageModal';
 
 // Define ALL_ELEMENTS to match PT051View
 const PT051_STRUCTURE = [
@@ -230,7 +231,8 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         // Confirm deletion
         const confirmMessage = `Are you sure you want to delete this PT-051 assessment?\n\nDate: ${assessmentToDelete.date}\nGrade: ${assessmentToDelete.overallGrade || 'N/A'}\nEvent: ${assessmentToDelete.flightNumber || 'N/A'}\n\nThis action cannot be undone.`;
         
-        const confirmed = confirm(confirmMessage);
+        // Use custom dark confirm modal instead of browser default
+        const confirmed = await showDarkConfirm(confirmMessage);
         console.log('🤔 User confirmed deletion:', confirmed);
         if (!confirmed) return;
 

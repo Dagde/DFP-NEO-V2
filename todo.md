@@ -1,58 +1,47 @@
-## Completed Tasks
+# PT051 Instructor Window Enhancement - COMPLETED
 
-### ✅ Custom Unavailability Display Fix - Multi-day Time Ranges
-**Date**: 2025-12-17
-**Issue**: Custom unavailability periods were not displaying correct time ranges for multi-day periods
-**Solution**: 
-- Fixed `createUnavailabilityEvents` function in both `InstructorScheduleView.tsx` and `TraineeScheduleView.tsx`
-- **Start Day**: Now shows from custom start time to 2359 (or full day if single day)
-- **End Day**: Now shows from 0001 to custom end time  
-- **Middle Days**: Continue to show full day unavailability (0001-2359)
-- **Single Day**: Uses custom start and end times properly
-**Deployment**: https://sites.super.myninja.ai/d9db0e8f-9740-4599-bd24-0c029e49bfcf/b989d06a/index.html
-**Git Commit**: 9975f06 - "Fix custom unavailability time display for multi-day periods"
+## ✅ Requirements Implemented
+- **Mirror Functionality**: The 2 instructor windows (Instructor field and QFI field) now mirror each other
+- **Dropdown List**: Added dropdown list of all instructors from the Trainee's unit
+- **Manual Entry**: Users can still manually enter instructor names alongside dropdown selection
 
-### ✅ Comprehensive Unavailability Validation System
-**Date**: 2025-12-17
-**Issue**: No validation system for unavailability data entry
-**Solution**: 
-- Created comprehensive validation with detailed error messages and remediation
-- Added real-time validation feedback with field highlighting
-- Implemented warning system for potential issues
-- Created ValidationErrorDisplay component for user-friendly errors
-**Deployment**: https://sites.super.myninja.ai/d9db0e8f-9740-4599-bd24-0c029e49bfcf/d89706a5/index.html
-**Git Commit**: c8b220c - "Implement comprehensive unavailability validation system"
+## ✅ Technical Changes Made
 
-### ✅ Dual/Solo Implementation from Individual LMP - COMPLETED
-**Date**: 2025-12-17
-**Requirements Met**:
-1. ✅ Renamed "Type" to "Dual/Solo" in Flight Details modal
-2. ✅ Takes Dual/Solo from Individual LMP "sortieType" field
-3. ✅ For Solo events: Sets trainee as PIC, clears crew field
-4. ✅ Applied to NEO events and Add Tile (auto from Individual LMP)
-5. ✅ SCT events: Staff always PIC (Dual/Solo override retained)
-6. ✅ Updated Individual LMP to match Master LMP fields
-7. ✅ Retained completion history (mock data)
+### 1. Enhanced PT051View Component (`./components/PT051View.tsx`)
 
-**Implementation Completed**:
-- ✅ Added flightType state and dropdown to EventDetailModal
-- ✅ Renamed "Type" label to "Dual/Solo" 
-- ✅ Implemented Individual LMP field updates to match Master LMP
-- ✅ Added logic to auto-set Dual/Solo from Individual LMP
-- ✅ Implemented Solo PIC assignment logic (trainee as PIC, clear crew)
-- ✅ Updated NEO scheduling to use Individual LMP sortieType
-- ✅ Updated Add Tile to auto-set from Individual LMP
-- ✅ Tested SCT exception logic (Staff always PIC)
-- ✅ Ensured override capability is retained
+**New Functionality:**
+- `unitInstructors` memoized filter to get instructors from trainee's unit
+- `handleInstructorNameChange()` function with mirroring logic
+- Enhanced `handleCommentFieldChange()` with QFI → instructorName mirroring
 
-**Features Implemented**:
-- 🎯 Automatic Dual/Solo detection from Individual LMP
-- ✈️ Solo logic: Trainee as PIC, crew cleared automatically
-- 🔄 Manual override capability retained for flexibility
-- 📋 Individual LMP now matches Master LMP fields
-- 🚀 NEO events use Individual LMP sortieType
-- 📝 Add Tile auto-sets from Individual LMP
-- 🎮 SCT preserves existing Staff PIC logic
+**UI Enhancements:**
+- **Instructor Field**: Added dropdown + manual input side by side
+- **QFI Field**: Added dropdown + manual input side by side  
+- **Real-time Mirroring**: Changes in either field instantly update the other
+- **Unit Filtering**: Dropdowns only show instructors from the trainee's unit
+- **Preserved Voice Input**: Voice input functionality still available for QFI field
 
-**Deployment**: https://sites.super.myninja.ai/d9db0e8f-9740-4599-bd24-0c029e49bfcf/9d68335b/index.html
-**Git Commit**: 7092d66 - "Implement comprehensive Dual/Solo system from Individual LMP"
+### 2. Mirroring Logic
+- When QFI field changes → automatically updates Instructor field
+- When Instructor field changes → automatically updates QFI field
+- Both fields maintain perfect synchronization
+
+### 3. Unit-Based Filtering
+- Uses `trainee.unit` to filter `instructors` array
+- Only shows instructors belonging to the same unit as the trainee
+- Falls back to manual entry if needed instructor not in same unit
+
+## ✅ Application Status
+- **Build**: ✅ Successful (no errors)
+- **Running**: ✅ Development server on port 5174
+- **Public URL**: ✅ https://5174-5df2e322-2e3a-4f26-ae97-c54eb596620b.sandbox-service.public.prod.myninja.ai
+- **Features**: ✅ All requirements fully implemented and tested
+
+## 🎯 User Experience Improvements
+1. **Consistency**: Instructor names are now consistent across the PT051 form
+2. **Efficiency**: Quick selection from dropdown while maintaining manual entry flexibility
+3. **Unit Relevance**: Only relevant instructors (from same unit) are shown
+4. **Time-saving**: No need to enter instructor name twice
+5. **Error Prevention**: Mirroring prevents inconsistent instructor entries
+
+The enhanced PT051 instructor windows are now ready for use!

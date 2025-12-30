@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import { showDarkConfirm } from './DarkMessageModal';
 
 interface PT051ViewProps {
     trainee: Trainee;
@@ -369,6 +370,23 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const handleCommentFieldChange = (key: typeof COMMENT_SECTIONS[number], value: string) => {
         setCommentFields(prev => ({ ...prev, [key]: value }));
+        
+        // Mirror QFI field to instructorName field
+        if (key === 'QFI') {
+            setAssessment(prev => ({ ...prev, instructorName: value }));
+        }
+    };
+
+    // Filter instructors by trainee's unit
+    const unitInstructors = useMemo(() => {
+        return instructors.filter(instructor => instructor.unit === trainee.unit);
+    }, [instructors, trainee.unit]);
+
+    // Handle instructor name change (mirror to QFI)
+    const handleInstructorNameChange = (value: string) => {
+        setAssessment(prev => ({ ...prev, instructorName: value }));
+        // Mirror to QFI field
+        setCommentFields(prev => ({ ...prev, QFI: value }));
     };
 
     // Time handling functions for simplified hhmm input
@@ -624,16 +642,17 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         onBack();
     };
 
-    const handleDeleteAssessment = () => {
-        confirmDeleteAssessment();
+    const handleDeleteAssessment = async () => {
+        await confirmDeleteAssessment();
     };
 
-    const confirmDeleteAssessment = () => {
+    const confirmDeleteAssessment = async () => {
         // Simple confirmation - no PIN required
         const confirmMessage = `Are you sure you want to delete this PT-051 assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${assessment.date}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
         
         console.log('🗑️ PT051View: Delete button clicked');
-        if (window.confirm(confirmMessage)) {
+        // Use custom dark confirm modal instead of browser default
+        if (await showDarkConfirm(confirmMessage)) {
             console.log('✅ PT051View: User confirmed deletion');
             if (onDeleteAssessment && assessment.id) {
                 console.log('🗑️ PT051View: Calling onDeleteAssessment with ID:', assessment.id);
@@ -858,13 +877,19 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                          <div className="col-span-2">
                              <dt className="text-sm font-medium text-gray-400">Instructor</dt>
                              <dd className="mt-1">
-                                 <input
-                                     type="text"
+                                 {/* Dropdown for unit instructors only */}
+                                 <select
                                      value={assessment.instructorName || ''}
-                                     onChange={(e) => setAssessment(prev => ({ ...prev, instructorName: e.target.value }))}
+                                     onChange={(e) => handleInstructorNameChange(e.target.value)}
                                      className="text-sm text-white font-semibold bg-gray-700 border border-gray-600 rounded px-2 py-1 w-full focus:ring-1 focus:ring-sky-500"
-                                     placeholder="Instructor name"
-                                 />
+                                 >
+                                     <option value="">Select instructor...</option>
+                                     {unitInstructors.map(instructor => (
+                                         <option key={instructor.idNumber} value={instructor.name}>
+                                             {instructor.rank} {instructor.name}
+                                         </option>
+                                     ))}
+                                 </select>
                              </dd>
                          </div>
                     </dl>
@@ -950,16 +975,24 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-400">QFI</label>
-                            <input
-                                type="text"
-                                value={commentFields['QFI']}
-                                onChange={(e) => handleCommentFieldChange('QFI', e.target.value)}
-                                maxLength={30}
-                                className="mt-1 w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
-                            />
+                            <div className="mt-1">
+                                {/* Dropdown for unit instructors only */}
+                                <select
+                                    value={commentFields['QFI'] || ''}
+                                    onChange={(e) => handleCommentFieldChange('QFI', e.target.value)}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-sm text-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                                >
+                                    <option value="">Select instructor...</option>
+                                    {unitInstructors.map(instructor => (
+                                        <option key={instructor.idNumber} value={instructor.name}>
+                                            {instructor.rank} {instructor.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                             <button
                                 onClick={() => handleVoiceInput('QFI', 'section')}
-                                className={`absolute top-8 right-2 p-1 rounded-full transition-colors ${listeningField === 'QFI' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
+                                className={`absolute top-10 right-2 p-1 rounded-full transition-colors ${listeningField === 'QFI' ? 'bg-red-500 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-600'}`}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" /><path d="M5.5 13a.5.5 0 01.5.5v1a4 4 0 004 4h1a4 4 0 004-4v-1a.5.5 0 011 0v1a5 5 0 01-5 5h-1a5 5 0 01-5-5v-1a.5.5 0 01.5-.5z" /></svg>
                             </button>
