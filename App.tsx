@@ -4530,7 +4530,8 @@ const App: React.FC = () => {
     };
 
     const onSavePT051Assessment = (assessment: Pt051Assessment) => {
-        const saveKey = `${assessment.traineeName}_${assessment.eventId}_PT051`;
+        // Use traineeFullName for the key to ensure consistency across the app
+        const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
         setPt051Assessments(prev => new Map(prev).set(saveKey, assessment));
         
         // Log to audit trail
