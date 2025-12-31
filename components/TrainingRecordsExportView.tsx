@@ -327,7 +327,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Handle export
     const handleExport = async () => {
-        console.log('Exporting:', {
+        console.log('🚀 Starting export...', {
             recordType,
             timePeriod,
             outputFormat,
@@ -340,21 +340,32 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const filename = `training_records_${timestamp}.${outputFormat}`;
         
         try {
+            console.log('📄 Export format:', outputFormat);
+            
             if (outputFormat === 'csv') {
+                console.log('📊 Exporting CSV...');
                 exportToCSV(filename);
+                console.log('✅ CSV export completed');
             } else if (outputFormat === 'excel') {
+                console.log('📊 Exporting Excel...');
                 exportToExcel(filename);
+                console.log('✅ Excel export completed');
             } else if (outputFormat === 'pdf') {
+                console.log('📄 Exporting PDF...');
+                console.log('📄 Events to export:', filteredData.events.length);
                 await exportToPDF(filename);
+                console.log('✅ PDF export completed');
             }
             
             // Show success message
+            console.log('✅ Showing success message');
             setShowExportSuccess(true);
-            setTimeout(() => setShowExportSuccess(false), 3000);
+            setTimeout(() => setShowExportSuccess(false), 5000);
         } catch (error) {
-            console.error('Export error:', error);
+            console.error('❌ Export error:', error);
+            console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
             setShowExportError(true);
-            setTimeout(() => setShowExportError(false), 3000);
+            setTimeout(() => setShowExportError(false), 5000);
         }
     };
     
@@ -405,14 +416,18 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     };
     
     const exportToPDF = async (filename: string) => {
+        console.log('📄 exportToPDF called with filename:', filename);
+        
         // Generate PT051 forms for each event
         const eventsToExport = filteredData.events;
+        console.log('📄 Events to export:', eventsToExport.length);
         
         if (eventsToExport.length === 0) {
-            alert('No events to export');
-            return;
+            console.log('❌ No events to export');
+            throw new Error('No events to export');
         }
         
+        console.log('📄 Creating container element...');
         // Create a container for rendering PT051 forms
         const container = document.createElement('div');
         container.style.position = 'absolute';
@@ -420,44 +435,66 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         container.style.top = '0';
         container.style.width = '210mm'; // A4 width
         document.body.appendChild(container);
+        console.log('✅ Container created and added to DOM');
         
+        console.log('📄 Creating PDF document...');
         const pdf = new jsPDF('p', 'mm', 'a4');
         let isFirstPage = true;
         
         try {
-            for (const event of eventsToExport) {
+            console.log('📄 Starting to process events...');
+            for (let i = 0; i < eventsToExport.length; i++) {
+                const event = eventsToExport[i];
+                console.log(`📄 Processing event ${i + 1}/${eventsToExport.length}:`, event.flightNumber);
+                
                 // Render PT051 form for this event
+                console.log('📄 Rendering PT051 HTML...');
                 const pt051Html = renderPT051ForEvent(event);
                 container.innerHTML = pt051Html;
+                console.log('✅ PT051 HTML rendered');
                 
                 // Wait for rendering
+                console.log('⏳ Waiting for DOM to settle...');
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
                 // Convert to canvas
+                console.log('📄 Converting to canvas...');
                 const canvas = await html2canvas(container, {
                     scale: 2,
                     useCORS: true,
                     logging: false
                 });
+                console.log('✅ Canvas created:', canvas.width, 'x', canvas.height);
                 
                 const imgData = canvas.toDataURL('image/png');
                 const imgWidth = 210; // A4 width in mm
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                console.log('📄 Image dimensions:', imgWidth, 'x', imgHeight, 'mm');
                 
                 if (!isFirstPage) {
+                    console.log('📄 Adding new page...');
                     pdf.addPage();
                 }
                 
+                console.log('📄 Adding image to PDF...');
                 pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                console.log('✅ Image added to PDF');
                 isFirstPage = false;
             }
             
             // Download the PDF
+            console.log('📄 Saving PDF:', filename);
             pdf.save(filename);
+            console.log('✅ PDF saved successfully!');
             
+        } catch (error) {
+            console.error('❌ Error during PDF generation:', error);
+            throw error;
         } finally {
             // Clean up
+            console.log('🧹 Cleaning up container...');
             document.body.removeChild(container);
+            console.log('✅ Container removed');
         }
     };
     
@@ -1121,16 +1158,25 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             
             {/* Export Success Message */}
             {showExportSuccess && (
-                <div className="fixed top-4 right-4 z-50 bg-gray-800 border border-green-500/50 rounded-lg shadow-xl p-4 min-w-[300px]">
-                    <div className="flex items-start gap-3">
-                        <div className="text-green-400 text-xl">✓</div>
-                        <div>
-                            <h3 className="text-green-400 font-semibold mb-1">Export Successful</h3>
-                            <p className="text-gray-300 text-sm">
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-800 border-2 border-green-500 rounded-lg shadow-2xl p-6 min-w-[400px]">
+                    <div className="flex items-start gap-4">
+                        <div className="text-green-400 text-3xl">✓</div>
+                        <div className="flex-1">
+                            <h3 className="text-green-400 font-bold text-lg mb-2">Export Successful!</h3>
+                            <p className="text-gray-200 text-base mb-2">
                                 Your file has been downloaded successfully.
-                                <br />
-                                <span className="text-gray-400">Format: {outputFormat.toUpperCase()} • Records: {recordCount}</span>
                             </p>
+                            <div className="bg-gray-700/50 rounded p-3 text-sm">
+                                <div className="text-gray-300">
+                                    <strong>Format:</strong> {outputFormat.toUpperCase()}
+                                </div>
+                                <div className="text-gray-300">
+                                    <strong>Records:</strong> {recordCount}
+                                </div>
+                                <div className="text-gray-300">
+                                    <strong>File:</strong> training_records_{new Date().toISOString().split('T')[0]}.{outputFormat}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1138,13 +1184,16 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             
             {/* Export Error Message */}
             {showExportError && (
-                <div className="fixed top-4 right-4 z-50 bg-gray-800 border border-red-500/50 rounded-lg shadow-xl p-4 min-w-[300px]">
-                    <div className="flex items-start gap-3">
-                        <div className="text-red-400 text-xl">✗</div>
-                        <div>
-                            <h3 className="text-red-400 font-semibold mb-1">Export Failed</h3>
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-800 border-2 border-red-500 rounded-lg shadow-2xl p-6 min-w-[400px]">
+                    <div className="flex items-start gap-4">
+                        <div className="text-red-400 text-3xl">✗</div>
+                        <div className="flex-1">
+                            <h3 className="text-red-400 font-bold text-lg mb-2">Export Failed</h3>
+                            <p className="text-gray-200 text-base mb-2">
+                                There was an error exporting your data.
+                            </p>
                             <p className="text-gray-300 text-sm">
-                                There was an error exporting your data. Please try again.
+                                Please check the browser console for details and try again.
                             </p>
                         </div>
                     </div>
