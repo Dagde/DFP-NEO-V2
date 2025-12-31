@@ -1245,12 +1245,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     dcoResult: 'DCO', // Check DCO box
                     overallGrade: 'No Grade', // Set to "No Grade"
                     overallResult: '', // Empty for ground events
-                    overallComments: {
-                        weather: '',
-                        nest: '',
-                        profile: '',
-                        overallComment: `Ground event completed via Mass Brief completion on ${currentDate}`
-                    },
+                    overallComments: `Ground event completed via Mass Brief completion on ${currentDate}`, // String format for compatibility
                     groundSchoolAssessment: {
                         isAssessment: false,
                         result: 0
