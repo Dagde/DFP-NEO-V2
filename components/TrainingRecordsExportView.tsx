@@ -4,8 +4,11 @@ import { Trainee, Instructor, ScheduleEvent, Course, Score } from '../types';
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
     instructorsData: Instructor[];
+    archivedTraineesData: Trainee[];
+    archivedInstructorsData: Instructor[];
     events: ScheduleEvent[];
     courses: Course[];
+    archivedCourses: { [key: string]: string };
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
 }
@@ -14,7 +17,7 @@ type RecordType = 'all' | 'trainees' | 'staff' | 'events';
 type TimePeriod = 'all-time' | 'single-date' | 'date-range';
 type OutputFormat = 'pdf' | 'excel' | 'csv';
 type EventType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
-type StatusFilter = 'all' | 'completed' | 'cancelled';
+type StatusFilter = 'all' | 'dco' | 'dnco' | 'pass' | 'fail';
 type RemedialFilter = 'all' | 'yes' | 'no';
 
 interface ExportTemplate {
@@ -36,8 +39,11 @@ interface ExportTemplate {
 const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     traineesData,
     instructorsData,
+    archivedTraineesData,
+    archivedInstructorsData,
     events,
     courses,
+    archivedCourses,
     scores,
     publishedSchedules
 }) => {
@@ -57,6 +63,11 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [remedialFilter, setRemedialFilter] = useState<RemedialFilter>('all');
+    
+    // Search filters
+    const [courseSearch, setCourseSearch] = useState('');
+    const [traineeSearch, setTraineeSearch] = useState('');
+    const [staffSearch, setStaffSearch] = useState('');
 
     // Template management
     const [showTemplates, setShowTemplates] = useState(false);
@@ -77,6 +88,34 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const allEvents = useMemo(() => {
         return Object.values(publishedSchedules).flat();
     }, [publishedSchedules]);
+    
+    // Combine active and archived data
+    const allTrainees = useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
+    const allInstructors = useMemo(() => [...instructorsData, ...archivedInstructorsData], [instructorsData, archivedInstructorsData]);
+    const allCourseNames = useMemo(() => {
+        const activeCourses = courses.map(c => c.name);
+        const archivedCourseNames = Object.keys(archivedCourses);
+        return [...new Set([...activeCourses, ...archivedCourseNames])];
+    }, [courses, archivedCourses]);
+    
+    // Filtered lists for dropdowns
+    const filteredCourses = useMemo(() => {
+        return allCourseNames.filter(name => 
+            name.toLowerCase().includes(courseSearch.toLowerCase())
+        );
+    }, [allCourseNames, courseSearch]);
+    
+    const filteredTrainees = useMemo(() => {
+        return allTrainees.filter(t => 
+            `${t.rank} ${t.name} ${t.course}`.toLowerCase().includes(traineeSearch.toLowerCase())
+        );
+    }, [allTrainees, traineeSearch]);
+    
+    const filteredStaff = useMemo(() => {
+        return allInstructors.filter(i => 
+            `${i.rank} ${i.name}`.toLowerCase().includes(staffSearch.toLowerCase())
+        );
+    }, [allInstructors, staffSearch]);
 
     // Filter events based on current settings
     const filteredEvents = useMemo(() => {
@@ -94,11 +133,43 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             filtered = filtered.filter(e => selectedEventTypes.includes(e.type as EventType));
         }
 
-        // Status filter
-        if (statusFilter === 'completed') {
-            filtered = filtered.filter(e => !e.isCancelled);
-        } else if (statusFilter === 'cancelled') {
-            filtered = filtered.filter(e => e.isCancelled);
+        // Status filter - based on PT051 outcomes
+        if (statusFilter === 'dco') {
+            filtered = filtered.filter(e => {
+                const trainee = e.student || e.pilot;
+                if (!trainee) return false;
+                const traineeScores = scores.get(trainee);
+                if (!traineeScores) return false;
+                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
+                return eventScore?.outcome === 'DCO';
+            });
+        } else if (statusFilter === 'dnco') {
+            filtered = filtered.filter(e => {
+                const trainee = e.student || e.pilot;
+                if (!trainee) return false;
+                const traineeScores = scores.get(trainee);
+                if (!traineeScores) return false;
+                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
+                return eventScore?.outcome === 'DNCO';
+            });
+        } else if (statusFilter === 'pass') {
+            filtered = filtered.filter(e => {
+                const trainee = e.student || e.pilot;
+                if (!trainee) return false;
+                const traineeScores = scores.get(trainee);
+                if (!traineeScores) return false;
+                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
+                return eventScore?.outcome === 'Pass';
+            });
+        } else if (statusFilter === 'fail') {
+            filtered = filtered.filter(e => {
+                const trainee = e.student || e.pilot;
+                if (!trainee) return false;
+                const traineeScores = scores.get(trainee);
+                if (!traineeScores) return false;
+                const eventScore = traineeScores.find(s => s.syllabusId === e.flightNumber && s.date === e.date);
+                return eventScore?.outcome === 'Fail';
+            });
         }
 
         // Remedial filter
@@ -121,9 +192,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             );
         }
 
-        // Course filter
+        // Course filter - FIXED: Use allTrainees instead of just traineesData
         if (selectedCourses.length > 0) {
-            const courseTrainees = traineesData.filter(t => selectedCourses.includes(t.course));
+            const courseTrainees = allTrainees.filter(t => selectedCourses.includes(t.course));
             const traineeNames = courseTrainees.map(t => t.name);
             filtered = filtered.filter(e => 
                 (e.student && traineeNames.includes(e.student)) ||
@@ -150,8 +221,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             if (e.instructor) eventStaff.add(e.instructor);
         });
 
-        let trainees = traineesData.filter(t => eventTrainees.has(t.name));
-        let staff = instructorsData.filter(i => eventStaff.has(i.name));
+        let trainees = allTrainees.filter(t => eventTrainees.has(t.name));
+        let staff = allInstructors.filter(i => eventStaff.has(i.name));
 
         if (recordType === 'trainees') {
             return { events: filteredEvents, trainees, staff: [] };
@@ -455,7 +526,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
                             {/* Status */}
                             <div>
-                                <h3 className="text-sm font-medium text-gray-300 mb-3">Status</h3>
+                                <h3 className="text-sm font-medium text-gray-300 mb-3">Status (PT051 Outcome)</h3>
                                 <div className="space-y-2">
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
@@ -469,20 +540,38 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="radio"
-                                            checked={statusFilter === 'completed'}
-                                            onChange={() => setStatusFilter('completed')}
+                                            checked={statusFilter === 'dco'}
+                                            onChange={() => setStatusFilter('dco')}
                                             className="w-4 h-4 text-sky-500"
                                         />
-                                        <span className="text-gray-200">Completed only</span>
+                                        <span className="text-gray-200">DCO (Duty Carried Out)</span>
                                     </label>
                                     <label className="flex items-center space-x-2 cursor-pointer">
                                         <input
                                             type="radio"
-                                            checked={statusFilter === 'cancelled'}
-                                            onChange={() => setStatusFilter('cancelled')}
+                                            checked={statusFilter === 'dnco'}
+                                            onChange={() => setStatusFilter('dnco')}
                                             className="w-4 h-4 text-sky-500"
                                         />
-                                        <span className="text-gray-200">Cancelled only</span>
+                                        <span className="text-gray-200">DNCO (Duty Not Carried Out)</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            checked={statusFilter === 'pass'}
+                                            onChange={() => setStatusFilter('pass')}
+                                            className="w-4 h-4 text-sky-500"
+                                        />
+                                        <span className="text-gray-200">Pass</span>
+                                    </label>
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            checked={statusFilter === 'fail'}
+                                            onChange={() => setStatusFilter('fail')}
+                                            className="w-4 h-4 text-sky-500"
+                                        />
+                                        <span className="text-gray-200">Fail</span>
                                     </label>
                                 </div>
                             </div>
@@ -523,7 +612,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
                             {/* Courses */}
                             <div>
-                                <h3 className="text-sm font-medium text-gray-300 mb-3">Courses</h3>
+                                <h3 className="text-sm font-medium text-gray-300 mb-3">Courses (Active & Archived)</h3>
+                                <input
+                                    type="text"
+                                    placeholder="Search courses..."
+                                    value={courseSearch}
+                                    onChange={(e) => setCourseSearch(e.target.value)}
+                                    className="w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
+                                />
                                 <select
                                     multiple
                                     value={selectedCourses}
@@ -534,9 +630,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                                     size={5}
                                 >
-                                    {courses.map(course => (
-                                        <option key={course.name} value={course.name}>
-                                            {course.name}
+                                    {filteredCourses.map(courseName => (
+                                        <option key={courseName} value={courseName}>
+                                            {courseName} {archivedCourses[courseName] ? '(Archived)' : ''}
                                         </option>
                                     ))}
                                 </select>
@@ -546,7 +642,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                             {/* Specific trainees */}
                             {(recordType === 'all' || recordType === 'trainees') && (
                                 <div>
-                                    <h3 className="text-sm font-medium text-gray-300 mb-3">Specific Trainees</h3>
+                                    <h3 className="text-sm font-medium text-gray-300 mb-3">Specific Trainees (Active & Archived)</h3>
+                                    <input
+                                        type="text"
+                                        placeholder="Search trainees..."
+                                        value={traineeSearch}
+                                        onChange={(e) => setTraineeSearch(e.target.value)}
+                                        className="w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
+                                    />
                                     <select
                                         multiple
                                         value={selectedTrainees}
@@ -557,9 +660,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                                         size={5}
                                     >
-                                        {traineesData.map(trainee => (
+                                        {filteredTrainees.map(trainee => (
                                             <option key={trainee.name} value={trainee.name}>
-                                                {trainee.rank} {trainee.name} ({trainee.course})
+                                                {trainee.rank} {trainee.name} ({trainee.course}) {trainee.isPaused ? '(Archived)' : ''}
                                             </option>
                                         ))}
                                     </select>
@@ -570,7 +673,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                             {/* Specific staff */}
                             {(recordType === 'all' || recordType === 'staff') && (
                                 <div>
-                                    <h3 className="text-sm font-medium text-gray-300 mb-3">Specific Staff</h3>
+                                    <h3 className="text-sm font-medium text-gray-300 mb-3">Specific Staff (Active & Archived)</h3>
+                                    <input
+                                        type="text"
+                                        placeholder="Search staff..."
+                                        value={staffSearch}
+                                        onChange={(e) => setStaffSearch(e.target.value)}
+                                        className="w-full px-3 py-2 mb-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-500"
+                                    />
                                     <select
                                         multiple
                                         value={selectedStaff}
@@ -581,9 +691,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
                                         size={5}
                                     >
-                                        {instructorsData.map(instructor => (
+                                        {filteredStaff.map(instructor => (
                                             <option key={instructor.name} value={instructor.name}>
-                                                {instructor.rank} {instructor.name}
+                                                {instructor.rank} {instructor.name} {instructor.isPaused ? '(Archived)' : ''}
                                             </option>
                                         ))}
                                     </select>

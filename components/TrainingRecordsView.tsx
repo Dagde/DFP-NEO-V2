@@ -15,6 +15,8 @@ interface TrainingRecordsViewProps {
     onNavigateToArchivedCourses: () => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
+    archivedTraineesData: Trainee[];
+    archivedInstructorsData: Instructor[];
     events: ScheduleEvent[];
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
@@ -32,6 +34,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onNavigateToArchivedCourses,
     traineesData,
     instructorsData,
+    archivedTraineesData,
+    archivedInstructorsData,
     events,
     scores,
     publishedSchedules
@@ -92,8 +96,11 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                     <TrainingRecordsExportView
                         traineesData={traineesData}
                         instructorsData={instructorsData}
+                        archivedTraineesData={archivedTraineesData}
+                        archivedInstructorsData={archivedInstructorsData}
                         events={events}
                         courses={courses}
+                        archivedCourses={archivedCourses}
                         scores={scores}
                         publishedSchedules={publishedSchedules}
                     />
