@@ -239,9 +239,15 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const eventTrainees = new Set<string>();
         const eventStaff = new Set<string>();
 
+        // Helper function to normalize names (remove course suffix)
+        const normalizeName = (name: string) => {
+            // Remove course suffix like " – ADF301" or " - ADF301"
+            return name.split(/\s+[–-]\s+/)[0];
+        };
+
         filteredEvents.forEach(e => {
-            if (e.student) eventTrainees.add(e.student);
-            if (e.pilot) eventTrainees.add(e.pilot);
+            if (e.student) eventTrainees.add(normalizeName(e.student));
+            if (e.pilot) eventTrainees.add(normalizeName(e.pilot));
             if (e.instructor) eventStaff.add(e.instructor);
         });
 
