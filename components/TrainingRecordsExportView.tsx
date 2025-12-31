@@ -72,6 +72,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Template management
     const [showTemplates, setShowTemplates] = useState(false);
     const [templateName, setTemplateName] = useState('');
+    const [showExportSuccess, setShowExportSuccess] = useState(false);
+    const [showExportError, setShowExportError] = useState(false);
     const [savedTemplates, setSavedTemplates] = useState<ExportTemplate[]>([]);
 
     // Format date as dd MMM yy
@@ -206,8 +208,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             const traineeNames = courseTrainees.map(t => t.name);
             console.log('📊 Course filter - Selected courses:', selectedCourses);
             console.log('📊 Course filter - Trainees in selected courses:', courseTrainees.length);
-            console.log('📊 Course filter - Trainee names:', traineeNames);
+            console.log('📊 Course filter - Trainee names (first 5):', traineeNames.slice(0, 5));
             console.log('📊 Course filter - Events before filter:', filtered.length);
+            console.log('📊 Course filter - Sample event student names (first 5):', filtered.slice(0, 5).map(e => e.student || e.pilot));
             
             // Match trainee names with or without course suffix (e.g., "Edwards, Charlotte" or "Edwards, Charlotte – ADF301")
             filtered = filtered.filter(e => {
@@ -215,13 +218,19 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 if (!studentName) return false;
                 
                 // Check if the student name (with or without course suffix) matches any trainee
-                return traineeNames.some(traineeName => {
+                const matches = traineeNames.some(traineeName => {
                     // Check exact match
                     if (studentName === traineeName) return true;
                     // Check if student name starts with trainee name followed by course suffix
                     if (studentName.startsWith(traineeName + ' –') || studentName.startsWith(traineeName + ' -')) return true;
                     return false;
                 });
+                
+                if (!matches) {
+                    console.log('📊 No match for student:', studentName);
+                }
+                
+                return matches;
             });
             console.log('📊 Course filter - Events after filter:', filtered.length);
         }
@@ -323,8 +332,79 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             recordCount,
             data: filteredData
         });
-        // TODO: Implement actual export logic
-        alert(`Export initiated!\n\nFormat: ${outputFormat.toUpperCase()}\nRecords: ${recordCount}\nSize: ${estimatedSize}`);
+        
+        // Generate filename
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `training_records_${timestamp}.${outputFormat}`;
+        
+        try {
+            if (outputFormat === 'csv') {
+                exportToCSV(filename);
+            } else if (outputFormat === 'excel') {
+                exportToExcel(filename);
+            } else if (outputFormat === 'pdf') {
+                exportToPDF(filename);
+            }
+            
+            // Show success message
+            setShowExportSuccess(true);
+            setTimeout(() => setShowExportSuccess(false), 3000);
+        } catch (error) {
+            console.error('Export error:', error);
+            setShowExportError(true);
+            setTimeout(() => setShowExportError(false), 3000);
+        }
+    };
+    
+    const exportToCSV = (filename: string) => {
+        let csvContent = '';
+        
+        // Add Events
+        if (recordType === 'all' || recordType === 'events') {
+            csvContent += 'EVENTS\n';
+            csvContent += 'Date,Type,Instructor,Student,Flight Number,Duration,Start Time,Resource\n';
+            filteredData.events.forEach(e => {
+                csvContent += `${e.date},${e.type},${e.instructor || ''},${e.student || e.pilot || ''},${e.flightNumber || ''},${e.duration || ''},${e.startTime || ''},${e.resourceId || ''}\n`;
+            });
+            csvContent += '\n';
+        }
+        
+        // Add Trainees
+        if (recordType === 'all' || recordType === 'trainees') {
+            csvContent += 'TRAINEES\n';
+            csvContent += 'Name,Rank,Course,Service,Unit,Flight\n';
+            filteredData.trainees.forEach(t => {
+                csvContent += `${t.name},${t.rank},${t.course},${t.service},${t.unit},${t.flight}\n`;
+            });
+            csvContent += '\n';
+        }
+        
+        // Add Staff
+        if (recordType === 'all' || recordType === 'staff') {
+            csvContent += 'STAFF\n';
+            csvContent += 'Name,Rank,Role,Category,Service\n';
+            filteredData.staff.forEach(s => {
+                csvContent += `${s.name},${s.rank},${s.role},${s.category || ''},${s.service}\n`;
+            });
+        }
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    };
+    
+    const exportToExcel = (filename: string) => {
+        // For now, export as CSV with .xlsx extension
+        // TODO: Implement proper Excel export with a library like xlsx
+        exportToCSV(filename.replace('.xlsx', '.csv'));
+    };
+    
+    const exportToPDF = (filename: string) => {
+        // For now, show a message that PDF export is not yet implemented
+        alert('PDF export is not yet implemented. Please use CSV or Excel format.');
     };
 
     // Handle save template
@@ -899,6 +979,38 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     )}
                 </div>
             </div>
+            
+            {/* Export Success Message */}
+            {showExportSuccess && (
+                <div className="fixed top-4 right-4 z-50 bg-gray-800 border border-green-500/50 rounded-lg shadow-xl p-4 min-w-[300px]">
+                    <div className="flex items-start gap-3">
+                        <div className="text-green-400 text-xl">✓</div>
+                        <div>
+                            <h3 className="text-green-400 font-semibold mb-1">Export Successful</h3>
+                            <p className="text-gray-300 text-sm">
+                                Your file has been downloaded successfully.
+                                <br />
+                                <span className="text-gray-400">Format: {outputFormat.toUpperCase()} • Records: {recordCount}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Export Error Message */}
+            {showExportError && (
+                <div className="fixed top-4 right-4 z-50 bg-gray-800 border border-red-500/50 rounded-lg shadow-xl p-4 min-w-[300px]">
+                    <div className="flex items-start gap-3">
+                        <div className="text-red-400 text-xl">✗</div>
+                        <div>
+                            <h3 className="text-red-400 font-semibold mb-1">Export Failed</h3>
+                            <p className="text-gray-300 text-sm">
+                                There was an error exporting your data. Please try again.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
