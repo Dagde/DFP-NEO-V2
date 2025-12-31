@@ -353,16 +353,19 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             
             if (outputFormat === 'csv') {
                 console.log('📊 Exporting CSV...');
+                console.log('📊 Record count:', recordCount);
                 setExportStatus('Generating CSV file...');
                 exportToCSV(filename);
                 console.log('✅ CSV export completed');
             } else if (outputFormat === 'excel') {
                 console.log('📊 Exporting Excel...');
+                console.log('📊 Record count:', recordCount);
                 setExportStatus('Generating Excel file...');
                 exportToExcel(filename);
                 console.log('✅ Excel export completed');
             } else if (outputFormat === 'pdf') {
                 console.log('📄 Exporting PDF...');
+                console.log('📄 Record count:', recordCount);
                 console.log('📄 Events to export:', filteredData.events.length);
                 setExportStatus(`Generating PDF (${filteredData.events.length} records)...`);
                 await exportToPDF(filename);
@@ -424,9 +427,59 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     };
     
     const exportToExcel = (filename: string) => {
-        // For now, export as CSV with .xlsx extension
-        // TODO: Implement proper Excel export with a library like xlsx
-        exportToCSV(filename.replace('.xlsx', '.csv'));
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Add Events sheet
+        if (recordType === 'all' || recordType === 'events') {
+            const eventsData = filteredData.events.map(e => ({
+                'Date': e.date || '',
+                'Type': e.type || '',
+                'Instructor': e.instructor || '',
+                'Student': e.student || e.pilot || '',
+                'Flight Number': e.flightNumber || '',
+                'Duration (hrs)': e.duration || 0,
+                'Start Time': e.startTime || '',
+                'Resource': e.resourceId || ''
+            }));
+            
+            const wsEvents = XLSX.utils.json_to_sheet(eventsData);
+            XLSX.utils.book_append_sheet(wb, wsEvents, 'Events');
+        }
+        
+        // Add Trainees sheet
+        if (recordType === 'all' || recordType === 'trainees') {
+            const traineesData = filteredData.trainees.map(t => ({
+                'Name': t.name || '',
+                'Rank': t.rank || '',
+                'Course': t.course || '',
+                'Service': t.service || '',
+                'Unit': t.unit || '',
+                'Flight': t.flight || '',
+                'Status': t.isPaused ? 'Archived' : 'Active'
+            }));
+            
+            const wsTrainees = XLSX.utils.json_to_sheet(traineesData);
+            XLSX.utils.book_append_sheet(wb, wsTrainees, 'Trainees');
+        }
+        
+        // Add Staff sheet
+        if (recordType === 'all' || recordType === 'staff') {
+            const staffData = filteredData.staff.map(s => ({
+                'Name': s.name || '',
+                'Rank': s.rank || '',
+                'Role': s.role || '',
+                'Category': s.category || '',
+                'Service': s.service || '',
+                'Status': s.isPaused ? 'Archived' : 'Active'
+            }));
+            
+            const wsStaff = XLSX.utils.json_to_sheet(staffData);
+            XLSX.utils.book_append_sheet(wb, wsStaff, 'Staff');
+        }
+        
+        // Write and download file
+        XLSX.writeFile(wb, filename);
     };
     
     const exportToPDF = async (filename: string) => {
