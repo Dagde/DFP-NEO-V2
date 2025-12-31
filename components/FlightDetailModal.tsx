@@ -1236,22 +1236,23 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (onSavePT051Assessment) {
             confirmedTrainees.forEach(trainee => {
                 const assessment = {
+                    id: `${trainee.idNumber}_${event.id}_${currentDate}`,
                     traineeName: trainee.name,
                     traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
                     eventId: event.id,
                     flightNumber: event.flightNumber,
                     date: currentDate,
-                    instructor: instructor,
+                    instructorName: instructor,
                     dcoResult: 'DCO', // Check DCO box
                     overallGrade: 'No Grade', // Set to "No Grade"
-                    overallResult: '', // Empty for ground events
+                    overallResult: null, // null for ground events
                     overallComments: `Ground event completed via Mass Brief completion on ${currentDate}`, // String format for compatibility
+                    scores: [], // Empty scores array for ground events
+                    isCompleted: true,
                     groundSchoolAssessment: {
                         isAssessment: false,
                         result: 0
-                    },
-                    assessmentAreas: {},
-                    manoeuvres: {}
+                    }
                 };
                 
                 console.log('Saving PT051 assessment for:', trainee.fullName, assessment);
