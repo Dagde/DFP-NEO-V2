@@ -267,41 +267,24 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         console.log('📊 filteredData calculation - allTrainees:', allTrainees.length);
         console.log('📊 filteredData calculation - allInstructors:', allInstructors.length);
         
+        // For "events only", return only events with no people records
         if (recordType === 'events') {
             return { events: filteredEvents, trainees: [], staff: [] };
         }
 
-        const eventTrainees = new Set<string>();
-        const eventStaff = new Set<string>();
-
-        // Helper function to normalize names (remove course suffix)
-        const normalizeName = (name: string) => {
-            // Remove course suffix like " – ADF301" or " - ADF301"
-            return name.split(/\s+[–-]\s+/)[0];
-        };
-
-        filteredEvents.forEach(e => {
-            if (e.student) eventTrainees.add(normalizeName(e.student));
-            if (e.pilot) eventTrainees.add(normalizeName(e.pilot));
-            if (e.instructor) eventStaff.add(e.instructor);
-        });
-
-        console.log('📊 eventTrainees set size:', eventTrainees.size);
-        console.log('📊 eventStaff set size:', eventStaff.size);
-        console.log('📊 eventTrainees sample:', Array.from(eventTrainees).slice(0, 5));
-
-        let trainees = allTrainees.filter(t => eventTrainees.has(t.name));
-        let staff = allInstructors.filter(i => eventStaff.has(i.name));
+        // For trainee/staff/all records, include ALL people (not just those with events)
+        // This matches user expectation: "Trainee records" = all trainees, not just those with events
         
-        console.log('📊 filtered trainees:', trainees.length);
-        console.log('📊 filtered staff:', staff.length);
-
         if (recordType === 'trainees') {
-            return { events: filteredEvents, trainees, staff: [] };
+            console.log('📊 Returning all trainees:', allTrainees.length);
+            return { events: filteredEvents, trainees: allTrainees, staff: [] };
         } else if (recordType === 'staff') {
-            return { events: filteredEvents, trainees: [], staff };
+            console.log('📊 Returning all staff:', allInstructors.length);
+            return { events: filteredEvents, trainees: [], staff: allInstructors };
         } else {
-            return { events: filteredEvents, trainees, staff };
+            // recordType === 'all'
+            console.log('📊 Returning all trainees and staff');
+            return { events: filteredEvents, trainees: allTrainees, staff: allInstructors };
         }
     }, [recordType, filteredEvents, allTrainees, allInstructors]);
 
@@ -600,6 +583,16 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         
         pdf.setTextColor(0, 0, 0);
         
+        // Grade color mapping (matching Performance History page)
+        const gradeColors: {[key: string]: [number, number, number]} = {
+            '0': [220, 38, 38],   // Red
+            '1': [234, 88, 12],   // Orange-red
+            '2': [245, 158, 11],  // Orange
+            '3': [234, 179, 8],   // Yellow
+            '4': [132, 204, 22],  // Light green
+            '5': [34, 197, 94]    // Green
+        };
+        
         pdf.setFontSize(7);
         pt051Structure.forEach(cat => {
             pdf.setFillColor(229, 231, 235);
@@ -612,10 +605,29 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             
             pdf.setFont('helvetica', 'normal');
             cat.elements.forEach(elem => {
+                // Draw element row border
                 pdf.setDrawColor(209, 213, 219);
                 pdf.rect(margin, y - 3, contentWidth, 5, 'S');
+                
+                // Element name
                 pdf.text('  ' + elem, margin + 2, y);
-                pdf.text('3', margin + 82, y);
+                
+                // Grade cell with color background
+                const grade = '3'; // Sample grade
+                const gradeColor = gradeColors[grade] || [243, 244, 246];
+                
+                // Draw colored grade cell
+                pdf.setFillColor(gradeColor[0], gradeColor[1], gradeColor[2]);
+                pdf.rect(margin + 78, y - 3, 15, 5, 'F');
+                pdf.setDrawColor(209, 213, 219);
+                pdf.rect(margin + 78, y - 3, 15, 5, 'S');
+                
+                // Draw grade text
+                pdf.setTextColor(255, 255, 255); // White text on colored background
+                pdf.text(grade, margin + 84, y);
+                pdf.setTextColor(0, 0, 0); // Reset to black
+                
+                // Comments
                 pdf.text('-', margin + 102, y);
                 y += 5;
             });

@@ -1,26 +1,31 @@
-# Training Records Export Fixes
+# Training Records Export Fixes - Part 2
 
-## Issues to Fix
-- [x] PDF not text-searchable (using html2canvas creates images)
-- [x] Individual trainee selection showing 0 records (name matching issue)
+## Issues Identified from Screenshots
 
-## Root Causes Identified
+### Issue 1: Record Count Logic Problem ✅ FIXED
+- **All records**: 80 total
+- **Trainee records**: 16
+- **Staff records**: 16 (SAME as trainees - WRONG!)
+- **Event records**: 48
+- **Problem**: Trainee + Staff should = 32, but both show 16
+- **Root Cause**: The filtering logic was only showing people who had events, not ALL people
+- **Solution**: Changed logic to return ALL trainees/staff regardless of events
 
-### Issue 1: PDF Not Text-Searchable
-- Current implementation uses `html2canvas` to convert HTML to images
-- Images are then embedded in PDF, making text non-searchable
-- Solution: Use jsPDF's native text/HTML rendering instead of canvas images
+### Issue 2: What Does "Events" Mean? ✅ CLARIFIED
+- "Events" refers to the scheduled flight events/sorties (PT051 forms)
+- Each event is a training flight with instructor, student, date, etc.
+- When "Event records only" is selected, it exports PT051 forms for those events
+- Currently showing 48 events
 
-### Issue 2: Individual Trainee Filter Not Working
-- Problem in line ~320: `selectedTrainees.includes(e.student)`
-- Event student names have course suffix: "Edwards, Charlotte – ADF301"
-- Trainee names in dropdown don't have suffix: "Edwards, Charlotte"
-- The includes() check fails because of suffix mismatch
-- Need to normalize names before comparison (like we do for course filter)
+### Issue 3: PT051 Color Scheme ✅ FIXED
+- Need to match the color scheme from the source Performance History page
+- Current PDF uses grayscale, should use the actual grade colors (red to green)
+- **Solution**: Added color-coded grade cells matching Performance History colors
 
 ## Implementation Plan
-- [x] Fix trainee filter to handle name normalization
-- [x] Implement text-searchable PDF using jsPDF native methods
-- [ ] Test both fixes
+- [x] Fix staff/trainee filtering logic to properly separate the two
+- [x] Add color scheme to PT051 PDF matching Performance History
+- [ ] Verify record counts add up correctly
+- [ ] Test all record type selections
 - [ ] Build and deploy
-- [ ] Commit changes to GitHub
+- [ ] Push to GitHub
