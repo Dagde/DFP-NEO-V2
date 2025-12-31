@@ -86,11 +86,19 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Get all events from published schedules
     const allEvents = useMemo(() => {
-        return Object.values(publishedSchedules).flat();
+        const events = Object.values(publishedSchedules).flat();
+        console.log('📊 Export View - All events from published schedules:', events.length);
+        console.log('📊 Export View - Published schedule dates:', Object.keys(publishedSchedules));
+        return events;
     }, [publishedSchedules]);
     
     // Combine active and archived data
-    const allTrainees = useMemo(() => [...traineesData, ...archivedTraineesData], [traineesData, archivedTraineesData]);
+    const allTrainees = useMemo(() => {
+        const combined = [...traineesData, ...archivedTraineesData];
+        console.log('📊 Export View - All trainees:', combined.length);
+        console.log('📊 Export View - ADF303 trainees:', combined.filter(t => t.course === 'ADF303').length);
+        return combined;
+    }, [traineesData, archivedTraineesData]);
     const allInstructors = useMemo(() => [...instructorsData, ...archivedInstructorsData], [instructorsData, archivedInstructorsData]);
     const allCourseNames = useMemo(() => {
         const activeCourses = courses.map(c => c.name);
@@ -192,14 +200,30 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             );
         }
 
-        // Course filter - FIXED: Use allTrainees instead of just traineesData
+        // Course filter - FIXED: Handle course suffix in event names
         if (selectedCourses.length > 0) {
             const courseTrainees = allTrainees.filter(t => selectedCourses.includes(t.course));
             const traineeNames = courseTrainees.map(t => t.name);
-            filtered = filtered.filter(e => 
-                (e.student && traineeNames.includes(e.student)) ||
-                (e.pilot && traineeNames.includes(e.pilot))
-            );
+            console.log('📊 Course filter - Selected courses:', selectedCourses);
+            console.log('📊 Course filter - Trainees in selected courses:', courseTrainees.length);
+            console.log('📊 Course filter - Trainee names:', traineeNames);
+            console.log('📊 Course filter - Events before filter:', filtered.length);
+            
+            // Match trainee names with or without course suffix (e.g., "Edwards, Charlotte" or "Edwards, Charlotte – ADF301")
+            filtered = filtered.filter(e => {
+                const studentName = e.student || e.pilot;
+                if (!studentName) return false;
+                
+                // Check if the student name (with or without course suffix) matches any trainee
+                return traineeNames.some(traineeName => {
+                    // Check exact match
+                    if (studentName === traineeName) return true;
+                    // Check if student name starts with trainee name followed by course suffix
+                    if (studentName.startsWith(traineeName + ' –') || studentName.startsWith(traineeName + ' -')) return true;
+                    return false;
+                });
+            });
+            console.log('📊 Course filter - Events after filter:', filtered.length);
         }
 
         return filtered;
