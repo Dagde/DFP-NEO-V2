@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Trainee, Instructor, ScheduleEvent, Course, Score } from '../types';
+import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment } from '../types';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
@@ -324,7 +326,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     };
 
     // Handle export
-    const handleExport = () => {
+    const handleExport = async () => {
         console.log('Exporting:', {
             recordType,
             timePeriod,
@@ -343,7 +345,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             } else if (outputFormat === 'excel') {
                 exportToExcel(filename);
             } else if (outputFormat === 'pdf') {
-                exportToPDF(filename);
+                await exportToPDF(filename);
             }
             
             // Show success message
@@ -402,9 +404,146 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         exportToCSV(filename.replace('.xlsx', '.csv'));
     };
     
-    const exportToPDF = (filename: string) => {
-        // For now, show a message that PDF export is not yet implemented
-        alert('PDF export is not yet implemented. Please use CSV or Excel format.');
+    const exportToPDF = async (filename: string) => {
+        // Generate PT051 forms for each event
+        const eventsToExport = filteredData.events;
+        
+        if (eventsToExport.length === 0) {
+            alert('No events to export');
+            return;
+        }
+        
+        // Create a container for rendering PT051 forms
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '210mm'; // A4 width
+        document.body.appendChild(container);
+        
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        let isFirstPage = true;
+        
+        try {
+            for (const event of eventsToExport) {
+                // Render PT051 form for this event
+                const pt051Html = renderPT051ForEvent(event);
+                container.innerHTML = pt051Html;
+                
+                // Wait for rendering
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Convert to canvas
+                const canvas = await html2canvas(container, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 210; // A4 width in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                if (!isFirstPage) {
+                    pdf.addPage();
+                }
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                isFirstPage = false;
+            }
+            
+            // Download the PDF
+            pdf.save(filename);
+            
+        } finally {
+            // Clean up
+            document.body.removeChild(container);
+        }
+    };
+    
+    const renderPT051ForEvent = (event: ScheduleEvent): string => {
+        const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);
+        const instructor = allInstructors.find(i => i.name === event.instructor);
+        
+        // Get scores for this event
+        const traineeScores = scores.get(event.student || event.pilot || '');
+        const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
+        
+        return `
+            <div style="font-family: Arial, sans-serif; padding: 20px; background: white; color: black;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h1 style="margin: 0; font-size: 24px;">RAAF PT-051</h1>
+                    <h2 style="margin: 5px 0; font-size: 18px;">Training Assessment Form</h2>
+                </div>
+                
+                <div style="border: 2px solid black; padding: 15px; margin-bottom: 20px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 5px; width: 25%;"><strong>Trainee:</strong></td>
+                            <td style="padding: 5px; width: 25%;">${trainee?.rank || ''} ${trainee?.name || event.student || event.pilot || 'N/A'}</td>
+                            <td style="padding: 5px; width: 25%;"><strong>Course:</strong></td>
+                            <td style="padding: 5px; width: 25%;">${trainee?.course || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px;"><strong>Instructor:</strong></td>
+                            <td style="padding: 5px;">${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</td>
+                            <td style="padding: 5px;"><strong>Date:</strong></td>
+                            <td style="padding: 5px;">${event.date || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 5px;"><strong>Flight Number:</strong></td>
+                            <td style="padding: 5px;">${event.flightNumber || 'N/A'}</td>
+                            <td style="padding: 5px;"><strong>Duration:</strong></td>
+                            <td style="padding: 5px;">${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div style="border: 2px solid black; padding: 15px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">Assessment</h3>
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
+                        <thead>
+                            <tr style="background: #f0f0f0;">
+                                <th style="border: 1px solid black; padding: 8px; text-align: left;">Element</th>
+                                <th style="border: 1px solid black; padding: 8px; text-align: center; width: 80px;">Grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${renderPT051Elements(eventScore)}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="border: 2px solid black; padding: 15px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Overall Grade:</strong> ${eventScore?.outcome || 'Not Assessed'}
+                    </div>
+                    <div>
+                        <strong>Comments:</strong>
+                        <div style="min-height: 100px; border: 1px solid #ccc; padding: 10px; margin-top: 5px;">
+                            ${eventScore?.comments || 'No comments'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    
+    const renderPT051Elements = (score: Score | undefined): string => {
+        const elements = [
+            'Airmanship', 'Preparation', 'Technique',
+            'Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks',
+            'Stationary', 'Visual', 'Effects of Control', 'Trimming', 'Straight and Level',
+            'Level medium Turn', 'Level Steep turn', 'Visual - Initial & Pitch',
+            'Landing', 'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
+        ];
+        
+        return elements.map(element => `
+            <tr>
+                <td style="border: 1px solid black; padding: 8px;">${element}</td>
+                <td style="border: 1px solid black; padding: 8px; text-align: center;">-</td>
+            </tr>
+        `).join('');
     };
 
     // Handle save template
