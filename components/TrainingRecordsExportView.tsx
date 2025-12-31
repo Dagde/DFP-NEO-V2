@@ -583,6 +583,19 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.setFont('helvetica', 'normal');
         pdf.text(event.flightNumber || 'N/A', col1X + 20, y);
         
+        // Get flight description from syllabus details
+        const syllabusDetail = syllabusDetails.find(d => d.id === event.flightNumber || d.code === event.flightNumber);
+        const flightDesc = syllabusDetail?.title || syllabusDetail?.description || '';
+        
+        if (flightDesc) {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7);
+            const descText = pdf.splitTextToSize(flightDesc, contentWidth / 2 - 10);
+            pdf.text(descText, col1X + 20, y + 4);
+            y += 4;
+            pdf.setFontSize(9);
+        }
+        
         pdf.setFont('helvetica', 'bold');
         pdf.text('Duration:', col2X, y);
         pdf.setFont('helvetica', 'normal');
@@ -610,59 +623,63 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.text(eventScore?.outcome === 'DCO' ? 'Yes' : 'No', col2X + 50, y);
         y += 12;
         
-        // Add Weather, NEST, Profile, Overall comment boxes
+        // Add Weather, Profile, NEST, Overall comment boxes with new layout
         pdf.setFontSize(8);
         const boxHeight = 12;
         const boxY = y;
         
+        // Weather and Profile on same row
+        const weatherProfileWidth = contentWidth * 0.4;
+        
         // Weather box (left)
         pdf.setFillColor(243, 244, 246);
-        pdf.rect(margin, boxY, contentWidth / 2 - 2, boxHeight, 'F');
+        pdf.rect(margin, boxY, weatherProfileWidth - 2, boxHeight, 'F');
         pdf.setDrawColor(0);
-        pdf.rect(margin, boxY, contentWidth / 2 - 2, boxHeight, 'S');
+        pdf.rect(margin, boxY, weatherProfileWidth - 2, boxHeight, 'S');
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(0, 0, 0);
         pdf.text('Weather:', margin + 2, boxY + 4);
         pdf.setFont('helvetica', 'normal');
-        const weatherText = pdf.splitTextToSize(commentSections.Weather || 'N/A', contentWidth / 2 - 6);
+        const weatherText = pdf.splitTextToSize(commentSections.Weather || 'N/A', weatherProfileWidth - 6);
         pdf.text(weatherText, margin + 2, boxY + 8);
         
-        // NEST box (right)
+        // Profile box (middle)
         pdf.setFillColor(243, 244, 246);
-        pdf.rect(margin + contentWidth / 2 + 2, boxY, contentWidth / 2 - 2, boxHeight, 'F');
+        pdf.rect(margin + weatherProfileWidth, boxY, weatherProfileWidth - 2, boxHeight, 'F');
         pdf.setDrawColor(0);
-        pdf.rect(margin + contentWidth / 2 + 2, boxY, contentWidth / 2 - 2, boxHeight, 'S');
+        pdf.rect(margin + weatherProfileWidth, boxY, weatherProfileWidth - 2, boxHeight, 'S');
         pdf.setFont('helvetica', 'bold');
-        pdf.text('NEST:', margin + contentWidth / 2 + 4, boxY + 4);
+        pdf.text('Profile:', margin + weatherProfileWidth + 2, boxY + 4);
         pdf.setFont('helvetica', 'normal');
-        const nestText = pdf.splitTextToSize(commentSections.NEST || 'N/A', contentWidth / 2 - 6);
-        pdf.text(nestText, margin + contentWidth / 2 + 4, boxY + 8);
+        const profileText = pdf.splitTextToSize(commentSections.Profile || 'N/A', weatherProfileWidth - 6);
+        pdf.text(profileText, margin + weatherProfileWidth + 2, boxY + 8);
         
-        y += boxHeight + 2;
-        
-        // Profile box (left)
+        // NEST box (small, right)
+        const nestWidth = contentWidth * 0.2;
         pdf.setFillColor(243, 244, 246);
-        pdf.rect(margin, y, contentWidth / 2 - 2, boxHeight, 'F');
+        pdf.rect(margin + weatherProfileWidth * 2, boxY, nestWidth, boxHeight, 'F');
         pdf.setDrawColor(0);
-        pdf.rect(margin, y, contentWidth / 2 - 2, boxHeight, 'S');
+        pdf.rect(margin + weatherProfileWidth * 2, boxY, nestWidth, boxHeight, 'S');
         pdf.setFont('helvetica', 'bold');
-        pdf.text('Profile:', margin + 2, y + 4);
+        pdf.text('NEST:', margin + weatherProfileWidth * 2 + 2, boxY + 4);
         pdf.setFont('helvetica', 'normal');
-        const profileText = pdf.splitTextToSize(commentSections.Profile || 'N/A', contentWidth / 2 - 6);
-        pdf.text(profileText, margin + 2, y + 8);
-        
-        // Overall comment box (right)
-        pdf.setFillColor(243, 244, 246);
-        pdf.rect(margin + contentWidth / 2 + 2, y, contentWidth / 2 - 2, boxHeight, 'F');
-        pdf.setDrawColor(0);
-        pdf.rect(margin + contentWidth / 2 + 2, y, contentWidth / 2 - 2, boxHeight, 'S');
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Overall:', margin + contentWidth / 2 + 4, y + 4);
-        pdf.setFont('helvetica', 'normal');
-        const overallText = pdf.splitTextToSize(commentSections.Overall || 'N/A', contentWidth / 2 - 6);
-        pdf.text(overallText, margin + contentWidth / 2 + 4, y + 8);
+        pdf.text(commentSections.NEST || 'N/A', margin + weatherProfileWidth * 2 + 2, boxY + 8);
         
         y += boxHeight + 4;
+        
+        // Overall comment box (full width)
+        const overallBoxHeight = 16;
+        pdf.setFillColor(243, 244, 246);
+        pdf.rect(margin, y, contentWidth, overallBoxHeight, 'F');
+        pdf.setDrawColor(0);
+        pdf.rect(margin, y, contentWidth, overallBoxHeight, 'S');
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Overall:', margin + 2, y + 4);
+        pdf.setFont('helvetica', 'normal');
+        const overallText = pdf.splitTextToSize(commentSections.Overall || 'N/A', contentWidth - 4);
+        pdf.text(overallText, margin + 2, y + 8);
+        
+        y += overallBoxHeight + 4;
         
         pdf.setFillColor(31, 41, 55);
         pdf.rect(margin, y - 4, contentWidth, 7, 'F');
@@ -726,21 +743,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             });
         });
         
-        y += 3;
-        
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(9);
-        pdf.text('QFI Comments:', margin, y);
-        y += 5;
-        
-        pdf.setDrawColor(209, 213, 219);
-        pdf.rect(margin, y - 3, contentWidth, 20, 'S');
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        const comments = eventScore?.comments || 'No comments provided';
-        const splitComments = pdf.splitTextToSize(comments, contentWidth - 4);
-        pdf.text(splitComments, margin + 2, y);
-    };
+        };
     
     const renderPT051ForEvent = (event: ScheduleEvent): string => {
         const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);

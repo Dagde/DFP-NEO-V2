@@ -1,18 +1,15 @@
-# Training Records Export - Add Weather, NEST, Profile Fields
+# Training Records Export - PT051 PDF Layout Updates
 
-## New Requirement
-Add the following fields to PT051 PDF immediately below the "Overall Grade, Result, DCO" box:
-- Weather
-- NEST  
-- Profile
-- Overall comment
-
-These fields are stored in the `overallComments` field of Pt051Assessment, parsed into sections.
+## Layout Changes Required
+- [x] Overall Comment: make full width of page
+- [x] NEST box: make small (for single number like 0.3 hrs)
+- [x] Profile: move to same line as Weather
+- [x] QFI comment: remove from bottom of page
+- [x] Flight description: add below flight number (BGF8)
 
 ## Implementation Plan
-- [x] Parse overallComments to extract Weather, NEST, Profile, Overall sections
-- [x] Add these fields to PT051 PDF layout below the Overall Grade box
-- [x] Match the styling and layout from the PT051View component
-- [ ] Test the export with sample data
+- [x] Update comment box layout in renderPT051ToPDF
+- [x] Get flight description from syllabus details
+- [x] Remove QFI comments section at bottom
 - [ ] Build and deploy
 - [ ] Push to GitHub
