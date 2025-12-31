@@ -232,6 +232,11 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
 
     // Calculate filtered data based on record type
     const filteredData = useMemo(() => {
+        console.log('📊 filteredData calculation - recordType:', recordType);
+        console.log('📊 filteredData calculation - filteredEvents:', filteredEvents.length);
+        console.log('📊 filteredData calculation - allTrainees:', allTrainees.length);
+        console.log('📊 filteredData calculation - allInstructors:', allInstructors.length);
+        
         if (recordType === 'events') {
             return { events: filteredEvents, trainees: [], staff: [] };
         }
@@ -251,8 +256,15 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             if (e.instructor) eventStaff.add(e.instructor);
         });
 
+        console.log('📊 eventTrainees set size:', eventTrainees.size);
+        console.log('📊 eventStaff set size:', eventStaff.size);
+        console.log('📊 eventTrainees sample:', Array.from(eventTrainees).slice(0, 5));
+
         let trainees = allTrainees.filter(t => eventTrainees.has(t.name));
         let staff = allInstructors.filter(i => eventStaff.has(i.name));
+        
+        console.log('📊 filtered trainees:', trainees.length);
+        console.log('📊 filtered staff:', staff.length);
 
         if (recordType === 'trainees') {
             return { events: filteredEvents, trainees, staff: [] };
@@ -261,7 +273,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         } else {
             return { events: filteredEvents, trainees, staff };
         }
-    }, [recordType, filteredEvents, traineesData, instructorsData]);
+    }, [recordType, filteredEvents, allTrainees, allInstructors]);
 
     // Calculate record count
     const recordCount = useMemo(() => {
