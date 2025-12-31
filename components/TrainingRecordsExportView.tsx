@@ -194,12 +194,28 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             filtered = filtered.filter(e => !e.isRemedial);
         }
 
-        // People filter
+        // People filter - FIXED: Handle course suffix in event names
         if (selectedTrainees.length > 0) {
-            filtered = filtered.filter(e => 
-                e.student && selectedTrainees.includes(e.student) ||
-                e.pilot && selectedTrainees.includes(e.pilot)
-            );
+            console.log('📊 Trainee filter - Selected trainees:', selectedTrainees);
+            console.log('📊 Trainee filter - Events before filter:', filtered.length);
+            
+            filtered = filtered.filter(e => {
+                const studentName = e.student || e.pilot;
+                if (!studentName) return false;
+                
+                // Check if the student name (with or without course suffix) matches any selected trainee
+                const matches = selectedTrainees.some(selectedTrainee => {
+                    // Check exact match
+                    if (studentName === selectedTrainee) return true;
+                    // Check if student name starts with selected trainee name followed by course suffix
+                    if (studentName.startsWith(selectedTrainee + ' –') || studentName.startsWith(selectedTrainee + ' -')) return true;
+                    return false;
+                });
+                
+                return matches;
+            });
+            
+            console.log('📊 Trainee filter - Events after filter:', filtered.length);
         }
         if (selectedStaff.length > 0) {
             filtered = filtered.filter(e => 
@@ -440,16 +456,6 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             throw new Error('No events to export');
         }
         
-        console.log('📄 Creating container element...');
-        // Create a container for rendering PT051 forms
-        const container = document.createElement('div');
-        container.style.position = 'absolute';
-        container.style.left = '-9999px';
-        container.style.top = '0';
-        container.style.width = '210mm'; // A4 width
-        document.body.appendChild(container);
-        console.log('✅ Container created and added to DOM');
-        
         console.log('📄 Creating PDF document...');
         const pdf = new jsPDF('p', 'mm', 'a4');
         let isFirstPage = true;
@@ -464,54 +470,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 
                 console.log(`📄 Processing event ${i + 1}/${eventsToExport.length}:`, event.flightNumber);
                 
-                // Render PT051 form for this event
-                console.log('📄 Rendering PT051 HTML...');
-                const pt051Html = renderPT051ForEvent(event);
-                container.innerHTML = pt051Html;
-                console.log('✅ PT051 HTML rendered');
-                
-                // Wait for rendering
-                console.log('⏳ Waiting for DOM to settle...');
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Convert to canvas
-                console.log('📄 Converting to canvas...');
-                const canvas = await html2canvas(container, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false
-                });
-                console.log('✅ Canvas created:', canvas.width, 'x', canvas.height);
-                
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = 210; // A4 width in mm
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                
-                // If content is too tall, scale it to fit on one page
-                const maxHeight = 297; // A4 height in mm
-                if (imgHeight > maxHeight) {
-                    const scale = maxHeight / imgHeight;
-                    const scaledWidth = imgWidth * scale;
-                    const scaledHeight = maxHeight;
-                    console.log('📄 Scaling to fit page:', scaledWidth, 'x', scaledHeight, 'mm');
-                    
-                    if (!isFirstPage) {
-                        pdf.addPage();
-                    }
-                    pdf.addImage(imgData, 'PNG', 0, 0, scaledWidth, scaledHeight);
-                } else {
-                    console.log('📄 Image dimensions:', imgWidth, 'x', imgHeight, 'mm');
-                    
-                    if (!isFirstPage) {
-                        console.log('📄 Adding new page...');
-                        pdf.addPage();
-                    }
-                    
-                    console.log('📄 Adding image to PDF...');
-                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                if (!isFirstPage) {
+                    pdf.addPage();
                 }
                 
-                console.log('✅ Image added to PDF');
+                // Render PT051 form using native PDF text
+                renderPT051ToPDF(pdf, event);
+                
+                console.log('✅ PT051 added to PDF');
                 isFirstPage = false;
             }
             
@@ -524,12 +490,151 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         } catch (error) {
             console.error('❌ Error during PDF generation:', error);
             throw error;
-        } finally {
-            // Clean up
-            console.log('🧹 Cleaning up container...');
-            document.body.removeChild(container);
-            console.log('✅ Container removed');
         }
+    };
+    
+    const renderPT051ToPDF = (pdf: jsPDF, event: ScheduleEvent) => {
+        const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);
+        const instructor = allInstructors.find(i => i.name === event.instructor);
+        
+        // Get scores for this event
+        const traineeScores = scores.get(event.student || event.pilot || '');
+        const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
+        
+        // PT051 structure with all elements
+        const pt051Structure = [
+            { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
+            { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
+            { category: 'Takeoff', elements: ['Stationary'] },
+            { category: 'Departure', elements: ['Visual'] },
+            { category: 'Core Handling Skills', elements: ['Effects of Control', 'Trimming', 'Straight and Level'] },
+            { category: 'Turns', elements: ['Level medium Turn', 'Level Steep turn'] },
+            { category: 'Recovery', elements: ['Visual - Initial &amp; Pitch'] },
+            { category: 'Landing', elements: ['Landing', 'Crosswind'] },
+            { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] }
+        ];
+        
+        let y = 15;
+        const margin = 15;
+        const pageWidth = 210;
+        const contentWidth = pageWidth - (2 * margin);
+        
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('RAAF PT-051 Training Assessment', pageWidth / 2, y, { align: 'center' });
+        y += 10;
+        
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, y, pageWidth - margin, y);
+        y += 8;
+        
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        
+        const col1X = margin;
+        const col2X = pageWidth / 2 + 5;
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Trainee:', col1X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`${trainee?.rank || ''} ${trainee?.name || event.student || event.pilot || 'N/A'}`, col1X + 20, y);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Course:', col2X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(trainee?.course || 'N/A', col2X + 20, y);
+        y += 5;
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Instructor:', col1X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}`, col1X + 20, y);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Date:', col2X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(event.date || 'N/A', col2X + 20, y);
+        y += 5;
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Flight:', col1X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(event.flightNumber || 'N/A', col1X + 20, y);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Duration:', col2X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A', col2X + 20, y);
+        y += 8;
+        
+        pdf.setFillColor(243, 244, 246);
+        pdf.rect(margin, y - 4, contentWidth, 10, 'F');
+        pdf.setDrawColor(0);
+        pdf.rect(margin, y - 4, contentWidth, 10, 'S');
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Overall Grade:', col1X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(eventScore?.outcome || 'Not Assessed', col1X + 30, y);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Result:', col2X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(eventScore?.outcome === 'Pass' ? 'PASS' : eventScore?.outcome === 'Fail' ? 'FAIL' : 'N/A', col2X + 15, y);
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('DCO:', col2X + 40, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(eventScore?.outcome === 'DCO' ? 'Yes' : 'No', col2X + 50, y);
+        y += 12;
+        
+        pdf.setFillColor(31, 41, 55);
+        pdf.rect(margin, y - 4, contentWidth, 7, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8);
+        pdf.text('Category / Element', margin + 2, y);
+        pdf.text('Grade', margin + 80, y);
+        pdf.text('Comments', margin + 100, y);
+        y += 5;
+        
+        pdf.setTextColor(0, 0, 0);
+        
+        pdf.setFontSize(7);
+        pt051Structure.forEach(cat => {
+            pdf.setFillColor(229, 231, 235);
+            pdf.rect(margin, y - 3, contentWidth, 5, 'F');
+            pdf.setDrawColor(156, 163, 175);
+            pdf.rect(margin, y - 3, contentWidth, 5, 'S');
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(cat.category, margin + 2, y);
+            y += 5;
+            
+            pdf.setFont('helvetica', 'normal');
+            cat.elements.forEach(elem => {
+                pdf.setDrawColor(209, 213, 219);
+                pdf.rect(margin, y - 3, contentWidth, 5, 'S');
+                pdf.text('  ' + elem, margin + 2, y);
+                pdf.text('3', margin + 82, y);
+                pdf.text('-', margin + 102, y);
+                y += 5;
+            });
+        });
+        
+        y += 3;
+        
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.text('QFI Comments:', margin, y);
+        y += 5;
+        
+        pdf.setDrawColor(209, 213, 219);
+        pdf.rect(margin, y - 3, contentWidth, 20, 'S');
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        const comments = eventScore?.comments || 'No comments provided';
+        const splitComments = pdf.splitTextToSize(comments, contentWidth - 4);
+        pdf.text(splitComments, margin + 2, y);
     };
     
     const renderPT051ForEvent = (event: ScheduleEvent): string => {
