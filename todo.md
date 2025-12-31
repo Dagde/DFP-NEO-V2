@@ -1,15 +1,27 @@
-# Training Records Export - PT051 PDF Layout Updates
+<new_str># Export Failure Issue - Investigation and Fix
 
-## Layout Changes Required
-- [x] Overall Comment: make full width of page
-- [x] NEST box: make small (for single number like 0.3 hrs)
-- [x] Profile: move to same line as Weather
-- [x] QFI comment: remove from bottom of page
-- [x] Flight description: add below flight number (BGF8)
+## Problem
+- Export functionality was completely broken
+- Both individual and course (ADF301) exports failed
+- Error message: "Export Failed - There was an error exporting your data"
+- Error dialog with red border suggesting a critical error
 
-## Implementation Plan
-- [x] Update comment box layout in renderPT051ToPDF
-- [x] Get flight description from syllabus details
-- [x] Remove QFI comments section at bottom
-- [ ] Build and deploy
-- [ ] Push to GitHub
+## Root Cause Identified
+- Used `syllabusDetails` in TrainingRecordsExportView without importing/passing it
+- Added flight description feature but missing prop chain
+
+## Fix Applied
+- [x] Added SyllabusItemDetail import to TrainingRecordsExportView
+- [x] Added syllabusDetails to TrainingRecordsExportViewProps interface
+- [x] Added syllabusDetails to component parameters
+- [x] Added syllabusDetails prop to TrainingRecordsView
+- [x] Passed syllabusDetails through component chain from App.tsx
+- [ ] Build and test the fix
+- [ ] Deploy fix
+- [ ] Test all export scenarios
+
+## Recent Changes Fixed
+- parseComments function: ✅ Working
+- PT051 PDF layout: ✅ Working  
+- Flight description: ✅ Now with proper data source
+</new_str>

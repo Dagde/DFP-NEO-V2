@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
-import { Course, Trainee, Instructor, ScheduleEvent, Score } from '../types';
+import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 
 interface TrainingRecordsViewProps {
@@ -20,6 +20,7 @@ interface TrainingRecordsViewProps {
     events: ScheduleEvent[];
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
+    syllabusDetails: SyllabusItemDetail[];
 }
 
 type TabType = 'courses' | 'export';
@@ -38,7 +39,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     archivedInstructorsData,
     events,
     scores,
-    publishedSchedules
+    publishedSchedules,
+    syllabusDetails
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
@@ -103,6 +105,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         archivedCourses={archivedCourses}
                         scores={scores}
                         publishedSchedules={publishedSchedules}
+                        syllabusDetails={syllabusDetails}
                     />
                 )}
             </div>

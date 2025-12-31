@@ -7964,6 +7964,7 @@ updates.forEach(update => {
                     events={events}
                     scores={scores}
                     publishedSchedules={publishedSchedules}
+                    syllabusDetails={syllabusDetails}
                 />;
             case 'ArchivedCourses':
                 return <ArchivedCoursesView 

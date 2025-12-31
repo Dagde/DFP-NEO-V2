@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment } from '../types';
+import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -13,6 +13,7 @@ interface TrainingRecordsExportViewProps {
     archivedCourses: { [key: string]: string };
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
+    syllabusDetails: SyllabusItemDetail[];
 }
 
 type RecordType = 'all' | 'trainees' | 'staff' | 'events';
@@ -47,7 +48,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     courses,
     archivedCourses,
     scores,
-    publishedSchedules
+    publishedSchedules,
+    syllabusDetails
 }) => {
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
