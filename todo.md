@@ -1,30 +1,27 @@
-<new_str># Export Issues - Course Export Fails & Excel Not Working
+# Critical Export Errors - Both Issues Identified
 
-## Issues Identified
+## Error 1: Excel Export - Unrecognized bookType
+**Error**: `Error: Unrecognized bookType |excel|`
+**Root Cause**: Using `outputFormat` value "excel" directly in filename, but SheetJS expects "xlsx"
+**Fix**: Change filename extension from `.excel` to `.xlsx`
 
-### 1. Course Export Still Failing
-- Individual trainee export: ✅ Working 
-- Whole course export: ❌ Still failing with "Export Failed" error
-- Need to investigate what happens when exporting all records for ADF301
+## Error 2: PDF/Excel Course Export - No Events
+**Error**: `Error: No events to export` when selecting ADF301 course
+**Root Cause**: 
+- Log shows: `📊 Course filter - Events before filter: 0`
+- Events are being filtered out BEFORE the course filter is applied
+- The filteredEvents is already empty when course filter runs
+- This is why individual trainee works (doesn't use course filter) but course export fails
 
-### 2. Excel Format Not Working ✅ FIXED  
-- Current "Excel" option just generates CSV files
-- Need to implement proper XLSX file generation
-- All data fields should be carried into Excel spreadsheet
+**Investigation Needed**:
+- Check what's filtering out events before the course filter
+- Look at the filteredEvents useMemo dependencies
+- Verify event filtering logic order
 
-## Implementation Progress
-- [x] Implemented proper XLSX export using SheetJS library (already included)
-- [x] Added proper data fields to Excel export
-- [x] Added debugging logs for record counts
-- [ ] Debug course export failure - check if it's a timeout/memory issue
-- [ ] Add error handling for large exports
+## Implementation Plan
+- [ ] Fix Excel filename to use .xlsx extension
+- [ ] Debug why filteredEvents is 0 before course filter
+- [ ] Fix event filtering order/logic
 - [ ] Test both individual and course exports
 - [ ] Build and deploy
 - [ ] Push to GitHub
-
-## XLSX Export Features Added
-- Proper Excel file format (.xlsx)
-- Multiple sheets: Events, Trainees, Staff
-- All data fields included
-- Professional formatting with column headers
-</new_str>

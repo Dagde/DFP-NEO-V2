@@ -785,6 +785,42 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <dl className="lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg h-fit">
                         <div>
+                            <dt className="text-sm font-medium text-gray-400">Event Number</dt>
+                            <dd className="mt-1 text-sm text-white font-semibold">{event.flightNumber || 'N/A'}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-sm font-medium text-gray-400">Event Description</dt>
+                            <dd className="mt-1 text-sm text-white">
+                                {(() => {
+                                    const eventNum = (event.flightNumber || '').trim();
+                                    console.log('🔍 Event Description Debug - Event Number:', eventNum);
+                                    console.log('🔍 Event Description Debug - syllabusDetails count:', syllabusDetails.length);
+                                    console.log('🔍 Event Description Debug - First 5 syllabus items:', syllabusDetails.slice(0, 5).map(d => ({ id: d.id, code: d.code, title: d.title })));
+                                    
+                                    // Try multiple matching strategies
+                                    let syllabusDetail = syllabusDetails.find(d => {
+                                        const id = (d.id || '').trim();
+                                        const code = (d.code || '').trim();
+                                        // Exact match (case-insensitive)
+                                        if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
+                                            console.log('🔍 Found exact match:', d);
+                                            return true;
+                                        }
+                                        // Match without spaces
+                                        if (id.replace(/\s+/g, '').toLowerCase() === eventNum.replace(/\s+/g, '').toLowerCase() ||
+                                            code.replace(/\s+/g, '').toLowerCase() === eventNum.replace(/\s+/g, '').toLowerCase()) {
+                                            console.log('🔍 Found match without spaces:', d);
+                                            return true;
+                                        }
+                                        return false;
+                                    });
+                                    
+                                    console.log('🔍 Event Description Debug - Found detail:', syllabusDetail);
+                                    return syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || 'N/A';
+                                })()}
+                            </dd>
+                        </div>
+                        <div>
                             <dt className="text-sm font-medium text-gray-400">Trainee</dt>
                             <dd className="mt-1 text-sm text-white font-semibold">{`${trainee.rank} ${trainee.name}`}</dd>
                         </div>

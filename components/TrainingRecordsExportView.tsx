@@ -137,20 +137,40 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     // Filter events based on current settings
     const filteredEvents = useMemo(() => {
         let filtered = [...allEvents];
+        console.log('🔍 FILTER DEBUG - Starting with events:', filtered.length);
+        console.log('🔍 FILTER DEBUG - timePeriod:', timePeriod);
+        console.log('🔍 FILTER DEBUG - singleDate:', singleDate);
+        console.log('🔍 FILTER DEBUG - startDate:', startDate);
+        console.log('🔍 FILTER DEBUG - endDate:', endDate);
 
         // Time period filter
         if (timePeriod === 'single-date' && singleDate) {
             filtered = filtered.filter(e => e.date === singleDate);
+            console.log('🔍 FILTER DEBUG - After single-date filter:', filtered.length);
         } else if (timePeriod === 'date-range' && startDate && endDate) {
             filtered = filtered.filter(e => e.date >= startDate && e.date <= endDate);
+            console.log('🔍 FILTER DEBUG - After date-range filter:', filtered.length);
         }
 
-        // Event type filter
+        // Event type filter - FIXED: Case-insensitive comparison
         if (selectedEventTypes.length > 0) {
-            filtered = filtered.filter(e => selectedEventTypes.includes(e.type as EventType));
+            console.log('🔍 FILTER DEBUG - selectedEventTypes:', selectedEventTypes);
+            console.log('🔍 FILTER DEBUG - Sample event types from data (first 5):', filtered.slice(0, 5).map(e => e.type));
+            console.log('🔍 FILTER DEBUG - Unique event types in data:', [...new Set(filtered.map(e => e.type))]);
+            
+            // Convert both to lowercase for case-insensitive comparison
+            const selectedTypesLower = selectedEventTypes.map(t => t.toLowerCase());
+            filtered = filtered.filter(e => {
+                const eventTypeLower = (e.type as string).toLowerCase();
+                return selectedTypesLower.includes(eventTypeLower);
+            });
+            
+            console.log('🔍 FILTER DEBUG - After event type filter:', filtered.length);
         }
 
         // Status filter - based on PT051 outcomes
+        console.log('🔍 FILTER DEBUG - statusFilter:', statusFilter);
+        console.log('🔍 FILTER DEBUG - Before status filter:', filtered.length);
         if (statusFilter === 'dco') {
             filtered = filtered.filter(e => {
                 const trainee = e.student || e.pilot;
@@ -188,12 +208,16 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 return eventScore?.outcome === 'Fail';
             });
         }
+        console.log('🔍 FILTER DEBUG - After all status filters:', filtered.length);
 
         // Remedial filter
+        console.log('🔍 FILTER DEBUG - remedialFilter:', remedialFilter);
         if (remedialFilter === 'yes') {
             filtered = filtered.filter(e => e.isRemedial);
+            console.log('🔍 FILTER DEBUG - After remedial=yes filter:', filtered.length);
         } else if (remedialFilter === 'no') {
             filtered = filtered.filter(e => !e.isRemedial);
+            console.log('🔍 FILTER DEBUG - After remedial=no filter:', filtered.length);
         }
 
         // People filter - FIXED: Handle course suffix in event names
@@ -341,7 +365,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         
         // Generate filename
         const timestamp = new Date().toISOString().split('T')[0];
-        const filename = `training_records_${timestamp}.${outputFormat}`;
+        const fileExtension = outputFormat === 'excel' ? 'xlsx' : outputFormat;
+        const filename = `training_records_${timestamp}.${fileExtension}`;
         
         try {
             console.log('📄 Export format:', outputFormat);
@@ -571,6 +596,17 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const trainee = allTrainees.find(t => t.fullName === event.student || t.fullName === event.pilot);
         const instructor = allInstructors.find(i => i.name === event.instructor);
         
+        // Format date as dd Mmm YY (e.g., "31 Dec 25")
+        const formatDate = (dateStr: string) => {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            const day = date.getDate().toString().padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[date.getMonth()];
+            const year = date.getFullYear().toString().slice(-2);
+            return `${day} ${month} ${year}`;
+        };
+        
         // Get scores for this event
         const traineeScores = scores.get(event.student || event.pilot || '');
         const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
@@ -630,26 +666,55 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         pdf.setFont('helvetica', 'bold');
         pdf.text('Date:', col2X, y);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(event.date || 'N/A', col2X + 20, y);
+        pdf.text(formatDate(event.date), col2X + 20, y);
         y += 5;
         
         pdf.setFont('helvetica', 'bold');
         pdf.text('Flight:', col1X, y);
         pdf.setFont('helvetica', 'normal');
         pdf.text(event.flightNumber || 'N/A', col1X + 20, y);
+        y += 5;
         
-        // Get flight description from syllabus details
-        const syllabusDetail = syllabusDetails.find(d => d.id === event.flightNumber || d.code === event.flightNumber);
-        const flightDesc = syllabusDetail?.title || syllabusDetail?.description || '';
+        // Event Description label and content
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Event Description:', col1X, y);
+        
+        // Get flight description from syllabus details with flexible matching
+        const eventNum = (event.flightNumber || '').trim();
+        const syllabusDetail = syllabusDetails.find(d => {
+            const id = (d.id || '').trim();
+            const code = (d.code || '').trim();
+            // Exact match (case-insensitive)
+            if (id.toLowerCase() === eventNum.toLowerCase() || code.toLowerCase() === eventNum.toLowerCase()) {
+                return true;
+            }
+            // Match without spaces
+            if (id.replace(/\s+/g, '').toLowerCase() === eventNum.replace(/\s+/g, '').toLowerCase() ||
+                code.replace(/\s+/g, '').toLowerCase() === eventNum.replace(/\s+/g, '').toLowerCase()) {
+                return true;
+            }
+            return false;
+        });
+        const flightDesc = syllabusDetail?.eventDescription || syllabusDetail?.title || syllabusDetail?.description || '';
         
         if (flightDesc) {
             pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(7);
-            const descText = pdf.splitTextToSize(flightDesc, contentWidth / 2 - 10);
-            pdf.text(descText, col1X + 20, y + 4);
-            y += 4;
+            pdf.setFontSize(8);
+            const descText = pdf.splitTextToSize(flightDesc, contentWidth - 40);
+            pdf.text(descText, col1X + 40, y);
+            y += (descText.length * 3.5);
             pdf.setFontSize(9);
+        } else {
+            pdf.setFont('helvetica', 'normal');
+            pdf.text('N/A', col1X + 40, y);
         }
+        y += 2;
+        
+        // Event Number (repeated from above)
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Event Number:', col1X, y);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(event.flightNumber || 'N/A', col1X + 30, y);
         
         pdf.setFont('helvetica', 'bold');
         pdf.text('Duration:', col2X, y);
@@ -1110,24 +1175,44 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                             {/* Event types */}
                             <div>
                                 <h3 className="text-sm font-medium text-gray-300 mb-3">Event Types</h3>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {(['Flight', 'FTD', 'CPT', 'Ground'] as EventType[]).map(type => (
-                                        <label key={type} className="flex items-center space-x-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedEventTypes.includes(type)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setSelectedEventTypes([...selectedEventTypes, type]);
-                                                    } else {
-                                                        setSelectedEventTypes(selectedEventTypes.filter(t => t !== type));
-                                                    }
-                                                }}
-                                                className="w-4 h-4 text-sky-500"
-                                            />
-                                            <span className="text-gray-200">{type}</span>
-                                        </label>
-                                    ))}
+                                <div className="space-y-3">
+                                    {/* All checkbox */}
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedEventTypes.length === 4}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedEventTypes(['Flight', 'FTD', 'CPT', 'Ground']);
+                                                } else {
+                                                    setSelectedEventTypes([]);
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-sky-500"
+                                        />
+                                        <span className="text-gray-200 font-medium">All</span>
+                                    </label>
+                                    
+                                    {/* Individual event type checkboxes */}
+                                    <div className="grid grid-cols-2 gap-3 pl-6">
+                                        {(['Flight', 'FTD', 'CPT', 'Ground'] as EventType[]).map(type => (
+                                            <label key={type} className="flex items-center space-x-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedEventTypes.includes(type)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedEventTypes([...selectedEventTypes, type]);
+                                                        } else {
+                                                            setSelectedEventTypes(selectedEventTypes.filter(t => t !== type));
+                                                        }
+                                                    }}
+                                                    className="w-4 h-4 text-sky-500"
+                                                />
+                                                <span className="text-gray-200">{type}</span>
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
