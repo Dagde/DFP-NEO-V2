@@ -46,6 +46,7 @@ interface EventDetailModalProps {
     currentLocation?: string;
     onVisualAdjustStart?: (event: ScheduleEvent) => void;
     onVisualAdjustEnd?: (event: ScheduleEvent) => void;
+    onSavePT051Assessment?: (assessment: any) => void;
 }
 
 interface CrewMember {
@@ -83,7 +84,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -1226,35 +1227,47 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
 
     const handleMassBriefComplete = (confirmedTrainees: Trainee[]) => {
-        // Here we would:
-        // 1. Set DCO radio button in each trainee's PT-051
-        // 2. Mark the event as complete for these trainees
-        // 3. Update the scores/progress
-        
         console.log('Mass Brief completed for trainees:', confirmedTrainees.map(t => t.fullName));
         
-        // Create completion scores for ground events
         const currentDate = new Date().toISOString().split('T')[0];
-        const completionScores = confirmedTrainees.map(trainee => ({
-            traineeName: trainee.fullName,
-            event: event.flightNumber,
-            score: 5 as const, // Use 5 to indicate complete
-            date: currentDate,
-            instructor: 'System', // Or current instructor
-            notes: 'Ground event completed via Mass Brief completion',
-            details: [] as { criteria: string; score: number; comment: string; }[]
-        }));
+        const instructor = event.instructor || 'System';
         
-        // Call the callback to save scores if it exists
-        console.log('Calling onScoresCreated with scores:', completionScores);
-        if (onScoresCreated) {
-            onScoresCreated(completionScores);
-            console.log('onScoresCreated callback executed successfully');
+        // Create PT051 assessments for each trainee
+        if (onSavePT051Assessment) {
+            confirmedTrainees.forEach(trainee => {
+                const assessment = {
+                    traineeName: trainee.name,
+                    traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
+                    eventId: event.id,
+                    flightNumber: event.flightNumber,
+                    date: currentDate,
+                    instructor: instructor,
+                    dcoResult: 'DCO', // Check DCO box
+                    overallGrade: 'No Grade', // Set to "No Grade"
+                    overallResult: '', // Empty for ground events
+                    overallComments: {
+                        weather: '',
+                        nest: '',
+                        profile: '',
+                        overallComment: `Ground event completed via Mass Brief completion on ${currentDate}`
+                    },
+                    groundSchoolAssessment: {
+                        isAssessment: false,
+                        result: 0
+                    },
+                    assessmentAreas: {},
+                    manoeuvres: {}
+                };
+                
+                console.log('Saving PT051 assessment for:', trainee.fullName, assessment);
+                onSavePT051Assessment(assessment);
+            });
+            console.log('PT051 assessments saved successfully');
         } else {
-            console.warn('onScoresCreated callback is not defined!');
+            console.warn('onSavePT051Assessment callback is not defined!');
         }
         
-        // Show styled confirmation instead of alert
+        // Show styled confirmation
         setCompletedTrainees(confirmedTrainees);
         setShowMassBriefConfirmation(true);
     };
@@ -1909,23 +1922,110 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     isOpen={showMassBriefComplete}
                     onClose={() => setShowMassBriefComplete(false)}
                     event={event}
-                    trainees={event.attendees ? event.attendees.map(attendeeName => {
-                        // Find the trainee object from the trainees list
-                        const trainee = trainees.find(t => {
-                            const fullName = `${t.rank} ${t.name}`;
-                            return fullName === attendeeName.split(' – ')[0];
-                        });
-                        return trainee || {
-                            fullName: attendeeName.split(' – ')[0],
-                            name: attendeeName.split(' – ')[0].split(' ').slice(1).join(' '),
-                            rank: attendeeName.split(' – ')[0].split(' ')[0],
-                            course: '',
-                            isPaused: false,
-                            id: 0,
-                            position: 0,
-                            status: ''
-                        };
-                    }) : []}
+                    trainees={
+                        (() => {
+                            console.log('🔍 Processing trainees for MassBriefCompleteFlyout');
+                            console.log('🔍 Event:', event);
+                            console.log('🔍 Event.attendees:', event.attendees);
+                            console.log('🔍 Event.group:', event.group);
+                            console.log('🔍 Event.selectedTrainees:', event.selectedTrainees);
+                            console.log('🔍 Event.trainees:', event.trainees);
+                            console.log('🔍 Event keys:', Object.keys(event));
+                            console.log('🔍 Available trainees (strings):', trainees);
+                            console.log('🔍 Available traineesData (objects):', traineesData);
+                            
+                            // First try attendees array
+                            if (event.attendees) {
+                                console.log('🔍 Processing attendees array');
+                                const processedAttendees = event.attendees.map((attendeeName, index) => {
+                                    console.log(`🔍 Processing attendee ${index}: "${attendeeName}"`);
+                                    
+                                    // Find the trainee object from the traineesData list
+                                    const trainee = traineesData.find(t => {
+                                        const fullName = `${t.rank} ${t.name}`;
+                                        console.log(`🔍 Comparing "${fullName}" with "${attendeeName.split(' – ')[0]}"`);
+                                        return fullName === attendeeName.split(' – ')[0];
+                                    });
+                                    
+                                    if (trainee) {
+                                        console.log('🔍 Found matching trainee:', trainee);
+                                        return trainee;
+                                    } else {
+                                        console.log('🔍 Creating fallback trainee object');
+                                        const nameParts = attendeeName.split(' – ');
+                                        const fullName = nameParts[0];
+                                        const course = nameParts[1] || '';
+                                        
+                                        // Parse "Last, First" format
+                                        let rank = '';
+                                        let name = fullName;
+                                        const commaIndex = fullName.indexOf(',');
+                                        if (commaIndex !== -1) {
+                                            const lastName = fullName.substring(0, commaIndex).trim();
+                                            const firstName = fullName.substring(commaIndex + 1).trim();
+                                            name = `${firstName} ${lastName}`;
+                                        } else {
+                                            // Try "Rank Last First" format
+                                            const parts = fullName.trim().split(' ');
+                                            if (parts.length >= 2) {
+                                                rank = parts[0];
+                                                name = parts.slice(1).join(' ');
+                                            }
+                                        }
+                                        
+                                        const fallbackTrainee = {
+                                            idNumber: 0,
+                                            fullName: fullName,
+                                            name: name,
+                                            rank: rank,
+                                            course: course,
+                                            isPaused: false,
+                                            unit: '',
+                                            seatConfig: 'Pilot' as any,
+                                            id: fullName
+                                        };
+                                        console.log('🔍 Fallback trainee:', fallbackTrainee);
+                                        return fallbackTrainee;
+                                    }
+                                });
+                                console.log('🔍 Final processed attendees:', processedAttendees);
+                                return processedAttendees;
+                            }
+                            
+                            // If no attendees, try to get trainees from the course (for mass events)
+                            if (event.group && event.group.includes('Trainees Selected')) {
+                                console.log('🔍 Mass event detected, filtering trainees by course');
+                                
+                                // Extract course from event if available
+                                let eventCourse = '';
+                                if (event.course) {
+                                    eventCourse = event.course;
+                                    console.log('🔍 Event course:', eventCourse);
+                                } else if (trainees.length > 0 && typeof trainees[0] === 'string') {
+                                    // Try to extract course from first trainee string
+                                    const firstTrainee = trainees[0];
+                                    const parts = firstTrainee.split(' – ');
+                                    if (parts.length > 1) {
+                                        eventCourse = parts[1];
+                                        console.log('🔍 Extracted course from trainees:', eventCourse);
+                                    }
+                                }
+                                
+                                // Filter traineesData by course
+                                const filteredTrainees = eventCourse 
+                                    ? traineesData.filter(t => t.course === eventCourse)
+                                    : traineesData;
+                                
+                                console.log('🔍 Filtered trainees count:', filteredTrainees.length);
+                                console.log('🔍 Filtered trainees:', filteredTrainees);
+                                
+                                return filteredTrainees;
+                            }
+                            
+                            console.log('🔍 No attendees or mass event, returning empty array');
+                            return [];
+                        })()
+                    }
                     onConfirm={handleMassBriefComplete}
                 />
             )}

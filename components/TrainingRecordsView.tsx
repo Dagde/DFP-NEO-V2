@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
-import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail } from '../types';
+import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 
 interface TrainingRecordsViewProps {
@@ -21,6 +21,8 @@ interface TrainingRecordsViewProps {
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
     syllabusDetails: SyllabusItemDetail[];
+    pt051Assessments: Map<string, Pt051Assessment>;
+    onSavePT051Assessment: (assessment: Pt051Assessment) => void;
 }
 
 type TabType = 'courses' | 'export';
@@ -40,7 +42,9 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     events,
     scores,
     publishedSchedules,
-    syllabusDetails
+    syllabusDetails,
+    pt051Assessments,
+    onSavePT051Assessment
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
@@ -106,6 +110,8 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         scores={scores}
                         publishedSchedules={publishedSchedules}
                         syllabusDetails={syllabusDetails}
+                        pt051Assessments={pt051Assessments}
+                        onSavePT051Assessment={onSavePT051Assessment}
                     />
                 )}
             </div>

@@ -14,6 +14,8 @@ interface TrainingRecordsExportViewProps {
     scores: Map<string, Score[]>;
     publishedSchedules: Record<string, ScheduleEvent[]>;
     syllabusDetails: SyllabusItemDetail[];
+    pt051Assessments: Map<string, Pt051Assessment>;
+    onSavePT051Assessment: (assessment: Pt051Assessment) => void;
 }
 
 type RecordType = 'all' | 'trainees' | 'staff' | 'events';
@@ -49,7 +51,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     archivedCourses,
     scores,
     publishedSchedules,
-    syllabusDetails
+    syllabusDetails,
+    pt051Assessments,
+    onSavePT051Assessment
 }) => {
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -82,6 +86,13 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const [exportProgress, setExportProgress] = useState(0);
     const [exportStatus, setExportStatus] = useState('');
     const [savedTemplates, setSavedTemplates] = useState<ExportTemplate[]>([]);
+    
+    // Mass completion state
+    const [showMassComplete, setShowMassComplete] = useState(false);
+    const [selectedForCompletion, setSelectedForCompletion] = useState<string[]>([]);
+    const [isCompleting, setIsCompleting] = useState(false);
+    const [completionProgress, setCompletionProgress] = useState(0);
+    const [completionStatus, setCompletionStatus] = useState('');
 
     // Format date as dd MMM yy
     const formatDate = (dateStr: string): string => {
@@ -285,6 +296,53 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         return filtered;
     }, [allEvents, timePeriod, singleDate, startDate, endDate, selectedEventTypes, 
         statusFilter, remedialFilter, selectedTrainees, selectedStaff, selectedCourses, traineesData]);
+
+    // Get trainees scheduled for selected courses and date range (for mass completion)
+    const getScheduledTraineesForCompletion = useMemo(() => {
+        if (selectedCourses.length === 0) return [];
+        
+        const courseTrainees = allTrainees.filter(t => selectedCourses.includes(t.course));
+        
+        // Filter events by selected courses and date range
+        let eventsInDateRange = allEvents;
+        if (timePeriod === 'single-date' && singleDate) {
+            eventsInDateRange = eventsInDateRange.filter(e => e.date === singleDate);
+        } else if (timePeriod === 'date-range' && startDate && endDate) {
+            eventsInDateRange = eventsInDateRange.filter(e => e.date >= startDate && e.date <= endDate);
+        }
+        
+        // Get events for selected courses
+        const courseEvents = eventsInDateRange.filter(e => 
+            selectedCourses.some(course => {
+                const studentName = e.student || e.pilot;
+                if (!studentName) return false;
+                const trainee = courseTrainees.find(t => 
+                    studentName === t.name || 
+                    studentName.startsWith(t.name + ' –') || 
+                    studentName.startsWith(t.name + ' -')
+                );
+                return trainee;
+            })
+        );
+        
+        // Get unique trainee names from these events
+        const scheduledTraineeNames = [...new Set(
+            courseEvents.map(e => {
+                const studentName = e.student || e.pilot;
+                if (!studentName) return null;
+                
+                // Extract just the name part (remove course suffix)
+                const trainee = courseTrainees.find(t => 
+                    studentName === t.name || 
+                    studentName.startsWith(t.name + ' –') || 
+                    studentName.startsWith(t.name + ' -')
+                );
+                return trainee?.name;
+            }).filter(Boolean)
+        )] as string[];
+        
+        return scheduledTraineeNames;
+    }, [allEvents, selectedCourses, timePeriod, singleDate, startDate, endDate, allTrainees]);
 
     // Calculate filtered data based on record type
     const filteredData = useMemo(() => {
@@ -1002,6 +1060,105 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         setShowTemplates(false);
     };
 
+    // Handle mass completion
+    const handleMassComplete = () => {
+        const scheduledTrainees = getScheduledTraineesForCompletion;
+        setSelectedForCompletion(scheduledTrainees);
+        setShowMassComplete(true);
+    };
+
+    // Process mass completion
+    const processMassCompletion = async () => {
+        if (selectedForCompletion.length === 0) {
+            alert('Please select at least one trainee for completion.');
+            return;
+        }
+
+        setIsCompleting(true);
+        setCompletionProgress(0);
+        setCompletionStatus('Processing trainees...');
+
+        try {
+            const currentDate = new Date().toISOString().split('T')[0];
+            let completedCount = 0;
+
+            for (let i = 0; i < selectedForCompletion.length; i++) {
+                const traineeName = selectedForCompletion[i];
+                const trainee = allTrainees.find(t => t.name === traineeName);
+                
+                if (!trainee) continue;
+
+                // Find events for this trainee in the selected courses and date range
+                let eventsInDateRange = allEvents;
+                if (timePeriod === 'single-date' && singleDate) {
+                    eventsInDateRange = eventsInDateRange.filter(e => e.date === singleDate);
+                } else if (timePeriod === 'date-range' && startDate && endDate) {
+                    eventsInDateRange = eventsInDateRange.filter(e => e.date >= startDate && e.date <= endDate);
+                }
+
+                const traineeEvents = eventsInDateRange.filter(e => {
+                    const studentName = e.student || e.pilot;
+                    if (!studentName) return false;
+                    return studentName === traineeName || 
+                           studentName.startsWith(traineeName + ' –') || 
+                           studentName.startsWith(traineeName + ' -');
+                });
+
+                // Create or update PT051 assessment for each event
+                for (const event of traineeEvents) {
+                    const assessmentId = `${trainee.name}_${event.id}_PT051`;
+                    let assessment = pt051Assessments.get(assessmentId);
+
+                    if (!assessment) {
+                        // Create new assessment
+                        assessment = {
+                            id: assessmentId,
+                            traineeFullName: trainee.name,
+                            eventId: event.id,
+                            flightNumber: event.flightNumber,
+                            date: event.date,
+                            instructorName: event.instructor || '',
+                            overallGrade: 'No Grade' as any,
+                            overallResult: 'P',
+                            dcoResult: 'DCO',
+                            overallComments: '',
+                            scores: [],
+                            isCompleted: true,
+                            groundSchoolAssessment: { isAssessment: false, result: undefined }
+                        };
+                    } else {
+                        // Update existing assessment
+                        assessment = {
+                            ...assessment,
+                            dcoResult: 'DCO',
+                            overallGrade: 'No Grade' as any,
+                            overallResult: 'P',
+                            isCompleted: true
+                        };
+                    }
+
+                    onSavePT051Assessment(assessment);
+                }
+
+                completedCount++;
+                setCompletionProgress(Math.round((i + 1) / selectedForCompletion.length * 100));
+                setCompletionStatus(`Completed ${completedCount} of ${selectedForCompletion.length} trainees...`);
+            }
+
+            setCompletionStatus(`Successfully completed ${completedCount} trainees!`);
+            setTimeout(() => {
+                setShowMassComplete(false);
+                setSelectedForCompletion([]);
+            }, 2000);
+
+        } catch (error) {
+            console.error('Error during mass completion:', error);
+            setCompletionStatus('Error occurred during completion. Please try again.');
+        } finally {
+            setIsCompleting(false);
+        }
+    };
+
     return (
         <div className="h-full overflow-auto bg-gray-900 p-6">
             <div className="max-w-5xl mx-auto space-y-6">
@@ -1491,6 +1648,14 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                             >
                                 Export {outputFormat.toUpperCase()}
                             </button>
+                            {selectedCourses.length > 0 && (
+                                <button
+                                    onClick={handleMassComplete}
+                                    className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-semibold"
+                                >
+                                    Mark as Complete
+                                </button>
+                            )}
                             <button
                                 onClick={() => setShowTemplates(!showTemplates)}
                                 className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded"
@@ -1618,6 +1783,112 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                 Please check the browser console for details and try again.
                             </p>
                         </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Mass Completion Modal */}
+            {showMassComplete && (
+                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+                    <div className="bg-gray-800 border-2 border-green-500 rounded-lg shadow-2xl p-8 min-w-[600px] max-h-[80vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-green-400 font-bold text-xl">Mark Trainees as Complete</h3>
+                            <button 
+                                onClick={() => setShowMassComplete(false)}
+                                className="text-gray-400 hover:text-white text-2xl"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        
+                        {isCompleting ? (
+                            <div className="text-center">
+                                <div className="mb-4">
+                                    <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                                        <div 
+                                            className="bg-green-500 h-full transition-all duration-300 flex items-center justify-center text-xs font-bold text-white"
+                                            style={{ width: `${completionProgress}%` }}
+                                        >
+                                            {completionProgress > 10 && `${completionProgress}%`}
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-gray-300 text-base">{completionStatus}</p>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-gray-300 mb-4">
+                                    Select trainees to mark as completed. This will update their PT051 assessments with DCO completion.
+                                </p>
+                                
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-300">
+                                            Trainees for Completion ({selectedForCompletion.length} selected)
+                                        </label>
+                                        <div className="space-x-2">
+                                            <button
+                                                onClick={() => setSelectedForCompletion(getScheduledTraineesForCompletion)}
+                                                className="px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded text-sm"
+                                            >
+                                                Select All
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedForCompletion([])}
+                                                className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm"
+                                            >
+                                                Deselect All
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="max-h-60 overflow-y-auto border border-gray-600 rounded p-2 bg-gray-700/50">
+                                        {getScheduledTraineesForCompletion.map(traineeName => {
+                                            const trainee = allTrainees.find(t => t.name === traineeName);
+                                            return (
+                                                <label key={traineeName} className="flex items-center space-x-2 p-2 hover:bg-gray-600/30 rounded cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedForCompletion.includes(traineeName)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedForCompletion([...selectedForCompletion, traineeName]);
+                                                            } else {
+                                                                setSelectedForCompletion(selectedForCompletion.filter(name => name !== traineeName));
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4 accent-green-500 bg-gray-600 border-gray-500 rounded"
+                                                    />
+                                                    <span className="text-sm text-gray-200">
+                                                        {trainee?.rank} {traineeName} ({trainee?.course})
+                                                    </span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-end space-x-3">
+                                    <button
+                                        onClick={() => setShowMassComplete(false)}
+                                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={processMassCompletion}
+                                        disabled={selectedForCompletion.length === 0}
+                                        className={`px-4 py-2 rounded font-semibold ${
+                                            selectedForCompletion.length === 0
+                                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                : 'bg-green-600 hover:bg-green-700 text-white'
+                                        }`}
+                                    >
+                                        Complete Selected ({selectedForCompletion.length})
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

@@ -4528,6 +4528,21 @@ const App: React.FC = () => {
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
     };
+
+    const onSavePT051Assessment = (assessment: Pt051Assessment) => {
+        const saveKey = `${assessment.traineeName}_${assessment.eventId}_PT051`;
+        setPt051Assessments(prev => new Map(prev).set(saveKey, assessment));
+        
+        // Log to audit trail
+        const changes = [
+            assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
+            assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
+            assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
+            assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
+        ].filter(Boolean).join(', ');
+        
+        logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+    };
     
     const findAvailableResourceId = (eventToPlace: ScheduleEvent, existingEvents: ScheduleEvent[]): string => {
         // Handle deployment events - find an available Deployed resource
@@ -7965,6 +7980,8 @@ updates.forEach(update => {
                     scores={scores}
                     publishedSchedules={publishedSchedules}
                     syllabusDetails={syllabusDetails}
+                    pt051Assessments={pt051Assessments}
+                    onSavePT051Assessment={onSavePT051Assessment}
                 />;
             case 'ArchivedCourses':
                 return <ArchivedCoursesView 
@@ -8670,6 +8687,7 @@ updates.forEach(update => {
                        currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}
                     onVisualAdjustStart={handleVisualAdjustStart}
                     onVisualAdjustEnd={handleVisualAdjustEnd}
+                    onSavePT051Assessment={onSavePT051Assessment}
                 />
             )}
             

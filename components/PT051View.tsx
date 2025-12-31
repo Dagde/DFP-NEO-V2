@@ -266,6 +266,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             })),
             overallGrade: null,
             overallResult: null,
+            groundSchoolAssessment: { isAssessment: false, result: undefined },
         } as Pt051Assessment;
     });
 
@@ -287,6 +288,9 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     
     const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade || null);
     const [overallResult, setOverallResult] = useState<'P' | 'F' | null>(initialAssessment?.overallResult || null);
+    const [groundSchoolAssessment, setGroundSchoolAssessment] = useState(
+        initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: undefined }
+    );
     const [dcoResult, setDcoResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>(initialAssessment?.dcoResult || '');
     
     const previousPerformance = useMemo(() => {
@@ -621,6 +625,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             overallGrade,
             overallResult,
             dcoResult,
+            groundSchoolAssessment,
             // Preserve timing data
             startTime: currentEvent?.startTime,
             duration: currentEvent?.duration,
@@ -677,7 +682,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             handleSave(true); 
         }, 1000); 
         return () => clearTimeout(timerId);
-    }, [assessment, overallGrade, overallResult, dcoResult]);
+    }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
 
     useEffect(() => {
         registerDirtyCheck(
@@ -685,7 +690,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             () => handleSave(false), 
             () => { setIsDirty(false); } 
         );
-    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult]);
+    }, [registerDirtyCheck, isDirty, assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
 
     const gradeHeaderColors: { [key: string]: string } = {
         'MIN': 'bg-red-800/50',
@@ -783,7 +788,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             <div className="p-4 md:p-6 w-full max-w-full mx-auto">
                 {/* TOP SECTION: Details & Overall Assessment */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <dl className="lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg h-fit">
+                    <dl className="lg:col-span-1 space-y-2 p-4 bg-gray-800 border border-gray-700 rounded-lg">
                         <div>
                             <dt className="text-sm font-medium text-gray-400">Event Number</dt>
                             <dd className="mt-1 text-sm text-white font-semibold">{event.flightNumber || 'N/A'}</dd>
@@ -994,6 +999,51 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                                             <input type="radio" name="overall-result" value="F" checked={overallResult === 'F'} onChange={() => setOverallResult('F')} className="sr-only" />
                                             <span className="text-2xl font-bold">{showDoubleMarginalWarning ? 'Double Marg' : 'FAIL'}</span>
                                         </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Ground School Assessment */}
+                            <div className="mt-4 pt-4 border-t border-gray-600">
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Ground School Assessment</label>
+                                <div className="flex items-center space-x-3">
+                                    <label className="flex items-center space-x-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={groundSchoolAssessment.isAssessment}
+                                            onChange={(e) => setGroundSchoolAssessment({
+                                                ...groundSchoolAssessment,
+                                                isAssessment: e.target.checked,
+                                                result: e.target.checked ? groundSchoolAssessment.result || 0 : undefined
+                                            })}
+                                            className="h-4 w-4 accent-sky-500 bg-gray-600 border-gray-500 rounded"
+                                        />
+                                        <span className="text-xs font-medium text-gray-300">Assessment</span>
+                                    </label>
+                                    <div className="flex items-center space-x-1">
+                                        <label className="text-xs font-medium text-gray-400">Result:</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                value={groundSchoolAssessment.isAssessment ? (groundSchoolAssessment.result ?? '') : ''}
+                                                onChange={(e) => {
+                                                    const value = parseInt(e.target.value) || 0;
+                                                    setGroundSchoolAssessment({
+                                                        ...groundSchoolAssessment,
+                                                        result: Math.min(100, Math.max(0, value))
+                                                    });
+                                                }}
+                                                disabled={!groundSchoolAssessment.isAssessment}
+                                                className={`w-16 px-2 py-1 rounded-md text-center font-semibold text-xs
+                                                    ${groundSchoolAssessment.isAssessment
+                                                        ? 'bg-gray-700 text-white border-gray-600 focus:ring-2 focus:ring-sky-500'
+                                                        : 'bg-gray-600/50 text-gray-500 cursor-not-allowed border-gray-600'
+                                                    } border`}
+                                                placeholder="%"
+                                            />
+                                            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

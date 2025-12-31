@@ -289,6 +289,11 @@ export interface Pt051Assessment {
     comment: string;
   }[];
   isCompleted?: boolean; // Track if PT-051 has been edited and saved
+  // Ground School Assessment
+  groundSchoolAssessment?: {
+    isAssessment: boolean;
+    result?: number; // percentage (0-100)
+  };
 }
 
 export interface Conflict {

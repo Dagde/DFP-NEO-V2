@@ -27,8 +27,22 @@ const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
 
   // Initialize with all trainees selected
   React.useEffect(() => {
+    console.log('🔍 MassBriefCompleteFlyout - isOpen:', isOpen);
+    console.log('🔍 MassBriefCompleteFlyout - trainees:', trainees);
+    console.log('🔍 MassBriefCompleteFlyout - trainees.length:', trainees.length);
+    
     if (isOpen && trainees.length > 0) {
-      setSelectedTrainees(new Set(trainees.map(t => t.fullName)));
+      console.log('🔍 MassBriefCompleteFlyout - Trainee details:');
+      trainees.forEach((trainee, index) => {
+        console.log(`  ${index}:`, trainee);
+        console.log(`    Name: ${trainee.name}`);
+        console.log(`    FullName: ${trainee.fullName}`);
+        console.log(`    ID: ${trainee.idNumber}`);
+        console.log(`    Rank: ${trainee.rank}`);
+      });
+      const traineeFullNames = trainees.map(t => t.fullName);
+      console.log('🔍 MassBriefCompleteFlyout - traineeFullNames:', traineeFullNames);
+      setSelectedTrainees(new Set(traineeFullNames));
     }
   }, [isOpen, trainees]);
 
@@ -79,23 +93,39 @@ const MassBriefCompleteFlyout: React.FC<MassBriefCompleteFlyoutProps> = ({
         </div>
 
         <div className="space-y-2 mb-6">
-          {trainees.map(trainee => (
-            <div key={trainee.fullName} className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                id={`trainee-${trainee.fullName}`}
-                checked={selectedTrainees.has(trainee.fullName)}
-                onChange={() => handleTraineeToggle(trainee.fullName)}
-                className="w-4 h-4 text-sky-600 bg-gray-700 border-gray-600 rounded focus:ring-sky-500"
-              />
-              <label 
-                htmlFor={`trainee-${trainee.fullName}`}
-                className="text-white flex-1 cursor-pointer"
-              >
-                {trainee.rank} {trainee.name}
-              </label>
+          {trainees.length === 0 ? (
+            <div className="text-yellow-400 text-center py-4">
+              No trainees found for this event.
             </div>
-          ))}
+          ) : (
+            trainees.map(trainee => {
+              console.log('🔍 Rendering trainee:', trainee);
+              console.log('🔍 Trainee details:', {
+                fullName: trainee.fullName,
+                name: trainee.name,
+                rank: trainee.rank,
+                idNumber: trainee.idNumber
+              });
+              const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || 'Unknown Trainee';
+              return (
+                <div key={trainee.fullName || trainee.idNumber || trainee.id} className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id={`trainee-${trainee.fullName || trainee.idNumber || trainee.id}`}
+                    checked={selectedTrainees.has(trainee.fullName)}
+                    onChange={() => handleTraineeToggle(trainee.fullName)}
+                    className="w-4 h-4 text-sky-600 bg-gray-700 border-gray-600 rounded focus:ring-sky-500"
+                  />
+                  <label 
+                    htmlFor={`trainee-${trainee.fullName || trainee.idNumber || trainee.id}`}
+                    className="text-white flex-1 cursor-pointer"
+                  >
+                    {displayName}
+                  </label>
+                </div>
+              );
+            })
+          )}
         </div>
 
         <div className="flex space-x-3">
