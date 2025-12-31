@@ -7957,6 +7957,11 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
+                    events={events}
+                    scores={scores}
+                    publishedSchedules={publishedSchedules}
                 />;
             case 'ArchivedCourses':
                 return <ArchivedCoursesView 

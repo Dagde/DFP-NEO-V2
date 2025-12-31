@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import AuditButton from './AuditButton';
 import CoursesManagementView from './CoursesManagementView';
-import { Course } from '../types';
+import TrainingRecordsExportView from './TrainingRecordsExportView';
+import { Course, Trainee, Instructor, ScheduleEvent, Score } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
 
 interface TrainingRecordsViewProps {
@@ -12,7 +13,14 @@ interface TrainingRecordsViewProps {
     onDeleteCourse: (courseName: string, archive: boolean) => void;
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
+    traineesData: Trainee[];
+    instructorsData: Instructor[];
+    events: ScheduleEvent[];
+    scores: Map<string, Score[]>;
+    publishedSchedules: Record<string, ScheduleEvent[]>;
 }
+
+type TabType = 'courses' | 'export';
 
 const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     courses,
@@ -21,29 +29,75 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onAddCourse,
     onDeleteCourse,
     onNavigateToCourseRoster,
-    onNavigateToArchivedCourses
+    onNavigateToArchivedCourses,
+    traineesData,
+    instructorsData,
+    events,
+    scores,
+    publishedSchedules
 }) => {
+    const [activeTab, setActiveTab] = useState<TabType>('courses');
+
     return (
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
-            <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
-                <div>
-                    <h1 className="text-3xl font-bold text-white">Training Records</h1>
-                    <p className="text-sm text-gray-400">Manage and view training records</p>
+            <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">Training Records</h1>
+                        <p className="text-sm text-gray-400">Manage and view training records</p>
+                    </div>
+                    <div className="flex justify-end">
+                        <AuditButton pageName="Training Records" />
+                    </div>
                 </div>
-                <div className="flex justify-end mt-2">
-                    <AuditButton pageName="Training Records" />
+                
+                {/* Tabs */}
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => setActiveTab('courses')}
+                        className={`px-4 py-2 rounded-t font-medium transition-colors ${
+                            activeTab === 'courses'
+                                ? 'bg-gray-900 text-white border-t-2 border-sky-500'
+                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                        }`}
+                    >
+                        Courses Management
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('export')}
+                        className={`px-4 py-2 rounded-t font-medium transition-colors ${
+                            activeTab === 'export'
+                                ? 'bg-gray-900 text-white border-t-2 border-sky-500'
+                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                        }`}
+                    >
+                        Export Records
+                    </button>
                 </div>
             </div>
+            
             <div className="flex-1 overflow-hidden">
-                <CoursesManagementView
-                    courses={courses}
-                    courseColors={courseColors}
-                    archivedCourses={archivedCourses}
-                    onAddCourse={onAddCourse}
-                    onDeleteCourse={onDeleteCourse}
-                    onNavigateToCourseRoster={onNavigateToCourseRoster}
-                    onNavigateToArchivedCourses={onNavigateToArchivedCourses}
-                />
+                {activeTab === 'courses' && (
+                    <CoursesManagementView
+                        courses={courses}
+                        courseColors={courseColors}
+                        archivedCourses={archivedCourses}
+                        onAddCourse={onAddCourse}
+                        onDeleteCourse={onDeleteCourse}
+                        onNavigateToCourseRoster={onNavigateToCourseRoster}
+                        onNavigateToArchivedCourses={onNavigateToArchivedCourses}
+                    />
+                )}
+                {activeTab === 'export' && (
+                    <TrainingRecordsExportView
+                        traineesData={traineesData}
+                        instructorsData={instructorsData}
+                        events={events}
+                        courses={courses}
+                        scores={scores}
+                        publishedSchedules={publishedSchedules}
+                    />
+                )}
             </div>
         </div>
     );
