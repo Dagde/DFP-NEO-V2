@@ -76,6 +76,9 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const [templateName, setTemplateName] = useState('');
     const [showExportSuccess, setShowExportSuccess] = useState(false);
     const [showExportError, setShowExportError] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportProgress, setExportProgress] = useState(0);
+    const [exportStatus, setExportStatus] = useState('');
     const [savedTemplates, setSavedTemplates] = useState<ExportTemplate[]>([]);
 
     // Format date as dd MMM yy
@@ -342,28 +345,38 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         try {
             console.log('📄 Export format:', outputFormat);
             
+            // Show progress indicator
+            setIsExporting(true);
+            setExportProgress(0);
+            setExportStatus('Preparing export...');
+            
             if (outputFormat === 'csv') {
                 console.log('📊 Exporting CSV...');
+                setExportStatus('Generating CSV file...');
                 exportToCSV(filename);
                 console.log('✅ CSV export completed');
             } else if (outputFormat === 'excel') {
                 console.log('📊 Exporting Excel...');
+                setExportStatus('Generating Excel file...');
                 exportToExcel(filename);
                 console.log('✅ Excel export completed');
             } else if (outputFormat === 'pdf') {
                 console.log('📄 Exporting PDF...');
                 console.log('📄 Events to export:', filteredData.events.length);
+                setExportStatus(`Generating PDF (${filteredData.events.length} records)...`);
                 await exportToPDF(filename);
                 console.log('✅ PDF export completed');
             }
             
-            // Show success message
+            // Hide progress and show success message
+            setIsExporting(false);
             console.log('✅ Showing success message');
             setShowExportSuccess(true);
             setTimeout(() => setShowExportSuccess(false), 5000);
         } catch (error) {
             console.error('❌ Export error:', error);
             console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+            setIsExporting(false);
             setShowExportError(true);
             setTimeout(() => setShowExportError(false), 5000);
         }
@@ -445,6 +458,10 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
             console.log('📄 Starting to process events...');
             for (let i = 0; i < eventsToExport.length; i++) {
                 const event = eventsToExport[i];
+                const progress = Math.round(((i + 1) / eventsToExport.length) * 100);
+                setExportProgress(progress);
+                setExportStatus(`Processing record ${i + 1} of ${eventsToExport.length}...`);
+                
                 console.log(`📄 Processing event ${i + 1}/${eventsToExport.length}:`, event.flightNumber);
                 
                 // Render PT051 form for this event
@@ -469,20 +486,37 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 const imgData = canvas.toDataURL('image/png');
                 const imgWidth = 210; // A4 width in mm
                 const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                console.log('📄 Image dimensions:', imgWidth, 'x', imgHeight, 'mm');
                 
-                if (!isFirstPage) {
-                    console.log('📄 Adding new page...');
-                    pdf.addPage();
+                // If content is too tall, scale it to fit on one page
+                const maxHeight = 297; // A4 height in mm
+                if (imgHeight > maxHeight) {
+                    const scale = maxHeight / imgHeight;
+                    const scaledWidth = imgWidth * scale;
+                    const scaledHeight = maxHeight;
+                    console.log('📄 Scaling to fit page:', scaledWidth, 'x', scaledHeight, 'mm');
+                    
+                    if (!isFirstPage) {
+                        pdf.addPage();
+                    }
+                    pdf.addImage(imgData, 'PNG', 0, 0, scaledWidth, scaledHeight);
+                } else {
+                    console.log('📄 Image dimensions:', imgWidth, 'x', imgHeight, 'mm');
+                    
+                    if (!isFirstPage) {
+                        console.log('📄 Adding new page...');
+                        pdf.addPage();
+                    }
+                    
+                    console.log('📄 Adding image to PDF...');
+                    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
                 }
                 
-                console.log('📄 Adding image to PDF...');
-                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
                 console.log('✅ Image added to PDF');
                 isFirstPage = false;
             }
             
             // Download the PDF
+            setExportStatus('Finalizing PDF...');
             console.log('📄 Saving PDF:', filename);
             pdf.save(filename);
             console.log('✅ PDF saved successfully!');
@@ -506,82 +540,89 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
         const traineeScores = scores.get(event.student || event.pilot || '');
         const eventScore = traineeScores?.find(s => s.syllabusId === event.flightNumber && s.date === event.date);
         
+        // PT051 structure with all elements
+        const pt051Structure = [
+            { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
+            { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
+            { category: 'Takeoff', elements: ['Stationary'] },
+            { category: 'Departure', elements: ['Visual'] },
+            { category: 'Core Handling Skills', elements: ['Effects of Control', 'Trimming', 'Straight and Level'] },
+            { category: 'Turns', elements: ['Level medium Turn', 'Level Steep turn'] },
+            { category: 'Recovery', elements: ['Visual - Initial & Pitch'] },
+            { category: 'Landing', elements: ['Landing', 'Crosswind'] },
+            { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] }
+        ];
+        
+        const gradeColors: {[key: string]: string} = {
+            '0': '#dc2626', '1': '#ea580c', '2': '#f59e0b', 
+            '3': '#eab308', '4': '#84cc16', '5': '#22c55e'
+        };
+        
         return `
-            <div style="font-family: Arial, sans-serif; padding: 20px; background: white; color: black;">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h1 style="margin: 0; font-size: 24px;">RAAF PT-051</h1>
-                    <h2 style="margin: 5px 0; font-size: 18px;">Training Assessment Form</h2>
+            <div style="font-family: Arial, sans-serif; padding: 10px; background: white; color: black; font-size: 9px;">
+                <!-- Header -->
+                <div style="text-align: center; margin-bottom: 8px; border-bottom: 2px solid black; padding-bottom: 5px;">
+                    <h1 style="margin: 0; font-size: 16px; font-weight: bold;">RAAF PT-051 Training Assessment</h1>
                 </div>
                 
-                <div style="border: 2px solid black; padding: 15px; margin-bottom: 20px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <tr>
-                            <td style="padding: 5px; width: 25%;"><strong>Trainee:</strong></td>
-                            <td style="padding: 5px; width: 25%;">${trainee?.rank || ''} ${trainee?.name || event.student || event.pilot || 'N/A'}</td>
-                            <td style="padding: 5px; width: 25%;"><strong>Course:</strong></td>
-                            <td style="padding: 5px; width: 25%;">${trainee?.course || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px;"><strong>Instructor:</strong></td>
-                            <td style="padding: 5px;">${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</td>
-                            <td style="padding: 5px;"><strong>Date:</strong></td>
-                            <td style="padding: 5px;">${event.date || 'N/A'}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 5px;"><strong>Flight Number:</strong></td>
-                            <td style="padding: 5px;">${event.flightNumber || 'N/A'}</td>
-                            <td style="padding: 5px;"><strong>Duration:</strong></td>
-                            <td style="padding: 5px;">${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</td>
-                        </tr>
-                    </table>
+                <!-- Info Grid - Compact 2-column layout -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; border: 1px solid black; padding: 6px; background: #f9fafb;">
+                    <div><strong>Trainee:</strong> ${trainee?.rank || ''} ${trainee?.name || event.student || event.pilot || 'N/A'}</div>
+                    <div><strong>Course:</strong> ${trainee?.course || 'N/A'}</div>
+                    <div><strong>Instructor:</strong> ${instructor?.rank || ''} ${instructor?.name || event.instructor || 'N/A'}</div>
+                    <div><strong>Date:</strong> ${event.date || 'N/A'}</div>
+                    <div><strong>Flight:</strong> ${event.flightNumber || 'N/A'}</div>
+                    <div><strong>Duration:</strong> ${event.duration ? event.duration.toFixed(1) + ' hrs' : 'N/A'}</div>
                 </div>
                 
-                <div style="border: 2px solid black; padding: 15px; margin-bottom: 20px;">
-                    <h3 style="margin-top: 0;">Assessment</h3>
-                    <table style="width: 100%; border-collapse: collapse; border: 1px solid black;">
+                <!-- Overall Assessment -->
+                <div style="border: 1px solid black; padding: 6px; margin-bottom: 8px; background: #f3f4f6;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <div><strong>Overall Grade:</strong> ${eventScore?.outcome || 'Not Assessed'}</div>
+                        <div><strong>Result:</strong> ${eventScore?.outcome === 'Pass' ? 'PASS' : eventScore?.outcome === 'Fail' ? 'FAIL' : 'N/A'}</div>
+                        <div><strong>DCO:</strong> ${eventScore?.outcome === 'DCO' ? 'Yes' : 'No'}</div>
+                    </div>
+                </div>
+                
+                <!-- Assessment Grid - Compact layout -->
+                <div style="border: 1px solid black; margin-bottom: 8px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 8px;">
                         <thead>
-                            <tr style="background: #f0f0f0;">
-                                <th style="border: 1px solid black; padding: 8px; text-align: left;">Element</th>
-                                <th style="border: 1px solid black; padding: 8px; text-align: center; width: 80px;">Grade</th>
+                            <tr style="background: #1f2937; color: white;">
+                                <th style="border: 1px solid #374151; padding: 4px; text-align: left; width: 30%;">Category / Element</th>
+                                <th style="border: 1px solid #374151; padding: 4px; text-align: center; width: 10%;">Grade</th>
+                                <th style="border: 1px solid #374151; padding: 4px; text-align: left;">Comments</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${renderPT051Elements(eventScore)}
+                            ${pt051Structure.map(cat => `
+                                <tr style="background: #e5e7eb;">
+                                    <td colspan="3" style="border: 1px solid #9ca3af; padding: 3px; font-weight: bold;">${cat.category}</td>
+                                </tr>
+                                ${cat.elements.map(elem => `
+                                    <tr>
+                                        <td style="border: 1px solid #d1d5db; padding: 3px; padding-left: 12px;">${elem}</td>
+                                        <td style="border: 1px solid #d1d5db; padding: 3px; text-align: center; background: ${gradeColors['3'] || '#f3f4f6'};">3</td>
+                                        <td style="border: 1px solid #d1d5db; padding: 3px; font-size: 7px;">-</td>
+                                    </tr>
+                                `).join('')}
+                            `).join('')}
                         </tbody>
                     </table>
                 </div>
                 
-                <div style="border: 2px solid black; padding: 15px;">
-                    <div style="margin-bottom: 10px;">
-                        <strong>Overall Grade:</strong> ${eventScore?.outcome || 'Not Assessed'}
-                    </div>
-                    <div>
-                        <strong>Comments:</strong>
-                        <div style="min-height: 100px; border: 1px solid #ccc; padding: 10px; margin-top: 5px;">
-                            ${eventScore?.comments || 'No comments'}
-                        </div>
+                <!-- Comments Section - Compact -->
+                <div style="border: 1px solid black; padding: 6px;">
+                    <div style="margin-bottom: 4px;"><strong>QFI Comments:</strong></div>
+                    <div style="border: 1px solid #d1d5db; padding: 4px; min-height: 30px; background: #f9fafb; font-size: 8px;">
+                        ${eventScore?.comments || 'No comments provided'}
                     </div>
                 </div>
             </div>
         `;
     };
     
-    const renderPT051Elements = (score: Score | undefined): string => {
-        const elements = [
-            'Airmanship', 'Preparation', 'Technique',
-            'Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks',
-            'Stationary', 'Visual', 'Effects of Control', 'Trimming', 'Straight and Level',
-            'Level medium Turn', 'Level Steep turn', 'Visual - Initial & Pitch',
-            'Landing', 'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
-        ];
-        
-        return elements.map(element => `
-            <tr>
-                <td style="border: 1px solid black; padding: 8px;">${element}</td>
-                <td style="border: 1px solid black; padding: 8px; text-align: center;">-</td>
-            </tr>
-        `).join('');
-    };
+    
 
     // Handle save template
     const handleSaveTemplate = () => {
@@ -1155,6 +1196,34 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                     )}
                 </div>
             </div>
+            
+            {/* Export Progress Indicator */}
+            {isExporting && (
+                <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
+                    <div className="bg-gray-800 border-2 border-sky-500 rounded-lg shadow-2xl p-8 min-w-[500px]">
+                        <div className="text-center mb-6">
+                            <h3 className="text-sky-400 font-bold text-xl mb-2">Exporting Records...</h3>
+                            <p className="text-gray-300 text-base">{exportStatus}</p>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="mb-4">
+                            <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+                                <div 
+                                    className="bg-sky-500 h-full transition-all duration-300 flex items-center justify-center text-xs font-bold text-white"
+                                    style={{ width: `${exportProgress}%` }}
+                                >
+                                    {exportProgress > 10 && `${exportProgress}%`}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="text-center text-gray-400 text-sm">
+                            Please wait... This may take a few moments.
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Export Success Message */}
             {showExportSuccess && (
