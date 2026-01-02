@@ -8,12 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Backup database
-datasource backup {
-  provider = "postgresql"
-  url      = env("BACKUP_DATABASE_URL")
-}
-
 model User {
   id            String    @id @default(cuid())
   username      String    @unique
@@ -34,6 +28,11 @@ model User {
   createdBy     User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
   createdById   String?
   createdUsers  User[]    @relation("UserCreatedBy")
+  flightSchedules FlightSchedule[] @relation("FlightSchedules")
+  personnel     Personnel[] @relation("Personnel")
+  aircraft      Aircraft[] @relation("Aircraft")
+  cancellations CancellationHistory[] @relation("CancellationHistory")
+  auditLogs     AuditLog[] @relation("AuditLog")
   
   @@index([username])
   @@index([email])
@@ -90,4 +89,100 @@ enum Role {
   SUPER_ADMIN
   ADMIN
   USER
+}
+
+// Enhanced Flight Scheduling Models
+model FlightSchedule {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime
+  scheduleData Json    // Stores the complete schedule for the day
+  version     String   @default("1.0")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation("FlightSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+}
+
+model Personnel {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  rank            String?
+  role            String   // 'instructor', 'trainee', 'staff'
+  qualifications  Json?    // Array of qualifications
+  availability    Json?    // Availability data
+  preferences     Json?    // Scheduling preferences
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation("Personnel", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Aircraft {
+  id              String   @id @default(cuid())
+  userId          String
+  aircraftNumber  String   // e.g., "001", "002"
+  type            String   // Aircraft type
+  status          String   @default("available") // 'available', 'maintenance', 'unavailable'
+  configuration   Json?    // Seat configurations, equipment
+  maintenanceLog  Json?    // Maintenance history
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation("Aircraft", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([isActive])
+  @@unique([userId, aircraftNumber])
+}
+
+model CancellationHistory {
+  id              String   @id @default(cuid())
+  userId          String
+  scheduleId      String?
+  eventId         String
+  eventType       String   // 'flight', 'simulator', etc.
+  cancellationCode String
+  reason          String?
+  cancelledBy     String
+  cancelledAt     DateTime @default(now())
+  originalData    Json     // Original event data before cancellation
+  
+  user            User     @relation("CancellationHistory", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([scheduleId])
+  @@index([cancelledAt])
+  @@index([cancellationCode])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  action      String   // 'create', 'update', 'delete', 'login', etc.
+  entityType  String   // 'schedule', 'personnel', 'aircraft', etc.
+  entityId    String?
+  changes     Json?    // What changed
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation("AuditLog", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
 }

@@ -4,8 +4,9 @@ import { prisma } from '@/lib/db/prisma';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await auth();
     
@@ -17,7 +18,7 @@ export async function PATCH(
     const { isActive } = body;
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: { isActive },
       select: {
         id: true,
@@ -35,8 +36,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await auth();
     
@@ -45,7 +47,7 @@ export async function DELETE(
     }
 
     await prisma.user.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

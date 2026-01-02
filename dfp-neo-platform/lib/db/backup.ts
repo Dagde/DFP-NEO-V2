@@ -74,16 +74,22 @@ export class BackupSystem {
       for (const schedule of schedules) {
         await backupPrisma.schedule.upsert({
           where: { id: schedule.id },
-          update: schedule,
-          create: schedule,
+          update: {
+            userId: schedule.userId,
+            date: schedule.date,
+            data: schedule.data as any,
+            version: schedule.version,
+            updatedAt: schedule.updatedAt,
+          },
+          create: schedule as any,
         });
       }
 
       for (const setting of settings) {
         await backupPrisma.userSettings.upsert({
           where: { id: setting.id },
-          update: setting,
-          create: setting,
+          update: setting as any,
+          create: setting as any,
         });
       }
 

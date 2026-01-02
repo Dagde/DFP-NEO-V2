@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Formation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        .pass { color: #4ade80; }
+        .fail { color: #ef4444; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        #formation-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #374151;
+            border: 2px solid #10b981;
+            border-radius: 8px;
+        }
+        #formation-section.visible {
+            display: block;
+        }
+        select {
+            padding: 8px;
+            margin: 10px 0;
+            background: #1f2937;
+            color: white;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            width: 200px;
+        }
+    </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+    <h1>Formation Functionality Test</h1>
+    
+    <div class="test-section">
+        <h2>Test: Simulate Formation Selection</h2>
+        <p>This demonstrates how the formation section should work</p>
+        
+        <div style="margin-top: 20px;">
+            <label><strong>Select Flight Number:</strong></label><br>
+            <select id="flight-number" onchange="handleFlightNumberChange()">
+                <option value="">Select...</option>
+                <option value="BGF1">BGF1</option>
+                <option value="BGF2">BGF2</option>
+                <option value="SCT FORM">SCT FORM</option>
+                <option value="FTD1">FTD1</option>
+            </select>
+        </div>
+
+        <div id="formation-section">
+            <h3 style="color: #10b981;">✅ Formation Section Visible!</h3>
+            <div>
+                <label>Formation Type:</label><br>
+                <select>
+                    <option>COBR</option>
+                    <option>HAWK</option>
+                </select>
+            </div>
+            <div style="margin-top: 10px;">
+                <label>Aircraft Count:</label><br>
+                <select>
+                    <option>2</option>
+                    <option>3</option>
+                    <option>4</option>
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option>
+                    <option>8</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="status" style="margin-top: 20px; padding: 10px; background: #1f2937; border-radius: 4px;">
+            <strong>Status:</strong> <span id="status-text">Waiting for selection...</span>
+        </div>
+    </div>
+
+    <script>
+        function handleFlightNumberChange() {
+            const select = document.getElementById('flight-number');
+            const value = select.value;
+            const formationSection = document.getElementById('formation-section');
+            const statusText = document.getElementById('status-text');
+            
+            console.log('🔥🔥🔥 Flight number changed to:', value);
+            
+            if (value === 'SCT FORM') {
+                console.log('🔥🔥🔥 SCT FORM selected - showing formation section');
+                formationSection.classList.add('visible');
+                statusText.innerHTML = '<span style="color: #10b981;">✓ Formation section is now visible</span>';
+            } else if (value) {
+                console.log('🔥🔥🔥 Other option selected - hiding formation section');
+                formationSection.classList.remove('visible');
+                statusText.innerHTML = '<span style="color: #ef4444;">Formation section hidden (not SCT FORM)</span>';
+            } else {
+                formationSection.classList.remove('visible');
+                statusText.textContent = 'Waiting for selection...';
+            }
+        }
+
+        console.log('🔥🔥🔥 Formation Test Page Loaded');
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 7.2s
+   Linting and checking validity of types ...
+   Collecting page data ...
+Error [PrismaClientConstructorValidationError]: Invalid value undefined for datasource "db" provided to PrismaClient constructor.
+It should have this form: { url: "CONNECTION_STRING" }
+Read more at https://pris.ly/d/client-constructor
+    at 7311 (.next/server/app/api/admin/users/[id]/route.js:1:1801)
+    at c (.next/server/webpack-runtime.js:1:143)
+    at 6472 (.next/server/app/api/admin/users/[id]/route.js:1:795)
+    at c (.next/server/webpack-runtime.js:1:143)
+    at 7482 (.next/server/app/api/admin/users/[id]/route.js:1:2264)
+    at c (.next/server/webpack-runtime.js:1:143)
+    at <unknown> (.next/server/app/api/admin/users/[id]/route.js:1:8668)
+
+> Build error occurred
+[Error: Failed to collect page data for /api/admin/users/[id]] {
+  type: 'Error'
+}
