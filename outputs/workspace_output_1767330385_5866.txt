@@ -1,0 +1,2 @@
+./components/ACHistoryPage.tsx
+./components/ACHistoryAnalytics.tsx

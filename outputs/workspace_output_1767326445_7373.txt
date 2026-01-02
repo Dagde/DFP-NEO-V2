@@ -1,0 +1,5 @@
+root        1614  0.0  0.0   2584   912 ?        S    03:56   0:00 sh -c vite
+root        1615  2.0  3.2 11861536 131648 ?     Sl   03:56   0:04 node /workspace/node_modules/.bin/vite
+root        1855  0.0  0.0   2920   916 ?        Ss   04:00   0:00 timeout --preserve-status --signal=KILL 60s bash -lc { cd /workspace ; mkdir -p /workspace/outputs ; } { ps aux | grep vite __ec=$? } >"/workspace/outputs/workspace_output_1767326445_7373.txt" 2>&1 head -c 80000 "/workspace/outputs/workspace_output_1767326445_7373.txt" ( exit "$__ec" )
+root        1856  0.0  0.0   4352  3240 ?        S    04:00   0:00 bash -lc { cd /workspace ; mkdir -p /workspace/outputs ; } { ps aux | grep vite __ec=$? } >"/workspace/outputs/workspace_output_1767326445_7373.txt" 2>&1 head -c 80000 "/workspace/outputs/workspace_output_1767326445_7373.txt" ( exit "$__ec" )
+root        1861  0.0  0.0   3752  1988 ?        S    04:00   0:00 grep vite

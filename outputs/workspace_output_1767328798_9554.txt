@@ -1,0 +1,100 @@
+                    </td>
+                    <td className="py-3 px-4">
+                      <select
+                        value={formData.appliesTo}
+                        onChange={(e) => setFormData({ ...formData, appliesTo: e.target.value as CancellationCodeAppliesTo })}
+                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
+                      >
+                        <option value="Flight">Flight</option>
+                        <option value="FTD">FTD</option>
+                        <option value="Both">Both</option>
+                      </select>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                        formData.isActive 
+                          ? 'bg-green-900/50 text-green-400' 
+                          : 'bg-red-900/50 text-red-400'
+                      }`}>
+                        {formData.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center space-x-2">
+                        <button
+                          onClick={handleSave}
+                          className="px-3 py-1 bg-green-600 text-white rounded text-xs font-semibold hover:bg-green-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="px-3 py-1 bg-gray-600 text-white rounded text-xs font-semibold hover:bg-gray-700"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }
+
+              return (
+                <tr key={code.code} className="border-b border-gray-700 hover:bg-gray-700/20">
+                  <td className="py-3 px-4 text-white font-mono font-semibold">{code.code}</td>
+                  <td className="py-3 px-4 text-gray-300">{code.category}</td>
+                  <td className="py-3 px-4 text-gray-300">{code.description}</td>
+                  <td className="py-3 px-4 text-gray-300">{code.appliesTo}</td>
+                  <td className="py-3 px-4 text-center">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                      code.isActive 
+                        ? 'bg-green-900/50 text-green-400' 
+                        : 'bg-red-900/50 text-red-400'
+                    }`}>
+                      {code.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  {canEdit && (
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center space-x-2">
+                        <button
+                          onClick={() => handleStartEdit(code)}
+                          disabled={isAddingNew || editingCode !== null}
+                          className="px-3 py-1 bg-sky-600 text-white rounded text-xs font-semibold hover:bg-sky-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => onToggleActive(code.code)}
+                          disabled={isAddingNew || editingCode !== null}
+                          className={`px-3 py-1 rounded text-xs font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed ${
+                            code.isActive
+                              ? 'bg-amber-600 text-white hover:bg-amber-700'
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                          }`}
+                        >
+                          {code.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
+                      {isUsed && (
+                        <p className="text-xs text-gray-500 text-center mt-1">Used in history</p>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 text-sm text-gray-400">
+        <p>• Only authorized users (Admin/Config roles) can add, edit, or activate/deactivate codes.</p>
+        <p>• Codes that have been used in cancellations cannot be deleted.</p>
+        <p>• Inactive codes remain visible in historical records.</p>
+      </div>
+    </div>
+  );
+};
+
+export default CancellationCodesTable;

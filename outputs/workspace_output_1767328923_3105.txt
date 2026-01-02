@@ -1,0 +1,10 @@
+      {/* AC History Analytics */}
+      <ACHistoryAnalytics
+        cancellationRecords={cancellationRecords}
+        cancellationCodes={cancellationCodes}
+      />
+    </div>
+  );
+};
+
+export default ACHistoryPage;

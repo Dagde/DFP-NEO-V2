@@ -1,0 +1,20 @@
+            ) : (
+                !isSmallTile && (
+                    <div 
+                        className="absolute -top-px left-1 font-mono text-white/60 pointer-events-none"
+                        style={{ fontSize: `${scaledFontSize * 0.75}px` }}
+                    >
+                        {formatTime(effectiveStartTime)}
+                    </div>
+                )
+            )}
+            {renderContent()}
+            {renderFlyout()}
+        </div>
+    </div>
+    );
+  };
+
+  return <FlightTileComponent />;
+
+export default FlightTile;

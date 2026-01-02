@@ -1,0 +1,11 @@
+interface ACHistoryPageProps {
+  currentUserRole: string;
+  cancellationRecords: CancellationRecord[];
+}
+
+const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
+  currentUserRole,
+  cancellationRecords,
+}) => {
+  const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
+  const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());

@@ -1,0 +1,1 @@
+168:      console.log('🎯 FlightTile rendering SCT event:', {

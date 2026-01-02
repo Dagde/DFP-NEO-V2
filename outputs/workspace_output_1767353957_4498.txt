@@ -1,0 +1,10 @@
+components/AircraftAvailabilityOverlay.tsx:14:    pixelsPerHour: number; // For time-based positioning
+components/AircraftAvailabilityOverlay.tsx:27:    pixelsPerHour,
+components/AircraftAvailabilityOverlay.tsx:105:        return (hours - startHour) * pixelsPerHour;
+components/FlightTile.tsx:12:  pixelsPerHour: number;
+components/FlightTile.tsx:83:const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+components/FlightTile.tsx:91:  const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
+components/FlightTile.tsx:105:    left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
+components/InstructorScheduleView.tsx:685:                    pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
+components/NextDayBuildView.tsx:590:                        pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
+components/NextDayBuildView.tsx:713:                            pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}

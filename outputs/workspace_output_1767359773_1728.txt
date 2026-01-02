@@ -1,0 +1,50 @@
+* feature/comprehensive-build-algorithm
+  main
+On branch feature/comprehensive-build-algorithm
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   components/ACHistoryPage.tsx
+	modified:   components/CancellationCodesTable.tsx
+	modified:   components/ScheduleView.tsx
+	modified:   components/SettingsView.tsx
+	modified:   components/SettingsViewWithMenu.tsx
+	modified:   vite.config.ts
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	3000-266375c4-e167-4965-8379-f82e010676b1.app.super.myninja.ai-1
+	Logo Final copy.png
+	Metal plate 1 copy.png
+	Password 2 copy.png
+	Screen Shot 2026-01-02 at 10.24.08 pm.jpg
+	Screen Shot 2026-01-02 at 10.32.49 pm.jpg
+	Screen Shot 2026-01-02 at 10.50.12 pm.jpg
+	Screen Shot 2026-01-02 at 3.47.56 pm.jpg
+	Screen Shot 2026-01-02 at 3.56.02 pm.jpg
+	Screen Shot 2026-01-02 at 4.14.33 pm.jpg
+	Screen Shot 2026-01-02 at 4.14.41 pm.jpg
+	Screen Shot 2026-01-02 at 4.14.48 pm.jpg
+	Screen Shot 2026-01-02 at 4.14.55 pm.jpg
+	Screen Shot 2026-01-02 at 4.15.01 pm.jpg
+	Screen Shot 2026-01-02 at 4.21.07 pm.jpg
+	Screen Shot 2026-01-02 at 4.21.14 pm.jpg
+	Screen Shot 2026-01-02 at 4.21.21 pm.jpg
+	Screen Shot 2026-01-02 at 4.21.29 pm.jpg
+	Screen Shot 2026-01-02 at 4.21.35 pm.jpg
+	Screen Shot 2026-01-02 at 4.27.06 pm.jpg
+	Screen Shot 2026-01-02 at 4.27.15 pm.jpg
+	Screen Shot 2026-01-02 at 4.27.20 pm.jpg
+	Screen Shot 2026-01-02 at 4.27.26 pm.jpg
+	Screen Shot 2026-01-02 at 4.27.32 pm.jpg
+	Screen Shot 2026-01-02 at 8.56.06 pm.jpg
+	Username 1 copy.png
+	components/RecentCancellationsTable.tsx
+	deployment-todo.md
+	dfp-neo-platform/
+	outputs/
+	summarized_conversations/
+
+no changes added to commit (use "git add" and/or "git commit -a")

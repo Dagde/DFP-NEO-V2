@@ -1,0 +1,11 @@
+                {/* AC History */}
+                {shouldShowSection('validation') && (
+                <div className="space-y-6">
+                   <ACHistoryPage 
+                       currentUserRole={currentUserPermission}
+                       cancellationRecords={cancellationRecords || []}
+                   />
+                </div>
+                )}
+                {/* Timezone Settings Window */}
+                {shouldShowSection('timezone') && (

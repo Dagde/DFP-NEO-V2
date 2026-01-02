@@ -1,0 +1,43 @@
+    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+        console.log('🚫 ========== CANCELLATION STARTED ==========');
+        console.log('🚫 Event ID:', eventId);
+        console.log('🚫 Cancellation Code:', cancellationCode);
+        console.log('🚫 Manual Entry:', manualCodeEntry);
+        
+        if (!selectedEvent) {
+            console.error('❌ No selected event!');
+            return;
+        }
+        const eventDate = selectedEvent.date;
+        console.log('📅 Event Date:', eventDate);
+        console.log('📋 Selected Event:', selectedEvent);
+        
+        // Create cancellation record
+        const personnelNames = [
+            selectedEvent.instructor,
+            selectedEvent.student,
+            selectedEvent.pilot
+        ].filter(Boolean).join(', ');
+        
+        const cancellationRecord: CancellationRecord = {
+            eventId: selectedEvent.id,
+            cancellationCode: cancellationCode,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            manualCodeEntry: manualCodeEntry,
+            eventDate: selectedEvent.date,
+            eventType: selectedEvent.type === 'ftd' ? 'ftd' : 'flight',
+            resourceType: selectedEvent.resourceId || 'Unknown',
+            eventName: selectedEvent.flightNumber || selectedEvent.syllabusItem || 'N/A',
+            personnelAffected: personnelNames || 'N/A',
+            notes: selectedEvent.notes || '',
+        };
+        
+        console.log('📝 Created cancellation record:', JSON.stringify(cancellationRecord, null, 2));
+        
+        // Save cancellation record
+        const updatedRecords = [...cancellationRecords, cancellationRecord];
+        setCancellationRecords(updatedRecords);
+        localStorage.setItem('cancellationRecords', JSON.stringify(updatedRecords));
+        console.log('💾 Saved cancellation records to localStorage. Total:', updatedRecords.length);
+        

@@ -6,6 +6,7 @@ interface CancellationCodesTableProps {
   onAddCode: (code: CancellationCode) => void;
   onEditCode: (oldCode: string, newCode: CancellationCode) => void;
   onToggleActive: (code: string) => void;
+  onDeleteCode: (code: string) => void;
   canEdit: boolean; // Based on user role
   usedCodes: Set<string>; // Codes that have been used in cancellations
 }
@@ -15,11 +16,13 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   onAddCode,
   onEditCode,
   onToggleActive,
+  onDeleteCode,
   canEdit,
   usedCodes,
 }) => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [deletingCode, setDeletingCode] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<CancellationCode>>({
     code: '',
     category: 'Aircraft',
@@ -56,6 +59,21 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
       appliesTo: 'Both',
       isActive: true,
     });
+  };
+
+  const handleDelete = (code: string) => {
+    setDeletingCode(code);
+  };
+
+  const confirmDelete = () => {
+    if (deletingCode) {
+      onDeleteCode(deletingCode);
+      setDeletingCode(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeletingCode(null);
   };
 
   const handleSave = () => {
@@ -297,6 +315,14 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         >
                           {code.isActive ? 'Deactivate' : 'Activate'}
                         </button>
+                        <button
+                          onClick={() => handleDelete(code.code)}
+                          disabled={isAddingNew || editingCode !== null || isUsed}
+                          className="px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                          title={isUsed ? "Cannot delete code that has been used" : "Delete code"}
+                        >
+                          Delete
+                        </button>
                       </div>
                       {isUsed && (
                         <p className="text-xs text-gray-500 text-center mt-1">Used in history</p>
@@ -315,6 +341,33 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
         <p>• Codes that have been used in cancellations cannot be deleted.</p>
         <p>• Inactive codes remain visible in historical records.</p>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {deletingCode && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md">
+            <h3 className="text-xl font-bold text-white mb-4">Confirm Delete</h3>
+            <p className="text-gray-300 mb-6">
+              Are you sure you want to delete the cancellation code <span className="font-mono font-bold text-red-400">{deletingCode}</span>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

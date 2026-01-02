@@ -1,0 +1,13 @@
+[eval]:1
+const fs = require('fs'); const content = fs.readFileSync('/workspace/components/FlightTile.tsx', 'utf8'); const lines = content.split('\n'); let lastReturnIndex = -1; let componentOpenBraces = 0; for (let i = 0; i < lines.length; i++) { const line = lines[i]; const openBraces = (line.match(/{/g) || []).length; const closeBraces = (line.match(/}/g) || []).length; componentOpenBraces += openBraces - closeBraces; if (line.trim()startsWith('return (')) { lastReturnIndex = i; } if (i > lastReturnIndex && lastReturnIndex > 0 && line.trim() === ');') { console.log('Main return ends at line', i + 1); console.log('Open braces after return:', componentOpenBraces); break; } }
+                                                                                                                                                                                                                                                                                                                                                                                                                                              ^^^^^^^^^^
+
+SyntaxError: Unexpected identifier 'startsWith'
+    at makeContextifyScript (node:internal/vm:185:14)
+    at node:internal/process/execution:107:22
+    at [eval]-wrapper:6:24
+    at runScript (node:internal/process/execution:101:62)
+    at evalScript (node:internal/process/execution:133:3)
+    at node:internal/main/eval_string:51:3
+
+Node.js v20.19.6

@@ -1,0 +1,9 @@
+
+> daily-flying-program@0.0.0 dev
+> vite
+
+
+  VITE v6.4.1  ready in 156 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.16.0.105:5173/

@@ -1,0 +1,93 @@
+    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+        if (!selectedEvent) {
+            return;
+        }
+        const eventDate = selectedEvent.date;
+        
+        // Create cancellation record
+        const personnelNames = [
+            selectedEvent.instructor,
+            selectedEvent.student,
+            selectedEvent.pilot
+        ].filter(Boolean).join(', ');
+        
+        const cancellationRecord: CancellationRecord = {
+            eventId: selectedEvent.id,
+            cancellationCode: cancellationCode,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            manualCodeEntry: manualCodeEntry,
+            eventDate: selectedEvent.date,
+            eventType: selectedEvent.type === 'ftd' ? 'ftd' : 'flight',
+            resourceType: selectedEvent.resourceId || 'Unknown',
+            eventName: selectedEvent.flightNumber || selectedEvent.syllabusItem || 'N/A',
+            personnelAffected: personnelNames || 'N/A',
+            notes: selectedEvent.notes || '',
+        };
+        
+        // Save cancellation record
+        const updatedRecords = [...cancellationRecords, cancellationRecord];
+        setCancellationRecords(updatedRecords);
+        localStorage.setItem('cancellationRecords', JSON.stringify(updatedRecords));
+        
+        // Mark event as cancelled and move to STBY
+        const originalResourceId = selectedEvent.resourceId;
+        const newResourceId = selectedEvent.type === 'ftd' ? 'BNF-STBY' : 'STBY';
+        
+        const cancelledEvent: ScheduleEvent = {
+            ...selectedEvent,
+            isCancelled: true,
+            cancellationCode: cancellationCode,
+            cancellationManualEntry: manualCodeEntry,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            resourceId: newResourceId,
+        };
+        
+        console.log('STBY FIX - Moving event to STBY:', {
+            eventId: cancelledEvent.id,
+            oldResourceId: originalResourceId,
+            newResourceId: cancelledEvent.resourceId,
+            isCancelled: cancelledEvent.isCancelled
+        });
+        
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        
+        if (isNextDay) {
+            setNextDayBuildEvents(prev => {
+                const updated = prev.map(e => e.id === selectedEvent.id ? cancelledEvent : e);
+                console.log('STBY FIX - NextDay events updated, STBY count:', updated.filter(e => e.resourceId?.includes('STBY')).length);
+                return updated;
+            });
+        } else {
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const scheduleForDate = prev[eventDate] || [];
+                const updatedSchedule = scheduleForDate.map(e => e.id === selectedEvent.id ? cancelledEvent : e);
+                console.log('STBY FIX - Schedule updated for date:', eventDate, 'STBY count:', updatedSchedule.filter(e => e.resourceId?.includes('STBY')).length);
+                return { ...prev, [eventDate]: updatedSchedule };
+            });
+        }
+        
+        // Remove from highest priority events
+        setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+        
+        // Force a refresh of the events by updating the date
+        const currentDate = date;
+        setDate(''); // Clear date
+        setTimeout(() => setDate(currentDate), 100); // Reset date after 100ms
+        
+        // Log the cancellation to audit trail
+        const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+        const eventType = selectedEvent.type || 'event';
+        const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
+        const codeDisplay = cancellationCode === 'OTHER' && manualCodeEntry ? manualCodeEntry : cancellationCode;
+        const description = `Cancelled ${eventType} event for ${personName} (Code: ${codeDisplay})`;
+        const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Moved to STBY`;
+        
+        logAudit(pageName, "Cancel", description, changes);
+        setSelectedEvent(null);
+        
+        
+    };
+    
+    const handleDeleteEvent = () => {

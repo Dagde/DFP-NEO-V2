@@ -1,0 +1,20 @@
+
+
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+  // Determine if this is a segment and use effective start/duration
+  const segment = event as EventSegment;
+  const effectiveStartTime = segment.segmentStartTime !== undefined ? segment.segmentStartTime : event.startTime;
+  const effectiveDuration = segment.segmentDuration !== undefined ? segment.segmentDuration : event.duration;
+  
+  const tileWidth = (effectiveDuration || 0) * pixelsPerHour;
+  const isDutySup = event.resourceId === 'Duty Sup';
+  
+  // Check if tile is too small for content (threshold e.g. 60px ~ 18 mins)
+  const isSmallTile = tileWidth < 60;
+  
+  // Determine flyout direction based on segment type
+  // 'start' segment means it starts today and ends tomorrow (renders at right edge) -> flyout left
+  // 'end' segment means it started yesterday and ends today (renders at left edge) -> flyout right
+  // Default to right for normal small tiles unless they are near the right edge (heuristic)
+  const isEndSegment = segment.segmentType === 'start'; 
+  const flyoutToLeft = isEndSegment || (effectiveStartTime + effectiveDuration > 22); // Logic: if it ends late in the day, flyout left

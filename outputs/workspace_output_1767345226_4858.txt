@@ -1,0 +1,31 @@
+
+> daily-flying-program@0.0.0 build
+> vite build
+
+vite v6.4.1 building for production...
+transforming...
+✓ 15 modules transformed.
+✗ Build failed in 174ms
+error during build:
+[vite:esbuild] Transform failed with 1 error:
+/workspace/App.tsx:5177:62: ERROR: Unexpected "&"
+file: /workspace/App.tsx:5177:62
+
+Unexpected "&"
+5175|          const eventType = selectedEvent.type || 'event';
+5176|          const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
+5177|          const codeDisplay = cancellationCode === 'OTHER' &amp;&amp; manualCodeEntry ? manualCodeEntry : cancellationCode;
+   |                                                                ^
+5178|          const description = `Cancelled ${eventType} event for ${personName} (Code: ${codeDisplay})`;
+5179|          const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Marked as cancelled`;
+
+    at failureErrorWithLog (/workspace/node_modules/esbuild/lib/main.js:1467:15)
+    at /workspace/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/workspace/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/workspace/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/workspace/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:524:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)

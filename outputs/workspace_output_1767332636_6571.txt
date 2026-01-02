@@ -1,0 +1,4 @@
+30:const formatTime = (time: number): string => {
+36:const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date): string => {
+83:const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+578:export default FlightTile;

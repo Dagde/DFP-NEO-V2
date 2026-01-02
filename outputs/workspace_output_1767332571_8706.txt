@@ -1,0 +1,19 @@
+          onMouseDown(e);
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      
+    >
+        {isChanged && !isPreview && (
+            <div className="absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" />
+        )}
+        {isStbyEvent && !isPreview && (
+            <div 
+                className="absolute inset-0 pointer-events-none z-10"
+                style={{
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(209, 213, 219, 0.4) 0px, rgba(209, 213, 219, 0.4) 3px, transparent 3px, transparent 8px)',
+                }}
+            />
+        )}
+        {event.isCancelled && (
+            <>

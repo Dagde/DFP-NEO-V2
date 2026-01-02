@@ -1,0 +1,41 @@
+      const firstInitial = firstName.charAt(0);
+      
+      return `${surname}, ${firstInitial}`;
+    };
+
+    // Apply name abbreviation for short flights
+    const displayPicName = isShortFlight ? abbreviateName(picName || '') : picName;
+    const displayStudentName = isShortFlight ? abbreviateName(studentName || '') : studentName;
+    
+    const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
+    
+    if (event.type === 'deployment') {
+        // Render deployment tile with subtle styling
+        return (
+            <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
+                <div className="overflow-hidden text-center">
+                    <div className="text-white/80 font-medium text-sm">
+                        DEPLOYMENT
+                    </div>
+                    <div className="font-mono text-white/60 truncate">
+                        deployed
+                    </div>
+                    <div className="text-xs text-white/50 mt-1">
+                        {event.deploymentStartTime?.replace(/:/g, '')} - {event.deploymentEndTime?.replace(/:/g, '')}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (event.type === 'unavailability') {
+        // Render unavailability tile
+        return (
+            <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
+                <div className="overflow-hidden text-center">
+                    <div className="text-red-300 font-medium text-sm">
+                        UNAVAILABLE
+                    </div>
+                    <div className="font-mono text-red-400 truncate">
+                        {(event.reason || 'Other').toUpperCase()}
+                    </div>

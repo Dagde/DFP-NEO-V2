@@ -1,0 +1,11 @@
+          </div>
+      );
+  }
+
+  return (
+    <div
+      data-is-flight-tile="true"
+      style={style}
+      className={finalClasses.join(' ')}
+      onClick={onSelectEvent}
+      onMouseDown={(e) => {

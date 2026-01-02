@@ -1,0 +1,6 @@
+                // TWR DI not required, skip this validation rule
+                // TWR DI not required, skip this validation rule
+        // If Validate mode is active and this event is flagged, emphasize the validation conflicts
+            // Add specific validation context
+                setShowInfoNotification('NEO analysis: This event has no conflicts and passes all validation rules.');
+        // If this is a validate-mode conflict, add specific context about validation

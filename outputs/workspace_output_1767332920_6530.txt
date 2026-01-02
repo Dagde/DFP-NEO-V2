@@ -1,0 +1,5 @@
+}
+
+const formatTime = (time: number): string => {
+    const hours = Math.floor(time);
+    const minutes = Math.round((time % 1) * 60);

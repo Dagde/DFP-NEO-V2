@@ -1,0 +1,21 @@
+  const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
+  const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
+
+  // Check if user has edit permissions (Admin or Super Admin)
+  const canEdit = currentUserRole === 'Super Admin' || currentUserRole === 'Admin';
+
+  // Load cancellation codes from localStorage or use initial data
+  useEffect(() => {
+    const storedCodes = localStorage.getItem('cancellationCodes');
+    if (storedCodes) {
+      try {
+        setCancellationCodes(JSON.parse(storedCodes));
+      } catch (error) {
+        console.error('Error loading cancellation codes:', error);
+        setCancellationCodes(initialCancellationCodes);
+      }
+    } else {
+      setCancellationCodes(initialCancellationCodes);
+      localStorage.setItem('cancellationCodes', JSON.stringify(initialCancellationCodes));
+    }
+  }, []);

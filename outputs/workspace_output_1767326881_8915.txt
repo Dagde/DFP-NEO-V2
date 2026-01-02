@@ -1,0 +1,40 @@
+    masterCurrencies: MasterCurrency[];
+    currencyRequirements: CurrencyRequirement[];
+    sctEvents: string[];
+    onUpdateSctEvents: (events: string[]) => void;
+    preferredDutyPeriod: number;
+    onUpdatePreferredDutyPeriod: (value: number) => void;
+    maxCrewDutyPeriod: number;
+    onUpdateMaxCrewDutyPeriod: (value: number) => void;
+    flightTurnaround: number;
+    onUpdateFlightTurnaround: (value: number) => void;
+    ftdTurnaround: number;
+    onUpdateFtdTurnaround: (value: number) => void;
+    cptTurnaround: number;
+    onUpdateCptTurnaround: (value: number) => void;
+    currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
+    maxDispatchPerHour: number;
+    onUpdateMaxDispatchPerHour: (value: number) => void;
+    timezoneOffset: number;
+    onUpdateTimezoneOffset: (offset: number) => void;
+    showDepartureDensityOverlay: boolean;
+    onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
+    formationCallsigns: FormationCallsign[];
+    courseColors: { [key: string]: string };
+    setCourseColors: (colors: { [key: string]: string }) => void;
+    onUpdateFormationCallsigns: (callsigns: FormationCallsign[]) => void;
+    onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
+    cancellationRecords: CancellationRecord[];
+}
+
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone';
+
+export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
+    const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
+
+    const menuItems = [
+        { id: 'validation' as const, label: 'AC History', icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+        )},

@@ -1,0 +1,50 @@
+  // Save codes to localStorage whenever they change
+  const saveCodes = (codes: CancellationCode[]) => {
+    setCancellationCodes(codes);
+    localStorage.setItem('cancellationCodes', JSON.stringify(codes));
+  };
+
+  const handleAddCode = (newCode: CancellationCode) => {
+    // Check if code already exists
+    if (cancellationCodes.some(c => c.code === newCode.code)) {
+      alert('A code with this identifier already exists.');
+      return;
+    }
+
+    const updatedCodes = [...cancellationCodes, newCode];
+    saveCodes(updatedCodes);
+  };
+
+  const handleEditCode = (oldCode: string, newCode: CancellationCode) => {
+    const updatedCodes = cancellationCodes.map(c => 
+      c.code === oldCode ? newCode : c
+    );
+    saveCodes(updatedCodes);
+  };
+
+  const handleToggleActive = (code: string) => {
+    const updatedCodes = cancellationCodes.map(c => 
+      c.code === code 
+        ? { ...c, isActive: !c.isActive, updatedAt: new Date().toISOString() }
+        : c
+    );
+    saveCodes(updatedCodes);
+  };
+
+  const handleDeleteCode = (code: string) => {
+    const updatedCodes = cancellationCodes.filter(c => c.code !== code);
+    saveCodes(updatedCodes);
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-white mb-2">AC History</h1>
+        <p className="text-gray-400">
+          Manage cancellation codes and view cancellation analytics and trends.
+        </p>
+      </div>
+
+      {/* Cancellation Codes Master Table */}
+      <CancellationCodesTable
+        codes={cancellationCodes}

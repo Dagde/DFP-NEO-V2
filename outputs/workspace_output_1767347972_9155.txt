@@ -1,0 +1,16 @@
+
+  const baseFontSize = 8;
+  const optimalWidth = 200; 
+  const minFontSize = 7;
+  const maxFontSize = 13;
+  
+  const scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, (tileWidth / optimalWidth) * baseFontSize));
+
+  // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
+  const isSctEvent = event.eventCategory === 'sct';
+  
+  
+  
+  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
+  const studentName = isSctEvent ? event.student : (event.student || (event.flightType === 'Solo' ? event.pilot : ''));
+  

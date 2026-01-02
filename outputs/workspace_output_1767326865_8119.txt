@@ -1,0 +1,59 @@
+                return <SettingsViewWithMenu 
+                    locations={locations}
+                    onUpdateLocations={setLocations}
+                    units={units}
+                    onUpdateUnits={setUnits}
+                    unitLocations={unitLocations}
+                    onUpdateUnitLocations={setUnitLocations}
+                    instructorsData={instructorsData}
+                    traineesData={traineesData}
+                    syllabusDetails={syllabusDetails}
+                    onBulkUpdateInstructors={handleBulkUpdateInstructors}
+                    onReplaceInstructors={handleReplaceInstructors}
+                    onBulkUpdateTrainees={handleBulkUpdateTrainees}
+                    onReplaceTrainees={handleReplaceTrainees}
+                    // FIX: Cannot find name 'onUpdateSyllabus'. Did you mean 'handleUpdateSyllabus'?
+                    onUpdateSyllabus={handleUpdateSyllabus}
+                    onShowSuccess={setSuccessMessage}
+                    eventLimits={eventLimits}
+                    onUpdateEventLimits={setEventLimits}
+                    phraseBank={phraseBank} // Pass phraseBank state
+                    onUpdatePhraseBank={setPhraseBank} // Pass update handler
+                    onNavigate={handleNavigation}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
+                    sctEvents={sctEvents}
+                    onUpdateSctEvents={setSctEvents}
+                    preferredDutyPeriod={preferredDutyPeriod}
+                    onUpdatePreferredDutyPeriod={setPreferredDutyPeriod}
+                    maxCrewDutyPeriod={maxCrewDutyPeriod}
+                    onUpdateMaxCrewDutyPeriod={setMaxCrewDutyPeriod}
+                    flightTurnaround={flightTurnaround}
+                    onUpdateFlightTurnaround={setFlightTurnaround}
+                    ftdTurnaround={ftdTurnaround}
+                    onUpdateFtdTurnaround={setFtdTurnaround}
+                    cptTurnaround={cptTurnaround}
+                    onUpdateCptTurnaround={setCptTurnaround}
+                    currentUserPermission={currentUserPermission}
+                    maxDispatchPerHour={maxDispatchPerHour}
+                    onUpdateMaxDispatchPerHour={setMaxDispatchPerHour}
+                    timezoneOffset={timezoneOffset}
+                    onUpdateTimezoneOffset={setTimezoneOffset}
+                    
+                       formationCallsigns={formationCallsigns}
+                          onUpdateFormationCallsigns={setFormationCallsigns}
+                          courseColors={courseColors}
+                          setCourseColors={setCourseColors}
+                          onUpdateTraineeLMPs={setTraineeLMPs}
+                          cancellationRecords={cancellationRecords}
+                       dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
+                       dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
+                       totalAircraft={24}
+                />;
+            case 'CurrencyBuilder':
+                return <CurrencyBuilderView 
+                            onBack={() => handleNavigation('Settings')} 
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            onSave={handleSaveCurrencies}
+                            onDelete={handleDeleteCurrency}

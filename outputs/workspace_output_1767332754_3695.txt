@@ -1,0 +1,20 @@
+   561	                    </div>
+   562	                </>
+   563	            ) : (
+   564	                !isSmallTile && (
+   565	                    <div 
+   566	                        className="absolute -top-px left-1 font-mono text-white/60 pointer-events-none"
+   567	                        style={{ fontSize: `${scaledFontSize * 0.75}px` }}
+   568	                    >
+   569	                        {formatTime(effectiveStartTime)}
+   570	                    </div>
+   571	                )
+   572	            )}
+   573	            {renderContent()}
+   574	            {renderFlyout()}
+   575	        </div>
+   576	    </div>
+   577	  );
+   578	};
+   579	
+   580	export default FlightTile;

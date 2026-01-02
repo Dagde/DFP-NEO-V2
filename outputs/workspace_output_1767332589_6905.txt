@@ -1,0 +1,18 @@
+     7	  traineesData: Trainee[];
+     8	  onSelectEvent: () => void;
+     9	  onMouseDown: (e: MouseEvent<HTMLDivElement>) => void;
+    10	  onMouseEnter: () => void;
+    11	  onMouseLeave: () => void;
+--
+    81	
+    82	
+    83	const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+    84	  // Determine if this is a segment and use effective start/duration
+    85	  const segment = event as EventSegment;
+--
+   499	      className={finalClasses.join(' ')}
+   500	      onClick={onSelectEvent}
+   501	      onMouseDown={(e) => {
+   502	          onMouseDown(e);
+   503	      }}
+   504	      onMouseEnter={onMouseEnter}
