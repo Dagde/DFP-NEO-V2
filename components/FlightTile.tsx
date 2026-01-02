@@ -171,12 +171,37 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     return 'ring-transparent'; // Default for unsigned flights > 2hrs away on the current day
   };
 
-  const baseFontSize = 8;
-  const optimalWidth = 200; 
+  // Smarter font scaling based on duration (200px per hour)
   const minFontSize = 7;
   const maxFontSize = 13;
+  const baseFontSize = 11; // Start with a good readable size
   
-  const scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, (tileWidth / optimalWidth) * baseFontSize));
+  // Calculate content-aware font size based on duration thresholds
+  let scaledFontSize = baseFontSize;
+  
+  // Duration-based thresholds (200px per hour)
+  const maxNoScaleThreshold = 239; // <1.2 hours = <240px start scaling down
+  const moderateScaleThreshold = 220; // 1.1 hours = 220px (font: 10)
+  const smallScaleThreshold = 160;    // 0.8 hours = 160px (font: 9)
+  const minScaleThreshold = 120;       // 0.6 hours = 120px (font: 7)
+  
+  if (tileWidth < minScaleThreshold) {
+    // Very small tiles (< 0.6 hours) - minimum font size
+    scaledFontSize = minFontSize;
+  } else if (tileWidth < smallScaleThreshold) {
+    // Small tiles (0.6-0.8 hours) - moderate scaling
+    scaledFontSize = 9;
+  } else if (tileWidth < moderateScaleThreshold) {
+    // Medium tiles (0.9-1.1 hours) - slight reduction
+    scaledFontSize = 10;
+  } else if (tileWidth < maxNoScaleThreshold) {
+    // Just under 1.2 hours (1.1-1.19 hours) - slight reduction
+    scaledFontSize = 10;
+  }
+  // else: use baseFontSize (11) for tiles >= 1.2 hours (240px+)
+  
+  // Ensure within bounds
+  scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
 
   // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
   const isSctEvent = event.eventCategory === 'sct';
@@ -330,6 +355,25 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       fontSize: `${scaledFontSize}px`,
       lineHeight: '1.3',
     };
+
+    // Smart name truncation for flights <= 1.1 hour
+    const isShortFlight = effectiveDuration <= 1.1;
+    
+    const abbreviateName = (fullName: string) => {
+      if (!fullName) return fullName;
+      const parts = fullName.split(', ');
+      if (parts.length !== 2) return fullName;
+      
+      const surname = parts[0];
+      const firstName = parts[1];
+      const firstInitial = firstName.charAt(0);
+      
+      return `${surname}, ${firstInitial}`;
+    };
+
+    // Apply name abbreviation for short flights
+    const displayPicName = isShortFlight ? abbreviateName(picName || '') : picName;
+    const displayStudentName = isShortFlight ? abbreviateName(studentName || '') : studentName;
     
     const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
     
@@ -390,13 +434,13 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
         return (
             <div className="flex justify-between items-center h-full w-full px-2" style={textStyle}>
-                <div className="flex-1 overflow-hidden pr-2" style={{ paddingLeft: '12%' }}>
-                    <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses}>{typeof studentDisplay === 'string' ? <>{studentDisplay}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
+                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : displayStudentName?.split(' – ')[0]}</div>
                 </div>
-                <div className="flex flex-col items-end justify-between h-full ml-2 flex-shrink-0 w-20">
+                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
-                        <div className="font-mono text-white/80 truncate text-right">
+                        <div className="font-mono text-white/80 text-right whitespace-nowrap">
                             <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
                         </div>
                     </div>
@@ -409,44 +453,58 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     return (
         <>
             <div className="flex items-center justify-between h-full w-full px-2" style={textStyle}>
-                <div className="flex-1 overflow-hidden pr-2" style={{ paddingLeft: '12%' }}>
-                    <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses}>{typeof studentDisplay === 'string' ? <>{studentDisplay}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
+                    <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : displayStudentName?.split(' – ')[0]}</div>
                 </div>
 
-                <div className="flex flex-col items-end justify-between h-full pl-2 flex-shrink-0 w-20">
+                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
-                        <div className="font-mono text-white/80 truncate text-right">
+                        <div className="font-mono text-white/80 text-right whitespace-nowrap">
                             <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {event.area && (
+            {event.aircraftNumber && (
                 <div
-                    className={`absolute bottom-0.5 left-1 font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
-                    style={{
-                        fontSize: `${scaledFontSize}px`,
-                        lineHeight: '1',
-                        opacity: 0.7,
-                    }}
-                >
-                    {event.area}
-                </div>
-            )}
-            {callsign && (
-                <div
-                    className="absolute bottom-0.5 right-3 font-mono text-white/80"
+                    className="absolute bottom-0.5 left-1 font-mono text-white/80"
                     style={{
                         fontSize: `${scaledFontSize - 2}px`,
                         lineHeight: '1',
                         opacity: 0.8,
                     }}
                 >
-                    {callsign}
+                    #{event.aircraftNumber}
                 </div>
             )}
+            <div className="absolute bottom-0.5 right-3 flex items-center gap-1">
+                {event.area && (
+                    <div
+                        className={`font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
+                        style={{
+                            fontSize: `${scaledFontSize}px`,
+                            lineHeight: '1',
+                            opacity: 0.7,
+                        }}
+                    >
+                        {event.area}
+                    </div>
+                )}
+                {callsign && (
+                    <div
+                        className="font-mono text-white/80"
+                        style={{
+                            fontSize: `${scaledFontSize - 2}px`,
+                            lineHeight: '1',
+                            opacity: 0.8,
+                        }}
+                    >
+                        {callsign}
+                    </div>
+                )}
+            </div>
         </>
     );
   };

@@ -113,6 +113,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [eventType, setEventType] = useState(event.type);
     const [startTime, setStartTime] = useState(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
     const [area, setArea] = useState(event.area || 'A');
+    const [aircraftNumber, setAircraftNumber] = useState(event.aircraftNumber || '001');
     const [aircraftCount, setAircraftCount] = useState(1);
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
     const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
@@ -674,6 +675,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setEventType(event.type);
         setStartTime(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
         setArea(event.area || 'A');
+        setAircraftNumber(event.aircraftNumber || '001');
         setAircraftCount(1);
         setCrew([{ 
             flightType: event.flightType, 
@@ -1044,6 +1046,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 resourceId,
                 duration: typeof duration === 'number' ? duration : 0, // Ensure duration is a number
                 area: eventType === 'flight' ? area : undefined,
+                aircraftNumber: eventType === 'flight' ? aircraftNumber : undefined,
                 color: eventColor,
                 flightType: c.flightType,
                 instructor: c.instructor,
@@ -1609,12 +1612,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             )}
                                         </div>
                                         {eventType === 'flight' && (
+                                        <>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Area</label>
                                             <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
                                                 {areas.map(a => <option key={a} value={a}>{a}</option>)}
                                             </select>
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Aircraft Number</label>
+                                            <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num}>{num}</option>)}
+                                            </select>
+                                        </div>
+                                        </>
                                         )}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Start Time</label>

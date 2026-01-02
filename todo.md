@@ -1,27 +1,32 @@
-# Critical Export Errors - Both Issues Identified
+# AC History Enhancement Tasks
 
-## Error 1: Excel Export - Unrecognized bookType
-**Error**: `Error: Unrecognized bookType |excel|`
-**Root Cause**: Using `outputFormat` value "excel" directly in filename, but SheetJS expects "xlsx"
-**Fix**: Change filename extension from `.excel` to `.xlsx`
+## 1. Add Delete Button to Cancellation Codes Table
+- [x] Add onDeleteCode prop to CancellationCodesTable interface
+- [x] Add delete button to each row in the table
+- [x] Implement delete confirmation dialog
+- [x] Add delete handler in ACHistoryPage
+- [x] Update localStorage when code is deleted
+- [x] Prevent deletion of codes that are currently in use
 
-## Error 2: PDF/Excel Course Export - No Events
-**Error**: `Error: No events to export` when selecting ADF301 course
-**Root Cause**: 
-- Log shows: `📊 Course filter - Events before filter: 0`
-- Events are being filtered out BEFORE the course filter is applied
-- The filteredEvents is already empty when course filter runs
-- This is why individual trainee works (doesn't use course filter) but course export fails
+## 2. Create Recent Cancellations Table
+- [x] Create new component: RecentCancellationsTable.tsx
+- [x] Display cancellation records with: date, flight/event name, personnel, cancellation code, reason
+- [x] Add filtering by time period (Last 7 Days, Last 30 Days, Last 90 Days, All Time)
+- [x] Add sorting capabilities (by date, by code, by personnel)
+- [x] Style table to match existing design
+- [x] Integrate into ACHistoryPage component
 
-**Investigation Needed**:
-- Check what's filtering out events before the course filter
-- Look at the filteredEvents useMemo dependencies
-- Verify event filtering logic order
+## 3. Move Cancelled Flights to STBY Line with Red X
+- [x] Identify where flight cancellation logic is handled in App.tsx
+- [x] When a flight is cancelled, move it to STBY line (already implemented)
+- [x] Add visual indicator (red X overlay) to cancelled flight tiles
+- [x] Update flight tile rendering to show red X for cancelled events
+- [x] Ensure cancelled flights maintain their data but are visually distinct
+- [ ] Test cancellation flow end-to-end
 
-## Implementation Plan
-- [ ] Fix Excel filename to use .xlsx extension
-- [ ] Debug why filteredEvents is 0 before course filter
-- [ ] Fix event filtering order/logic
-- [ ] Test both individual and course exports
-- [ ] Build and deploy
-- [ ] Push to GitHub
+## 4. Testing & Integration
+- [ ] Test delete functionality for cancellation codes
+- [ ] Test recent cancellations table with various filters
+- [ ] Test cancelled flight movement to STBY line
+- [ ] Verify red X display on cancelled flights
+- [x] Rebuild and deploy application

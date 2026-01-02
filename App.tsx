@@ -3033,7 +3033,7 @@ const App: React.FC = () => {
     const [isEditingDefault, setIsEditingDefault] = useState(false);
     const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
     const [conflict, setConflict] = useState<Conflict | null>(null);
-    const [showValidation, setShowValidation] = useState(true);
+    const [showValidation, setShowValidation] = useState(false);
     const [showPrePost, setShowPrePost] = useState(true);
     const [isMagnifierEnabled, setIsMagnifierEnabled] = useState(false);
     const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -5106,10 +5106,18 @@ const App: React.FC = () => {
     };
 
     const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
-        if (!selectedEvent) return;
+        if (!selectedEvent) {
+            return;
+        }
         const eventDate = selectedEvent.date;
         
         // Create cancellation record
+        const personnelNames = [
+            selectedEvent.instructor,
+            selectedEvent.student,
+            selectedEvent.pilot
+        ].filter(Boolean).join(', ');
+        
         const cancellationRecord: CancellationRecord = {
             eventId: selectedEvent.id,
             cancellationCode: cancellationCode,
@@ -5119,6 +5127,9 @@ const App: React.FC = () => {
             eventDate: selectedEvent.date,
             eventType: selectedEvent.type === 'ftd' ? 'ftd' : 'flight',
             resourceType: selectedEvent.resourceId || 'Unknown',
+            eventName: selectedEvent.flightNumber || selectedEvent.syllabusItem || 'N/A',
+            personnelAffected: personnelNames || 'N/A',
+            notes: selectedEvent.notes || '',
         };
         
         // Save cancellation record
@@ -5126,7 +5137,7 @@ const App: React.FC = () => {
         setCancellationRecords(updatedRecords);
         localStorage.setItem('cancellationRecords', JSON.stringify(updatedRecords));
         
-        // Mark event as cancelled and move to STBY
+        // Mark event as cancelled (leave in original position, just add red X)
         const cancelledEvent: ScheduleEvent = {
             ...selectedEvent,
             isCancelled: true,
@@ -5134,13 +5145,15 @@ const App: React.FC = () => {
             cancellationManualEntry: manualCodeEntry,
             cancelledBy: `${currentUser}`,
             cancelledAt: new Date().toISOString(),
-            resourceId: selectedEvent.type === 'ftd' ? 'BNF-STBY' : 'STBY',
+            // Keep original resourceId - don't move to STBY
         };
         
         const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
         
         if (isNextDay) {
-            setNextDayBuildEvents(prev => prev.map(e => e.id === selectedEvent.id ? cancelledEvent : e));
+            setNextDayBuildEvents(prev => 
+                prev.map(e => e.id === selectedEvent.id ? cancelledEvent : e)
+            );
         } else {
             setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
                 const scheduleForDate = prev[eventDate] || [];
@@ -5152,16 +5165,23 @@ const App: React.FC = () => {
         // Remove from highest priority events
         setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
         
+        // Force a refresh of the events by updating the date
+        const currentDate = date;
+        setDate(''); // Clear date
+        setTimeout(() => setDate(currentDate), 100); // Reset date after 100ms
+        
         // Log the cancellation to audit trail
         const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
         const eventType = selectedEvent.type || 'event';
         const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
         const codeDisplay = cancellationCode === 'OTHER' && manualCodeEntry ? manualCodeEntry : cancellationCode;
         const description = `Cancelled ${eventType} event for ${personName} (Code: ${codeDisplay})`;
-        const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Moved to STBY`;
+        const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Marked as cancelled`;
         
         logAudit(pageName, "Cancel", description, changes);
         setSelectedEvent(null);
+        
+        
     };
     
     const handleDeleteEvent = () => {
@@ -8457,6 +8477,7 @@ updates.forEach(update => {
                           setCourseColors={setCourseColors}
                           onUpdateTraineeLMPs={setTraineeLMPs}
                           cancellationRecords={cancellationRecords}
+                          cancellationCodes={cancellationCodes}
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}

@@ -152,6 +152,7 @@ export interface ScheduleEvent {
   formationType?: string;
   formationPosition?: number;
   callsign?: string;
+  aircraftNumber?: string;
   attendees?: string[];
   isUnavailabilityConflict?: boolean;
   authNotes?: string;
@@ -466,6 +467,9 @@ export interface CancellationRecord {
   eventDate: string;
   eventType: 'flight' | 'ftd';
   resourceType: string; // Aircraft, FTD, etc.
+  eventName?: string; // Flight number or event name
+  personnelAffected?: string; // Names of personnel affected
+  notes?: string; // Additional notes
 }
 
 export interface CancellationAnalytics {
