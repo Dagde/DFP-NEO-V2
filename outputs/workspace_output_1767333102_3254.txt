@@ -1,0 +1,9 @@
+
+    return '';
+};
+
+
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+  // Determine if this is a segment and use effective start/duration
+  const segment = event as EventSegment;
+  const effectiveStartTime = segment.segmentStartTime !== undefined ? segment.segmentStartTime : event.startTime;

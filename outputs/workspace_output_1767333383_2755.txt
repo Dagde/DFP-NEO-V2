@@ -1,0 +1,10 @@
+            {renderContent()}
+            {renderFlyout()}
+        </div>
+    </div>
+    );
+  };
+
+  return <FlightTileComponent />;
+
+export default FlightTile;

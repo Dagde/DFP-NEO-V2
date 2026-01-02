@@ -1,0 +1,7 @@
+  // Debug logging for SCT events
+  if (isSctEvent) {
+      console.log('🎯 FlightTile rendering SCT event:', {
+          id: event.id,
+          flightType: event.flightType,
+          pilot: event.pilot,
+          student: event.student,

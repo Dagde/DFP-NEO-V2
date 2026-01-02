@@ -1,0 +1,480 @@
+ * shows last completed as BGF1. ELCE logic finds BGF2 in yesterday's DFP (finished,
+ * not cancelled, not unsuccessful) and uses it to determine Next Event = BGF3.
+ */
+const getEffectiveLastCompletedEvent = (
+    traineeName: string,
+    publishedSchedules: Record<string, ScheduleEvent[]>,
+    buildDate: string
+): string | null => {
+    // Calculate yesterday's date
+    const buildDateObj = new Date(buildDate + 'T00:00:00Z');
+    buildDateObj.setDate(buildDateObj.getDate() - 1);
+    const yesterdayStr = buildDateObj.toISOString().split('T')[0];
+    
+    // Get yesterday's DFP
+    const yesterdayDfp = publishedSchedules[yesterdayStr] || [];
+    
+    if (yesterdayDfp.length === 0) {
+        return null;
+    }
+    
+--
+const computeNextEventsForTrainee = (
+    trainee: Trainee,
+    traineeLMPs: Map<string, SyllabusItemDetail[]>,
+    scores: Map<string, Score[]>,
+    masterSyllabus: SyllabusItemDetail[], // Added fallback
+    publishedSchedules?: Record<string, ScheduleEvent[]>, // NEW: Optional for ELCE
+    buildDate?: string // NEW: Optional for ELCE
+): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
+    // Check individual LMP first, then fallback to master syllabus
+    const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
+    const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+--
+    
+    const traineeScores = scores.get(trainee.fullName) || [];
+    const completedEventIds = new Set(traineeScores.map(s => s.event));
+    
+    // NEW: Check for ELCE - events completed yesterday but not yet in PT-051
+    if (publishedSchedules && buildDate) {
+        const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
+        if (elce) {
+            completedEventIds.add(elce);
+        }
+    }
+
+--
+    traineesData: Trainee[],
+    coursePriorities: string[],
+    traineeLMPs: Map<string, LMP[]>,
+    scores: Map<string, Score[]>,
+    syllabusDetails: SyllabusDetail[],
+    publishedSchedules: Map<string, Omit<ScheduleEvent, 'date'>[]>,
+    buildDate: string
+): Map<string, number> {
+    const possibleEventCounts = new Map<string, number>();
+    
+    // Initialize counts
+--
+        const { next, plusOne } = computeNextEventsForTrainee(
+            trainee,
+            traineeLMPs,
+            scores,
+            syllabusDetails,
+            publishedSchedules,
+            buildDate
+        );
+        
+        // Count next event
+        if (next) {
+--
+    buildDate: string,
+    traineesData: Trainee[],
+    traineeLMPs: Map<string, LMP[]>,
+    scores: Map<string, Score[]>,
+    syllabusDetails: SyllabusDetail[],
+    publishedSchedules: Map<string, Omit<ScheduleEvent, 'date'>[]>
+): BuildAnalysis {
+    // Filter out non-scheduled events (Duty Sup, STBY)
+    const scheduledEvents = events.filter(e => 
+        !e.flightNumber.includes('Duty Sup') && 
+        !e.resourceId.startsWith('STBY') && 
+--
+        traineesData,
+        coursePriorities,
+        traineeLMPs,
+        scores,
+        syllabusDetails,
+        publishedSchedules,
+        buildDate
+    );
+    
+    const courseAnalysis: CourseAnalysis[] = coursePriorities.map(course => {
+        const targetPercentage = normalizedPercentages.get(course) || 0;
+--
+}
+
+function generateDfpInternal(
+    config: DfpConfig, 
+    setProgress: (progress: { message: string, percentage: number }) => void,
+    publishedSchedules: Record<string, ScheduleEvent[]>
+): Omit<ScheduleEvent, 'date'>[] {
+    const { 
+        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
+        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
+        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
+--
+    // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
+
+    setProgress({ message: 'Initializing DFP build...', percentage: 0 });
+
+    // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
+    const activeDfpEvents = publishedSchedules[buildDate] || [];
+    console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
+    
+    // Convert Active DFP events to the format needed (remove date field)
+    const activeDfpEventsWithoutDate: Omit<ScheduleEvent, 'date'>[] = activeDfpEvents.map(e => {
+        const { date, ...eventWithoutDate } = e;
+--
+    );
+    
+    const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
+
+    activeTrainees.forEach(trainee => {
+        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+        traineeNextEventMap.set(trainee.fullName, nextEvents);
+    });
+
+    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
+    const nextPlusOneLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[] };
+--
+
+    // Phrase Bank State
+    const [phraseBank, setPhraseBank] = useState<PhraseBank>(DEFAULT_PHRASE_BANK);
+
+    // Published Schedules State (must be declared before buildResources)
+    const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    
+    // NDB state
+    const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
+    const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
+        const tomorrow = new Date();
+--
+            const todayStart = new Date(`${date}T00:00:00Z`).getTime();
+            const todayEnd = new Date(todayStart);
+            todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+            const todayEndTime = todayEnd.getTime();
+            
+            const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
+            const overlappingDeployments = allEvents.filter(event => {
+                if (event.type !== 'deployment') return false;
+                
+                const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+                const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
+--
+                
+                stbyLineCount = Math.max(4, maxStbyLine); // At least 4, or more if needed
+            }
+        } else {
+            // For published schedules, check the events for that date
+            const eventsForDate = publishedSchedules[date] || [];
+            const stbyEvents = eventsForDate.filter(e => 
+                e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')
+            );
+            
+            if (stbyEvents.length > 0) {
+--
+            ...Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`),
+        ];
+        
+        console.log('Built all resources:', allResources, 'STBY lines:', stbyLineCount);
+        return allResources;
+    }, [availableFtdCount, availableCptCount, availableAircraftCount, date, activeView, publishedSchedules, nextDayBuildEvents]);
+    
+    // Filter resources to only show those with events (for schedule views)
+    const getFilteredResources = useCallback((events: ScheduleEvent[], allResources: string[]) => {
+        // Safety check: if no events, return empty array
+        if (!events || events.length === 0) {
+--
+    }, []);
+    
+    // Sync PT-051s when navigating to MyDashboard (ensures dashboard is up to date)
+    useEffect(() => {
+        if (activeView === 'MyDashboard') {
+            syncPt051WithActiveDfp(publishedSchedules, pt051Assessments);
+        }
+    }, [activeView, publishedSchedules, pt051Assessments]);
+
+    // Sync priority events when SCT requests change
+    useEffect(() => {
+        if (activeView === 'Priorities' || activeView === 'ProgramData') {
+            syncPriorityEventsWithSctAndRemedial();
+--
+
+    const eventsForDate = useMemo(() => {
+        // This is used for LOGIC (like conflict checks), not rendering.
+        console.log('🟡 eventsForDate memo recalculating');
+        console.log('🟡 date:', date);
+        console.log('🟡 publishedSchedules keys:', Object.keys(publishedSchedules));
+        const events = publishedSchedules[date] || [];
+        console.log('🟡 eventsForDate count:', events.length);
+        
+        // Log SCT FORM events
+        const sctEvents = events.filter(e => e.flightNumber === 'SCT FORM');
+        if (sctEvents.length > 0) {
+--
+                pilot: e.pilot
+            })));
+        }
+        
+        return events;
+    }, [date, publishedSchedules]);
+    
+    // Filter out STBY events for Staff and Trainee schedule views
+    const eventsForStaffTraineeSchedule = useMemo(() => {
+        return eventsForDate.filter(e => !e.resourceId.startsWith('STBY'));
+    }, [eventsForDate]);
+--
+        const todayEnd = new Date(todayStart);
+        todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+        const todayEndTime = todayEnd.getTime();
+    
+        // FIX: Explicitly type allEvents to aid TypeScript's inference.
+        const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
+    
+        for (const event of allEvents) {
+            let eventStartMs: number, eventEndMs: number;
+    
+            eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+--
+                    segmentType
+                });
+            }
+        }
+        return segments;
+    }, [date, publishedSchedules]);
+
+    const nextDayEventSegments = useMemo(() => {
+        console.log('🚀 [NEO-Build] nextDayEventSegments useMemo recalculating');
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
+--
+        
+        const dayBeforeBuild = new Date(todayStart);
+        dayBeforeBuild.setUTCDate(dayBeforeBuild.getUTCDate() - 1);
+        const dayBeforeBuildStr = dayBeforeBuild.toISOString().split('T')[0];
+
+        const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
+
+        for (const event of allEvents) {
+            const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+            const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
+
+--
+                });
+            }
+        }
+        console.log('🚀 [NEO-Build] Final segments.length:', segments.length);
+        return segments;
+    }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
+
+    useEffect(() => {
+        const todayStr = getLocalDateString();
+        const initialEvents = events.filter(e => e.date === todayStr);
+        if (Object.keys(baselineSchedules).length === 0 && initialEvents.length > 0) {
+--
+                    
+                    eventsToSave.forEach(e => {
+                        // Assign resourceId based on event type
+                        // For deployments, always reassign to get correct numbered resource
+                        if (!e.resourceId || e.type === 'deployment') {
+                            const allEventsForDate = publishedSchedules[mainEvent.date] || [];
+                            // Include already assigned events from this batch
+                            const eventsToCheck = [...allEventsForDate, ...alreadyAssigned];
+                            const assignedResourceId = findAvailableResourceId(e, eventsToCheck);
+                            console.log(`Assigning resourceId to ${e.type} event:`, assignedResourceId);
+                            e.resourceId = assignedResourceId;
+--
+                        }
+                    });
+                }
+                setPublishedSchedules((prev) => {
+                    console.log('🟢 setPublishedSchedules: START');
+                    console.log('🟢 Previous publishedSchedules keys:', Object.keys(prev));
+                    const newSchedules = { ...prev };
+                    
+                    // Group events by their date (deployment tiles may have different dates)
+                    const eventsByDate = new Map<string, ScheduleEvent[]>();
+                    eventsToSave.forEach(event => {
+--
+                            pilot: savedEvent?.pilot
+                        });
+                    });
+                    
+                    console.log('🟢 setPublishedSchedules: COMPLETE');
+                    console.log('🟢 New publishedSchedules keys:', Object.keys(newSchedules));
+                    
+                    return newSchedules;
+                });
+                
+                // NEW APPROACH: Trigger PT-051 sync after any Active DFP change
+--
+                   const description = `Added ${eventType} event for ${personName}`;
+                   const changes = `Event: ${event.syllabusItem || event.flightNumber || eventType}, Time: ${event.startTime}, Duration: ${event.duration}hrs, Resource: ${event.resourceId}`;
+                   logAudit(pageName, 'Add', description, changes);
+               } else {
+                   // Find the original event to compare changes
+                   const originalEvent = publishedSchedules[event.date]?.find(e => e.id === event.id) || 
+                                       nextDayBuildEvents.find(e => e.id === event.id);
+                   
+                   if (originalEvent) {
+                       const changesList: string[] = [];
+                       
+--
+                console.log('✅ Updated nextDayBuildEvents. Found event:', updated.some(e => e.id === selectedEvent.id));
+                console.log('🔍 Event after update:', updated.find(e => e.id === selectedEvent.id));
+                return updated;
+            });
+        } else {
+            console.log('📝 Updating publishedSchedules for date:', eventDate);
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const scheduleForDate = prev[eventDate] || [];
+                console.log('📊 Events for this date before update:', scheduleForDate.length);
+                const updatedSchedule = scheduleForDate.map(e => e.id === selectedEvent.id ? cancelledEvent : e);
+                console.log('✅ Updated schedule. Found event:', updatedSchedule.some(e => e.id === selectedEvent.id));
+--
+    };
+    // NEW PT-051 SYNC SYSTEM
+    // Syncs PT-051 assessments with Active DFP events
+    const syncPt051WithActiveDfp = (currentPublishedSchedules?: Record<string, ScheduleEvent[]>, currentPt051Assessments?: Map<string, Pt051Assessment>) => {
+        // Use provided parameters or fall back to current state
+        const schedules = currentPublishedSchedules || publishedSchedules;
+        const assessments = currentPt051Assessments || pt051Assessments;
+        
+        console.log('🔄 Starting PT-051 sync with Active DFP...');
+        console.log('Published schedules keys:', Object.keys(schedules));
+        
+--
+        const syncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
+        
+        // SECOND STEP: Analyze Active DFP for the build date and preserve ALL existing events
+        console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
+        
+        const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
+        
+        console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
+        
+        // Declare these outside the if block so they're accessible later
+        // CRITICAL: Use the synced events, not the old state
+--
+        // Now proceed with normal build process
+        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        let bnfTraineeCount = 0;
+
+        activeTrainees.forEach(trainee => {
+            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+            if (next && next.code.startsWith('BNF') && next.type === 'Flight') {
+                bnfTraineeCount++;
+            }
+        });
+
+--
+                    syllabus: config.syllabus.length,
+                    highestPriorityEvents: config.highestPriorityEvents.length,
+                    buildDate: config.buildDate
+                });
+                
+                const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+                console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
+                console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
+                
+                setNextDayBuildEvents(generated);
+                console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+--
+                    buildDfpDate,
+                    traineesData,
+                    traineeLMPs,
+                    scores,
+                    syllabusDetails,
+                    publishedSchedules
+                );
+                
+                // Store analysis in state for BuildAnalysisView
+                setLastBuildAnalysis(analysis);
+                
+--
+    
+        const otherTrainees = traineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
+    
+        for (const trainee of otherTrainees) {
+            // 1. Check if their next event matches
+            const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+            if (nextEvents.next?.id !== conflictedSyllabusId) {
+                continue;
+            }
+    
+            // 2. Check availability
+--
+        console.log('🟣 NEO: activeView:', activeView);
+        
+        // Get the current events
+        const currentEvents = isNextDayContext 
+            ? nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate }))
+            : (publishedSchedules[targetDate] || []);
+        
+        console.log('🟣 NEO: currentEvents count:', currentEvents.length);
+        
+        // Find the event to update
+        const eventToUpdate = currentEvents.find(e => e.id === problemTile.id);
+--
+
+        console.log('🟠 ========== NEO USEEFFECT END ==========');
+
+    // We depend on the schedules and the flyout's open state.
+    // CRITICAL: We must re-run when the actual schedule data changes, not just when the event ID changes
+    }, [publishedSchedules, nextDayBuildEvents, neoProblemTileForFlyout?.event.id, eventsForDate, activeView, buildDfpDate]); // Re-run when schedules change if flyout is open
+
+
+    const handleCancelNeo = () => {
+        setNeoProblemTileForFlyout(null);
+        setNeoRemediesForFlyout([]);
+--
+            // Count events by type for the analysis date
+            const hasFtd = events.some(e => e.type === 'ftd' && e.date === analysisDate);
+            const hasFlight = events.some(e => e.type === 'flight' && e.date === analysisDate);
+            const groundEventsToday = events.filter(e => e.type === 'ground' && e.date === analysisDate).length;
+            
+            const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
+            
+            // Enhanced eligibility logic for Oracle - proper trainee duty rules
+            let isEligible = nextSyllabusEvent?.type === 'Flight';
+            
+            // Rule 0: EXCLUDE PAUSED/NTSC TRAINEES - Oracle should NOT offer these trainees
+--
+                                       startTime,
+                                       duration: newDuration
+                                   };
+                                   setVisualAdjustEvent(updatedEvent);
+                                   
+                                   // Update the actual event in the publishedSchedules
+                                   setPublishedSchedules(prevSchedules => {
+                                       const updatedSchedules = { ...prevSchedules };
+                                       const dateKey = date;
+                                       
+                                       if (updatedSchedules[dateKey]) {
+--
+                    instructorsData={instructorsData}
+                    archivedTraineesData={archivedTraineesData}
+                    archivedInstructorsData={archivedInstructorsData}
+                    events={events}
+                    scores={scores}
+                    publishedSchedules={publishedSchedules}
+                    syllabusDetails={syllabusDetails}
+                    pt051Assessments={pt051Assessments}
+                    onSavePT051Assessment={onSavePT051Assessment}
+                />;
+            case 'ArchivedCourses':
+--
+                            analysis={lastBuildAnalysis}
+                        />;
+            case 'MyDashboard':
+                // Get all events from published schedules for PT-051 lookup
+                const allPublishedEvents: ScheduleEvent[] = [];
+                Object.values(publishedSchedules).forEach(scheduleEvents => {
+                    allPublishedEvents.push(...scheduleEvents);
+                });
+                
+                return <MyDashboard 
+                            userName={currentUser?.name ? currentUser.name.split(', ').reverse().join(' ') : 'Joe Bloggs'}
+--
+                    onNeoClick={handleNeoClick}
+                    traineeLMPs={traineeLMPs}
+                    oracleContextForModal={oracleContextForModal}
+                    sctRequests={[...sctFlights, ...sctFtds]}
+                    sctEvents={sctEvents}
+                    publishedSchedules={publishedSchedules}
+                    nextDayBuildEvents={nextDayBuildEvents}
+                    activeView={activeView}
+                    isAddingTile={isAddingTile}
+                       formationCallsigns={formationCallsigns}
+                       currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}

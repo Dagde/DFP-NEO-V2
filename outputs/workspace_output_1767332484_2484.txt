@@ -1,0 +1,1 @@
+/workspace/components/ScheduleView.tsx:760:        console.log('Overlay state check:', { 

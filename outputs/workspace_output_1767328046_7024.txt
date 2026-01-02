@@ -1,0 +1,10 @@
+import React, { useState } from 'react';
+import { SettingsView } from './SettingsView';
+import AuditButton from './AuditButton';
+import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord } from '../types';
+
+interface SettingsViewWithMenuProps {
+    locations: string[];
+    onUpdateLocations: (locations: string[]) => void;
+    units: string[];
+    onUpdateUnits: (units: string[]) => void;

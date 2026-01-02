@@ -1,0 +1,11 @@
+                    onToggleOracleMode={handleToggleOracleMode}
+                    showDepartureDensityOverlay={showDepartureDensityOverlay}
+                    onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
+                    
+                       showAircraftAvailability={showAircraftAvailability}
+                       onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
+                />}
+                {renderActiveView()}
+            </div>
+            {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
+

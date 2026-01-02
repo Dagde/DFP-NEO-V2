@@ -1,0 +1,2 @@
+386:                <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '2%', minWidth: 0 }}>
+405:                <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '2%', minWidth: 0 }}>

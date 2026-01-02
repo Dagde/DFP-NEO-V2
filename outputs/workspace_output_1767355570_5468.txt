@@ -1,0 +1,10 @@
+components/AddUnavailabilityFlyout.tsx:import { validateUnavailabilityPeriod, ValidationResult } from '../utils/unavailabilityValidation';
+components/AddUnavailabilityFlyout.tsx:    const validateField = () => {
+components/AddUnavailabilityFlyout.tsx:            const validationResult = validateUnavailabilityPeriod(
+components/AddUnavailabilityFlyout.tsx:            validateField();
+components/AddUnavailabilityFlyout.tsx:        const validationResult = validateUnavailabilityPeriod(
+components/AddUnavailabilityFlyout.tsx:                                                if (showErrors) validateField();
+components/AddUnavailabilityFlyout.tsx:                                                if (showErrors) validateField();
+components/AddUnavailabilityFlyout.tsx:                                                if (showErrors) validateField();
+components/AddUnavailabilityFlyout.tsx:                                                if (showErrors) validateField();
+components/AddUnavailabilityFlyout.tsx:                                        if (showErrors) validateField();

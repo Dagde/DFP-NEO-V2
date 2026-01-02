@@ -1,0 +1,5 @@
+3036:    const [showValidation, setShowValidation] = useState(true);
+4076:            let hasValidCoverage = false;
+4085:                    hasValidCoverage = true;
+4136:            let hasValidCoverage = false;
+4145:                    hasValidCoverage = true;

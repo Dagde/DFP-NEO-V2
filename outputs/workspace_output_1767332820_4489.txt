@@ -1,0 +1,21 @@
+               </div>
+          </div>
+      );
+  }
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    onMouseDown(e);
+  };
+
+  return (
+    <div
+      data-is-flight-tile="true"
+      style={style}
+      className={finalClasses.join(' ')}
+      onClick={onSelectEvent}
+      onMouseDown={handleMouseDown}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      
+    >
+        {isChanged && !isPreview && (

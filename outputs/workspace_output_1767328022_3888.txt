@@ -1,0 +1,16 @@
+                    onUpdateMaxDispatchPerHour={setMaxDispatchPerHour}
+                    timezoneOffset={timezoneOffset}
+                    onUpdateTimezoneOffset={setTimezoneOffset}
+                    
+                       formationCallsigns={formationCallsigns}
+                          onUpdateFormationCallsigns={setFormationCallsigns}
+                          courseColors={courseColors}
+                          setCourseColors={setCourseColors}
+                          onUpdateTraineeLMPs={setTraineeLMPs}
+                          cancellationRecords={cancellationRecords}
+                       dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
+                       dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
+                       totalAircraft={24}
+                />;
+            case 'CurrencyBuilder':
+                return <CurrencyBuilderView 

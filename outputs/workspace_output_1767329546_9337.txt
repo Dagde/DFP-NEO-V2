@@ -1,0 +1,21 @@
+export interface CancellationRecord {
+  eventId: string;
+  cancellationCode: string;
+  cancelledBy: string;
+  cancelledAt: string;
+  manualCodeEntry?: string; // For OTHER option
+  eventDate: string;
+  eventType: 'flight' | 'ftd';
+  resourceType: string; // Aircraft, FTD, etc.
+}
+
+export interface CancellationAnalytics {
+  code: string;
+  category: CancellationCodeCategory;
+  description: string;
+  totalCount: number;
+  percentage: number;
+  trend: number; // Positive = increase, negative = decrease
+  previousCount: number;
+}
+

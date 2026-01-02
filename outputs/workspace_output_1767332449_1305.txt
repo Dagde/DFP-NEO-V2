@@ -1,0 +1,30 @@
+/workspace/components/ACHistoryPage.tsx:93:      console.log('=== CANCELLATION RECORDS DEBUG ===');
+/workspace/components/ACHistoryPage.tsx:94:      console.log('Raw localStorage data:', cancellationRecords);
+/workspace/components/ACHistoryPage.tsx:98:        console.log('Parsed data:', parsed);
+/workspace/components/ACHistoryPage.tsx:99:        console.log('Number of records:', parsed.length);
+/workspace/components/ACHistoryPage.tsx:100:        console.log('First record:', parsed[0]);
+/workspace/components/ACHistoryPage.tsx:101:        console.log('All records:', parsed);
+/workspace/components/ACHistoryPage.tsx:103:        console.log('No cancellation records found in localStorage');
+/workspace/components/ACHistoryPage.tsx:107:      console.log('All localStorage keys:', Object.keys(localStorage));
+/workspace/components/ACHistoryPage.tsx:110:        console.log(`${key}:`, localStorage.getItem(key));
+/workspace/components/ACHistoryPage.tsx:131:              console.log('cancellationRecords:', cancellationRecords);
+/workspace/components/AddUnavailabilityFlyout.tsx:60:        console.log('handleSave called', { startDate, endDate, startTime, endTime, reason });
+/workspace/components/AddUnavailabilityFlyout.tsx:102:        console.log('Calling onSave with period data');
+/workspace/components/AircraftAvailabilityOverlay.tsx:128:        console.log('🖱️ DRAG START:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:164:        console.log('🔄 DRAGGING:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:190:            console.log('✅ DRAG END:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:229:                console.log('🕐 TIMESTAMP DEBUG:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:249:                console.log('📸 CREATING NEW SNAPSHOT:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:260:                    console.log('📊 SNAPSHOTS UPDATED:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:270:                console.log('⏭️ NO SNAPSHOT CREATED - Value unchanged');
+/workspace/components/AircraftAvailabilityOverlay.tsx:305:            console.log('📏 RENDER HISTORICAL LINES: No snapshots');
+/workspace/components/AircraftAvailabilityOverlay.tsx:316:           console.log("📏 RENDER HISTORICAL LINES:", {
+/workspace/components/AircraftAvailabilityOverlay.tsx:333:                console.log(`  ⏭️ Skipping Line ${i} (most recent, at/after current time)`);
+/workspace/components/AircraftAvailabilityOverlay.tsx:344:                   console.log(`  📍 Line ${i}:`, {
+/workspace/components/AircraftAvailabilityOverlay.tsx:407:        console.log('🕐 TIMESTAMP COMPARISON:', {
+/workspace/components/AircraftAvailabilityOverlay.tsx:425:    console.log('🎯 SOLID LINE CALCULATION:', {
+/workspace/components/AircraftAvailabilitySettings.tsx:72:            console.log("Adding sample aircraft availability data...");
+/workspace/components/AircraftAvailabilitySettings_old.tsx:71:            console.log("Adding sample aircraft availability data...");
+/workspace/components/AircraftAvailabilitySettings_old.tsx:305:                                       console.log("\n🧮 === AIRCRAFT AVAILABILITY CALCULATIONS ===");
+/workspace/components/AircraftAvailabilitySettings_old.tsx:307:                                           console.log(`📅 Record ${index + 1}: ${record.date}`);
+/workspace/components/AircraftAvailabilitySettings_old.tsx:308:                                           console.log("Day Flying Window:", record.dayFlyingStart, "-", record.dayFlyingEnd);

@@ -1,0 +1,18 @@
+App.tsx:    const [cancellationRecords, setCancellationRecords] = useState<CancellationRecord[]>(() => {
+App.tsx:        const stored = localStorage.getItem('cancellationRecords');
+App.tsx:        const updatedRecords = [...cancellationRecords, cancellationRecord];
+App.tsx:        localStorage.setItem('cancellationRecords', JSON.stringify(updatedRecords));
+App.tsx:                          cancellationRecords={cancellationRecords}
+components/SettingsView.tsx:    cancellationRecords?: CancellationRecord[];
+components/SettingsView.tsx:                       cancellationRecords={cancellationRecords || []}
+components/ACHistoryPage.tsx:  cancellationRecords: CancellationRecord[];
+components/ACHistoryPage.tsx:  cancellationRecords,
+components/ACHistoryPage.tsx:    cancellationRecords.forEach(record => {
+components/ACHistoryPage.tsx:  }, [cancellationRecords]);
+components/ACHistoryPage.tsx:        cancellationRecords={cancellationRecords}
+components/SettingsViewWithMenu.tsx:    cancellationRecords: CancellationRecord[];
+components/ACHistoryAnalytics.tsx:  cancellationRecords: CancellationRecord[];
+components/ACHistoryAnalytics.tsx:  cancellationRecords,
+components/ACHistoryAnalytics.tsx:    const currentRecords = filterRecordsByDateRange(cancellationRecords, currentRange.start, currentRange.end);
+components/ACHistoryAnalytics.tsx:    const previousRecords = filterRecordsByDateRange(cancellationRecords, previousRange.start, previousRange.end);
+components/ACHistoryAnalytics.tsx:  }, [cancellationRecords, cancellationCodes, selectedPeriod, sortBy, sortDirection, showAllCodes]);

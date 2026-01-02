@@ -1,0 +1,5 @@
+115:    const [area, setArea] = useState(event.area || 'A');
+676:        setArea(event.area || 'A');
+1613:                                            <label className="block text-sm font-medium text-gray-400">Area</label>
+1614:                                            <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+1805:                                    {event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}

@@ -1,0 +1,14 @@
+                        style={{ fontSize: `${scaledFontSize * 0.75}px` }}
+                    >
+                        {formatTime(effectiveStartTime)}
+                    </div>
+                )
+            )}
+            {renderContent()}
+            {renderFlyout()}
+        </div>
+    </div>
+  );
+};
+
+export default FlightTile;

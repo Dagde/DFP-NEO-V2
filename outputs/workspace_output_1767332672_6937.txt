@@ -1,0 +1,84 @@
+  return (
+    <div
+      data-is-flight-tile="true"
+      style={style}
+      className={finalClasses.join(' ')}
+      onClick={onSelectEvent}
+      onMouseDown={(e) => {
+          onMouseDown(e);
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      
+    >
+        {isChanged && !isPreview && (
+            <div className="absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" />
+        )}
+        {isStbyEvent && !isPreview && (
+            <div 
+                className="absolute inset-0 pointer-events-none z-10"
+                style={{
+                    backgroundImage: 'repeating-linear-gradient(45deg, rgba(209, 213, 219, 0.4) 0px, rgba(209, 213, 219, 0.4) 3px, transparent 3px, transparent 8px)',
+                }}
+            />
+        )}
+        {event.isCancelled && (
+            <>
+                <div className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center">
+                    <svg 
+                        viewBox="0 0 100 100" 
+                        className="w-full h-full"
+                        style={{ maxWidth: '80%', maxHeight: '80%' }}
+                    >
+                        <line 
+                            x1="10" y1="10" 
+                            x2="90" y2="90" 
+                            stroke="#ef4444" 
+                            strokeWidth="8" 
+                            strokeLinecap="round"
+                        />
+                        <line 
+                            x1="90" y1="10" 
+                            x2="10" y2="90" 
+                            stroke="#ef4444" 
+                            strokeWidth="8" 
+                            strokeLinecap="round"
+                        />
+                    </svg>
+                </div>
+            </>
+        )}
+        <div className="relative w-full h-full text-white">
+            {isDutySup ? (
+                <>
+                    <div 
+                        className="absolute top-1 left-1 font-mono text-white/60 pointer-events-none"
+                        style={{ fontSize: `${scaledFontSize * 0.825}px` }}
+                    >
+                        {formatTime(effectiveStartTime)}
+                    </div>
+                    <div 
+                        className="absolute top-1 right-1 font-mono text-white/60 pointer-events-none"
+                        style={{ fontSize: `${scaledFontSize * 0.825}px` }}
+                    >
+                        {formatTime(effectiveStartTime + effectiveDuration)}
+                    </div>
+                </>
+            ) : (
+                !isSmallTile && (
+                    <div 
+                        className="absolute -top-px left-1 font-mono text-white/60 pointer-events-none"
+                        style={{ fontSize: `${scaledFontSize * 0.75}px` }}
+                    >
+                        {formatTime(effectiveStartTime)}
+                    </div>
+                )
+            )}
+            {renderContent()}
+            {renderFlyout()}
+        </div>
+    </div>
+  );
+};
+
+export default FlightTile;

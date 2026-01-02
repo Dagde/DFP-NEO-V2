@@ -1,0 +1,11 @@
+      onClick={onSelectEvent}
+      onMouseDown={(e) => {
+          onMouseDown(e);
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      
+    >
+        {isChanged && !isPreview && (
+            <div className="absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" />
+        )}

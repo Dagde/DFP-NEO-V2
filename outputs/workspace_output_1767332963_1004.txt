@@ -1,0 +1,30 @@
+
+import React, { MouseEvent } from 'react';
+import { ScheduleEvent, Trainee, EventSegment } from '../types';
+
+interface FlightTileProps {
+  event: ScheduleEvent | EventSegment;
+  traineesData: Trainee[];
+  onSelectEvent: () => void;
+  onMouseDown: (e: MouseEvent<HTMLDivElement>) => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  pixelsPerHour: number;
+  rowHeight: number;
+  startHour: number;
+  row: number;
+  isDragging: boolean;
+  isConflicting?: boolean;
+  conflictedPersonnelName?: string | null;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  seatConfigs: Map<string, string>;
+  isDraggable?: boolean;
+  currentTime: Date;
+  isUnavailabilityConflict?: boolean;
+  unavailablePersonnel?: string[];
+  isSelected?: boolean;
+  isChanged?: boolean;
+  isPreview?: boolean;
+}
+
+const formatTime = (time: number): string => {

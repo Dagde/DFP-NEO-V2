@@ -756,12 +756,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     // Render validate mode overlay
     const renderValidateOverlay = () => {
-        // Debug logging to check state values
-        console.log('Overlay state check:', { 
-            showValidation, 
-            validateOverlayTime, 
-            showDepartureDensityOverlay 
-        });
         
         if (!showValidation || validateOverlayTime === null || !showDepartureDensityOverlay) return null;
         

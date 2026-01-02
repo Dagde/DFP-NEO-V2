@@ -1,0 +1,11 @@
+            setDuration('');
+        } else {
+            setDuration(event.duration);
+        }
+
+        setEventType(event.type);
+        setStartTime(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
+        setArea(event.area || 'A');
+        setAircraftCount(1);
+        setCrew([{ 
+            flightType: event.flightType, 

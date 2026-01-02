@@ -1,0 +1,6 @@
+    );
+  };
+
+  return <FlightTileComponent />;
+
+export default FlightTile;

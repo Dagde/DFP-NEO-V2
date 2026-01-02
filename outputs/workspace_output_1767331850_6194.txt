@@ -1,0 +1,30 @@
+    }
+    // Default to Day if not found or not specified
+    return 'Day';
+};
+
+const calculateTotalDutyHoursForPeriod = (instructorName: string, events: ScheduleEvent[], startTime: number, endTime: number, syllabusDetails: SyllabusItemDetail[]): number => {
+    const instructorEvents = events.filter(e => 
+        getPersonnel(e).includes(instructorName) && 
+        // Check if event overlaps with the specified time period (considering booking windows)
+        (() => {
+            const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return bookingWindow.start < endTime && bookingWindow.end > startTime;
+        })()
+    );
+    
+    if (instructorEvents.length === 0) return 0;
+
+--
+    events: (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[], 
+    newEvent: (ScheduleEvent | Omit<ScheduleEvent, 'date'>),
+    syllabusDetails: SyllabusItemDetail[] = INITIAL_SYLLABUS_DETAILS
+): number => {
+    // Filter events for the instructor
+    const instructorEvents = [...events.filter(e => getPersonnel(e).includes(instructorName)), newEvent];
+    if (instructorEvents.length === 0) return 0;
+
+    // Calculate start/end times including pre/post brief
+    const sortedWindows = instructorEvents
+        .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+        .sort((a, b) => a.start - b.start);

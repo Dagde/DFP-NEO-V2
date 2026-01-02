@@ -1,0 +1,5 @@
+3156:    const [cancellationRecords, setCancellationRecords] = useState<CancellationRecord[]>(() => {
+3157:        const stored = localStorage.getItem('cancellationRecords');
+5125:        const updatedRecords = [...cancellationRecords, cancellationRecord];
+5127:        localStorage.setItem('cancellationRecords', JSON.stringify(updatedRecords));
+8459:                          cancellationRecords={cancellationRecords}

@@ -1,0 +1,18 @@
+                    <div>
+                        <div className={`font-bold ${picClasses.replace('truncate', '')}`}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                        <div className={studentClasses.replace('truncate', '')}>{typeof studentDisplay === 'string' ? <>{studentDisplay}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    </div>
+                    <div className="h-6 w-px bg-gray-600"></div>
+                    <div>
+                        <div className="font-mono font-semibold text-sky-400">{event.flightNumber}</div>
+                        <div className="font-mono text-gray-400">{formatTime(effectiveStartTime)}</div>
+                    </div>
+                    {callsign && <div className="font-mono text-gray-500 text-[10px]">{callsign}</div>}
+               </div>
+          </div>
+      );
+  }
+
+  return (
+    <div
+      data-is-flight-tile="true"

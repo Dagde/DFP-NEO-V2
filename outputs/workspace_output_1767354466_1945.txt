@@ -1,0 +1,31 @@
+                </div>
+
+                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
+                    <div>
+                        <div className="font-mono text-white/80 text-right whitespace-nowrap">
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {event.aircraftNumber && (
+                <div
+                    className="absolute bottom-0.5 left-1 font-mono text-white/80"
+                    style={{
+                        fontSize: `${scaledFontSize - 2}px`,
+                        lineHeight: '1',
+                        opacity: 0.8,
+                    }}
+                >
+                    #{event.aircraftNumber}
+                </div>
+            )}
+            <div className="absolute bottom-0.5 right-3 flex items-center gap-1">
+                {event.area && (
+                    <div
+                        className={`font-sans font-light ${['A','B','C','D','E','F','G','H'].includes(event.area) ? 'text-white' : 'text-yellow-300'}`}
+                        style={{
+                            fontSize: `${scaledFontSize}px`,
+                            lineHeight: '1',
+                            opacity: 0.7,

@@ -1,0 +1,6 @@
+total 36
+drwxr-xr-x  2 root root  4096 Jan  2 03:56 .
+drwxr-xr-x 14 user user 12288 Jan  2 04:06 ..
+-rw-r--r--  1 root root   127 Jan  2 03:56 ESLDATA.ts
+-rw-r--r--  1 root root  1742 Jan  2 03:56 cancellationCodes.ts
+-rw-r--r--  1 root root  9684 Jan  2 03:56 currencies.ts

@@ -1,0 +1,43 @@
+        return null;
+    }
+    
+    // Filter for events that were not cancelled or marked unsuccessful
+    const completedEvents = traineeEvents.filter(e => {
+        const notCancelled = !e.isCancelled;
+        const notUnsuccessful = !e.isUnsuccessful;
+        return notCancelled && notUnsuccessful;
+    });
+    
+    if (completedEvents.length === 0) {
+        return null;
+    }
+    
+    // Return the last completed event code (latest by start time)
+    const lastEvent = completedEvents.sort((a, b) => b.startTime - a.startTime)[0];
+--
+        
+        console.log('🔄 Moving event from', originalResourceId, 'to', newResourceId);
+        
+        const cancelledEvent: ScheduleEvent = {
+            ...selectedEvent,
+            isCancelled: true,
+            cancellationCode: cancellationCode,
+            cancellationManualEntry: manualCodeEntry,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            resourceId: newResourceId,
+        };
+        
+        console.log('✅ Created cancelled event:', {
+            id: cancelledEvent.id,
+            isCancelled: cancelledEvent.isCancelled,
+            resourceId: cancelledEvent.resourceId,
+            cancellationCode: cancelledEvent.cancellationCode
+        });
+        
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        
+        console.log('🔍 Is Next Day Build?', isNextDay);
+        console.log('🔍 Active View:', activeView);
+        console.log('🔍 Event Date:', eventDate, 'Build Date:', buildDfpDate);
+        

@@ -1,0 +1,16 @@
+        // Mark event as cancelled and move to STBY
+        const originalResourceId = selectedEvent.resourceId;
+        const newResourceId = selectedEvent.type === 'ftd' ? 'BNF-STBY' : 'STBY';
+        
+        console.log('🔄 Moving event from', originalResourceId, 'to', newResourceId);
+        
+        const cancelledEvent: ScheduleEvent = {
+            ...selectedEvent,
+            isCancelled: true,
+            cancellationCode: cancellationCode,
+            cancellationManualEntry: manualCodeEntry,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            resourceId: newResourceId,
+        };
+        

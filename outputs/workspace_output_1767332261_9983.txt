@@ -1,0 +1,16 @@
+87:  console.log('🔍 FLIGHT TILE ERROR TRACKING - Props received:');
+88-  console.log('  - event.id:', event?.id);
+89-  console.log('  - event.type:', event?.type);
+90-  console.log('  - personnelData size:', personnelData?.size);
+91-  console.log('  - seatConfigs type:', typeof seatConfigs);
+92-  console.log('  - seatConfigs value:', seatConfigs);
+93-  console.log('  - seatConfigs === undefined:', seatConfigs === undefined);
+94-  console.log('  - seatConfigs === null:', seatConfigs === null);
+95-  
+96-  try {
+97-    // Test access to seatConfigs to trigger the error
+98-    const testAccess = seatConfigs;
+99-    console.log('✅ seatConfigs access successful');
+100-  } catch (error) {
+101-    console.error('❌ seatConfigs access failed:', error);
+102-    console.error('❌ Error stack:', error.stack);

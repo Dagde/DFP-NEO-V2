@@ -1,0 +1,21 @@
+                    <div className="overflow-hidden text-center">
+                        <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                        <div className="font-mono text-white/80 truncate">
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="flex justify-between items-center h-full w-full px-2" style={textStyle}>
+                <div className="flex-1 overflow-hidden pr-2" style={{ paddingLeft: '12%' }}>
+                    <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
+                    <div className={studentClasses}>{typeof studentDisplay === 'string' ? <>{studentDisplay}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                </div>
+                <div className="flex flex-col items-end justify-between h-full ml-2 flex-shrink-0 w-20">
+                    <div>
+                        <div className="font-mono text-white/80 truncate text-right">
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
+                        </div>

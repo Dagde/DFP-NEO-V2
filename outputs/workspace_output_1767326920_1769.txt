@@ -1,0 +1,13 @@
+  // Calculate which codes have been used in cancellations
+  useEffect(() => {
+    const used = new Set<string>();
+    cancellationRecords.forEach(record => {
+      used.add(record.cancellationCode);
+      if (record.manualCodeEntry) {
+        used.add(record.manualCodeEntry);
+      }
+    });
+    setUsedCodes(used);
+  }, [cancellationRecords]);
+
+  // Save codes to localStorage whenever they change
