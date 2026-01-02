@@ -40,7 +40,9 @@ import {
     OracleTraineeAnalysis,
     NeoTraineeRemedy,
     EventSegment,
-    FormationCallsign
+    FormationCallsign,
+    CancellationCode,
+    CancellationRecord
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
@@ -3148,6 +3150,24 @@ const App: React.FC = () => {
     const [isPriorityEventCreation, setIsPriorityEventCreation] = useState(false);
     const [highestPriorityEvents, setHighestPriorityEvents] = useState<ScheduleEvent[]>([]);
     const [programWithPrimaries, setProgramWithPrimaries] = useState(true);
+    
+    // Cancellation Records State
+    const [cancellationRecords, setCancellationRecords] = useState<CancellationRecord[]>(() => {
+        const stored = localStorage.getItem('cancellationRecords');
+        return stored ? JSON.parse(stored) : [];
+    });
+    
+    // Cancellation Codes State
+    const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>(() => {
+        const stored = localStorage.getItem('cancellationCodes');
+        if (stored) {
+            return JSON.parse(stored);
+        }
+        // Initialize with default codes if not found
+        const { initialCancellationCodes } = require('./data/cancellationCodes');
+        localStorage.setItem('cancellationCodes', JSON.stringify(initialCancellationCodes));
+        return initialCancellationCodes;
+    });
     const [showNightFlyingInfo, setShowNightFlyingInfo] = useState(false);
     const [nightFlyingTraineeCount, setNightFlyingTraineeCount] = useState(0);
     const [showUnavailabilityReport, setShowUnavailabilityReport] = useState(false);
@@ -5085,6 +5105,65 @@ const App: React.FC = () => {
         console.log('🔵 ========== handleSaveEvents END ==========');
     };
 
+    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+        if (!selectedEvent) return;
+        const eventDate = selectedEvent.date;
+        
+        // Create cancellation record
+        const cancellationRecord: CancellationRecord = {
+            eventId: selectedEvent.id,
+            cancellationCode: cancellationCode,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            manualCodeEntry: manualCodeEntry,
+            eventDate: selectedEvent.date,
+            eventType: selectedEvent.type === 'ftd' ? 'ftd' : 'flight',
+            resourceType: selectedEvent.resourceId || 'Unknown',
+        };
+        
+        // Save cancellation record
+        const updatedRecords = [...cancellationRecords, cancellationRecord];
+        setCancellationRecords(updatedRecords);
+        localStorage.setItem('cancellationRecords', JSON.stringify(updatedRecords));
+        
+        // Mark event as cancelled and move to STBY
+        const cancelledEvent: ScheduleEvent = {
+            ...selectedEvent,
+            isCancelled: true,
+            cancellationCode: cancellationCode,
+            cancellationManualEntry: manualCodeEntry,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            resourceId: selectedEvent.type === 'ftd' ? 'BNF-STBY' : 'STBY',
+        };
+        
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        
+        if (isNextDay) {
+            setNextDayBuildEvents(prev => prev.map(e => e.id === selectedEvent.id ? cancelledEvent : e));
+        } else {
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const scheduleForDate = prev[eventDate] || [];
+                const updatedSchedule = scheduleForDate.map(e => e.id === selectedEvent.id ? cancelledEvent : e);
+                return { ...prev, [eventDate]: updatedSchedule };
+            });
+        }
+        
+        // Remove from highest priority events
+        setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+        
+        // Log the cancellation to audit trail
+        const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+        const eventType = selectedEvent.type || 'event';
+        const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
+        const codeDisplay = cancellationCode === 'OTHER' && manualCodeEntry ? manualCodeEntry : cancellationCode;
+        const description = `Cancelled ${eventType} event for ${personName} (Code: ${codeDisplay})`;
+        const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Moved to STBY`;
+        
+        logAudit(pageName, "Cancel", description, changes);
+        setSelectedEvent(null);
+    };
+    
     const handleDeleteEvent = () => {
         if (!selectedEvent) return;
         const eventDate = selectedEvent.date;
@@ -8377,6 +8456,7 @@ updates.forEach(update => {
                           courseColors={courseColors}
                           setCourseColors={setCourseColors}
                           onUpdateTraineeLMPs={setTraineeLMPs}
+                          cancellationRecords={cancellationRecords}
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
@@ -8689,6 +8769,8 @@ updates.forEach(update => {
                     onVisualAdjustStart={handleVisualAdjustStart}
                     onVisualAdjustEnd={handleVisualAdjustEnd}
                     onSavePT051Assessment={onSavePT051Assessment}
+                    cancellationCodes={cancellationCodes}
+                    onCancelEvent={handleCancelEvent}
                 />
             )}
             

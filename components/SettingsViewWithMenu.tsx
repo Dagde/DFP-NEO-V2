@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SettingsView } from './SettingsView';
 import AuditButton from './AuditButton';
-import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign } from '../types';
+import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord } from '../types';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -50,6 +50,7 @@ interface SettingsViewWithMenuProps {
     setCourseColors: (colors: { [key: string]: string }) => void;
     onUpdateFormationCallsigns: (callsigns: FormationCallsign[]) => void;
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
+    cancellationRecords: CancellationRecord[];
 }
 
 type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone';

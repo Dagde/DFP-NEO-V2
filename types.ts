@@ -185,6 +185,13 @@ export interface ScheduleEvent {
       isRemedialForceSchedule?: boolean;
       traineeId?: number;
       eventCode?: string;
+      
+      // Cancellation fields
+      isCancelled?: boolean;
+      cancellationCode?: string;
+      cancellationManualEntry?: string; // For OTHER option
+      cancelledBy?: string;
+      cancelledAt?: string;
 }
 
 export interface EventSegment extends ScheduleEvent {
@@ -434,3 +441,41 @@ export interface OracleTraineeAnalysis {
        location: string;       // Location name (e.g., "East Sale")
        locationCode: string;   // Location code (e.g., "ESL")
    }
+
+// AC History Types
+export type CancellationCodeCategory = 'Aircraft' | 'Crew' | 'Program' | 'Weather';
+export type CancellationCodeAppliesTo = 'Flight' | 'FTD' | 'Both';
+
+export interface CancellationCode {
+  code: string;
+  category: CancellationCodeCategory;
+  description: string;
+  appliesTo: CancellationCodeAppliesTo;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
+
+export interface CancellationRecord {
+  eventId: string;
+  cancellationCode: string;
+  cancelledBy: string;
+  cancelledAt: string;
+  manualCodeEntry?: string; // For OTHER option
+  eventDate: string;
+  eventType: 'flight' | 'ftd';
+  resourceType: string; // Aircraft, FTD, etc.
+}
+
+export interface CancellationAnalytics {
+  code: string;
+  category: CancellationCodeCategory;
+  description: string;
+  totalCount: number;
+  percentage: number;
+  trend: number; // Positive = increase, negative = decrease
+  previousCount: number;
+}
+
+export type TimePeriod = 'week' | 'month' | '6months' | 'year' | '2years' | '5years' | 'lastFY' | 'lastCY';

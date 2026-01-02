@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import CancelConfirmationFlyout from './CancelConfirmationFlyout';
+import CancelEventFlyout from './CancelEventFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
 
@@ -47,6 +47,8 @@ interface EventDetailModalProps {
     onVisualAdjustStart?: (event: ScheduleEvent) => void;
     onVisualAdjustEnd?: (event: ScheduleEvent) => void;
     onSavePT051Assessment?: (assessment: any) => void;
+    cancellationCodes?: CancellationCode[];
+    onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
 }
 
 interface CrewMember {
@@ -84,7 +86,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -1908,9 +1910,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                 </div>
             </div>
             {showCancelConfirm && (
-                <CancelConfirmationFlyout 
-                    onConfirm={onDeleteRequest}
+                <CancelEventFlyout 
+                    eventId={event.id}
+                    eventType={event.type === 'ftd' ? 'ftd' : 'flight'}
+                    onConfirm={(eventId, cancellationCode, manualCodeEntry) => {
+                        if (onCancelEvent) {
+                            onCancelEvent(eventId, cancellationCode, manualCodeEntry);
+                        } else {
+                            // Fallback to old delete behavior if onCancelEvent not provided
+                            onDeleteRequest();
+                        }
+                        setShowCancelConfirm(false);
+                    }}
                     onClose={() => setShowCancelConfirm(false)}
+                    cancellationCodes={cancellationCodes}
                 />
             )}
             {showMassBriefComplete && (

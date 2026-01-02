@@ -14,7 +14,8 @@ import UpdateSummaryFlyout from './UpdateSummaryFlyout';
 import ScoringMatrixFlyout from './ScoringMatrixFlyout';
 import CourseSelectionFlyout from './CourseSelectionFlyout';
 import { CourseSelectionDialog } from './CourseSelectionDialog';
-import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign } from '../types';
+import { Instructor, Trainee, SyllabusItemDetail, InstructorRank, InstructorCategory, SeatConfig, TraineeRank, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord } from '../types';
+import ACHistoryPage from './ACHistoryPage';
 import FormationCallsignsSection from './FormationCallsignsSection';
 import PermissionsManagerWindow from './PermissionsManagerWindow';
 import AuditButton from './AuditButton';
@@ -74,6 +75,7 @@ interface SettingsViewProps {
     courseColors: { [key: string]: string };
     setCourseColors: (colors: { [key: string]: string }) => void;
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
+    cancellationRecords?: CancellationRecord[];
 }
 
 const FolderIcon = () => (
@@ -1193,7 +1195,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* AC History */}
                 {shouldShowSection('validation') && (
                 <div className="space-y-6">
-                   <AircraftAvailabilitySettings totalAircraft={24} />
+                   <ACHistoryPage 
+                       currentUserRole={currentUserPermission}
+                       cancellationRecords={cancellationRecords || []}
+                   />
                 </div>
                 )}
                 {/* Timezone Settings Window */}
