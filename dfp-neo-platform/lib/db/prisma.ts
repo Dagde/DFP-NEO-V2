@@ -4,7 +4,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || 'postgresql://placeholder',
+    },
+  },
+});
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
@@ -16,7 +22,7 @@ const backupGlobal = globalThis as unknown as {
 export const backupPrisma = backupGlobal.backupPrisma ?? new PrismaClient({
   datasources: {
     db: {
-      url: process.env.BACKUP_DATABASE_URL,
+      url: process.env.BACKUP_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://placeholder',
     },
   },
 });

@@ -1,32 +1,34 @@
-# AC History Enhancement Tasks
+# DFP-NEO Platform Integration & Deployment
 
-## 1. Add Delete Button to Cancellation Codes Table
-- [x] Add onDeleteCode prop to CancellationCodesTable interface
-- [x] Add delete button to each row in the table
-- [x] Implement delete confirmation dialog
-- [x] Add delete handler in ACHistoryPage
-- [x] Update localStorage when code is deleted
-- [x] Prevent deletion of codes that are currently in use
+## Phase 1: Integration
+- [x] Copy React app components into Next.js structure
+- [x] Create protected /flight-school route
+- [x] Set up client-side rendering for React app
+- [x] Move assets and styles
+- [x] Configure build settings
 
-## 2. Create Recent Cancellations Table
-- [x] Create new component: RecentCancellationsTable.tsx
-- [x] Display cancellation records with: date, flight/event name, personnel, cancellation code, reason
-- [x] Add filtering by time period (Last 7 Days, Last 30 Days, Last 90 Days, All Time)
-- [x] Add sorting capabilities (by date, by code, by personnel)
-- [x] Style table to match existing design
-- [x] Integrate into ACHistoryPage component
+## Phase 2: Database Schema Enhancement
+- [x] Add flight schedule tables
+- [x] Add personnel data tables
+- [x] Add aircraft configuration tables
+- [x] Add cancellation history tables
+- [x] Test database schema
 
-## 3. Move Cancelled Flights to STBY Line with Red X
-- [x] Identify where flight cancellation logic is handled in App.tsx
-- [x] When a flight is cancelled, move it to STBY line (already implemented)
-- [x] Add visual indicator (red X overlay) to cancelled flight tiles
-- [x] Update flight tile rendering to show red X for cancelled events
-- [x] Ensure cancelled flights maintain their data but are visually distinct
-- [ ] Test cancellation flow end-to-end
+## Phase 3: Local Testing
+- [x] Install dependencies
+- [x] Test authentication flow
+- [x] Test app integration
+- [x] Verify database connections
 
-## 4. Testing & Integration
-- [ ] Test delete functionality for cancellation codes
-- [ ] Test recent cancellations table with various filters
-- [ ] Test cancelled flight movement to STBY line
-- [ ] Verify red X display on cancelled flights
-- [x] Rebuild and deploy application
+## Phase 4: Deployment Preparation
+- [x] Create deployment configuration
+- [x] Set up environment variables template
+- [x] Create deployment guide
+- [x] Prepare for Vercel deployment
+
+## Phase 5: Vercel Deployment
+- [ ] Guide user through Vercel setup
+- [ ] Configure database
+- [ ] Deploy application
+- [ ] Create admin user
+- [ ] Verify everything works

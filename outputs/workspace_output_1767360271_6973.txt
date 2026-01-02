@@ -1,0 +1,5 @@
+
+> dfp-neo-platform@1.0.0 build
+> prisma generate &amp;&amp; next build
+
+sh: 1: Syntax error: "&" unexpected

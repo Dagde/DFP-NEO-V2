@@ -1,0 +1,27 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 7.0s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/admin/page.tsx:38:31
+Type error: Property 'role' does not exist on type 'User'.
+
+[0m [90m 36 |[39m     [36mif[39m (status [33m===[39m [32m'unauthenticated'[39m) {
+ [90m 37 |[39m       router[33m.[39mpush([32m'/login'[39m)[33m;[39m
+[31m[1m>[22m[39m[90m 38 |[39m     } [36melse[39m [36mif[39m (session[33m?[39m[33m.[39muser[33m?[39m[33m.[39mrole [33m!==[39m [32m'ADMIN'[39m [33m&&[39m session[33m?[39m[33m.[39muser[33m?[39m[33m.[39mrole [33m!==[39m [32m'SUPER_ADMIN'[39m) {
+ [90m    |[39m                               [31m[1m^[22m[39m
+ [90m 39 |[39m       router[33m.[39mpush([32m'/select'[39m)[33m;[39m
+ [90m 40 |[39m     } [36melse[39m {
+ [90m 41 |[39m       fetchUsers()[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

@@ -1,0 +1,32 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 7.2s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./lib/db/backup.ts:91:11
+Type error: Type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; settings: JsonValue; }' is not assignable to type '(Without<UserSettingsUpdateInput, UserSettingsUncheckedUpdateInput> & UserSettingsUncheckedUpdateInput) | (Without<...> & UserSettingsUpdateInput)'.
+  Type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; settings: JsonValue; }' is not assignable to type 'Without<UserSettingsUpdateInput, UserSettingsUncheckedUpdateInput> & UserSettingsUncheckedUpdateInput'.
+    Type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; settings: JsonValue; }' is not assignable to type 'UserSettingsUncheckedUpdateInput'.
+      Types of property 'settings' are incompatible.
+        Type 'JsonValue' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+          Type 'null' is not assignable to type 'JsonNull | InputJsonValue | undefined'.
+
+[0m [90m 89 |[39m         [36mawait[39m backupPrisma[33m.[39muserSettings[33m.[39mupsert({
+ [90m 90 |[39m           where[33m:[39m { id[33m:[39m setting[33m.[39mid }[33m,[39m
+[31m[1m>[22m[39m[90m 91 |[39m           update[33m:[39m setting[33m,[39m
+ [90m    |[39m           [31m[1m^[22m[39m
+ [90m 92 |[39m           create[33m:[39m setting[33m,[39m
+ [90m 93 |[39m         })[33m;[39m
+ [90m 94 |[39m       }[0m
+Next.js build worker exited with code: 1 and signal: null
