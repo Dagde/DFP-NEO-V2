@@ -107,6 +107,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
+import { initialCancellationCodes } from './data/cancellationCodes';
 
 // --- PT-051 STRUCTURE ---
 const PT051_STRUCTURE = [
@@ -3164,7 +3165,6 @@ const App: React.FC = () => {
             return JSON.parse(stored);
         }
         // Initialize with default codes if not found
-        const { initialCancellationCodes } = require('./data/cancellationCodes');
         localStorage.setItem('cancellationCodes', JSON.stringify(initialCancellationCodes));
         return initialCancellationCodes;
     });
