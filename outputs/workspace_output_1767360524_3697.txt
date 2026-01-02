@@ -1,0 +1,64 @@
+[feature/comprehensive-build-algorithm 0aa5954] Complete platform integration with React app, enhanced database schema, and deployment preparation
+ Committer: root <root@172.16.0.24>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 58 files changed, 4933 insertions(+), 765 deletions(-)
+ create mode 100644 dfp-neo-platform/VERCEL_DEPLOYMENT.md
+ create mode 100644 dfp-neo-platform/app/flight-school/page.tsx
+ create mode 100644 dfp-neo-platform/public/flight-school-app/LMP_Syllabus_Template.xlsx
+ create mode 100644 dfp-neo-platform/public/flight-school-app/Staff_Bulk_Update_Template.xlsx
+ create mode 100644 dfp-neo-platform/public/flight-school-app/Trainee_Bulk_Update_Template.xlsx
+ create mode 100644 dfp-neo-platform/public/flight-school-app/aircraft-icon.png
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/html2canvas.esm-QH1iLAAe.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/html2canvas.esm-QH1iLAAe.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Bj1RKZcF.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Bj1RKZcF.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-sSu_VbfF.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-sSu_VbfF.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/purify.es-B9ZVCkUG.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/purify.es-B9ZVCkUG.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/icons/multi-select-icon.png
+ create mode 100644 dfp-neo-platform/public/flight-school-app/icons/warning-icon.png
+ create mode 100644 dfp-neo-platform/public/flight-school-app/index.html
+ create mode 100644 dfp-neo-platform/public/flight-school-app/multi-select-icon.png
+ create mode 100644 dfp-neo-platform/public/flight-school-app/priority-analysis.html
+ create mode 100644 dfp-neo-platform/public/flight-school-app/test-formation.html
+ create mode 100644 dfp-neo-platform/public/flight-school-app/warning-icon.png
+ create mode 100644 dfp-neo-platform/types/next-auth.d.ts
+ create mode 100644 integration-plan.md
+ create mode 100644 outputs/workspace_output_1767359787_411.txt
+ create mode 100644 outputs/workspace_output_1767360141_5167.txt
+ create mode 100644 outputs/workspace_output_1767360149_1178.txt
+ create mode 100644 outputs/workspace_output_1767360162_4569.txt
+ create mode 100644 outputs/workspace_output_1767360165_6359.txt
+ create mode 100644 outputs/workspace_output_1767360168_2663.txt
+ create mode 100644 outputs/workspace_output_1767360185_8990.txt
+ create mode 100644 outputs/workspace_output_1767360219_6110.txt
+ create mode 100644 outputs/workspace_output_1767360222_9818.txt
+ create mode 100644 outputs/workspace_output_1767360225_1716.txt
+ create mode 100644 outputs/workspace_output_1767360238_2832.txt
+ create mode 100644 outputs/workspace_output_1767360265_2626.txt
+ create mode 100644 outputs/workspace_output_1767360271_6973.txt
+ create mode 100644 outputs/workspace_output_1767360284_9914.txt
+ create mode 100644 outputs/workspace_output_1767360301_1170.txt
+ create mode 100644 outputs/workspace_output_1767360320_448.txt
+ create mode 100644 outputs/workspace_output_1767360338_9122.txt
+ create mode 100644 outputs/workspace_output_1767360341_6905.txt
+ create mode 100644 outputs/workspace_output_1767360349_4474.txt
+ create mode 100644 outputs/workspace_output_1767360371_2587.txt
+ create mode 100644 outputs/workspace_output_1767360388_6860.txt
+ create mode 100644 outputs/workspace_output_1767360396_969.txt
+ create mode 100644 outputs/workspace_output_1767360419_425.txt
+ create mode 100644 outputs/workspace_output_1767360440_8289.txt
+ create mode 100644 outputs/workspace_output_1767360465_2854.txt
+ create mode 100644 outputs/workspace_output_1767360474_7973.txt
+ create mode 100644 outputs/workspace_output_1767360524_3697.txt
