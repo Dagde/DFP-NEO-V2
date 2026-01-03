@@ -1,0 +1,194 @@
+66-
+67-    if (isUnsigned) {
+68-        const timeUntilStart = event.startTime - nowInHours;
+69-        
+70-        if (timeUntilStart <= 0.25) {
+71:            return 'text-red-500';
+72-        }
+73-
+74-        if (timeUntilStart <= 2) {
+75-            return 'text-amber-400';
+76-        }
+77-    }
+78-
+79-    return '';
+80-};
+81-
+--
+127-    marginTop: '2px',
+128-  };
+129-  
+130-  const getDynamicRingClass = () => {
+131-    if (isConflicting || isUnavailabilityConflict) {
+132:        return 'ring-red-400'; // Highest priority
+133-    }
+134-    
+135-    const todayStr = new Date().toISOString().split('T')[0];
+136-
+137-    // Only apply auth highlighting for the current date
+138-    if (event.date !== todayStr) {
+139-        return 'ring-transparent';
+140-    }
+141-
+142-    // From here, it's today's date.
+--
+146-    }
+147-    
+148-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+149-    const endTime = event.startTime + event.duration;
+150-
+151:    // Lapsed status for today - no border required on main schedule
+152-    if (nowInHours >= endTime) {
+153-        return 'ring-transparent';
+154-    }
+155-    
+156-    const isAuthoSigned = !!(event.authoSignedBy || event.isVerbalAuth);
+157:    // Awaiting PIC - no border required on main schedule
+158-    if (isAuthoSigned) {
+159-        return 'ring-transparent';
+160-    }
+161-
+162-    // Time-based warnings for upcoming unsigned events
+163-    const timeUntilStart = event.startTime - nowInHours;
+164-    if (timeUntilStart <= 0.25) {
+165:        return 'ring-red-500'; // Needs auth urgently
+166-    }
+167-    if (timeUntilStart <= 2) {
+168-        return 'ring-amber-400'; // Needs auth soon
+169-    }
+170-
+171-    return 'ring-transparent'; // Default for unsigned flights > 2hrs away on the current day
+172-  };
+173-
+174-  // Smarter font scaling based on duration (200px per hour)
+175-  const minFontSize = 7;
+--
+190-    scaledFontSize = minFontSize;
+191-  } else if (tileWidth < smallScaleThreshold) {
+192-    // Small tiles (0.6-0.8 hours) - moderate scaling
+193-    scaledFontSize = 9;
+194-  } else if (tileWidth < moderateScaleThreshold) {
+195:    // Medium tiles (0.9-1.1 hours) - slight reduction
+196-    scaledFontSize = 10;
+197-  } else if (tileWidth < maxNoScaleThreshold) {
+198:    // Just under 1.2 hours (1.1-1.19 hours) - slight reduction
+199-    scaledFontSize = 10;
+200-  }
+201-  // else: use baseFontSize (11) for tiles >= 1.2 hours (240px+)
+202-  
+203-  // Ensure within bounds
+204-  scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, scaledFontSize));
+205-
+206-  // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
+207-  const isSctEvent = event.eventCategory === 'sct';
+208-  
+--
+227-
+228-  if (isPreview) {
+229-      if (picName?.includes('✓')) {
+230-          picClasses = 'font-bold truncate text-green-400';
+231-      } else if (picName?.includes('✕')) {
+232:          picClasses = 'font-bold truncate text-red-500';
+233-      }
+234-
+235-      if (studentName?.includes('✓')) {
+236-          studentClasses = 'font-bold truncate text-green-400';
+237-      } else if (studentName?.includes('✕')) {
+238:          studentClasses = 'font-bold truncate text-red-500';
+239-      }
+240-  } else {
+241-      const textColorClass = getAuthorizationTextColorClass(event, currentTime);
+242-      const picHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(picName || '');
+243-      const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
+244-      
+245-      // Check for event finish to stop highlighting unavailability on past events
+246-      const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+247-      const eventEndTime = event.startTime + event.duration;
+248-      const isEventFinished = nowInHours >= eventEndTime && event.date === new Date().toISOString().split('T')[0];
+249-
+250-      if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
+251:          picClasses = 'font-bold truncate text-red-500';
+252-      } else if (textColorClass) {
+253-          picClasses += ` ${textColorClass}`;
+254-      }
+255-
+256-      if ((conflictedPersonnelName === studentName) || (studentHasUnavailability && !isEventFinished)) {
+257:          studentClasses = 'font-bold truncate text-red-500';
+258-      } else if (textColorClass) {
+259-          studentClasses += ' text-white/80';
+260-      } else {
+261-          studentClasses += ' text-white/80';
+262-      }
+263-  }
+264-  
+265-  const getStudentDisplay = () => {
+266-      if (isPreview) {
+267-          return studentName;
+--
+328-
+329-    // Get seat config abbreviations for pilot and student
+330-    const picSeatConfig = getSeatConfigAbbr(picName);
+331-    const studentSeatConfig = getSeatConfigAbbr(typeof studentDisplay === "string" ? studentDisplay : "");
+332-
+333:  const storedCallsign = event.callsign || '';
+334-  
+335-  const callsignInfo = picName ? personnelData.get(picName) : undefined;
+336-  const pilotCallsign = callsignInfo && callsignInfo.callsignNumber > 0
+337-      ? `${callsignInfo.callsignPrefix} ${String(callsignInfo.callsignNumber).padStart(3, '0')}`
+338-      : '';
+339-  
+340-  // For solo flights, use trainee callsign instead of instructor callsign
+341-     const isSoloFlight = event.flightType === 'Solo';
+342:     let callsign = storedCallsign || pilotCallsign;
+343-     
+344-     if (isSoloFlight && event.pilot) {
+345-         const trainee = traineesData.find(t => t.fullName === event.pilot);
+346-         if (trainee?.traineeCallsign) {
+347-             callsign = trainee.traineeCallsign;
+348-         }
+349-     }
+350-
+351-  const renderContent = () => {
+352-    if (isSmallTile) return null; // Don't render internal text if tile is small
+--
+399-    if (event.type === 'unavailability') {
+400-        // Render unavailability tile
+401-        return (
+402-            <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
+403-                <div className="overflow-hidden text-center">
+404:                    <div className="text-red-300 font-medium text-sm">
+405-                        UNAVAILABLE
+406-                    </div>
+407:                    <div className="font-mono text-red-400 truncate">
+408-                        {(event.reason || 'Other').toUpperCase()}
+409-                    </div>
+410-                    {event.notes && (
+411:                        <div className="text-xs text-red-500 mt-1 truncate">
+412-                            {event.notes}
+413-                        </div>
+414-                    )}
+415-                </div>
+416-            </div>
+417-        );
+418-    }
+419-
+420-    if (event.type === 'ftd' || event.type === 'ground' || isGroundEventFromName) {
+421-        
+--
+517-  
+518-  // Handle deployment tile special styling
+519-  const backgroundClass = event.type === 'deployment' 
+520-    ? 'bg-gray-600/30 border border-white/60' 
+521-    : event.type === 'unavailability'
+522:    ? 'bg-red-900/80 border border-red-600/60'
+523:    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : event.color;
+524-  const ringClass = getDynamicRingClass();
+525-  const dutySupBorderClass = isDutySup ? 'border border-black' : '';
+526-  const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
+527-  
+528-  const finalClasses = [commonClasses];
+529-
+530-  if (isPreview) {
+531-      finalClasses.push(event.color); // The color is set in App.tsx for oracle preview
+532-      finalClasses.push('border-2 border-dashed border-sky-300');
+533-  } else {

@@ -1,0 +1,12 @@
+grep: ./node_modules/bignumber.js: Is a directory
+grep: ./dfp-neo-platform/node_modules/fraction.js: Is a directory
+./types/audit.ts
+./App.tsx
+./current_build_algorithm.ts
+./static-demo/assets/index-BkFkfBtP.js
+./utils/auditDebounce.ts
+./utils/seedAuditLogs.ts
+./dist/assets/index-uPhlgI5U.js
+./dfp-neo-platform/.next/static/chunks/main-app.js
+./dfp-neo-platform/.next/static/chunks/app-pages-internals.js
+./dfp-neo-platform/.next/static/chunks/app/layout.js

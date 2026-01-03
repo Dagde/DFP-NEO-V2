@@ -1,0 +1,1 @@
+components/TrainingRecordsExportView.tsx:273:            // Match trainee names with or without course suffix (e.g., "Edwards, Charlotte" or "Edwards, Charlotte – ADF301")

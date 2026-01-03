@@ -1,0 +1,5 @@
+./test-auth.js
+./lib/auth
+./lib/auth/auth.config.ts
+./lib/auth/auth.ts
+./app/api/auth

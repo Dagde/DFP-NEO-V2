@@ -1,0 +1,30 @@
+            )}
+            {showUnavailabilityReport && (
+                <UnavailabilityReportModal
+                    isOpen={showUnavailabilityReport}
+                    onClose={() => setShowUnavailabilityReport(false)}
+                    date={date}
+                    instructors={instructorsData}
+                    trainees={traineesData}
+                    events={eventsForDate}
+                />
+            )}
+            {showSctRequest && instructorForSct && (
+                <SctRequestFlyout
+                    instructor={instructorForSct}
+                    onClose={() => setShowSctRequest(false)}
+                    onSave={(request) => {
+                        // Add the SCT request to the appropriate list
+                        if (request.event.includes('FTD')) {
+                            setSctFtds(prev => [...prev, request]);
+                        } else {
+                            setSctFlights(prev => [...prev, request]);
+                        }
+                        setShowSctRequest(false);
+                        // Show success message
+                        setSuccessMessage(`SCT request submitted for ${instructorForSct.name}`);
+                    }}
+                    currencyNames={['Instrument', 'Night', 'Multi-Engine', 'Formation']}
+                    sctEvents={sctEvents}
+                />
+            )}

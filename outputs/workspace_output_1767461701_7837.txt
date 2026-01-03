@@ -1,0 +1,94 @@
+4-import { v4 as uuidv4 } from 'uuid';
+5-import CancelEventFlyout from './CancelEventFlyout';
+6-import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
+7:import { VisualAdjustModal } from './VisualAdjustModal';
+8-
+9-interface EventDetailModalProps {
+10-  event: ScheduleEvent;
+--
+44-  isAddingTile?: boolean;
+45-    formationCallsigns?: FormationCallsign[];
+46-    currentLocation?: string;
+47:    onVisualAdjustStart?: (event: ScheduleEvent) => void;
+48:    onVisualAdjustEnd?: (event: ScheduleEvent) => void;
+49-    onSavePT051Assessment?: (assessment: any) => void;
+50-    cancellationCodes?: CancellationCode[];
+51-    onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
+--
+86-    return hours + (minutes / 60);
+87-};
+88-
+89:export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent }) => {
+90-    
+91-    console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
+92-    console.log('Event data:', {
+--
+115-    const [area, setArea] = useState(event.area || 'A');
+116-    const [aircraftNumber, setAircraftNumber] = useState(event.aircraftNumber || '001');
+117-    const [aircraftCount, setAircraftCount] = useState(1);
+118:    const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+119:    const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
+120:    const [visualAdjustEndTime, setVisualAdjustEndTime] = useState(event.startTime + event.duration);
+121-    
+122-    // Sync visual adjust times when event changes (from parent drag updates)
+123-    useEffect(() => {
+124:        if (isVisualAdjustMode) {
+125:            setVisualAdjustStartTime(event.startTime);
+126:            setVisualAdjustEndTime(event.startTime + event.duration);
+127-        }
+128:    }, [event.startTime, event.duration, isVisualAdjustMode]);
+129-    const [crew, setCrew] = useState<CrewMember[]>([{
+130-        flightType: event.flightType,
+131-        instructor: event.instructor || '',
+--
+981-        }
+982-    };
+983-
+984:    const handleVisualAdjust = () => {
+985:        console.log("Visual Adjust clicked");
+986-        // Call parent callback FIRST before changing local state
+987:        if (onVisualAdjustStart) {
+988:            onVisualAdjustStart(event);
+989-        }
+990-        // Then set local state
+991:        setIsVisualAdjustMode(true);
+992-    };
+993-
+994:    const handleVisualAdjustContinue = () => {
+995:        setIsVisualAdjustMode(false);
+996-        const updatedEvent = {
+997-            ...event,
+998:            startTime: visualAdjustStartTime,
+999:            duration: visualAdjustEndTime - visualAdjustStartTime
+1000-        };
+1001:        if (onVisualAdjustEnd) {
+1002:            onVisualAdjustEnd(updatedEvent);
+1003-        }
+1004:        setStartTime(formatTime(visualAdjustStartTime));
+1005:        setDuration(visualAdjustEndTime - visualAdjustStartTime);
+1006-    };
+1007-    const handleSave = () => {
+1008-        const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
+--
+1483-        </div>
+1484-    );
+1485-};    
+1486:    if (isVisualAdjustMode) {
+1487-        return (
+1488:            <VisualAdjustModal
+1489-                event={event}
+1490:                startTime={visualAdjustStartTime}
+1491:                endTime={visualAdjustEndTime}
+1492:                onContinue={handleVisualAdjustContinue}
+1493:                onClose={() => setIsVisualAdjustMode(false)}
+1494-            />
+1495-        );
+1496-    }
+--
+1907-                            {isEditing ? (
+1908-                                   <>
+1909-                                <button onClick={handleSave} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-sky-600 hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save</button>
+1910:                                       <button onClick={handleVisualAdjust} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-purple-600 hover:bg-purple-700">Visual Adjust</button>
+1911-                                   </>
+1912-                            ) : (
+1913-                                <button onClick={() => setIsEditing(true)} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-gray-600 hover:bg-gray-700">Edit</button>

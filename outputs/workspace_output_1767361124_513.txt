@@ -1,0 +1,105 @@
+Auto-merging App.tsx
+CONFLICT (add/add): Merge conflict in App.tsx
+Auto-merging App.tsx.backup
+CONFLICT (add/add): Merge conflict in App.tsx.backup
+Auto-merging components/AddCourseFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/AddCourseFlyout.tsx
+Auto-merging components/AddRemedialPackageFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/AddRemedialPackageFlyout.tsx
+Auto-merging components/AddUnavailabilityFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/AddUnavailabilityFlyout.tsx
+Auto-merging components/AirframeColumn.tsx
+CONFLICT (add/add): Merge conflict in components/AirframeColumn.tsx
+Auto-merging components/AuthorisationView.tsx
+CONFLICT (add/add): Merge conflict in components/AuthorisationView.tsx
+Auto-merging components/CourseRosterView.tsx
+CONFLICT (add/add): Merge conflict in components/CourseRosterView.tsx
+Auto-merging components/CourseSelectionDialog.tsx
+CONFLICT (add/add): Merge conflict in components/CourseSelectionDialog.tsx
+Auto-merging components/CurrencyBuilderView.tsx
+CONFLICT (add/add): Merge conflict in components/CurrencyBuilderView.tsx
+Auto-merging components/FlightDetailModal.tsx
+CONFLICT (add/add): Merge conflict in components/FlightDetailModal.tsx
+Auto-merging components/FlightTile.tsx
+CONFLICT (add/add): Merge conflict in components/FlightTile.tsx
+Auto-merging components/FullPageProgressGraph.tsx
+CONFLICT (add/add): Merge conflict in components/FullPageProgressGraph.tsx
+Auto-merging components/HateSheetView.tsx
+CONFLICT (add/add): Merge conflict in components/HateSheetView.tsx
+Auto-merging components/Header.tsx
+CONFLICT (add/add): Merge conflict in components/Header.tsx
+Auto-merging components/InstructorProfileFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/InstructorProfileFlyout.tsx
+Auto-merging components/InstructorScheduleView.tsx
+CONFLICT (add/add): Merge conflict in components/InstructorScheduleView.tsx
+Auto-merging components/LogbookView.tsx
+CONFLICT (add/add): Merge conflict in components/LogbookView.tsx
+Auto-merging components/MassBriefCompleteFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/MassBriefCompleteFlyout.tsx
+Auto-merging components/MyDashboard.tsx
+CONFLICT (add/add): Merge conflict in components/MyDashboard.tsx
+Auto-merging components/NextDayBuildView.tsx
+CONFLICT (add/add): Merge conflict in components/NextDayBuildView.tsx
+Auto-merging components/NextDayInstructorScheduleView.tsx
+CONFLICT (add/add): Merge conflict in components/NextDayInstructorScheduleView.tsx
+Auto-merging components/PT051HateSheetView.tsx
+CONFLICT (add/add): Merge conflict in components/PT051HateSheetView.tsx
+Auto-merging components/PT051View.tsx
+CONFLICT (add/add): Merge conflict in components/PT051View.tsx
+Auto-merging components/PersonnelColumn.tsx
+CONFLICT (add/add): Merge conflict in components/PersonnelColumn.tsx
+Auto-merging components/PinEntryFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/PinEntryFlyout.tsx
+Auto-merging components/PrioritiesView.tsx
+CONFLICT (add/add): Merge conflict in components/PrioritiesView.tsx
+Auto-merging components/RestoreCourseConfirmation.tsx
+CONFLICT (add/add): Merge conflict in components/RestoreCourseConfirmation.tsx
+Auto-merging components/ScheduleView.tsx
+CONFLICT (add/add): Merge conflict in components/ScheduleView.tsx
+Auto-merging components/SctRequestFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/SctRequestFlyout.tsx
+Auto-merging components/SettingsView.tsx
+CONFLICT (add/add): Merge conflict in components/SettingsView.tsx
+Auto-merging components/SettingsView.tsx.backup
+CONFLICT (add/add): Merge conflict in components/SettingsView.tsx.backup
+Auto-merging components/SettingsViewWithMenu.tsx
+CONFLICT (add/add): Merge conflict in components/SettingsViewWithMenu.tsx
+Auto-merging components/Sidebar.tsx
+CONFLICT (add/add): Merge conflict in components/Sidebar.tsx
+Auto-merging components/SupervisorDashboard.tsx
+CONFLICT (add/add): Merge conflict in components/SupervisorDashboard.tsx
+Auto-merging components/SyllabusView.tsx
+CONFLICT (add/add): Merge conflict in components/SyllabusView.tsx
+Auto-merging components/TraineeLmpView.tsx
+CONFLICT (add/add): Merge conflict in components/TraineeLmpView.tsx
+Auto-merging components/TraineeProfileFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/TraineeProfileFlyout.tsx
+Auto-merging components/TraineeScheduleView.tsx
+CONFLICT (add/add): Merge conflict in components/TraineeScheduleView.tsx
+Auto-merging components/UnavailabilitiesWindow.tsx
+CONFLICT (add/add): Merge conflict in components/UnavailabilitiesWindow.tsx
+Auto-merging components/UnavailabilityReportModal.tsx
+CONFLICT (add/add): Merge conflict in components/UnavailabilityReportModal.tsx
+Auto-merging components/UpdateSummaryFlyout.tsx
+CONFLICT (add/add): Merge conflict in components/UpdateSummaryFlyout.tsx
+Auto-merging current_build_algorithm.ts
+CONFLICT (add/add): Merge conflict in current_build_algorithm.ts
+Auto-merging index.html
+CONFLICT (add/add): Merge conflict in index.html
+Auto-merging mockData.ts
+CONFLICT (add/add): Merge conflict in mockData.ts
+Auto-merging package-lock.json
+CONFLICT (add/add): Merge conflict in package-lock.json
+Auto-merging package.json
+CONFLICT (add/add): Merge conflict in package.json
+Auto-merging test.html
+CONFLICT (add/add): Merge conflict in test.html
+Auto-merging todo.md
+CONFLICT (add/add): Merge conflict in todo.md
+Auto-merging types.ts
+CONFLICT (add/add): Merge conflict in types.ts
+Auto-merging utils/syllabusFilter.ts
+CONFLICT (add/add): Merge conflict in utils/syllabusFilter.ts
+Auto-merging vite.config.ts
+CONFLICT (add/add): Merge conflict in vite.config.ts
+Automatic merge failed; fix conflicts and then commit the result.

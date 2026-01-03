@@ -1,0 +1,110 @@
+3030-    const [date, setDate] = useState<string>(() => getLocalDateString());
+3031-    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+3032-    const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
+3033:    const [isEditingDefault, setIsEditingDefault] = useState(false);
+3034-    const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
+3035-    const [conflict, setConflict] = useState<Conflict | null>(null);
+3036-    const [showValidation, setShowValidation] = useState(false);
+--
+4562-            assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
+4563-        ].filter(Boolean).join(', ');
+4564-        
+4565:        logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+4566-    };
+4567-    
+4568-    const findAvailableResourceId = (eventToPlace: ScheduleEvent, existingEvents: ScheduleEvent[]): string => {
+--
+4681-                isTimeFixed: true,
+4682-            };
+4683-            setSelectedEvent(newEvent);
+4684:            setIsEditingDefault(true);
+4685-            setHighlightedField(null);
+4686-            setIsPriorityEventCreation(!!options.isPriority);
+4687-            setOracleContextForModal(options.oracleContext || null);
+--
+4696-            const eventToOpen = latestEvent || event;
+4697-            
+4698-            setSelectedEvent(eventToOpen);
+4699:            setIsEditingDefault(false);
+4700-            setHighlightedField(null);
+4701-            setIsAddingTile(false); // Reset isAddingTile when editing existing event
+4702-            const isHighPriority = highestPriorityEvents.some(p => p.id === event.id);
+--
+4816-                
+4817-                if (!dayNightCheck.isAllowed) {
+4818-                    showDarkAlert(`\u274c DAY/NIGHT SEPARATION VIOLATION DETECTED!\n\n${dayNightCheck.reason}\n\nThis is a hard rule that cannot be violated. The event will not be saved.`, "Day/Night Separation Violation", "error");
+4819:                    console.log('SAVE BLOCKED - Day/Night separation violation:', dayNightCheck.reason);
+4820-                    return; // Block the save
+4821-                }
+4822-            }
+--
+4828-    
+4829-        // Determine if we should save to priority list or schedule
+4830-        // If editing an existing event in Next Day Build view, save to nextDayBuildEvents
+4831:        const isEditingInNextDayView = !isNewEvent && ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+4832:        const shouldSaveToPriority = isPriority && !isEditingInNextDayView;
+4833-        
+4834-        if (shouldSaveToPriority) {
+4835-            const priorityEvent = { ...mainEvent, isTimeFixed: mainEvent.isTimeFixed ?? true };
+--
+5081-                       // Only log if there are actual changes
+5082-                       if (changesList.length > 0) {
+5083-                           const description = `Modified ${eventType} event for ${personName}`;
+5084:                           logAudit(pageName, 'Edit', description, changesList.join(', '));
+5085-                       }
+5086-                   } else {
+5087-                       // Fallback if original event not found
+5088-                       const description = `Modified ${eventType} event for ${personName}`;
+5089-                       const changes = `Event: ${event.syllabusItem || event.flightNumber || eventType}, Time: ${event.startTime}, Duration: ${event.duration}hrs, Resource: ${event.resourceId}`;
+5090:                       logAudit(pageName, 'Edit', description, changes);
+5091-                   }
+5092-               }
+5093-           });
+--
+6023-           // Log the publish action to audit trail
+6024-           logAudit(
+6025-               "Next Day Build",
+6026:               "Edit",
+6027-               `Published schedule for ${buildDfpDate}`,
+6028-               `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, FTD: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
+6029-           );
+--
+6073-                          `schedule-move-${update.eventId}`,
+6074-                          {
+6075-                              page: "Program Schedule",
+6076:                              action: "Edit",
+6077-                              description: `Moved ${eventType} event for ${personName}`,
+6078-                              originalValues: {
+6079-                                  startTime: originalStartTime,
+--
+6124-                          `ndb-move-${update.eventId}`,
+6125-                          {
+6126-                              page: "Next Day Build",
+6127:                              action: "Edit",
+6128-                              description: `Moved ${eventType} event for ${personName}`,
+6129-                              originalValues: {
+6130-                                  startTime: originalStartTime,
+--
+7414-        };
+7415-
+7416-        setSelectedEvent(newEvent);
+7417:        setIsEditingDefault(true);
+7418-        setOraclePreviewEvent(null);
+7419-
+7420-    }, [oraclePreviewEvent, oracleAnalysis, date, school, eventsForDate, nextDayBuildEvents, buildDfpDate, oracleContext, syllabusDetails]);
+--
+8575-                                    assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
+8576-                                ].filter(Boolean).join(', ');
+8577-                                
+8578:                                logAudit('Performance History', 'Edit', `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+8579-                            }
+8580-                        }}
+8581-                        instructors={instructorsData}
+--
+8721-                    }}
+8722-                    onSave={(events) => handleSaveEvents(events, isPriorityEventCreation)}
+8723-                    onDeleteRequest={handleDeleteEvent}
+8724:                    isEditingDefault={isEditingDefault}
+8725-                    instructors={instructorsData.map(i => i.name)}
+8726-                    trainees={traineesData.map(t => t.fullName)}
+8727-                    syllabus={(() => {

@@ -8649,6 +8649,76 @@ updates.forEach(update => {
         }
     };
 
+    // Debug: Log purple buttons when they appear
+    useEffect(() => {
+        const checkForPurpleButtons = () => {
+            // Check for purple elements
+            const purpleElements = document.querySelectorAll('[class*="purple"], [style*="purple"], [class*="bg-purple"], [style*="bg-purple"]');
+            
+            // Also check for Edit/Save buttons specifically
+            const editSaveButtons = document.querySelectorAll('button, [role="button"], .btn, button[class*="Edit"], button[class*="Save"]');
+            
+            // Check for any elements with purple-ish colors
+            const allElements = document.querySelectorAll('*');
+            const purpleColoredElements = Array.from(allElements).filter(el => {
+                const computedStyle = window.getComputedStyle(el);
+                const backgroundColor = computedStyle.backgroundColor;
+                const color = computedStyle.color;
+                return backgroundColor.includes('128, 0, 128') || backgroundColor.includes('purple') || 
+                       color.includes('128, 0, 128') || color.includes('purple');
+            });
+
+            if (purpleElements.length > 0 || purpleColoredElements.length > 0) {
+                console.log('🔍 PURPLE ELEMENTS DETECTED:');
+                console.log('- Purple class elements:', purpleElements);
+                console.log('- Purple colored elements:', purpleColoredElements);
+                
+                [...purpleElements, ...purpleColoredElements].forEach((el, index) => {
+                    console.log(`Purple Element ${index}:`, {
+                        element: el,
+                        tagName: el.tagName,
+                        classes: el.className,
+                        textContent: el.textContent?.substring(0, 50),
+                        innerHTML: el.innerHTML?.substring(0, 100),
+                        parent: el.parentElement?.tagName,
+                        id: el.id,
+                        style: el.style.cssText,
+                        computedStyle: window.getComputedStyle(el).backgroundColor + ' / ' + window.getComputedStyle(el).color
+                    });
+                });
+            }
+
+            // Log all Edit/Save buttons for analysis
+            if (editSaveButtons.length > 0) {
+                const relevantButtons = Array.from(editSaveButtons).filter(btn => 
+                    btn.textContent?.toLowerCase().includes('edit') || 
+                    btn.textContent?.toLowerCase().includes('save') ||
+                    btn.className?.toLowerCase().includes('edit') ||
+                    btn.className?.toLowerCase().includes('save')
+                );
+                
+                if (relevantButtons.length > 0) {
+                    console.log('🔍 EDIT/SAVE BUTTONS FOUND:', relevantButtons);
+                    relevantButtons.forEach((btn, index) => {
+                        console.log(`Edit/Save Button ${index}:`, {
+                            element: btn,
+                            classes: btn.className,
+                            textContent: btn.textContent,
+                            backgroundColor: window.getComputedStyle(btn).backgroundColor,
+                            color: window.getComputedStyle(btn).color
+                        });
+                    });
+                }
+            }
+        };
+
+        // Check immediately and every 2 seconds
+        checkForPurpleButtons();
+        const interval = setInterval(checkForPurpleButtons, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div id="app-content" className="flex h-screen bg-gray-900 text-white">
             <Sidebar

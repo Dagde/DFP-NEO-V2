@@ -1,0 +1,490 @@
+4469-        setCourses(prev => [...prev, newCourse]);
+4470-        
+4471-        setSuccessMessage(`Course ${data.number} added successfully!`);
+4472-    };
+4473-
+4474:    const handleDeleteCourseFromTrainingRecords = async (courseName: string, archive: boolean) => {
+4475-        const color = courseColors[courseName];
+4476-        if (!color) return;
+4477-
+4478-        if (archive) {
+4479-            // Archive the course
+4480-            const newActive = { ...courseColors };
+4481:            delete newActive[courseName];
+4482-            setCourseColors(newActive);
+4483-            setArchivedCourses(prev => ({ ...prev, [courseName]: color }));
+4484-            
+4485-            // Remove from courses array
+4486-            setCourses(prev => prev.filter(c => c.name !== courseName));
+4487-            
+4488-            setSuccessMessage(`Course ${courseName} archived successfully!`);
+4489-        } else {
+4490:            // Permanently delete the course
+4491-            const newActive = { ...courseColors };
+4492:            delete newActive[courseName];
+4493-            setCourseColors(newActive);
+4494-            
+4495-            // Remove from courses array
+4496-            setCourses(prev => prev.filter(c => c.name !== courseName));
+4497-            
+4498:            setSuccessMessage(`Course ${courseName} deleted permanently!`);
+4499-        }
+4500-    };
+4501-
+4502-    const handleNavigateToCourseRosterFromTrainingRecords = (courseName: string) => {
+4503-        // Navigate to Course Roster view
+4504-        handleNavigation('CourseRoster');
+4505-    };
+4506-
+4507-    const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
+4508-        // Navigate to Archived Courses view
+4509-        handleNavigation('ArchivedCourses');
+4510-    };
+4511-
+4512-    const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
+4513-        const color = archivedCourses[courseName];
+4514-        if (!color) return;
+4515-
+4516-        // Remove from archived courses
+4517-        const newArchived = { ...archivedCourses };
+4518:        delete newArchived[courseName];
+4519-        setArchivedCourses(newArchived);
+4520-
+4521-        // Add back to active courses
+4522-        setCourseColors(prev => ({ ...prev, [courseName]: color }));
+4523-
+4524-        // Add back to courses array (recreate from mock data)
+4525-        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
+4526-        if (courseFromMockData) {
+4527-            setCourses(prev => [...prev, courseFromMockData]);
+4528-        }
+4529-
+4530-        setSuccessMessage(`Course ${courseName} unarchived successfully!`);
+4531-    };
+4532-
+4533:    const handleDeleteCourseFromArchivedView = async (courseName: string) => {
+4534-        // Remove from archived courses
+4535-        const newArchived = { ...archivedCourses };
+4536:        delete newArchived[courseName];
+4537-        setArchivedCourses(newArchived);
+4538-
+4539-        // Remove from courses array if it exists there
+4540-        setCourses(prev => prev.filter(c => c.name !== courseName));
+4541-
+4542:        setSuccessMessage(`Course ${courseName} deleted permanently!`);
+4543-    };
+4544-
+4545-    const handleDateChange = (increment: number) => {
+4546-        const currentDate = new Date(`${date}T00:00:00Z`);
+4547-        currentDate.setUTCDate(currentDate.getUTCDate() + increment);
+4548-        const newDateStr = currentDate.toISOString().split('T')[0];
+4549-        setDate(newDateStr);
+4550-    };
+4551-
+4552-    const onSavePT051Assessment = (assessment: Pt051Assessment) => {
+4553-        // Use traineeFullName for the key to ensure consistency across the app
+4554-        const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
+4555-        setPt051Assessments(prev => new Map(prev).set(saveKey, assessment));
+4556-        
+4557-        // Log to audit trail
+4558-        const changes = [
+4559-            assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
+4560-            assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
+4561-            assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
+4562-            assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
+--
+5182-        setSelectedEvent(null);
+5183-        
+5184-        
+5185-    };
+5186-    
+5187:    const handleDeleteEvent = () => {
+5188-        if (!selectedEvent) return;
+5189-        const eventDate = selectedEvent.date;
+5190-
+5191-        setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+5192-
+5193-        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+5194-
+5195-        if (isNextDay) {
+5196-            setNextDayBuildEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+5197-        } else {
+5198-            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+5199-                const newScheduleForDate = (prev[eventDate] || []).filter(e => e.id !== selectedEvent.id);
+5200-                return { ...prev, [eventDate]: newScheduleForDate };
+5201-            });
+5202-        }
+5203-        
+5204-        // NEW APPROACH: Trigger PT-051 sync after deletion (only for Active DFP)
+5205-        if (!isNextDay) {
+5206-            console.log('📋 Triggering PT-051 sync after event deletion...');
+5207-            setTimeout(() => {
+--
+5218-           
+5219-           // Log the deletion to audit trail
+5220-           const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+5221-           const eventType = selectedEvent.type || 'event';
+5222-           const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
+5223:           const description = `Deleted ${eventType} event for ${personName}`;
+5224-           const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs`;
+5225-           
+5226:           logAudit(pageName, "Delete", description, changes);
+5227-        setSelectedEvent(null);
+5228-    };
+5229-    
+5230-    // Visual Adjust handlers
+5231-    const handleVisualAdjustStart = (event: ScheduleEvent) => {
+5232-        console.log('Visual Adjust Start - Event:', event);
+5233-        setIsVisualAdjustMode(true);
+5234-        setVisualAdjustEvent(event);
+5235-        console.log('Visual Adjust Mode set to true');
+5236-    };
+5237-    
+5238-    const handleVisualAdjustEnd = (event: ScheduleEvent) => {
+5239-        setIsVisualAdjustMode(false);
+5240-        setVisualAdjustEvent(null);
+5241-        // Update the selected event so the modal shows the new times
+5242-        setSelectedEvent(event);
+5243-        // The event has already been updated in the events array during dragging
+5244-    };
+5245-    
+5246-    // SCT & REMEDIAL AUTO-ADD SYSTEM
+--
+5556-            instructor: e.instructor
+5557-        })));
+5558-        
+5559-        const newAssessments = new Map(assessments);
+5560-        let created = 0;
+5561:        let deleted = 0;
+5562-        
+5563-        // FORWARD CHECK: Create PT-051s for events that don't have them
+5564-        activeDfpEvents.forEach(event => {
+5565-            // Skip DUTY SUP events
+5566-            const isDutySup = event?.flightNumber?.includes('Duty Sup');
+5567-            
+5568-            // Skip events on STBY line (both by flight number and resource allocation)
+5569-            const isStbyFlightNumber = event?.flightNumber?.toUpperCase().includes('STBY');
+5570-            const isStbyResource = event?.resourceId?.startsWith('STBY') || 
+5571-                                   event?.resourceId?.startsWith('BNF-STBY');
+5572-            
+5573-            // Skip deployment events
+5574-            const isDeployment = event?.type === 'deployment';
+5575-            
+5576-            // Include flight, FTD, ground, and CPT events for PT-051 creation
+5577-            const isValidEventType = event?.type === 'flight' || 
+5578-                                    event?.type === 'ftd' || 
+5579-                                    event?.type === 'ground' || 
+5580-                                    event?.type === 'cpt';
+5581-            
+--
+5682-                    console.log('✏️ Updated PT-051 for', assessment.traineeFullName, 'on', assessment.flightNumber);
+5683-                }
+5684-            }
+5685-        });
+5686-        
+5687:        // REVERSE CHECK: Delete PT-051s whose events no longer exist on Active DFP
+5688-        const activeDfpEventIds = new Set(activeDfpEvents.map(e => e.id));
+5689:        const assessmentsToDelete: string[] = [];
+5690-        
+5691-        newAssessments.forEach((assessment, assessmentId) => {
+5692-            if (!activeDfpEventIds.has(assessment.eventId)) {
+5693:                assessmentsToDelete.push(assessmentId);
+5694-                console.log('🗑️ Deleting PT-051 for', assessment.traineeFullName, 'on', assessment.flightNumber, assessment.date, '(event no longer on Active DFP)');
+5695-            }
+5696-        });
+5697-        
+5698:        assessmentsToDelete.forEach(id => {
+5699:            newAssessments.delete(id);
+5700:            deleted++;
+5701-        });
+5702-        
+5703-        // Update state if changes were made
+5704:        if (created > 0 || deleted > 0 || updated > 0) {
+5705-            setPt051Assessments(newAssessments);
+5706:            console.log(`📊 PT-051 Sync Complete: Created ${created}, Updated ${updated}, Deleted ${deleted}`);
+5707-        } else {
+5708-            console.log('✅ PT-051s already in sync with Active DFP');
+5709-        }
+5710-    };
+5711-    
+5712-    const handleUpdatePriorityEvent = (eventId: string, updates: Partial<ScheduleEvent>) => {
+5713-        setHighestPriorityEvents(prevEvents => 
+5714-            prevEvents.map(event => 
+5715-                event.id === eventId ? { ...event, ...updates } : event
+5716-            )
+5717-        );
+5718-    };
+5719-
+5720-    const handleSelectInstructorFromSchedule = (instructorName: string) => {
+5721-        const instructor = instructorsData.find(i => i.name === instructorName);
+5722-        if (instructor) {
+5723-            setSelectedPersonForProfile(instructor);
+5724-            handleNavigation('Instructors');
+5725-        }
+5726-    };
+--
+7047-        // Find the LATEST version of the problem tile from the current state.
+7048-        const updatedProblemTile = currentEvents.find(e => e.id === neoProblemTileForFlyout.event.id);
+7049-
+7050-        if (!updatedProblemTile) {
+7051-            console.log('🟠 ❌ Event not found in current state, closing flyout');
+7052:            // The event was deleted or somehow disappeared. Clean up and close.
+7053-            setNeoProblemTileForFlyout(null);
+7054-            setNeoRemediesForFlyout([]);
+7055-            console.log('🟠 ========== NEO USEEFFECT END (NOT FOUND) ==========');
+7056-            return;
+7057-        }
+7058-
+7059-        console.log('🟠 Found updated problem tile:', {
+7060-            id: updatedProblemTile.id,
+7061-            instructor: updatedProblemTile.instructor,
+7062-            student: updatedProblemTile.student,
+7063-            pilot: updatedProblemTile.pilot
+7064-        });
+7065-
+7066-        // Re-run the error analysis on the updated tile and schedule.
+7067-        console.log('🟠 Running findHardErrors on updated tile...');
+7068-        const newErrors = findHardErrors(updatedProblemTile, currentEvents);
+7069-        console.log('🟠 Errors found:', newErrors.length);
+7070-        if (newErrors.length > 0) {
+7071-            console.log('🟠 Error details:', newErrors);
+7072-        }
+--
+7128-        setMasterCurrencies(newMasters);
+7129-        setCurrencyRequirements(newReqs);
+7130-        setSuccessMessage('Currency rules saved!');
+7131-    };
+7132-    
+7133:    const handleDeleteCurrency = (id: string) => {
+7134-        setMasterCurrencies(prev => prev.filter(c => c.id !== id));
+7135-        setCurrencyRequirements(prev => prev.filter(c => c.id !== id));
+7136:        setSuccessMessage('Currency deleted.');
+7137-    };
+7138-
+7139-    const currencyNames = useMemo(() => {
+7140-        return [...masterCurrencies.map(c => c.name), ...currencyRequirements.map(c => c.name)].sort();
+7141-    }, [masterCurrencies, currencyRequirements]);
+7142-
+7143-    // --- ORACLE HANDLERS ---
+7144-    const runOracleAnalysis = useCallback(() => {
+7145-        const isNextDayContext = oracleContext === 'nextDayBuild';
+7146-        const currentEvents = (isNextDayContext ? nextDayBuildEvents.map(e => ({...e, date: buildDfpDate})) : eventsForDate).filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
+7147-        const analysisDate = isNextDayContext ? buildDfpDate : date;
+7148-
+7149-        const instructorsAnalysis: OracleInstructorAnalysis[] = instructorsData.map(instructor => {
+7150-            const events = currentEvents.filter(e => getPersonnel(e).includes(instructor.name));
+7151-            return { instructor, availableWindows: [] }; // Placeholder
+7152-        });
+7153-
+7154-        
+7155-        const traineesAnalysis: OracleTraineeAnalysis[] = traineesData.map(trainee => {
+7156-            const events = currentEvents.filter(e => getPersonnel(e).includes(trainee.fullName));
+--
+7717-                            units={units}
+7718-                            selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
+7719-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+7720-                            traineeLMPs={traineeLMPs}
+7721-                            onViewLogbook={handleViewLogbook}
+7722:                            onDeleteTrainee={(trainee) => {
+7723-                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
+7724-                                // Remove from trainee LMPs if exists
+7725-                                setTraineeLMPs(prev => {
+7726-                                    const newLMPs = new Map(prev);
+7727:                                    newLMPs.delete(trainee.fullName);
+7728-                                    return newLMPs;
+7729-                                });
+7730-                                // Log audit for deletion
+7731-                                logAudit({
+7732-                                    page: 'Trainee Roster',
+7733:                                    action: 'delete',
+7734:                                    description: `Deleted trainee from roster`,
+7735-                                    changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+7736-                                });
+7737-                            }}
+7738-                        />;
+7739-            case 'HateSheet':
+7740-                if (selectedTraineeForHateSheet) {
+7741-                    const traineeAssessments = Array.from(pt051Assessments.values()).filter(
+7742-                        // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
+7743-                        (a: Pt051Assessment) => a.traineeFullName === selectedTraineeForHateSheet.fullName
+7744-                    );
+7745-                    const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents];
+7746-                    return <HateSheetView
+7747-                                trainee={selectedTraineeForHateSheet}
+7748-                                lmpScores={scores.get(selectedTraineeForHateSheet.fullName) || []}
+7749-                                assessments={traineeAssessments}
+7750-                                pt051Events={traineeAssessments}
+7751-                                userProfile={currentUser}
+7752-                                refreshEvents={() => {
+7753-                                    // Refresh events by calling the existing refresh functions
+7754-                                    loadEventsForDate(selectedDate, selectedCourse);
+--
+8067-                return <TrainingRecordsView 
+8068-                    courses={courses}
+8069-                    courseColors={courseColors}
+8070-                    archivedCourses={archivedCourses}
+8071-                    onAddCourse={handleAddCourseFromTrainingRecords}
+8072:                    onDeleteCourse={handleDeleteCourseFromTrainingRecords}
+8073-                    onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
+8074-                    onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+8075-                    traineesData={traineesData}
+8076-                    instructorsData={instructorsData}
+8077-                    archivedTraineesData={archivedTraineesData}
+8078-                    archivedInstructorsData={archivedInstructorsData}
+8079-                    events={events}
+8080-                    scores={scores}
+8081-                    publishedSchedules={publishedSchedules}
+8082-                    syllabusDetails={syllabusDetails}
+8083-                    pt051Assessments={pt051Assessments}
+8084-                    onSavePT051Assessment={onSavePT051Assessment}
+8085-                />;
+8086-            case 'ArchivedCourses':
+8087-                return <ArchivedCoursesView 
+8088-                    archivedCourses={archivedCourses}
+8089-                    onUnarchiveCourse={handleUnarchiveCourseFromArchivedView}
+8090:                    onDeleteCourse={handleDeleteCourseFromArchivedView}
+8091-                    onNavigateBack={() => handleNavigation('TrainingRecords')}
+8092-                />;
+8093-            case 'ProgramData':
+8094-                 return <ProgramDataView
+8095-                            date={buildDfpDate}
+8096-                            events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
+8097-                            instructorsData={instructorsData}
+8098-                            traineesData={traineesData}
+8099-                            activeCourses={coursePriorities}
+8100-                            onNavigateAndSelectPerson={(name) => {
+8101-                                const person = [...instructorsData, ...traineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
+8102-                                if (person) {
+8103-                                    if ('role' in person) handleSelectInstructorFromSchedule(name);
+8104-                                    else handleSelectTraineeFromSchedule(name);
+8105-                                }
+8106-                            }}
+8107-                            scores={scores}
+8108-                            syllabusDetails={syllabusDetails}
+8109-                            traineeLMPs={traineeLMPs}
+8110-                            courseColors={courseColors}
+--
+8486-                return <CurrencyBuilderView 
+8487-                            onBack={() => handleNavigation('Settings')} 
+8488-                            masterCurrencies={masterCurrencies}
+8489-                            currencyRequirements={currencyRequirements}
+8490-                            onSave={handleSaveCurrencies}
+8491:                            onDelete={handleDeleteCurrency}
+8492-                        />;
+8493-            case 'PT051':
+8494-                console.log('eventForPt051:', eventForPt051);
+8495-                console.log('selectedTraineeForHateSheet:', selectedTraineeForHateSheet);
+8496-                
+8497-                if (eventForPt051 && selectedTraineeForHateSheet) {
+8498-                    // Find the PT-051 for this event and trainee combination
+8499-                    const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+8500-                    console.log('Looking for assessment with key:', assessmentKey);
+8501-                    console.log('Available assessment keys:', Array.from(pt051Assessments.keys()));
+8502-                    
+8503-                    let existingAssessment = pt051Assessments.get(assessmentKey);
+8504-                    console.log('Direct lookup result:', existingAssessment);
+8505-                    
+8506-                    // Fallback: search by eventId and traineeFullName if key lookup fails
+8507-                    if (!existingAssessment) {
+8508-                        console.log('Direct lookup failed, trying fallback search...');
+8509-                        existingAssessment = Array.from(pt051Assessments.values()).find(
+8510-                            a => a.eventId === eventForPt051.id && a.traineeFullName === selectedTraineeForHateSheet.fullName
+8511-                        );
+--
+8532-                                    );
+8533-                                }
+8534-                                return prevEvents;
+8535-                            });
+8536-                        }}
+8537:                        onDeleteAssessment={(assessmentId) => {
+8538:                            console.log('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
+8539:                            // Find and delete the PT-051 assessment
+8540-                            const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+8541-                            console.log('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
+8542-                            setPt051Assessments(prev => {
+8543-                                const newMap = new Map(prev);
+8544:                                const deleted = newMap.delete(assessmentKey);
+8545:                                console.log('🗑️ App.tsx: Assessment deleted from map:', deleted);
+8546-                                return newMap;
+8547-                            });
+8548-                            
+8549-                            // Log PT-051 deletion to audit trail
+8550-                            console.log('📋 App.tsx: Logging to audit...');
+8551:                            logAudit('Performance History', 'Delete', `Deleted PT-051 for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
+8552-                            console.log('✅ App.tsx: Audit logged successfully');
+8553-                            
+8554:                            setSuccessMessage('PT-051 Assessment Deleted!');
+8555-                        }}
+8556-                        onSave={(assessment, isAutoSave) => {
+8557-                            // Mark assessment as completed when saved (not auto-save)
+8558-                            const updatedAssessment = {
+8559-                                ...assessment,
+8560-                                isCompleted: !isAutoSave ? true : assessment.isCompleted
+8561-                            };
+8562-                            
+8563-                            // Save using the correct key format: pt051-${eventId}-${traineeFullName}
+8564-                            const saveKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+8565-                            setPt051Assessments(prev => new Map(prev).set(saveKey, updatedAssessment));
+8566-                            
+8567-                            if (!isAutoSave) {
+8568-                                setSuccessMessage('PT-051 Assessment Saved!');
+8569-                                
+8570-                                // Log PT-051 modification to audit trail
+8571-                                const changes = [
+8572-                                    assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
+8573-                                    assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
+8574-                                    assessment.dcoResult ? `DCO Result: ${assessment.dcoResult}` : null,
+--
+8656-                onAddCourse={(data) => setCourseColors(prev => ({ ...prev, [data.number]: data.color }))}
+8657-                onArchiveCourse={(courseNumber) => {
+8658-                    const color = courseColors[courseNumber];
+8659-                    if (color) {
+8660-                        const newActive = { ...courseColors };
+8661:                        delete newActive[courseNumber];
+8662-                        setCourseColors(newActive);
+8663-                        setArchivedCourses(prev => ({ ...prev, [courseNumber]: color }));
+8664-                    }
+8665-                }}
+8666-                onNextDayBuildClick={() => {
+8667-                    handleNavigation('NextDayBuild');
+8668-                }}
+8669-                onBuildDfpClick={handleBuildDfp}
+8670-                isSupervisor={true}
+8671-                onPublish={handlePublish}
+8672-                currentUserName={currentUserName}
+8673-                currentUserRank={currentUser?.rank || 'FLTLT'}
+8674-                instructorsList={instructorsData.map(inst => ({
+8675-                    name: inst.name,
+8676-                    rank: inst.rank,
+8677-                    unit: inst.unit,
+8678-                    pin: inst.pin || '1111'
+8679-                }))}
+8680-                onUserChange={handleUserChange}
+8681-            />
+--
+8716-                        setSelectedEvent(null);
+8717-                        setOracleContextForModal(null);
+8718-                        setIsAddingTile(false);
+8719-                    }}
+8720-                    onSave={(events) => handleSaveEvents(events, isPriorityEventCreation)}
+8721:                    onDeleteRequest={handleDeleteEvent}
+8722-                    isEditingDefault={isEditingDefault}
+8723-                    instructors={instructorsData.map(i => i.name)}
+8724-                    trainees={traineesData.map(t => t.fullName)}
+8725-                    syllabus={(() => {
+8726-                        console.log('addTileSyllabusOptions length:', addTileSyllabusOptions.length);
+8727-                        console.log('syllabusForModal length:', syllabusForModal.length);
+8728-                        return isAddingTile ? addTileSyllabusOptions : syllabusForModal;
+8729-                    })()}
+8730-                    syllabusDetails={syllabusDetails}
+8731-                    highlightedField={highlightedField}
+8732-                    school={school}
+8733-                    traineesData={traineesData}
+8734-                    instructorsData={instructorsData}
+8735-                    courseColors={courseColors}
+8736-                    eventsForDate={eventsForDate}
+8737-                    onNavigateToHateSheet={(trainee) => {
+8738-                        setSelectedTraineeForHateSheet(trainee);
+8739-                        handleNavigation('HateSheet');
+8740-                    }}
+8741-                    onNavigateToSyllabus={(id) => {

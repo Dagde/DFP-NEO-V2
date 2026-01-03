@@ -1,0 +1,5 @@
+root        1685  0.0  0.0   2584   916 ?        S    14:58   0:00 sh -c next dev
+root        1686  0.4  1.7 11528824 71112 ?      Sl   14:58   0:00 node /workspace/dfp-neo-platform/node_modules/.bin/next dev
+root        1938  0.0  0.0   2920   888 ?        Ss   14:59   0:00 timeout --preserve-status --signal=KILL 60s bash -lc { cd /workspace ; mkdir -p /workspace/outputs ; } { ps aux | grep "next dev" __ec=$? } >"/workspace/outputs/workspace_output_1767452368_5849.txt" 2>&1 head -c 80000 "/workspace/outputs/workspace_output_1767452368_5849.txt" ( exit "$__ec" )
+root        1939  0.0  0.0   4352  3204 ?        S    14:59   0:00 bash -lc { cd /workspace ; mkdir -p /workspace/outputs ; } { ps aux | grep "next dev" __ec=$? } >"/workspace/outputs/workspace_output_1767452368_5849.txt" 2>&1 head -c 80000 "/workspace/outputs/workspace_output_1767452368_5849.txt" ( exit "$__ec" )
+root        1944  0.0  0.0   3752  1908 ?        S    14:59   0:00 grep next dev

@@ -1,7 +1,46 @@
 import type { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/db/prisma';
+
+// Mock user data for development (matching admin API mock users)
+const mockUsers = [
+  {
+    id: '1',
+    username: 'admin',
+    email: 'admin@dfp-neo.com',
+    password: '$2a$10$UQW34KIPs5Cmkg3Ni4.hUuVQInCsT1VVLKTIR78cgtrSqnrpkKvvS', // 'admin123' hashed
+    role: 'ADMIN',
+    firstName: 'System',
+    lastName: 'Administrator',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    username: 'john.pilot',
+    email: 'john.pilot@dfp-neo.com',
+    password: '$2a$10$k42WWwZ5MUhk3V0W6W58Dupj1zSkQoJ0Vvbvf2dGiHWwUyYQZomJi', // 'pilot123' hashed
+    role: 'PILOT',
+    firstName: 'John',
+    lastName: 'Smith',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: null,
+  },
+  {
+    id: '3',
+    username: 'jane.instructor',
+    email: 'jane.instructor@dfp-neo.com',
+    password: '$2a$10$eTq2oMUhI9R8MMoU0CGuX.VCZ66NQD/a/JVKdqorD/PXdmWTOttA6', // 'instructor123' hashed
+    role: 'INSTRUCTOR',
+    firstName: 'Jane',
+    lastName: 'Wilson',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: null,
+  }
+];
 
 export const authConfig: NextAuthConfig = {
   providers: [
@@ -12,65 +51,49 @@ export const authConfig: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('🔍 Auth attempt received');
+        console.log('📝 Username:', credentials?.username);
+        
         if (!credentials?.username || !credentials?.password) {
+          console.log('❌ Missing credentials');
           return null;
         }
 
-        // Development hardcoded users - remove in production
-        const testUsers = [
-          { username: 'admin', password: 'admin123', role: 'ADMIN', name: 'Admin User', email: 'admin@dfp-neo.com' },
-          { username: 'pilot', password: 'pilot123', role: 'PILOT', name: 'Test Pilot', email: 'pilot@dfp-neo.com' },
-          { username: 'instructor', password: 'instructor123', role: 'INSTRUCTOR', name: 'Flight Instructor', email: 'instructor@dfp-neo.com' },
-        ];
+        try {
+          // Use mock users for now since database is not connected
+          const user = mockUsers.find(u => u.username === credentials.username);
 
-        const testUser = testUsers.find(user => 
-          user.username === credentials.username && user.password === credentials.password
-        );
+          if (!user || !user.isActive) {
+            console.log('❌ User not found or inactive:', credentials.username);
+            return null;
+          }
 
-        if (testUser) {
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password as string,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            console.log('❌ Invalid password for:', credentials.username);
+            return null;
+          }
+
+          console.log('✅ Authentication successful for:', credentials.username);
+
+          // Update last login
+          user.lastLogin = new Date().toISOString();
+
           return {
-            id: testUser.username,
-            username: testUser.username,
-            email: testUser.email,
-            role: testUser.role,
-            name: testUser.name,
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
           };
-        }
-
-        // Production database code (commented out for development)
-        /*
-        const user = await prisma.user.findUnique({
-          where: { username: credentials.username as string },
-        });
-
-        if (!user || !user.isActive) {
+        } catch (error) {
+          console.error('Authentication error:', error);
           return null;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        // Update last login
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLogin: new Date() },
-        });
-
-        return {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-        };
-        */
-        return null;
       },
     }),
   ],

@@ -1,0 +1,1 @@
+dfp-neo-platform/public/images/logo.png: PNG image data, 1536 x 1024, 8-bit/color RGB, non-interlaced

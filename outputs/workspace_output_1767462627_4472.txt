@@ -1,0 +1,3 @@
+./App.tsx
+./components/EventDetailModal.tsx
+./components/CurrencyBuilderView.tsx

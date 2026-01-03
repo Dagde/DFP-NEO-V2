@@ -1,0 +1,372 @@
+On branch feature/comprehensive-build-algorithm
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   DEPLOYMENT_SUMMARY.md
+	modified:   dfp-neo-platform/app/api/admin/users/[id]/route.ts
+	modified:   dfp-neo-platform/app/api/admin/users/route.ts
+	modified:   dfp-neo-platform/lib/auth/auth.config.ts
+	modified:   dfp-neo-platform/prisma/schema.prisma
+	modified:   todo.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	AUTHORISATION_VIEW_FIX.md
+	AUTH_TRUST_HOST_FIX.md
+	B300 copy.png
+	C-17 copy.png
+	DELETE_FUNCTIONALITY_FIX.md
+	DEPLOYMENT_STATUS.md
+	EDIT_SAVE_BUTTONS_UPDATE.md
+	Landing page layout layout copy.jpg
+	NEXTAUTH_SECRET_GENERATOR.md
+	P-8 copy.png
+	PIN_AND_PASSWORD_MANAGEMENT.md
+	RAILWAY_NEXTAUTH_FIX.md
+	Screen Shot 2026-01-03 at 1.14.44 am.jpg
+	Screen Shot 2026-01-03 at 1.22.30 am.jpg
+	Screen Shot 2026-01-03 at 1.26.56 am.jpg
+	Screen Shot 2026-01-03 at 1.43.16 am.jpg
+	Screen Shot 2026-01-03 at 1.49.02 am.jpg
+	Screen Shot 2026-01-03 at 1.49.11 am.jpg
+	Screen Shot 2026-01-03 at 1.57.40 am.jpg
+	Screen Shot 2026-01-03 at 12.33.03 am.jpg
+	Screen Shot 2026-01-03 at 12.36.08 am.jpg
+	Screen Shot 2026-01-03 at 12.36.19 am.jpg
+	Screen Shot 2026-01-03 at 12.43.34 am.jpg
+	Screen Shot 2026-01-03 at 12.47.31 am.jpg
+	Screen Shot 2026-01-03 at 12.47.52 am.jpg
+	Screen Shot 2026-01-03 at 12.53.34 am.jpg
+	Screen Shot 2026-01-03 at 12.53.39 am.jpg
+	Screen Shot 2026-01-03 at 12.59.53 am.jpg
+	Screen Shot 2026-01-03 at 2.07.57 am.jpg
+	Screen Shot 2026-01-03 at 2.12.51 am.jpg
+	Screen Shot 2026-01-03 at 2.15.48 am.jpg
+	Screen Shot 2026-01-03 at 2.15.56 am.jpg
+	Screen Shot 2026-01-03 at 2.20.31 am.jpg
+	Screen Shot 2026-01-03 at 2.22.50 am.jpg
+	Screen Shot 2026-01-03 at 2.40.47 am.jpg
+	Screen Shot 2026-01-03 at 2.48.44 am.jpg
+	Screen Shot 2026-01-03 at 2.48.51 am.jpg
+	Screen Shot 2026-01-03 at 3.41.02 pm.jpg
+	Screen Shot 2026-01-03 at 3.43.10 pm.jpg
+	Screen Shot 2026-01-03 at 3.43.23 pm.jpg
+	Screen Shot 2026-01-03 at 3.43.32 pm.jpg
+	Screen Shot 2026-01-03 at 3.43.41 pm.jpg
+	Screen Shot 2026-01-03 at 4.02.32 pm.jpg
+	Screen Shot 2026-01-03 at 4.05.07 pm.jpg
+	Screen Shot 2026-01-03 at 4.27.11 pm.jpg
+	Screen Shot 2026-01-03 at 4.46.19 pm.jpg
+	Screen Shot 2026-01-03 at 5.06.18 pm.jpg
+	Screen Shot 2026-01-03 at 5.15.43 pm.jpg
+	Screen Shot 2026-01-03 at 5.24.07 pm.jpg
+	Screen Shot 2026-01-03 at 5.27.10 pm.jpg
+	Screen Shot 2026-01-04 at 1.58.46 am.jpg
+	Screen Shot 2026-01-04 at 2.01.31 am.jpg
+	Screen Shot 2026-01-04 at 2.34.57 am.jpg
+	Screen Shot 2026-01-04 at 3.06.02 am.jpg
+	Screen Shot 2026-01-04 at 3.39.13 am.jpg
+	Screen Shot 2026-01-04 at 3.55.24 am.jpg
+	Screen Shot 2026-01-04 at 4.01.12 am.jpg
+	Screen Shot 2026-01-04 at 4.25.39 am.jpg
+	Screen Shot 2026-01-04 at 4.26.18 am.jpg
+	Screen Shot 2026-01-04 at 4.32.15 am.jpg
+	Trainer Aircraft copy.png
+	VISUAL_ADJUST_FIX.md
+	dfp-neo-platform/.env.production
+	dfp-neo-platform/DATABASE-SETUP.md
+	dfp-neo-platform/FIX-INVALID-DATE-ERROR.md
+	dfp-neo-platform/GENERATE-SECRET-GUIDE.md
+	dfp-neo-platform/LMP_Syllabus_Template.xlsx
+	dfp-neo-platform/PRODUCTION-DEPLOYMENT-GUIDE.md
+	dfp-neo-platform/QUICK-FIX-CHECKLIST.md
+	dfp-neo-platform/Staff_Bulk_Update_Template.xlsx
+	dfp-neo-platform/Trainee_Bulk_Update_Template.xlsx
+	dfp-neo-platform/USER-MANAGEMENT.md
+	dfp-neo-platform/aircraft-icon.png
+	dfp-neo-platform/app/admin/layout.tsx
+	dfp-neo-platform/app/admin/users/
+	dfp-neo-platform/app/test-login/
+	dfp-neo-platform/assets/
+	dfp-neo-platform/config/
+	dfp-neo-platform/icons/
+	dfp-neo-platform/index.html
+	dfp-neo-platform/multi-select-icon.png
+	dfp-neo-platform/priority-analysis.html
+	dfp-neo-platform/production-setup.md
+	dfp-neo-platform/public/images/login-background.jpg
+	dfp-neo-platform/public/images/metal-plate-input.png
+	dfp-neo-platform/public/test.html
+	dfp-neo-platform/scripts/add-user.ts
+	dfp-neo-platform/scripts/add-users-from-json.ts
+	dfp-neo-platform/scripts/add-users-from-template.ts
+	dfp-neo-platform/scripts/setup-production-users.ts
+	dfp-neo-platform/templates/
+	dfp-neo-platform/test-auth.js
+	dfp-neo-platform/test-formation.html
+	dfp-neo-platform/warning-icon.png
+	outputs/workspace_output_1767361107_8674.txt
+	outputs/workspace_output_1767361114_6971.txt
+	outputs/workspace_output_1767361119_5430.txt
+	outputs/workspace_output_1767361124_513.txt
+	outputs/workspace_output_1767361159_2131.txt
+	outputs/workspace_output_1767361174_8872.txt
+	outputs/workspace_output_1767362634_8937.txt
+	outputs/workspace_output_1767365068_4612.txt
+	outputs/workspace_output_1767365074_4310.txt
+	outputs/workspace_output_1767365464_9142.txt
+	outputs/workspace_output_1767365478_2500.txt
+	outputs/workspace_output_1767365749_5928.txt
+	outputs/workspace_output_1767365756_9397.txt
+	outputs/workspace_output_1767365759_3794.txt
+	outputs/workspace_output_1767419353_2662.txt
+	outputs/workspace_output_1767419357_3340.txt
+	outputs/workspace_output_1767419361_9229.txt
+	outputs/workspace_output_1767419364_5476.txt
+	outputs/workspace_output_1767419368_9162.txt
+	outputs/workspace_output_1767419398_7897.txt
+	outputs/workspace_output_1767419647_1066.txt
+	outputs/workspace_output_1767420987_1223.txt
+	outputs/workspace_output_1767420992_2612.txt
+	outputs/workspace_output_1767420996_1922.txt
+	outputs/workspace_output_1767421117_8451.txt
+	outputs/workspace_output_1767421121_4397.txt
+	outputs/workspace_output_1767421125_1014.txt
+	outputs/workspace_output_1767421150_474.txt
+	outputs/workspace_output_1767421153_3094.txt
+	outputs/workspace_output_1767421157_6519.txt
+	outputs/workspace_output_1767421196_1690.txt
+	outputs/workspace_output_1767421527_4331.txt
+	outputs/workspace_output_1767452221_5293.txt
+	outputs/workspace_output_1767452278_423.txt
+	outputs/workspace_output_1767452280_4364.txt
+	outputs/workspace_output_1767452282_5724.txt
+	outputs/workspace_output_1767452283_2807.txt
+	outputs/workspace_output_1767452285_1313.txt
+	outputs/workspace_output_1767452286_4157.txt
+	outputs/workspace_output_1767452291_3206.txt
+	outputs/workspace_output_1767452367_9249.txt
+	outputs/workspace_output_1767452368_5849.txt
+	outputs/workspace_output_1767452370_8747.txt
+	outputs/workspace_output_1767452372_8623.txt
+	outputs/workspace_output_1767452389_8971.txt
+	outputs/workspace_output_1767452596_3607.txt
+	outputs/workspace_output_1767452600_1784.txt
+	outputs/workspace_output_1767452749_8820.txt
+	outputs/workspace_output_1767452752_8935.txt
+	outputs/workspace_output_1767452755_9405.txt
+	outputs/workspace_output_1767452756_8193.txt
+	outputs/workspace_output_1767452839_3756.txt
+	outputs/workspace_output_1767452840_2935.txt
+	outputs/workspace_output_1767452842_8213.txt
+	outputs/workspace_output_1767453843_8941.txt
+	outputs/workspace_output_1767453845_976.txt
+	outputs/workspace_output_1767454429_5889.txt
+	outputs/workspace_output_1767454430_40.txt
+	outputs/workspace_output_1767454573_6002.txt
+	outputs/workspace_output_1767454575_4584.txt
+	outputs/workspace_output_1767454580_2969.txt
+	outputs/workspace_output_1767454582_7130.txt
+	outputs/workspace_output_1767454584_2630.txt
+	outputs/workspace_output_1767454590_1442.txt
+	outputs/workspace_output_1767454593_5306.txt
+	outputs/workspace_output_1767455330_8696.txt
+	outputs/workspace_output_1767455332_6893.txt
+	outputs/workspace_output_1767455334_4385.txt
+	outputs/workspace_output_1767455337_1015.txt
+	outputs/workspace_output_1767455338_156.txt
+	outputs/workspace_output_1767455729_9301.txt
+	outputs/workspace_output_1767455733_9109.txt
+	outputs/workspace_output_1767455776_2995.txt
+	outputs/workspace_output_1767455923_1103.txt
+	outputs/workspace_output_1767456185_918.txt
+	outputs/workspace_output_1767456340_6964.txt
+	outputs/workspace_output_1767456352_3960.txt
+	outputs/workspace_output_1767456354_1419.txt
+	outputs/workspace_output_1767456501_3889.txt
+	outputs/workspace_output_1767456534_9248.txt
+	outputs/workspace_output_1767456539_814.txt
+	outputs/workspace_output_1767456541_4532.txt
+	outputs/workspace_output_1767456721_6536.txt
+	outputs/workspace_output_1767456723_3044.txt
+	outputs/workspace_output_1767456725_7129.txt
+	outputs/workspace_output_1767456727_2497.txt
+	outputs/workspace_output_1767456728_4002.txt
+	outputs/workspace_output_1767456730_5639.txt
+	outputs/workspace_output_1767456732_5990.txt
+	outputs/workspace_output_1767456738_7815.txt
+	outputs/workspace_output_1767456742_2554.txt
+	outputs/workspace_output_1767456745_3758.txt
+	outputs/workspace_output_1767456885_2128.txt
+	outputs/workspace_output_1767456947_7606.txt
+	outputs/workspace_output_1767456949_9721.txt
+	outputs/workspace_output_1767456951_3903.txt
+	outputs/workspace_output_1767456955_1469.txt
+	outputs/workspace_output_1767456968_4009.txt
+	outputs/workspace_output_1767456970_1106.txt
+	outputs/workspace_output_1767456982_1140.txt
+	outputs/workspace_output_1767456983_144.txt
+	outputs/workspace_output_1767456999_4340.txt
+	outputs/workspace_output_1767457015_7359.txt
+	outputs/workspace_output_1767457029_2324.txt
+	outputs/workspace_output_1767457032_5458.txt
+	outputs/workspace_output_1767457048_3392.txt
+	outputs/workspace_output_1767457060_2218.txt
+	outputs/workspace_output_1767457077_5328.txt
+	outputs/workspace_output_1767457109_787.txt
+	outputs/workspace_output_1767457116_6497.txt
+	outputs/workspace_output_1767457128_6664.txt
+	outputs/workspace_output_1767457135_7933.txt
+	outputs/workspace_output_1767457142_9474.txt
+	outputs/workspace_output_1767457246_7973.txt
+	outputs/workspace_output_1767457248_9642.txt
+	outputs/workspace_output_1767457252_7387.txt
+	outputs/workspace_output_1767457260_9108.txt
+	outputs/workspace_output_1767457262_693.txt
+	outputs/workspace_output_1767457264_3320.txt
+	outputs/workspace_output_1767457276_1923.txt
+	outputs/workspace_output_1767457288_7998.txt
+	outputs/workspace_output_1767457300_925.txt
+	outputs/workspace_output_1767457316_6339.txt
+	outputs/workspace_output_1767457398_5713.txt
+	outputs/workspace_output_1767458276_4016.txt
+	outputs/workspace_output_1767458281_3067.txt
+	outputs/workspace_output_1767458284_3005.txt
+	outputs/workspace_output_1767458288_7288.txt
+	outputs/workspace_output_1767458292_8073.txt
+	outputs/workspace_output_1767458296_8624.txt
+	outputs/workspace_output_1767458299_1797.txt
+	outputs/workspace_output_1767458304_6107.txt
+	outputs/workspace_output_1767458570_4514.txt
+	outputs/workspace_output_1767458581_426.txt
+	outputs/workspace_output_1767458788_6671.txt
+	outputs/workspace_output_1767458790_346.txt
+	outputs/workspace_output_1767458791_6429.txt
+	outputs/workspace_output_1767458792_6394.txt
+	outputs/workspace_output_1767458794_7442.txt
+	outputs/workspace_output_1767458795_9573.txt
+	outputs/workspace_output_1767458797_4112.txt
+	outputs/workspace_output_1767458798_5997.txt
+	outputs/workspace_output_1767458800_84.txt
+	outputs/workspace_output_1767458801_5718.txt
+	outputs/workspace_output_1767458803_2611.txt
+	outputs/workspace_output_1767458804_2904.txt
+	outputs/workspace_output_1767458807_8286.txt
+	outputs/workspace_output_1767458809_9626.txt
+	outputs/workspace_output_1767458810_8644.txt
+	outputs/workspace_output_1767458813_5285.txt
+	outputs/workspace_output_1767458814_8516.txt
+	outputs/workspace_output_1767458816_6814.txt
+	outputs/workspace_output_1767458818_1579.txt
+	outputs/workspace_output_1767458826_8126.txt
+	outputs/workspace_output_1767458909_2395.txt
+	outputs/workspace_output_1767458916_4731.txt
+	outputs/workspace_output_1767458919_9873.txt
+	outputs/workspace_output_1767458928_4608.txt
+	outputs/workspace_output_1767458933_7400.txt
+	outputs/workspace_output_1767458937_4276.txt
+	outputs/workspace_output_1767458940_9768.txt
+	outputs/workspace_output_1767458944_8423.txt
+	outputs/workspace_output_1767458947_8149.txt
+	outputs/workspace_output_1767458950_8916.txt
+	outputs/workspace_output_1767458955_6057.txt
+	outputs/workspace_output_1767458959_880.txt
+	outputs/workspace_output_1767458964_5848.txt
+	outputs/workspace_output_1767458967_5013.txt
+	outputs/workspace_output_1767458973_2866.txt
+	outputs/workspace_output_1767458976_6998.txt
+	outputs/workspace_output_1767458982_9771.txt
+	outputs/workspace_output_1767458986_8004.txt
+	outputs/workspace_output_1767459000_3353.txt
+	outputs/workspace_output_1767459004_2866.txt
+	outputs/workspace_output_1767459007_7814.txt
+	outputs/workspace_output_1767459038_8727.txt
+	outputs/workspace_output_1767459140_1596.txt
+	outputs/workspace_output_1767459154_9949.txt
+	outputs/workspace_output_1767459239_5000.txt
+	outputs/workspace_output_1767459243_5229.txt
+	outputs/workspace_output_1767459255_2622.txt
+	outputs/workspace_output_1767459268_7485.txt
+	outputs/workspace_output_1767459994_392.txt
+	outputs/workspace_output_1767460628_6457.txt
+	outputs/workspace_output_1767460633_8559.txt
+	outputs/workspace_output_1767460638_2618.txt
+	outputs/workspace_output_1767460642_1253.txt
+	outputs/workspace_output_1767460645_3556.txt
+	outputs/workspace_output_1767460649_1002.txt
+	outputs/workspace_output_1767460653_7559.txt
+	outputs/workspace_output_1767460659_2880.txt
+	outputs/workspace_output_1767460662_2462.txt
+	outputs/workspace_output_1767460667_4398.txt
+	outputs/workspace_output_1767460671_7723.txt
+	outputs/workspace_output_1767460676_5769.txt
+	outputs/workspace_output_1767460680_7803.txt
+	outputs/workspace_output_1767460686_5588.txt
+	outputs/workspace_output_1767460702_2241.txt
+	outputs/workspace_output_1767460717_9258.txt
+	outputs/workspace_output_1767461295_8982.txt
+	outputs/workspace_output_1767461302_4140.txt
+	outputs/workspace_output_1767461304_721.txt
+	outputs/workspace_output_1767461307_6340.txt
+	outputs/workspace_output_1767461309_8275.txt
+	outputs/workspace_output_1767461311_7083.txt
+	outputs/workspace_output_1767461313_9943.txt
+	outputs/workspace_output_1767461315_6495.txt
+	outputs/workspace_output_1767461316_1153.txt
+	outputs/workspace_output_1767461342_3823.txt
+	outputs/workspace_output_1767461354_4577.txt
+	outputs/workspace_output_1767461693_4414.txt
+	outputs/workspace_output_1767461697_1784.txt
+	outputs/workspace_output_1767461701_7837.txt
+	outputs/workspace_output_1767461705_7307.txt
+	outputs/workspace_output_1767461709_5982.txt
+	outputs/workspace_output_1767461718_7279.txt
+	outputs/workspace_output_1767461732_7438.txt
+	outputs/workspace_output_1767462013_3953.txt
+	outputs/workspace_output_1767462017_7365.txt
+	outputs/workspace_output_1767462021_9117.txt
+	outputs/workspace_output_1767462024_4699.txt
+	outputs/workspace_output_1767462028_5737.txt
+	outputs/workspace_output_1767462032_7896.txt
+	outputs/workspace_output_1767462036_888.txt
+	outputs/workspace_output_1767462039_1465.txt
+	outputs/workspace_output_1767462042_9483.txt
+	outputs/workspace_output_1767462046_8002.txt
+	outputs/workspace_output_1767462049_5597.txt
+	outputs/workspace_output_1767462053_914.txt
+	outputs/workspace_output_1767462058_9254.txt
+	outputs/workspace_output_1767462062_8434.txt
+	outputs/workspace_output_1767462066_9133.txt
+	outputs/workspace_output_1767462069_8290.txt
+	outputs/workspace_output_1767462073_6119.txt
+	outputs/workspace_output_1767462079_2149.txt
+	outputs/workspace_output_1767462090_2277.txt
+	outputs/workspace_output_1767462094_7279.txt
+	outputs/workspace_output_1767462098_4497.txt
+	outputs/workspace_output_1767462101_1253.txt
+	outputs/workspace_output_1767462104_3374.txt
+	outputs/workspace_output_1767462108_7314.txt
+	outputs/workspace_output_1767462114_1799.txt
+	outputs/workspace_output_1767462130_5349.txt
+	outputs/workspace_output_1767462135_2882.txt
+	outputs/workspace_output_1767462138_4377.txt
+	outputs/workspace_output_1767462145_9121.txt
+	outputs/workspace_output_1767462148_3116.txt
+	outputs/workspace_output_1767462173_5762.txt
+	outputs/workspace_output_1767462212_7956.txt
+	outputs/workspace_output_1767462269_5626.txt
+	outputs/workspace_output_1767462273_4337.txt
+	outputs/workspace_output_1767462275_5830.txt
+	outputs/workspace_output_1767462276_9307.txt
+	outputs/workspace_output_AUDIT_CODE_REVIEW_3523.txt
+	outputs/workspace_output_JAVASCRIPT_SOURCE_MAP_6780.txt
+	plate.png
+	porkbun.com | Domain Management.pdf
+	summarized_conversations/original_conversation_1767456714_1067.txt
+	summarized_conversations/original_conversation_1767458563_6740.txt
+	summarized_conversations/original_conversation_1767461038_4476.txt
+	summarized_conversations/original_conversation_1767462128_9534.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

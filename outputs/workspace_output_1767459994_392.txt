@@ -1,0 +1,52 @@
+2026-01-03T16:36:55.000000000Z [inf]  Starting Container
+2026-01-03T16:36:55.386680636Z [inf]  > dfp-neo-platform@1.0.0 start
+2026-01-03T16:36:55.386695844Z [inf]  > next start
+2026-01-03T16:36:55.386705582Z [inf]  
+2026-01-03T16:36:55.386775342Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-03T16:36:55.386782105Z [inf]  
+2026-01-03T16:36:55.561683680Z [inf]     ▲ Next.js 15.5.9
+2026-01-03T16:36:55.561688457Z [inf]     - Local:        http://localhost:8080
+2026-01-03T16:36:55.561692953Z [inf]     - Network:      http://10.155.129.20:8080
+2026-01-03T16:36:55.561698334Z [inf]  
+2026-01-03T16:36:55.561703668Z [inf]   ✓ Starting...
+2026-01-03T16:36:55.776314566Z [inf]   ✓ Ready in 369ms
+2026-01-03T16:38:36.029439804Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:38:36.029453850Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:38:36.029459651Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:38:36.029465603Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:38:36.029473960Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:38:36.029480564Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:38:36.029486449Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:38:36.029492344Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:38:36.029497233Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:38:36.029502433Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:38:55.579895386Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/providers. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:38:55.579899706Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:38:55.579904812Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:38:55.579909426Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:38:55.579914020Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:38:55.579918119Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/error. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:38:55.579922839Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:38:55.579927386Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:38:55.579932332Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:38:55.579936475Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:46:48.301025514Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:46:48.301041663Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:46:48.301050851Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:46:48.301060292Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:46:48.301068455Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:46:48.301079667Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:46:48.301089232Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:46:48.301120694Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/session. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:46:48.301129049Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:46:48.301136152Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:46:53.255055962Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/providers. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:46:53.255064100Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:46:53.255071516Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:46:53.255078793Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:46:53.255086334Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-03T16:46:53.286201475Z [err]  [31m[auth][error][0m UntrustedHost: Host must be trusted. URL was: https://dfp-neo.com/api/auth/error. Read more at https://errors.authjs.dev#untrustedhost
+2026-01-03T16:46:53.286211531Z [err]      at /app/.next/server/chunks/397.js:404:51283
+2026-01-03T16:46:53.286218578Z [err]      at fv (/app/.next/server/chunks/397.js:404:53950)
+2026-01-03T16:46:53.286224770Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-03T16:46:53.286236527Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)

@@ -1,0 +1,6 @@
+            case 'Program Schedule':
+            case 'TraineeSchedule':
+            case 'InstructorSchedule':
+            case 'NextDayInstructorSchedule':
+            case 'NextDayTraineeSchedule':
+            case 'CourseRoster':

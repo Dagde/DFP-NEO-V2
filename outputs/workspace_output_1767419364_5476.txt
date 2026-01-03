@@ -1,0 +1,7 @@
+total 3552
+drwxr-xr-x 2 root root    4096 Jan  2 14:44 .
+drwxr-xr-x 4 root root    4096 Jan  2 14:44 ..
+-rw-r--r-- 1 root root  906299 Jan  2 14:44 logo.png
+-rw-r--r-- 1 root root 1265480 Jan  2 14:44 metal-plate.png
+-rw-r--r-- 1 root root  684742 Jan  2 14:44 password.png
+-rw-r--r-- 1 root root  764337 Jan  2 14:44 username.png

@@ -1,0 +1,20 @@
+344:  coursePriorities: string[];
+693:    coursePriorities: string[],
+703:    coursePriorities.forEach(course => {
+711:        if (!coursePriorities.includes(trainee.course)) return;
+742:    coursePriorities: string[],
+777:    coursePriorities.forEach(course => {
+784:        if (trainee && coursePriorities.includes(trainee.course)) {
+800:        coursePriorities,
+808:    const courseAnalysis: CourseAnalysis[] = coursePriorities.map(course => {
+967:        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
+1256:    coursePriorities.forEach(c => courseMedians.set(c, getMedianProgress(c)));
+1408:        coursePriorities.forEach(c => listByCourse.set(c, []));
+1414:        coursePriorities.forEach(c => courseAllocations.set(c, 0));
+1426:            for (const course of coursePriorities) {
+3104:    const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
+4435:        setCoursePriorities(data.coursePriorities);
+5869:            coursePriorities,
+5922:                    coursePriorities,
+7939:                    coursePriorities={coursePriorities}
+8099:                            activeCourses={coursePriorities}

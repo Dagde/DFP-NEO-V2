@@ -1,0 +1,5 @@
+Testing password: admin123
+Stored hash: $2a$10$UQW34KIPs5Cmkg3Ni4.hUuVQInCsT1VVLKTIR78cgtrSqnrpkKvvS
+Password match: true
+New hash: $2a$10$aQy9YAD9TiktAFeoiRL0dOS/5.bQlwanSqT7w1GORHa4QtsB04ky2
+New hash match: true

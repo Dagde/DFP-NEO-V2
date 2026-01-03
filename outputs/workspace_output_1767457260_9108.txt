@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page</title>
+    <style>
+        body { background: black; color: white; font-family: Arial; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .success { color: #4CAF50; font-size: 18px; }
+        .info { color: #2196F3; margin: 10px 0; }
+    </style>

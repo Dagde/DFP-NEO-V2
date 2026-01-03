@@ -1,0 +1,28 @@
+            case 'Program Schedule':
+            case 'TraineeSchedule':
+            case 'InstructorSchedule':
+            case 'NextDayInstructorSchedule':
+            case 'NextDayTraineeSchedule':
+            case 'CourseRoster':
+            case 'HateSheet':
+            case 'ScoreDetail':
+            case 'NextDayBuild':
+            case 'Priorities':
+            case 'CourseProgress':
+            case 'TrainingRecords':
+            case 'ArchivedCourses':
+            case 'ProgramData':
+            case 'BuildAnalysis':
+            case 'MyDashboard':
+            case 'SupervisorDashboard':
+            case 'Instructors':
+                case 'Trainees':
+             case 'Syllabus':
+            case 'TraineeLMP':
+             case 'Currency':
+            case 'Settings':
+            case 'CurrencyBuilder':
+            case 'PT051':
+            case 'PostFlight':
+            case 'Logbook':
+            default:

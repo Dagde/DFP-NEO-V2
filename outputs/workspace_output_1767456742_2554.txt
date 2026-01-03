@@ -1,0 +1,3 @@
+Admin password hash: $2a$10$UQW34KIPs5Cmkg3Ni4.hUuVQInCsT1VVLKTIR78cgtrSqnrpkKvvS
+Pilot password hash: $2a$10$k42WWwZ5MUhk3V0W6W58Dupj1zSkQoJ0Vvbvf2dGiHWwUyYQZomJi
+Instructor password hash: $2a$10$eTq2oMUhI9R8MMoU0CGuX.VCZ66NQD/a/JVKdqorD/PXdmWTOttA6
