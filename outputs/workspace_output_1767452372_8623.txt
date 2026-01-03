@@ -1,0 +1,81 @@
+
+> dfp-neo-platform@1.0.0 dev
+> next dev
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+ ⚠ Port 3000 is in use by process 716, using available port 3001 instead.
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3001
+   - Network:      http://172.16.0.210:3001
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 1324ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 4.8s (589 modules)
+ GET /login?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 5198ms
+ ✓ Compiled in 516ms (253 modules)
+ GET /login?_gl=1*x5e4r0*_gcl_au*MTgyMTAwOTk4Ni4xNzY3MzE5MjIx*_ga*MjI5NDg4Njk1LjE3NjczMTkyMjA.*_ga_8NW18Q4WF2*czE3Njc0NDMzNzckbzUkZzEkdDE3Njc0NTIzMjEkajYwJGwwJGgyMDg3Nzg2Mg..&password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 51ms
+ ⚠ Cross origin request detected from 3001-f50e58f5-efd2-45fb-9f1f-9911f1134081.sandbox-service.public.prod.myninja.ai to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /_not-found in 2s (737 modules)
+ GET /_next/webpack-hmr?password=24660321-a13e-4492-8afe-c74d3e4e58ce 404 in 1741ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 2901ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 18ms
+ ✓ Compiled in 428ms (254 modules)
+ ✓ Compiled /login in 209ms (336 modules)
+ GET /login?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 524ms
+ GET /login?_gl=1*m4t5kq*_gcl_au*MTgyMTAwOTk4Ni4xNzY3MzE5MjIx*_ga*MjI5NDg4Njk1LjE3NjczMTkyMjA.*_ga_8NW18Q4WF2*czE3Njc0NDMzNzckbzUkZzEkdDE3Njc0NTI0NjMkajYwJGwwJGgyMDg3Nzg2Mg..&password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 46ms
+ ✓ Compiled /_not-found in 365ms (737 modules)
+ GET /_next/webpack-hmr?password=24660321-a13e-4492-8afe-c74d3e4e58ce 404 in 417ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 682ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 27ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 21ms
+ ✓ Compiled in 359ms (751 modules)
+ ✓ Compiled in 338ms (751 modules)
+ GET /login?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 213ms
+ GET /login?_gl=1*1c5ynru*_gcl_au*MTgyMTAwOTk4Ni4xNzY3MzE5MjIx*_ga*MjI5NDg4Njk1LjE3NjczMTkyMjA.*_ga_8NW18Q4WF2*czE3Njc0NDMzNzckbzUkZzEkdDE3Njc0NTI0NjMkajYwJGwwJGgyMDg3Nzg2Mg..&password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 57ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 71ms
+ GET /_next/webpack-hmr?password=24660321-a13e-4492-8afe-c74d3e4e58ce 404 in 52ms
+[31m[auth][error][0m MissingSecret: Please define a `secret`. Read more at https://errors.authjs.dev#missingsecret
+    at assertConfig (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/utils/assert.js:66:16)
+    at Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:91:95)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 500 in 22ms
+ ✓ Compiled in 332ms (254 modules)
+   Reload env: .env
+ ✓ Compiled in 369ms (240 modules)
+[?25h

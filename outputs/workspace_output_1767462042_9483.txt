@@ -1,0 +1,35 @@
+3099-    const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
+3100-    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
+3101-    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
+3102-    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
+3103-    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
+3104:    const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
+3105-    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(ESL_DATA.coursePercentages);
+3106-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
+3107-    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(ESL_DATA.traineeLMPs);
+3108-    
+3109-    // Event Limits State (Lifted from SettingsView)
+--
+4430-        setCourses(data.courses);
+4431-        setScores(data.scores);
+4432-        setPt051Assessments(data.pt051Assessments);
+4433-        setCourseColors(data.courseColors);
+4434-        setArchivedCourses(data.archivedCourses);
+4435:        setCoursePriorities(data.coursePriorities);
+4436-        setCoursePercentages(data.coursePercentages);
+4437-        setTraineeLMPs(data.traineeLMPs); // Load the correct LMPs for the new school
+4438-        setNextDayBuildEvents([]); // Clear the build when changing schools
+4439-        setPublishedSchedules({}); // Clear published schedules on school change
+4440-        
+--
+7935-                            }}
+7936-                       />;
+7937-            case 'Priorities':
+7938-                return <PrioritiesViewWithMenu 
+7939-                    coursePriorities={coursePriorities}
+7940:                    onUpdatePriorities={setCoursePriorities}
+7941-                    coursePercentages={coursePercentages}
+7942-                    onUpdatePercentages={setCoursePercentages}
+7943-                    availableAircraftCount={availableAircraftCount}
+7944-                    onUpdateAircraftCount={setAvailableAircraftCount}
+7945-                    availableFtdCount={availableFtdCount}

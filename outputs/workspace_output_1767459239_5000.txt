@@ -1,0 +1,2 @@
+621:                    strokeWidth="3"
+629:                    strokeWidth="3"

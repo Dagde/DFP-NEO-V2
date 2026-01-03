@@ -1,0 +1,100 @@
+import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { ScheduleEvent } from '../types';
+
+interface EventDetailModalProps {
+    event: ScheduleEvent;
+    onSave: (events: ScheduleEvent[]) => void;
+    onClose: () => void;
+    isInstructor?: boolean;
+    currentUserName?: string;
+    isAddingTile?: boolean;
+}
+
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({
+    event,
+    onSave,
+    onClose,
+    isInstructor = false,
+    currentUserName,
+    isAddingTile = false
+}) => {
+    const [flightNumber, setFlightNumber] = useState(event.flightNumber || '');
+    const [startTime, setStartTime] = useState(event.startTime || 480);
+    const [duration, setDuration] = useState(event.duration || 60);
+    const [area, setArea] = useState(event.area || 'A');
+    const [instructor, setInstructor] = useState(event.instructor || '');
+    const [student, setStudent] = useState(event.student || '');
+    const [pilot, setPilot] = useState(event.pilot || '');
+    const [crew, setCrew] = useState(event.crew || '');
+    const [formationType, setFormationType] = useState('MERL');
+    const [aircraftCount, setAircraftCount] = useState(2);
+
+    // Sync local state when event prop changes (e.g., when remedy is applied)
+    useEffect(() => {
+        console.log('🔄 EventDetailModal: Syncing state with event prop', event);
+        console.log('🔄 Event instructor:', event.instructor);
+        console.log('🔄 Event pilot:', event.pilot);
+        console.log('🔄 Event crew:', event.crew);
+        setFlightNumber(event.flightNumber || '');
+        setStartTime(event.startTime || 480);
+        setDuration(event.duration || 60);
+        setArea(event.area || 'A');
+        setInstructor(event.instructor || '');
+        setStudent(event.student || '');
+        setPilot(event.pilot || '');
+        setCrew(event.crew || '');
+    }, [event.id, event.instructor, event.student, event.pilot, event.crew, event.flightNumber, event.startTime, event.duration, event.area]);
+
+    const handleSave = () => {
+        console.log('🔷 ========== MODAL SAVE START ==========');
+        console.log('🔷 MODAL: Saving flight:', flightNumber);
+        console.log('🔷 MODAL: isAddingTile:', isAddingTile);
+        console.log('🔷 MODAL: Event ID:', event.id);
+        console.log('🔷 MODAL: Current instructor:', instructor);
+        console.log('🔷 MODAL: Current student:', student);
+        
+        // Create normal flight events (non-SCT)
+        if (flightNumber !== 'SCT FORM' && !flightNumber?.startsWith('SCT')) {
+            const normalEvent: ScheduleEvent = {
+                ...event,
+                id: event.id,
+                type: event.type,
+                flightNumber,
+                startTime,
+                duration,
+                area: event.type === 'flight' ? area : undefined,
+                instructor,
+                student,
+                pilot: instructor.split(' ')[1] || '',
+                resourceId: event.resourceId,
+            };
+            console.log('🔷 MODAL: Saving 1 normal flight');
+            console.log('🔷 MODAL: Event details:', {
+                id: normalEvent.id,
+                instructor: normalEvent.instructor,
+                student: normalEvent.student,
+                pilot: normalEvent.pilot
+            });
+            console.log('🔷 MODAL: Calling onSave...');
+            onSave([normalEvent]);
+            console.log('🔷 ========== MODAL SAVE END ==========');
+            return;
+        }
+        
+        // Handle SCT events (not FORM) - save pilot and crew
+        if (flightNumber?.startsWith('SCT') && flightNumber !== 'SCT FORM') {
+            const sctEvent: ScheduleEvent = {
+                ...event,
+                id: event.id,
+                type: event.type,
+                flightNumber,
+                startTime,
+                duration,
+                area: event.type === 'flight' ? area : undefined,
+                pilot,
+                crew,
+                instructor: '', // Clear instructor for SCT events
+                student: '', // Clear student for SCT events
+                resourceId: event.resourceId,
+            };

@@ -1,0 +1,13 @@
+Switched to branch 'feature/comprehensive-build-algorithm'
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate &amp;&amp; next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "setup": "npm install &amp;&amp; npx prisma db push &amp;&amp; node scripts/create-super-admin.js",
+    "create-admin": "node scripts/create-super-admin.js",
+    "postinstall": "prisma generate"

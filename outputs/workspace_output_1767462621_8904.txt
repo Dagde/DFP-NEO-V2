@@ -1,0 +1,10 @@
+./components/Header.tsx
+./components/TraineeColumn.tsx
+./components/CurrencyBuilderView.tsx
+./components/VisualAdjustGuide.tsx
+./components/PermissionsManagerFlyout.tsx
+./components/AuditFlyout.tsx
+./components/FlightDetailModal.tsx
+./components/PersonnelColumn.tsx
+./components/AddCourseFlyout.tsx
+./components/PermissionsManagerWindow.tsx

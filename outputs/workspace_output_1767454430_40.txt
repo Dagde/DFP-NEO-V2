@@ -1,0 +1,4 @@
+-rw-r--r-- 1 root root   61489 Jan  3 15:33 b300-aircraft.jpg
+-rw-r--r-- 1 root root   12742 Jan  3 15:33 c17-aircraft.jpg
+-rw-r--r-- 1 root root   14024 Jan  3 15:33 p8-aircraft.jpg
+-rw-r--r-- 1 root root   11790 Jan  3 15:33 trainer-aircraft.jpg

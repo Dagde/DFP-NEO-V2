@@ -1,0 +1,25 @@
+
+> dfp-neo-platform@1.0.0 dev
+> next dev
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+ ⚠ Port 3000 is in use by process 716, using available port 3001 instead.
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3001
+   - Network:      http://172.16.0.210:3001
+   - Environments: .env
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 1390ms
+ ○ Compiling /test-login ...
+ ✓ Compiled /test-login in 4.7s (552 modules)
+ HEAD /test-login 200 in 5085ms
+ ✓ Compiled in 471ms (235 modules)

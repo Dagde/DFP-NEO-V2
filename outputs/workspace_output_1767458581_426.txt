@@ -1,0 +1,5 @@
+root         715  0.0  1.4 1115872 59688 ?       Sl   14:54   0:00 /usr/lib/code-server/lib/node /usr/lib/code-server --bind-addr 127.0.0.1:4000 --auth none --user-data-dir /opt/code-server --extensions-dir /opt/code-server/extensions
+root         736  0.0  1.5 1051196 61456 ?       Sl   14:54   0:00 /usr/lib/code-server/lib/node /usr/lib/code-server/out/node/entry
+root         761  0.1  1.7 1456052 69568 ?       Sl   14:54   0:10 /usr/local/lib/python3.11/site-packages/playwright/driver/node /usr/local/lib/python3.11/site-packages/playwright/driver/package/cli.js run-driver
+root       29116  0.0  1.2 1090968 52012 ?       Sl   16:21   0:00 npm run dev
+root       29134  0.0  1.7 11529116 72400 ?      Sl   16:21   0:00 node /workspace/dfp-neo-platform/node_modules/.bin/next dev

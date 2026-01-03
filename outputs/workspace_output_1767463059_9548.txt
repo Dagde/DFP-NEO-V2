@@ -1,0 +1,10 @@
+                    confirmText={darkMessageModal.confirmText}
+                    cancelText={darkMessageModal.cancelText}
+                />
+            )}
+        </div>
+    );
+};
+
+export default App;
+// Force rebuild visual-adjust-5min-intervals

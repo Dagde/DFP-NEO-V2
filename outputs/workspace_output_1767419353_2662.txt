@@ -1,0 +1,14 @@
+./dfp-neo-platform/node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/lib/pages/verify-request.tsx
+./dfp-neo-platform/node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/lib/pages/error.tsx
+./dfp-neo-platform/node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/lib/pages/signin.tsx
+./dfp-neo-platform/node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/lib/pages/signout.tsx
+./dfp-neo-platform/node_modules/@auth/core/src/lib/pages/verify-request.tsx
+./dfp-neo-platform/node_modules/@auth/core/src/lib/pages/error.tsx
+./dfp-neo-platform/node_modules/@auth/core/src/lib/pages/signin.tsx
+./dfp-neo-platform/node_modules/@auth/core/src/lib/pages/signout.tsx
+./dfp-neo-platform/node_modules/next-auth/src/react.tsx
+./dfp-neo-platform/app/flight-school/page.tsx
+./dfp-neo-platform/app/select/page.tsx
+./dfp-neo-platform/app/admin/page.tsx
+./dfp-neo-platform/app/page.tsx
+./dfp-neo-platform/app/login/page.tsx

@@ -1,0 +1,91 @@
+
+> dfp-neo-platform@1.0.0 dev
+> next dev
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+ ⚠ Port 3000 is in use by process 716, using available port 3002 instead.
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3002
+   - Network:      http://172.16.0.210:3002
+   - Environments: .env
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 1323ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 5.2s (589 modules)
+ GET /login?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 5552ms
+ ✓ Compiled in 158ms (253 modules)
+ GET /login?_gl=1*6x6dsq*_gcl_au*MTgyMTAwOTk4Ni4xNzY3MzE5MjIx*_ga*MjI5NDg4Njk1LjE3NjczMTkyMjA.*_ga_8NW18Q4WF2*czE3Njc0NDMzNzckbzUkZzEkdDE3Njc0NTUxNDkkajU1JGwwJGgyMDg3Nzg2Mg..&password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 53ms
+ ⚠ Cross origin request detected from 3002-f50e58f5-efd2-45fb-9f1f-9911f1134081.sandbox-service.public.prod.myninja.ai to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1180ms (735 modules)
+ GET /_next/webpack-hmr?password=24660321-a13e-4492-8afe-c74d3e4e58ce 404 in 1313ms
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 1942ms
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 27ms
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 18ms
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 19ms
+ GET /api/auth/providers?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 53ms
+ GET /api/auth/providers?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 28ms
+ GET /api/auth/csrf?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 22ms
+ GET /api/auth/csrf?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 21ms
+[31m[auth][error][0m InvalidProvider: Callback for provider type (credentials) is not supported. Read more at https://errors.authjs.dev#invalidprovider
+    at Module.callback (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/actions/callback/index.js:393:15)
+    at AuthInternal (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/index.js:43:77)
+    at async Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:130:34)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute.ts&appDir=%2Fworkspace%2Fdfp-neo-platform%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2Fworkspace%2Fdfp-neo-platform&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:1:187565)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute.ts&appDir=%2Fworkspace%2Fdfp-neo-platform%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2Fworkspace%2Fdfp-neo-platform&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute.ts&appDir=%2Fworkspace%2Fdfp-neo-platform%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2Fworkspace%2Fdfp-neo-platform&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1422:9)
+    at async DevServer.renderPageComponent (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1474:24)
+    at async DevServer.renderToResponseImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1514:32)
+    at async DevServer.pipeImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1025:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/workspace/dfp-neo-platform/node_modules/next/dist/server/next-server.js:393:17)
+    at async DevServer.handleRequestImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:916:17)
+    at async /workspace/dfp-neo-platform/node_modules/next/dist/server/dev/next-dev-server.js:399:20
+    at async Span.traceAsyncFn (/workspace/dfp-neo-platform/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/workspace/dfp-neo-platform/node_modules/next/dist/server/dev/next-dev-server.js:395:24)
+    at async invokeRender (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/start-server.js:226:13)
+ GET /api/auth/callback/credentials?password=24660321-a13e-4492-8afe-c74d3e4e58ce 302 in 20ms
+🔍 Attempting login for username: admin
+❌ Invalid password for: admin
+[31m[auth][error][0m CredentialsSignin: Read more at https://errors.authjs.dev#credentialssignin
+    at Module.callback (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/actions/callback/index.js:246:23)
+    at async AuthInternal (webpack-internal:///(rsc)/./node_modules/@auth/core/lib/index.js:70:24)
+    at async Auth (webpack-internal:///(rsc)/./node_modules/@auth/core/index.js:130:34)
+    at async AppRouteRouteModule.do (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:38696)
+    at async AppRouteRouteModule.handle (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:5:45978)
+    at async responseGenerator (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute.ts&appDir=%2Fworkspace%2Fdfp-neo-platform%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2Fworkspace%2Fdfp-neo-platform&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:203:38)
+    at async AppRouteRouteModule.handleResponse (/workspace/dfp-neo-platform/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:1:187565)
+    at async handleResponse (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute.ts&appDir=%2Fworkspace%2Fdfp-neo-platform%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2Fworkspace%2Fdfp-neo-platform&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:265:32)
+    at async handler (webpack-internal:///(rsc)/./node_modules/next/dist/build/webpack/loaders/next-app-loader/index.js?name=app%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&page=%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute&appPaths=&pagePath=private-next-app-dir%2Fapi%2Fauth%2F%5B...nextauth%5D%2Froute.ts&appDir=%2Fworkspace%2Fdfp-neo-platform%2Fapp&pageExtensions=tsx&pageExtensions=ts&pageExtensions=jsx&pageExtensions=js&rootDir=%2Fworkspace%2Fdfp-neo-platform&isDev=true&tsconfigPath=tsconfig.json&basePath=&assetPrefix=&nextConfigOutput=&preferredRegion=&middlewareConfig=e30%3D&isGlobalNotFoundEnabled=!:317:13)
+    at async DevServer.renderToResponseWithComponentsImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1422:9)
+    at async DevServer.renderPageComponent (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1474:24)
+    at async DevServer.renderToResponseImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1514:32)
+    at async DevServer.pipeImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:1025:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/workspace/dfp-neo-platform/node_modules/next/dist/server/next-server.js:393:17)
+    at async DevServer.handleRequestImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/base-server.js:916:17)
+    at async /workspace/dfp-neo-platform/node_modules/next/dist/server/dev/next-dev-server.js:399:20
+    at async Span.traceAsyncFn (/workspace/dfp-neo-platform/node_modules/next/dist/trace/trace.js:157:20)
+    at async DevServer.handleRequest (/workspace/dfp-neo-platform/node_modules/next/dist/server/dev/next-dev-server.js:395:24)
+    at async invokeRender (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/router-server.js:240:21)
+    at async handleRequest (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/router-server.js:437:24)
+    at async requestHandlerImpl (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/router-server.js:485:13)
+    at async Server.requestListener (/workspace/dfp-neo-platform/node_modules/next/dist/server/lib/start-server.js:226:13)
+ POST /api/auth/callback/credentials?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 115ms
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 22ms
+ GET /api/auth/session?password=24660321-a13e-4492-8afe-c74d3e4e58ce 200 in 21ms

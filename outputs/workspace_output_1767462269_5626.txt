@@ -1,0 +1,5 @@
+d34a1b7 Fix: Visual Adjust modal persistence issue
+d2fb017 Implement complete app selection page with 2x2 grid layout
+d3e311d Implement exact Stackblitz login design with metallic plate inputs
+462923e Trigger Railway deployment
+371437a Fix build script - remove && from build command for Railway compatibility

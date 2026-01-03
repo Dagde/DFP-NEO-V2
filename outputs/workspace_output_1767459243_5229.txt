@@ -1,0 +1,21 @@
+                <line 
+                    x1="0" 
+                    y1="0" 
+                    x2="100%" 
+                    y2="100%" 
+                    stroke="rgb(239, 68, 68)" 
+                    strokeWidth="3"
+                />
+                <line 
+                    x1="100%" 
+                    y1="0" 
+                    x2="0" 
+                    y2="100%" 
+                    stroke="rgb(239, 68, 68)" 
+                    strokeWidth="3"
+                />
+            </svg>
+        )}
+        <div className="relative w-full h-full text-white">
+            {isDutySup ? (
+                <>

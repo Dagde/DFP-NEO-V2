@@ -1,0 +1,10 @@
+./.next/types/app/login/page.ts
+./node_modules/@auth/prisma-adapter/node_modules/@auth/core/lib/actions/callback/handle-login.d.ts
+./node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/lib/actions/callback/handle-login.ts
+./node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/providers/simplelogin.ts
+./node_modules/@auth/prisma-adapter/node_modules/@auth/core/src/providers/onelogin.ts
+./node_modules/@auth/prisma-adapter/node_modules/@auth/core/providers/onelogin.d.ts
+./node_modules/@auth/prisma-adapter/node_modules/@auth/core/providers/simplelogin.d.ts
+./node_modules/@auth/core/lib/actions/callback/handle-login.d.ts
+./node_modules/@auth/core/src/lib/actions/callback/handle-login.ts
+./node_modules/@auth/core/src/providers/simplelogin.ts

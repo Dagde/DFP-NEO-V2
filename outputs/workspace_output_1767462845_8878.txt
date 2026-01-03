@@ -1,0 +1,11 @@
+./types/audit.ts
+./App.tsx
+./current_build_algorithm.ts
+./node_modules/typescript/lib/typescript.d.ts
+./node_modules/typescript/lib/lib.dom.d.ts
+./node_modules/fflate/lib/index.d.ts
+./node_modules/fflate/esm/browser.d.ts
+./node_modules/@types/node/inspector.generated.d.ts
+./node_modules/@google/genai/dist/genai.d.ts
+./node_modules/@google/genai/dist/web/web.d.ts
+xargs: grep: terminated by signal 13

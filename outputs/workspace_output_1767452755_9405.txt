@@ -1,0 +1,15 @@
+[feature/comprehensive-build-algorithm d3e311d] Implement exact Stackblitz login design with metallic plate inputs
+ Committer: root <root@172.16.0.210>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 99 insertions(+), 91 deletions(-)
+ create mode 100644 dfp-neo-platform/public/images/plate.png

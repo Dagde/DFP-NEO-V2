@@ -1,0 +1,107 @@
+On branch feature/comprehensive-build-algorithm
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   app/login/page.tsx
+	modified:   ../todo.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	../Landing page layout layout copy.jpg
+	../Screen Shot 2026-01-03 at 1.14.44 am.jpg
+	../Screen Shot 2026-01-03 at 1.22.30 am.jpg
+	../Screen Shot 2026-01-03 at 1.26.56 am.jpg
+	../Screen Shot 2026-01-03 at 1.43.16 am.jpg
+	../Screen Shot 2026-01-03 at 1.49.02 am.jpg
+	../Screen Shot 2026-01-03 at 1.49.11 am.jpg
+	../Screen Shot 2026-01-03 at 1.57.40 am.jpg
+	../Screen Shot 2026-01-03 at 12.33.03 am.jpg
+	../Screen Shot 2026-01-03 at 12.36.08 am.jpg
+	../Screen Shot 2026-01-03 at 12.36.19 am.jpg
+	../Screen Shot 2026-01-03 at 12.43.34 am.jpg
+	../Screen Shot 2026-01-03 at 12.47.31 am.jpg
+	../Screen Shot 2026-01-03 at 12.47.52 am.jpg
+	../Screen Shot 2026-01-03 at 12.53.34 am.jpg
+	../Screen Shot 2026-01-03 at 12.53.39 am.jpg
+	../Screen Shot 2026-01-03 at 12.59.53 am.jpg
+	../Screen Shot 2026-01-03 at 2.07.57 am.jpg
+	../Screen Shot 2026-01-03 at 2.12.51 am.jpg
+	../Screen Shot 2026-01-03 at 2.15.48 am.jpg
+	../Screen Shot 2026-01-03 at 2.15.56 am.jpg
+	../Screen Shot 2026-01-03 at 2.20.31 am.jpg
+	../Screen Shot 2026-01-03 at 2.22.50 am.jpg
+	../Screen Shot 2026-01-03 at 2.40.47 am.jpg
+	../Screen Shot 2026-01-03 at 2.48.44 am.jpg
+	../Screen Shot 2026-01-03 at 2.48.51 am.jpg
+	../Screen Shot 2026-01-03 at 3.41.02 pm.jpg
+	../Screen Shot 2026-01-03 at 3.43.10 pm.jpg
+	../Screen Shot 2026-01-03 at 3.43.23 pm.jpg
+	../Screen Shot 2026-01-03 at 3.43.32 pm.jpg
+	../Screen Shot 2026-01-03 at 3.43.41 pm.jpg
+	../Screen Shot 2026-01-03 at 4.02.32 pm.jpg
+	../Screen Shot 2026-01-03 at 4.05.07 pm.jpg
+	../Screen Shot 2026-01-03 at 4.27.11 pm.jpg
+	../Screen Shot 2026-01-03 at 4.46.19 pm.jpg
+	../Screen Shot 2026-01-03 at 5.06.18 pm.jpg
+	../Screen Shot 2026-01-03 at 5.15.43 pm.jpg
+	../Screen Shot 2026-01-03 at 5.24.07 pm.jpg
+	../Screen Shot 2026-01-03 at 5.27.10 pm.jpg
+	../Screen Shot 2026-01-04 at 1.58.46 am.jpg
+	../Screen Shot 2026-01-04 at 2.01.31 am.jpg
+	public/images/login-background.jpg
+	public/images/metal-plate-input.png
+	public/images/plate.png
+	../outputs/workspace_output_1767361107_8674.txt
+	../outputs/workspace_output_1767361114_6971.txt
+	../outputs/workspace_output_1767361119_5430.txt
+	../outputs/workspace_output_1767361124_513.txt
+	../outputs/workspace_output_1767361159_2131.txt
+	../outputs/workspace_output_1767361174_8872.txt
+	../outputs/workspace_output_1767362634_8937.txt
+	../outputs/workspace_output_1767365068_4612.txt
+	../outputs/workspace_output_1767365074_4310.txt
+	../outputs/workspace_output_1767365464_9142.txt
+	../outputs/workspace_output_1767365478_2500.txt
+	../outputs/workspace_output_1767365749_5928.txt
+	../outputs/workspace_output_1767365756_9397.txt
+	../outputs/workspace_output_1767365759_3794.txt
+	../outputs/workspace_output_1767419353_2662.txt
+	../outputs/workspace_output_1767419357_3340.txt
+	../outputs/workspace_output_1767419361_9229.txt
+	../outputs/workspace_output_1767419364_5476.txt
+	../outputs/workspace_output_1767419368_9162.txt
+	../outputs/workspace_output_1767419398_7897.txt
+	../outputs/workspace_output_1767419647_1066.txt
+	../outputs/workspace_output_1767420987_1223.txt
+	../outputs/workspace_output_1767420992_2612.txt
+	../outputs/workspace_output_1767420996_1922.txt
+	../outputs/workspace_output_1767421117_8451.txt
+	../outputs/workspace_output_1767421121_4397.txt
+	../outputs/workspace_output_1767421125_1014.txt
+	../outputs/workspace_output_1767421150_474.txt
+	../outputs/workspace_output_1767421153_3094.txt
+	../outputs/workspace_output_1767421157_6519.txt
+	../outputs/workspace_output_1767421196_1690.txt
+	../outputs/workspace_output_1767421527_4331.txt
+	../outputs/workspace_output_1767452221_5293.txt
+	../outputs/workspace_output_1767452278_423.txt
+	../outputs/workspace_output_1767452280_4364.txt
+	../outputs/workspace_output_1767452282_5724.txt
+	../outputs/workspace_output_1767452283_2807.txt
+	../outputs/workspace_output_1767452285_1313.txt
+	../outputs/workspace_output_1767452286_4157.txt
+	../outputs/workspace_output_1767452291_3206.txt
+	../outputs/workspace_output_1767452367_9249.txt
+	../outputs/workspace_output_1767452368_5849.txt
+	../outputs/workspace_output_1767452370_8747.txt
+	../outputs/workspace_output_1767452372_8623.txt
+	../outputs/workspace_output_1767452389_8971.txt
+	../outputs/workspace_output_1767452596_3607.txt
+	../outputs/workspace_output_1767452600_1784.txt
+	../outputs/workspace_output_1767452749_8820.txt
+	../plate.png
+	../porkbun.com | Domain Management.pdf
+
+no changes added to commit (use "git add" and/or "git commit -a")

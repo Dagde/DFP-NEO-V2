@@ -1,0 +1,10 @@
+2918-          return [];
+2919-        }
+2920-        return originalSplit.apply(this, args);
+2921-      };
+2922-      
+2923:      return () => {
+2924-        String.prototype.split = originalSplit;
+2925-      };
+2926-    }, []);
+2927-
