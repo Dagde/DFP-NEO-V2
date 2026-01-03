@@ -1,0 +1,24 @@
+[feature/comprehensive-build-algorithm 55b61bf] Debug: Add comprehensive button logging + manual trigger (Ctrl+Shift+D)
+ Committer: root <root@172.16.0.210>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 12 files changed, 3115 insertions(+), 51 deletions(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cu9GSreP.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cu9GSreP.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CjJEz6d0.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CjJEz6d0.js.map
+ create mode 100644 outputs/workspace_output_1767463090_8606.txt
+ create mode 100644 outputs/workspace_output_1767463092_4136.txt
+ create mode 100644 outputs/workspace_output_1767463131_3008.txt
+ create mode 100644 outputs/workspace_output_1767463172_7980.txt
+ create mode 100644 outputs/workspace_output_1767463183_413.txt
+ create mode 100644 outputs/workspace_output_1767463186_7510.txt
