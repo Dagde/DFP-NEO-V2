@@ -1,0 +1,443 @@
+[feature/comprehensive-build-algorithm a8bb637] Debug: Add console logging to identify purple buttons
+ Committer: root <root@172.16.0.210>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 437 files changed, 20282 insertions(+), 366 deletions(-)
+ create mode 100644 AUTHORISATION_VIEW_FIX.md
+ create mode 100644 AUTH_TRUST_HOST_FIX.md
+ create mode 100644 B300 copy.png
+ create mode 100644 C-17 copy.png
+ create mode 100644 DELETE_FUNCTIONALITY_FIX.md
+ create mode 100644 DEPLOYMENT_STATUS.md
+ create mode 100644 EDIT_SAVE_BUTTONS_UPDATE.md
+ create mode 100644 Landing page layout layout copy.jpg
+ create mode 100644 NEXTAUTH_SECRET_GENERATOR.md
+ create mode 100644 P-8 copy.png
+ create mode 100644 PIN_AND_PASSWORD_MANAGEMENT.md
+ create mode 100644 PURPLE_BUTTONS_FIX.md
+ create mode 100644 RAILWAY_NEXTAUTH_FIX.md
+ create mode 100644 Screen Shot 2026-01-03 at 1.14.44 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 1.22.30 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 1.26.56 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 1.43.16 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 1.49.02 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 1.49.11 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 1.57.40 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.33.03 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.36.08 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.36.19 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.43.34 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.47.31 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.47.52 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.53.34 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.53.39 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 12.59.53 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.07.57 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.12.51 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.15.48 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.15.56 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.20.31 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.22.50 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.40.47 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.48.44 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 2.48.51 am.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 3.41.02 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 3.43.10 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 3.43.23 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 3.43.32 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 3.43.41 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 4.02.32 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 4.05.07 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 4.27.11 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 4.46.19 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 5.06.18 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 5.15.43 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 5.24.07 pm.jpg
+ create mode 100644 Screen Shot 2026-01-03 at 5.27.10 pm.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 1.58.46 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 2.01.31 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 2.34.57 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 3.06.02 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 3.39.13 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 3.55.24 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 4.01.12 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 4.25.39 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 4.26.18 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 4.32.15 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 4.48.09 am.jpg
+ create mode 100644 Screen Shot 2026-01-04 at 4.52.57 am.jpg
+ create mode 100644 Trainer Aircraft copy.png
+ create mode 100644 VISUAL_ADJUST_FIX.md
+ create mode 100644 dfp-neo-platform/.env.production
+ create mode 100644 dfp-neo-platform/DATABASE-SETUP.md
+ create mode 100644 dfp-neo-platform/FIX-INVALID-DATE-ERROR.md
+ create mode 100644 dfp-neo-platform/GENERATE-SECRET-GUIDE.md
+ create mode 100644 dfp-neo-platform/LMP_Syllabus_Template.xlsx
+ create mode 100644 dfp-neo-platform/PRODUCTION-DEPLOYMENT-GUIDE.md
+ create mode 100644 dfp-neo-platform/QUICK-FIX-CHECKLIST.md
+ create mode 100644 dfp-neo-platform/Staff_Bulk_Update_Template.xlsx
+ create mode 100644 dfp-neo-platform/Trainee_Bulk_Update_Template.xlsx
+ create mode 100644 dfp-neo-platform/USER-MANAGEMENT.md
+ create mode 100644 dfp-neo-platform/aircraft-icon.png
+ create mode 100644 dfp-neo-platform/app/admin/layout.tsx
+ create mode 100644 dfp-neo-platform/app/admin/users/page.tsx
+ create mode 100644 dfp-neo-platform/app/test-login/page.tsx
+ create mode 100644 dfp-neo-platform/assets/html2canvas.esm-QH1iLAAe.js
+ create mode 100644 dfp-neo-platform/assets/html2canvas.esm-QH1iLAAe.js.map
+ create mode 100644 dfp-neo-platform/assets/index-ocEpyxXE.js
+ create mode 100644 dfp-neo-platform/assets/index-ocEpyxXE.js.map
+ create mode 100644 dfp-neo-platform/assets/index-uPhlgI5U.js
+ create mode 100644 dfp-neo-platform/assets/index-uPhlgI5U.js.map
+ create mode 100644 dfp-neo-platform/assets/index.es-DVbKqt2L.js
+ create mode 100644 dfp-neo-platform/assets/index.es-DVbKqt2L.js.map
+ create mode 100644 dfp-neo-platform/assets/index.es-vwPxkHIN.js
+ create mode 100644 dfp-neo-platform/assets/index.es-vwPxkHIN.js.map
+ create mode 100644 dfp-neo-platform/assets/purify.es-B9ZVCkUG.js
+ create mode 100644 dfp-neo-platform/assets/purify.es-B9ZVCkUG.js.map
+ create mode 100644 dfp-neo-platform/config/users.json
+ create mode 100644 dfp-neo-platform/icons/multi-select-icon.png
+ create mode 100644 dfp-neo-platform/icons/warning-icon.png
+ create mode 100644 dfp-neo-platform/index.html
+ create mode 100644 dfp-neo-platform/multi-select-icon.png
+ create mode 100644 dfp-neo-platform/priority-analysis.html
+ create mode 100644 dfp-neo-platform/production-setup.md
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CjcVQ336.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CjcVQ336.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-B9ciJOxM.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-B9ciJOxM.js.map
+ create mode 100644 dfp-neo-platform/public/images/login-background.jpg
+ create mode 100644 dfp-neo-platform/public/images/metal-plate-input.png
+ create mode 100644 dfp-neo-platform/public/test.html
+ create mode 100644 dfp-neo-platform/scripts/add-user.ts
+ create mode 100644 dfp-neo-platform/scripts/add-users-from-json.ts
+ create mode 100644 dfp-neo-platform/scripts/add-users-from-template.ts
+ create mode 100644 dfp-neo-platform/scripts/setup-production-users.ts
+ create mode 100644 dfp-neo-platform/templates/user-templates.md
+ create mode 100644 dfp-neo-platform/test-auth.js
+ create mode 100644 dfp-neo-platform/test-formation.html
+ create mode 100644 dfp-neo-platform/warning-icon.png
+ create mode 100644 outputs/workspace_output_1767361107_8674.txt
+ create mode 100644 outputs/workspace_output_1767361114_6971.txt
+ create mode 100644 outputs/workspace_output_1767361119_5430.txt
+ create mode 100644 outputs/workspace_output_1767361124_513.txt
+ create mode 100644 outputs/workspace_output_1767361159_2131.txt
+ create mode 100644 outputs/workspace_output_1767361174_8872.txt
+ create mode 100644 outputs/workspace_output_1767362634_8937.txt
+ create mode 100644 outputs/workspace_output_1767365068_4612.txt
+ create mode 100644 outputs/workspace_output_1767365074_4310.txt
+ create mode 100644 outputs/workspace_output_1767365464_9142.txt
+ create mode 100644 outputs/workspace_output_1767365478_2500.txt
+ create mode 100644 outputs/workspace_output_1767365749_5928.txt
+ create mode 100644 outputs/workspace_output_1767365756_9397.txt
+ create mode 100644 outputs/workspace_output_1767365759_3794.txt
+ create mode 100644 outputs/workspace_output_1767419353_2662.txt
+ create mode 100644 outputs/workspace_output_1767419357_3340.txt
+ create mode 100644 outputs/workspace_output_1767419361_9229.txt
+ create mode 100644 outputs/workspace_output_1767419364_5476.txt
+ create mode 100644 outputs/workspace_output_1767419368_9162.txt
+ create mode 100644 outputs/workspace_output_1767419398_7897.txt
+ create mode 100644 outputs/workspace_output_1767419647_1066.txt
+ create mode 100644 outputs/workspace_output_1767420987_1223.txt
+ create mode 100644 outputs/workspace_output_1767420992_2612.txt
+ create mode 100644 outputs/workspace_output_1767420996_1922.txt
+ create mode 100644 outputs/workspace_output_1767421117_8451.txt
+ create mode 100644 outputs/workspace_output_1767421121_4397.txt
+ create mode 100644 outputs/workspace_output_1767421125_1014.txt
+ create mode 100644 outputs/workspace_output_1767421150_474.txt
+ create mode 100644 outputs/workspace_output_1767421153_3094.txt
+ create mode 100644 outputs/workspace_output_1767421157_6519.txt
+ create mode 100644 outputs/workspace_output_1767421196_1690.txt
+ create mode 100644 outputs/workspace_output_1767421527_4331.txt
+ create mode 100644 outputs/workspace_output_1767452221_5293.txt
+ create mode 100644 outputs/workspace_output_1767452278_423.txt
+ create mode 100644 outputs/workspace_output_1767452280_4364.txt
+ create mode 100644 outputs/workspace_output_1767452282_5724.txt
+ create mode 100644 outputs/workspace_output_1767452283_2807.txt
+ create mode 100644 outputs/workspace_output_1767452285_1313.txt
+ create mode 100644 outputs/workspace_output_1767452286_4157.txt
+ create mode 100644 outputs/workspace_output_1767452291_3206.txt
+ create mode 100644 outputs/workspace_output_1767452367_9249.txt
+ create mode 100644 outputs/workspace_output_1767452368_5849.txt
+ create mode 100644 outputs/workspace_output_1767452370_8747.txt
+ create mode 100644 outputs/workspace_output_1767452372_8623.txt
+ create mode 100644 outputs/workspace_output_1767452389_8971.txt
+ create mode 100644 outputs/workspace_output_1767452596_3607.txt
+ create mode 100644 outputs/workspace_output_1767452600_1784.txt
+ create mode 100644 outputs/workspace_output_1767452749_8820.txt
+ create mode 100644 outputs/workspace_output_1767452752_8935.txt
+ create mode 100644 outputs/workspace_output_1767452755_9405.txt
+ create mode 100644 outputs/workspace_output_1767452756_8193.txt
+ create mode 100644 outputs/workspace_output_1767452839_3756.txt
+ create mode 100644 outputs/workspace_output_1767452840_2935.txt
+ create mode 100644 outputs/workspace_output_1767452842_8213.txt
+ create mode 100644 outputs/workspace_output_1767453843_8941.txt
+ create mode 100644 outputs/workspace_output_1767453845_976.txt
+ create mode 100644 outputs/workspace_output_1767454429_5889.txt
+ create mode 100644 outputs/workspace_output_1767454430_40.txt
+ create mode 100644 outputs/workspace_output_1767454573_6002.txt
+ create mode 100644 outputs/workspace_output_1767454575_4584.txt
+ create mode 100644 outputs/workspace_output_1767454580_2969.txt
+ create mode 100644 outputs/workspace_output_1767454582_7130.txt
+ create mode 100644 outputs/workspace_output_1767454584_2630.txt
+ create mode 100644 outputs/workspace_output_1767454590_1442.txt
+ create mode 100644 outputs/workspace_output_1767454593_5306.txt
+ create mode 100644 outputs/workspace_output_1767455330_8696.txt
+ create mode 100644 outputs/workspace_output_1767455332_6893.txt
+ create mode 100644 outputs/workspace_output_1767455334_4385.txt
+ create mode 100644 outputs/workspace_output_1767455337_1015.txt
+ create mode 100644 outputs/workspace_output_1767455338_156.txt
+ create mode 100644 outputs/workspace_output_1767455729_9301.txt
+ create mode 100644 outputs/workspace_output_1767455733_9109.txt
+ create mode 100644 outputs/workspace_output_1767455776_2995.txt
+ create mode 100644 outputs/workspace_output_1767455923_1103.txt
+ create mode 100644 outputs/workspace_output_1767456185_918.txt
+ create mode 100644 outputs/workspace_output_1767456340_6964.txt
+ create mode 100644 outputs/workspace_output_1767456352_3960.txt
+ create mode 100644 outputs/workspace_output_1767456354_1419.txt
+ create mode 100644 outputs/workspace_output_1767456501_3889.txt
+ create mode 100644 outputs/workspace_output_1767456534_9248.txt
+ create mode 100644 outputs/workspace_output_1767456539_814.txt
+ create mode 100644 outputs/workspace_output_1767456541_4532.txt
+ create mode 100644 outputs/workspace_output_1767456721_6536.txt
+ create mode 100644 outputs/workspace_output_1767456723_3044.txt
+ create mode 100644 outputs/workspace_output_1767456725_7129.txt
+ create mode 100644 outputs/workspace_output_1767456727_2497.txt
+ create mode 100644 outputs/workspace_output_1767456728_4002.txt
+ create mode 100644 outputs/workspace_output_1767456730_5639.txt
+ create mode 100644 outputs/workspace_output_1767456732_5990.txt
+ create mode 100644 outputs/workspace_output_1767456738_7815.txt
+ create mode 100644 outputs/workspace_output_1767456742_2554.txt
+ create mode 100644 outputs/workspace_output_1767456745_3758.txt
+ create mode 100644 outputs/workspace_output_1767456885_2128.txt
+ create mode 100644 outputs/workspace_output_1767456947_7606.txt
+ create mode 100644 outputs/workspace_output_1767456949_9721.txt
+ create mode 100644 outputs/workspace_output_1767456951_3903.txt
+ create mode 100644 outputs/workspace_output_1767456955_1469.txt
+ create mode 100644 outputs/workspace_output_1767456968_4009.txt
+ create mode 100644 outputs/workspace_output_1767456970_1106.txt
+ create mode 100644 outputs/workspace_output_1767456982_1140.txt
+ create mode 100644 outputs/workspace_output_1767456983_144.txt
+ create mode 100644 outputs/workspace_output_1767456999_4340.txt
+ create mode 100644 outputs/workspace_output_1767457015_7359.txt
+ create mode 100644 outputs/workspace_output_1767457029_2324.txt
+ create mode 100644 outputs/workspace_output_1767457032_5458.txt
+ create mode 100644 outputs/workspace_output_1767457048_3392.txt
+ create mode 100644 outputs/workspace_output_1767457060_2218.txt
+ create mode 100644 outputs/workspace_output_1767457077_5328.txt
+ create mode 100644 outputs/workspace_output_1767457109_787.txt
+ create mode 100644 outputs/workspace_output_1767457116_6497.txt
+ create mode 100644 outputs/workspace_output_1767457128_6664.txt
+ create mode 100644 outputs/workspace_output_1767457135_7933.txt
+ create mode 100644 outputs/workspace_output_1767457142_9474.txt
+ create mode 100644 outputs/workspace_output_1767457246_7973.txt
+ create mode 100644 outputs/workspace_output_1767457248_9642.txt
+ create mode 100644 outputs/workspace_output_1767457252_7387.txt
+ create mode 100644 outputs/workspace_output_1767457260_9108.txt
+ create mode 100644 outputs/workspace_output_1767457262_693.txt
+ create mode 100644 outputs/workspace_output_1767457264_3320.txt
+ create mode 100644 outputs/workspace_output_1767457276_1923.txt
+ create mode 100644 outputs/workspace_output_1767457288_7998.txt
+ create mode 100644 outputs/workspace_output_1767457300_925.txt
+ create mode 100644 outputs/workspace_output_1767457316_6339.txt
+ create mode 100644 outputs/workspace_output_1767457398_5713.txt
+ create mode 100644 outputs/workspace_output_1767458276_4016.txt
+ create mode 100644 outputs/workspace_output_1767458281_3067.txt
+ create mode 100644 outputs/workspace_output_1767458284_3005.txt
+ create mode 100644 outputs/workspace_output_1767458288_7288.txt
+ create mode 100644 outputs/workspace_output_1767458292_8073.txt
+ create mode 100644 outputs/workspace_output_1767458296_8624.txt
+ create mode 100644 outputs/workspace_output_1767458299_1797.txt
+ create mode 100644 outputs/workspace_output_1767458304_6107.txt
+ create mode 100644 outputs/workspace_output_1767458570_4514.txt
+ create mode 100644 outputs/workspace_output_1767458581_426.txt
+ create mode 100644 outputs/workspace_output_1767458788_6671.txt
+ create mode 100644 outputs/workspace_output_1767458790_346.txt
+ create mode 100644 outputs/workspace_output_1767458791_6429.txt
+ create mode 100644 outputs/workspace_output_1767458792_6394.txt
+ create mode 100644 outputs/workspace_output_1767458794_7442.txt
+ create mode 100644 outputs/workspace_output_1767458795_9573.txt
+ create mode 100644 outputs/workspace_output_1767458797_4112.txt
+ create mode 100644 outputs/workspace_output_1767458798_5997.txt
+ create mode 100644 outputs/workspace_output_1767458800_84.txt
+ create mode 100644 outputs/workspace_output_1767458801_5718.txt
+ create mode 100644 outputs/workspace_output_1767458803_2611.txt
+ create mode 100644 outputs/workspace_output_1767458804_2904.txt
+ create mode 100644 outputs/workspace_output_1767458807_8286.txt
+ create mode 100644 outputs/workspace_output_1767458809_9626.txt
+ create mode 100644 outputs/workspace_output_1767458810_8644.txt
+ create mode 100644 outputs/workspace_output_1767458813_5285.txt
+ create mode 100644 outputs/workspace_output_1767458814_8516.txt
+ create mode 100644 outputs/workspace_output_1767458816_6814.txt
+ create mode 100644 outputs/workspace_output_1767458818_1579.txt
+ create mode 100644 outputs/workspace_output_1767458826_8126.txt
+ create mode 100644 outputs/workspace_output_1767458909_2395.txt
+ create mode 100644 outputs/workspace_output_1767458916_4731.txt
+ create mode 100644 outputs/workspace_output_1767458919_9873.txt
+ create mode 100644 outputs/workspace_output_1767458928_4608.txt
+ create mode 100644 outputs/workspace_output_1767458933_7400.txt
+ create mode 100644 outputs/workspace_output_1767458937_4276.txt
+ create mode 100644 outputs/workspace_output_1767458940_9768.txt
+ create mode 100644 outputs/workspace_output_1767458944_8423.txt
+ create mode 100644 outputs/workspace_output_1767458947_8149.txt
+ create mode 100644 outputs/workspace_output_1767458950_8916.txt
+ create mode 100644 outputs/workspace_output_1767458955_6057.txt
+ create mode 100644 outputs/workspace_output_1767458959_880.txt
+ create mode 100644 outputs/workspace_output_1767458964_5848.txt
+ create mode 100644 outputs/workspace_output_1767458967_5013.txt
+ create mode 100644 outputs/workspace_output_1767458973_2866.txt
+ create mode 100644 outputs/workspace_output_1767458976_6998.txt
+ create mode 100644 outputs/workspace_output_1767458982_9771.txt
+ create mode 100644 outputs/workspace_output_1767458986_8004.txt
+ create mode 100644 outputs/workspace_output_1767459000_3353.txt
+ create mode 100644 outputs/workspace_output_1767459004_2866.txt
+ create mode 100644 outputs/workspace_output_1767459007_7814.txt
+ create mode 100644 outputs/workspace_output_1767459038_8727.txt
+ create mode 100644 outputs/workspace_output_1767459140_1596.txt
+ create mode 100644 outputs/workspace_output_1767459154_9949.txt
+ create mode 100644 outputs/workspace_output_1767459239_5000.txt
+ create mode 100644 outputs/workspace_output_1767459243_5229.txt
+ create mode 100644 outputs/workspace_output_1767459255_2622.txt
+ create mode 100644 outputs/workspace_output_1767459268_7485.txt
+ create mode 100644 outputs/workspace_output_1767459994_392.txt
+ create mode 100644 outputs/workspace_output_1767460628_6457.txt
+ create mode 100644 outputs/workspace_output_1767460633_8559.txt
+ create mode 100644 outputs/workspace_output_1767460638_2618.txt
+ create mode 100644 outputs/workspace_output_1767460642_1253.txt
+ create mode 100644 outputs/workspace_output_1767460645_3556.txt
+ create mode 100644 outputs/workspace_output_1767460649_1002.txt
+ create mode 100644 outputs/workspace_output_1767460653_7559.txt
+ create mode 100644 outputs/workspace_output_1767460659_2880.txt
+ create mode 100644 outputs/workspace_output_1767460662_2462.txt
+ create mode 100644 outputs/workspace_output_1767460667_4398.txt
+ create mode 100644 outputs/workspace_output_1767460671_7723.txt
+ create mode 100644 outputs/workspace_output_1767460676_5769.txt
+ create mode 100644 outputs/workspace_output_1767460680_7803.txt
+ create mode 100644 outputs/workspace_output_1767460686_5588.txt
+ create mode 100644 outputs/workspace_output_1767460702_2241.txt
+ create mode 100644 outputs/workspace_output_1767460717_9258.txt
+ create mode 100644 outputs/workspace_output_1767461295_8982.txt
+ create mode 100644 outputs/workspace_output_1767461302_4140.txt
+ create mode 100644 outputs/workspace_output_1767461304_721.txt
+ create mode 100644 outputs/workspace_output_1767461307_6340.txt
+ create mode 100644 outputs/workspace_output_1767461309_8275.txt
+ create mode 100644 outputs/workspace_output_1767461311_7083.txt
+ create mode 100644 outputs/workspace_output_1767461313_9943.txt
+ create mode 100644 outputs/workspace_output_1767461315_6495.txt
+ create mode 100644 outputs/workspace_output_1767461316_1153.txt
+ create mode 100644 outputs/workspace_output_1767461342_3823.txt
+ create mode 100644 outputs/workspace_output_1767461354_4577.txt
+ create mode 100644 outputs/workspace_output_1767461693_4414.txt
+ create mode 100644 outputs/workspace_output_1767461697_1784.txt
+ create mode 100644 outputs/workspace_output_1767461701_7837.txt
+ create mode 100644 outputs/workspace_output_1767461705_7307.txt
+ create mode 100644 outputs/workspace_output_1767461709_5982.txt
+ create mode 100644 outputs/workspace_output_1767461718_7279.txt
+ create mode 100644 outputs/workspace_output_1767461732_7438.txt
+ create mode 100644 outputs/workspace_output_1767462013_3953.txt
+ create mode 100644 outputs/workspace_output_1767462017_7365.txt
+ create mode 100644 outputs/workspace_output_1767462021_9117.txt
+ create mode 100644 outputs/workspace_output_1767462024_4699.txt
+ create mode 100644 outputs/workspace_output_1767462028_5737.txt
+ create mode 100644 outputs/workspace_output_1767462032_7896.txt
+ create mode 100644 outputs/workspace_output_1767462036_888.txt
+ create mode 100644 outputs/workspace_output_1767462039_1465.txt
+ create mode 100644 outputs/workspace_output_1767462042_9483.txt
+ create mode 100644 outputs/workspace_output_1767462046_8002.txt
+ create mode 100644 outputs/workspace_output_1767462049_5597.txt
+ create mode 100644 outputs/workspace_output_1767462053_914.txt
+ create mode 100644 outputs/workspace_output_1767462058_9254.txt
+ create mode 100644 outputs/workspace_output_1767462062_8434.txt
+ create mode 100644 outputs/workspace_output_1767462066_9133.txt
+ create mode 100644 outputs/workspace_output_1767462069_8290.txt
+ create mode 100644 outputs/workspace_output_1767462073_6119.txt
+ create mode 100644 outputs/workspace_output_1767462079_2149.txt
+ create mode 100644 outputs/workspace_output_1767462090_2277.txt
+ create mode 100644 outputs/workspace_output_1767462094_7279.txt
+ create mode 100644 outputs/workspace_output_1767462098_4497.txt
+ create mode 100644 outputs/workspace_output_1767462101_1253.txt
+ create mode 100644 outputs/workspace_output_1767462104_3374.txt
+ create mode 100644 outputs/workspace_output_1767462108_7314.txt
+ create mode 100644 outputs/workspace_output_1767462114_1799.txt
+ create mode 100644 outputs/workspace_output_1767462130_5349.txt
+ create mode 100644 outputs/workspace_output_1767462135_2882.txt
+ create mode 100644 outputs/workspace_output_1767462138_4377.txt
+ create mode 100644 outputs/workspace_output_1767462145_9121.txt
+ create mode 100644 outputs/workspace_output_1767462148_3116.txt
+ create mode 100644 outputs/workspace_output_1767462173_5762.txt
+ create mode 100644 outputs/workspace_output_1767462212_7956.txt
+ create mode 100644 outputs/workspace_output_1767462269_5626.txt
+ create mode 100644 outputs/workspace_output_1767462273_4337.txt
+ create mode 100644 outputs/workspace_output_1767462275_5830.txt
+ create mode 100644 outputs/workspace_output_1767462276_9307.txt
+ create mode 100644 outputs/workspace_output_1767462433_1176.txt
+ create mode 100644 outputs/workspace_output_1767462446_4156.txt
+ create mode 100644 outputs/workspace_output_1767462597_5189.txt
+ create mode 100644 outputs/workspace_output_1767462600_534.txt
+ create mode 100644 outputs/workspace_output_1767462602_3339.txt
+ create mode 100644 outputs/workspace_output_1767462605_369.txt
+ create mode 100644 outputs/workspace_output_1767462607_6061.txt
+ create mode 100644 outputs/workspace_output_1767462609_9516.txt
+ create mode 100644 outputs/workspace_output_1767462612_264.txt
+ create mode 100644 outputs/workspace_output_1767462614_8386.txt
+ create mode 100644 outputs/workspace_output_1767462617_4968.txt
+ create mode 100644 outputs/workspace_output_1767462619_1626.txt
+ create mode 100644 outputs/workspace_output_1767462621_8904.txt
+ create mode 100644 outputs/workspace_output_1767462623_2800.txt
+ create mode 100644 outputs/workspace_output_1767462625_5355.txt
+ create mode 100644 outputs/workspace_output_1767462627_4472.txt
+ create mode 100644 outputs/workspace_output_1767462634_4261.txt
+ create mode 100644 outputs/workspace_output_1767462635_617.txt
+ create mode 100644 outputs/workspace_output_1767462637_1050.txt
+ create mode 100644 outputs/workspace_output_1767462639_1883.txt
+ create mode 100644 outputs/workspace_output_1767462641_3213.txt
+ create mode 100644 outputs/workspace_output_1767462643_1035.txt
+ create mode 100644 outputs/workspace_output_1767462645_5405.txt
+ create mode 100644 outputs/workspace_output_1767462648_8711.txt
+ create mode 100644 outputs/workspace_output_1767462650_8331.txt
+ create mode 100644 outputs/workspace_output_1767462653_2053.txt
+ create mode 100644 outputs/workspace_output_1767462662_5239.txt
+ create mode 100644 outputs/workspace_output_1767462664_3011.txt
+ create mode 100644 outputs/workspace_output_1767462666_1529.txt
+ create mode 100644 outputs/workspace_output_1767462667_4012.txt
+ create mode 100644 outputs/workspace_output_1767462845_8878.txt
+ create mode 100644 outputs/workspace_output_1767462847_9435.txt
+ create mode 100644 outputs/workspace_output_1767462849_2241.txt
+ create mode 100644 outputs/workspace_output_1767462851_7493.txt
+ create mode 100644 outputs/workspace_output_1767462852_7214.txt
+ create mode 100644 outputs/workspace_output_1767462854_8725.txt
+ create mode 100644 outputs/workspace_output_1767462856_3201.txt
+ create mode 100644 outputs/workspace_output_1767462858_6825.txt
+ create mode 100644 outputs/workspace_output_1767462860_6500.txt
+ create mode 100644 outputs/workspace_output_1767462861_1367.txt
+ create mode 100644 outputs/workspace_output_1767462864_4774.txt
+ create mode 100644 outputs/workspace_output_1767462866_9062.txt
+ create mode 100644 outputs/workspace_output_1767462868_4025.txt
+ create mode 100644 outputs/workspace_output_1767462871_2543.txt
+ create mode 100644 outputs/workspace_output_1767462873_9928.txt
+ create mode 100644 outputs/workspace_output_1767463052_456.txt
+ create mode 100644 outputs/workspace_output_1767463054_8007.txt
+ create mode 100644 outputs/workspace_output_1767463056_5149.txt
+ create mode 100644 outputs/workspace_output_1767463057_9416.txt
+ create mode 100644 outputs/workspace_output_1767463059_9548.txt
+ create mode 100644 outputs/workspace_output_1767463061_7.txt
+ create mode 100644 outputs/workspace_output_1767463068_8571.txt
+ create mode 100644 outputs/workspace_output_1767463085_405.txt
+ create mode 100644 outputs/workspace_output_1767463087_6315.txt
+ create mode 100644 outputs/workspace_output_AUDIT_CODE_REVIEW_3523.txt
+ create mode 100644 outputs/workspace_output_JAVASCRIPT_SOURCE_MAP_6780.txt
+ create mode 100644 plate.png
+ create mode 100644 porkbun.com | Domain Management.pdf
+ create mode 100644 summarized_conversations/original_conversation_1767456714_1067.txt
+ create mode 100644 summarized_conversations/original_conversation_1767458563_6740.txt
+ create mode 100644 summarized_conversations/original_conversation_1767461038_4476.txt
+ create mode 100644 summarized_conversations/original_conversation_1767462128_9534.txt
+ create mode 100644 summarized_conversations/original_conversation_1767462660_5485.txt

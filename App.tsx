@@ -8649,74 +8649,141 @@ updates.forEach(update => {
         }
     };
 
-    // Debug: Log purple buttons when they appear
+    // COMPREHENSIVE DEBUG: Log ALL buttons and potential purple elements
     useEffect(() => {
-        const checkForPurpleButtons = () => {
-            // Check for purple elements
-            const purpleElements = document.querySelectorAll('[class*="purple"], [style*="purple"], [class*="bg-purple"], [style*="bg-purple"]');
+        const comprehensiveDebug = () => {
+            console.log('🔍 === COMPREHENSIVE DEBUG SCAN ===');
             
-            // Also check for Edit/Save buttons specifically
-            const editSaveButtons = document.querySelectorAll('button, [role="button"], .btn, button[class*="Edit"], button[class*="Save"]');
+            // Log ALL buttons on the page
+            const allButtons = document.querySelectorAll('button, [role="button"], .btn, [onclick]');
+            console.log(`🔍 TOTAL BUTTONS FOUND: ${allButtons.length}`);
             
-            // Check for any elements with purple-ish colors
-            const allElements = document.querySelectorAll('*');
-            const purpleColoredElements = Array.from(allElements).filter(el => {
-                const computedStyle = window.getComputedStyle(el);
-                const backgroundColor = computedStyle.backgroundColor;
-                const color = computedStyle.color;
-                return backgroundColor.includes('128, 0, 128') || backgroundColor.includes('purple') || 
-                       color.includes('128, 0, 128') || color.includes('purple');
-            });
-
-            if (purpleElements.length > 0 || purpleColoredElements.length > 0) {
-                console.log('🔍 PURPLE ELEMENTS DETECTED:');
-                console.log('- Purple class elements:', purpleElements);
-                console.log('- Purple colored elements:', purpleColoredElements);
+            allButtons.forEach((btn, index) => {
+                const computedStyle = window.getComputedStyle(btn);
+                const isPurple = computedStyle.backgroundColor.includes('128, 0, 128') || 
+                                computedStyle.backgroundColor.includes('purple') ||
+                                computedStyle.color.includes('128, 0, 128') || 
+                                computedStyle.color.includes('purple');
                 
-                [...purpleElements, ...purpleColoredElements].forEach((el, index) => {
+                const buttonInfo = {
+                    index,
+                    tagName: btn.tagName,
+                    textContent: btn.textContent?.trim(),
+                    className: btn.className,
+                    id: btn.id,
+                    backgroundColor: computedStyle.backgroundColor,
+                    color: computedStyle.color,
+                    isPurple,
+                    innerHTML: btn.innerHTML?.substring(0, 100)
+                };
+                
+                // Log all buttons with purple OR containing Edit/Save text
+                if (isPurple || 
+                    btn.textContent?.toLowerCase().includes('edit') || 
+                    btn.textContent?.toLowerCase().includes('save')) {
+                    console.log(`🔍 ${isPurple ? '🟣 PURPLE' : '📝 EDIT/SAVE'} BUTTON:`, buttonInfo);
+                }
+            });
+            
+            // Also check for any elements that might be styled as purple
+            const allElements = document.querySelectorAll('*');
+            const purpleElements = Array.from(allElements).filter(el => {
+                const computedStyle = window.getComputedStyle(el);
+                return computedStyle.backgroundColor.includes('128, 0, 128') || 
+                       computedStyle.backgroundColor.includes('purple') ||
+                       computedStyle.color.includes('128, 0, 128') || 
+                       computedStyle.color.includes('purple');
+            });
+            
+            if (purpleElements.length > 0) {
+                console.log('🔍 PURPLE ELEMENTS DETECTED:', purpleElements.length);
+                purpleElements.forEach((el, index) => {
                     console.log(`Purple Element ${index}:`, {
-                        element: el,
                         tagName: el.tagName,
-                        classes: el.className,
-                        textContent: el.textContent?.substring(0, 50),
-                        innerHTML: el.innerHTML?.substring(0, 100),
-                        parent: el.parentElement?.tagName,
-                        id: el.id,
-                        style: el.style.cssText,
-                        computedStyle: window.getComputedStyle(el).backgroundColor + ' / ' + window.getComputedStyle(el).color
+                        textContent: el.textContent?.trim(),
+                        className: el.className,
+                        backgroundColor: window.getComputedStyle(el).backgroundColor,
+                        color: window.getComputedStyle(el).color
                     });
                 });
             }
+            
+            console.log('🔍 === END DEBUG SCAN ===');
+        };
 
-            // Log all Edit/Save buttons for analysis
-            if (editSaveButtons.length > 0) {
-                const relevantButtons = Array.from(editSaveButtons).filter(btn => 
-                    btn.textContent?.toLowerCase().includes('edit') || 
-                    btn.textContent?.toLowerCase().includes('save') ||
-                    btn.className?.toLowerCase().includes('edit') ||
-                    btn.className?.toLowerCase().includes('save')
-                );
+        // Check immediately and every 3 seconds
+        comprehensiveDebug();
+        const interval = setInterval(comprehensiveDebug, 3000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Manual debug trigger - press Ctrl+Shift+D to run debug scan
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                console.log('🔍 === MANUAL DEBUG TRIGGERED ===');
                 
-                if (relevantButtons.length > 0) {
-                    console.log('🔍 EDIT/SAVE BUTTONS FOUND:', relevantButtons);
-                    relevantButtons.forEach((btn, index) => {
-                        console.log(`Edit/Save Button ${index}:`, {
-                            element: btn,
-                            classes: btn.className,
-                            textContent: btn.textContent,
-                            backgroundColor: window.getComputedStyle(btn).backgroundColor,
-                            color: window.getComputedStyle(btn).color
+                // Log ALL buttons on the page
+                const allButtons = document.querySelectorAll('button, [role="button"], .btn, [onclick]');
+                console.log(`🔍 TOTAL BUTTONS FOUND: ${allButtons.length}`);
+                
+                allButtons.forEach((btn, index) => {
+                    const computedStyle = window.getComputedStyle(btn);
+                    const isPurple = computedStyle.backgroundColor.includes('128, 0, 128') || 
+                                    computedStyle.backgroundColor.includes('purple') ||
+                                    computedStyle.color.includes('128, 0, 128') || 
+                                    computedStyle.color.includes('purple');
+                    
+                    const buttonInfo = {
+                        index,
+                        tagName: btn.tagName,
+                        textContent: btn.textContent?.trim(),
+                        className: btn.className,
+                        id: btn.id,
+                        backgroundColor: computedStyle.backgroundColor,
+                        color: computedStyle.color,
+                        isPurple,
+                        innerHTML: btn.innerHTML?.substring(0, 100)
+                    };
+                    
+                    // Log all buttons with purple OR containing Edit/Save text
+                    if (isPurple || 
+                        btn.textContent?.toLowerCase().includes('edit') || 
+                        btn.textContent?.toLowerCase().includes('save')) {
+                        console.log(`🔍 ${isPurple ? '🟣 PURPLE' : '📝 EDIT/SAVE'} BUTTON:`, buttonInfo);
+                    }
+                });
+                
+                // Also check for any purple elements
+                const allElements = document.querySelectorAll('*');
+                const purpleElements = Array.from(allElements).filter(el => {
+                    const computedStyle = window.getComputedStyle(el);
+                    return computedStyle.backgroundColor.includes('128, 0, 128') || 
+                           computedStyle.backgroundColor.includes('purple') ||
+                           computedStyle.color.includes('128, 0, 128') || 
+                           computedStyle.color.includes('purple');
+                });
+                
+                if (purpleElements.length > 0) {
+                    console.log('🔍 PURPLE ELEMENTS DETECTED:', purpleElements.length);
+                    purpleElements.forEach((el, index) => {
+                        console.log(`Purple Element ${index}:`, {
+                            tagName: el.tagName,
+                            textContent: el.textContent?.trim(),
+                            className: el.className,
+                            backgroundColor: window.getComputedStyle(el).backgroundColor,
+                            color: window.getComputedStyle(el).color
                         });
                     });
                 }
+                
+                console.log('🔍 === END MANUAL DEBUG ===');
             }
         };
 
-        // Check immediately and every 2 seconds
-        checkForPurpleButtons();
-        const interval = setInterval(checkForPurpleButtons, 2000);
-
-        return () => clearInterval(interval);
+        document.addEventListener('keydown', handleKeyPress);
+        return () => document.removeEventListener('keydown', handleKeyPress);
     }, []);
 
     return (

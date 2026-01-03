@@ -1,0 +1,2100 @@
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 745947d7-5e2e-43df-b107-e6ef05f61c17
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c1d794d6-1f3a-44f6-a20e-1ecc0a52150a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7b90c482-63c5-4da7-b700-a4635351fb0c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 42431887-deb7-42e7-8099-709f34775ef2
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 4afe2cb2-763e-4b23-9a91-9c78c0cc7880
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: da82d9d5-6304-4afe-b1cd-3e585be711a7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 2a4e3bdd-eb68-49db-854a-fe4f9e500634
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 86b8059d-bd11-4d70-a17a-357d57e8be5b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 5ad031c0-a90a-4294-a8fd-e76a52a664ef
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 77ee8488-41dc-4edb-b4a8-bd7b43a85df9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 27df67c6-8aac-432b-bf00-ed5f3e9ebde3
+   - event.type: ftd
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 256fb108-14bd-4349-9bd2-b766f6a31551
+   - event.type: ftd
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8f3e60af-c967-4f4a-8661-c2d2da87942f
+   - event.type: ground
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c0eb2b5d-b6f3-4d4f-8865-23dfce229f67
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 6af2dee0-1803-44a2-8a13-4dc97c0b2b0a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8898fda2-479e-4f6c-8ecd-272f431b71cb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7a4d888d-1b2c-460d-b436-076fd6ef2bc6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 88581e4d-1ccc-4901-9970-5beeee97be45
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: a944e103-3bfb-4af5-ba51-971d8ab40e6d
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 442dcd14-59a8-4474-bec2-f4de0c442a33
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: aa87aa4b-c82e-4dcf-8ae7-d2cee4240b38
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 94f7add8-10f0-4053-876c-8cd382882019
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 26b2ceea-aa27-487e-82e2-2826fcde9f2b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 555f5f4b-1e17-4a3c-900c-47c7fd5b6844
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 061ca307-2f54-461c-aa40-e035f1f9cbf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8b3c4bc4-fd35-434c-83f5-3989e4743454
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c4c114fd-ba5c-4ee6-b354-ff0ce8a8ecf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: af8366f1-6a2b-43e1-aa91-de282039e62c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: b5c69022-e7f9-48db-a8c6-701f5258f2c5
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 0e56d093-aad4-4c55-ba6e-4d827530fa53
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: de36eedb-d2d6-45f5-8f22-89fd23986193
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8a75892e-929e-441e-9576-76029f547a69
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 573d6ac6-490b-433e-9b7b-9ddc8dbe6168
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: faa2bfc1-24d3-41b9-b6bb-9b54cf46156c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 21ed7f66-85e9-4e94-8ffb-43845a660607
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7bdb1804-cca4-4d21-b27d-d2f10f695a41
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 149b8505-8e06-4de5-96a3-414755e8ef89
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e827403f-0b59-4f91-8b3b-8717903ffef0
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: df58c1fb-67ba-475f-b84c-0ca9edd3d6d7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 13bcc5ff-6ccd-4f8d-9b43-4615c5c74ca9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 57c0b2c6-89b3-4449-bb68-ed4b9d881abb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e39fa5bf-013f-4eb8-9c7f-c7d3d8af2339
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 56f927da-61ca-40f8-95fc-e867d50f5a58
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: afd17a91-8aa6-4eeb-ae58-b43eb9c2948e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c44177ca-223d-47a8-a8b4-98203a298ad9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: d8eaafc9-983d-4228-926a-96be32401a1e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: ea64554e-9198-4f96-9824-9eac90ae45b3
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 40ea4739-e7de-4807-bf1e-5600e0ad687a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 745947d7-5e2e-43df-b107-e6ef05f61c17
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c1d794d6-1f3a-44f6-a20e-1ecc0a52150a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7b90c482-63c5-4da7-b700-a4635351fb0c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 42431887-deb7-42e7-8099-709f34775ef2
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 4afe2cb2-763e-4b23-9a91-9c78c0cc7880
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: da82d9d5-6304-4afe-b1cd-3e585be711a7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 2a4e3bdd-eb68-49db-854a-fe4f9e500634
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 86b8059d-bd11-4d70-a17a-357d57e8be5b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 5ad031c0-a90a-4294-a8fd-e76a52a664ef
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 77ee8488-41dc-4edb-b4a8-bd7b43a85df9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 27df67c6-8aac-432b-bf00-ed5f3e9ebde3
+   - event.type: ftd
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 256fb108-14bd-4349-9bd2-b766f6a31551
+   - event.type: ftd
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8f3e60af-c967-4f4a-8661-c2d2da87942f
+   - event.type: ground
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ Local handleMouseUp called - ignoring when dragState exists: false
+ Clearing drag state in local handleMouseUp
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c0eb2b5d-b6f3-4d4f-8865-23dfce229f67
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 6af2dee0-1803-44a2-8a13-4dc97c0b2b0a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8898fda2-479e-4f6c-8ecd-272f431b71cb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7a4d888d-1b2c-460d-b436-076fd6ef2bc6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 88581e4d-1ccc-4901-9970-5beeee97be45
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: a944e103-3bfb-4af5-ba51-971d8ab40e6d
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 442dcd14-59a8-4474-bec2-f4de0c442a33
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: aa87aa4b-c82e-4dcf-8ae7-d2cee4240b38
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 94f7add8-10f0-4053-876c-8cd382882019
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 26b2ceea-aa27-487e-82e2-2826fcde9f2b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 555f5f4b-1e17-4a3c-900c-47c7fd5b6844
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 061ca307-2f54-461c-aa40-e035f1f9cbf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8b3c4bc4-fd35-434c-83f5-3989e4743454
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c4c114fd-ba5c-4ee6-b354-ff0ce8a8ecf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: af8366f1-6a2b-43e1-aa91-de282039e62c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: b5c69022-e7f9-48db-a8c6-701f5258f2c5
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 0e56d093-aad4-4c55-ba6e-4d827530fa53
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: de36eedb-d2d6-45f5-8f22-89fd23986193
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8a75892e-929e-441e-9576-76029f547a69
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 573d6ac6-490b-433e-9b7b-9ddc8dbe6168
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: faa2bfc1-24d3-41b9-b6bb-9b54cf46156c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 21ed7f66-85e9-4e94-8ffb-43845a660607
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7bdb1804-cca4-4d21-b27d-d2f10f695a41
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 149b8505-8e06-4de5-96a3-414755e8ef89
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e827403f-0b59-4f91-8b3b-8717903ffef0
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: df58c1fb-67ba-475f-b84c-0ca9edd3d6d7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 13bcc5ff-6ccd-4f8d-9b43-4615c5c74ca9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 57c0b2c6-89b3-4449-bb68-ed4b9d881abb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e39fa5bf-013f-4eb8-9c7f-c7d3d8af2339
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 56f927da-61ca-40f8-95fc-e867d50f5a58
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: afd17a91-8aa6-4eeb-ae58-b43eb9c2948e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c44177ca-223d-47a8-a8b4-98203a298ad9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: d8eaafc9-983d-4228-926a-96be32401a1e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: ea64554e-9198-4f96-9824-9eac90ae45b3
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 40ea4739-e7de-4807-bf1e-5600e0ad687a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 745947d7-5e2e-43df-b107-e6ef05f61c17
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c1d794d6-1f3a-44f6-a20e-1ecc0a52150a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7b90c482-63c5-4da7-b700-a4635351fb0c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 42431887-deb7-42e7-8099-709f34775ef2
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 4afe2cb2-763e-4b23-9a91-9c78c0cc7880
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130)
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: da82d9d5-6304-4afe-b1cd-3e585be711a7
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 2a4e3bdd-eb68-49db-854a-fe4f9e500634
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 86b8059d-bd11-4d70-a17a-357d57e8be5b
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 5ad031c0-a90a-4294-a8fd-e76a52a664ef
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 77ee8488-41dc-4edb-b4a8-bd7b43a85df9
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 27df67c6-8aac-432b-bf00-ed5f3e9ebde3
+FlightTile.tsx:89   - event.type: ftd
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 256fb108-14bd-4349-9bd2-b766f6a31551
+FlightTile.tsx:89   - event.type: ftd
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 8f3e60af-c967-4f4a-8661-c2d2da87942f
+FlightTile.tsx:89   - event.type: ground
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130)
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+ScheduleView.tsx:544 Local handleMouseUp called - ignoring when dragState exists: false
+ScheduleView.tsx:558 Clearing drag state in local handleMouseUp
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c0eb2b5d-b6f3-4d4f-8865-23dfce229f67
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 6af2dee0-1803-44a2-8a13-4dc97c0b2b0a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8898fda2-479e-4f6c-8ecd-272f431b71cb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7a4d888d-1b2c-460d-b436-076fd6ef2bc6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 88581e4d-1ccc-4901-9970-5beeee97be45
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: a944e103-3bfb-4af5-ba51-971d8ab40e6d
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 442dcd14-59a8-4474-bec2-f4de0c442a33
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: aa87aa4b-c82e-4dcf-8ae7-d2cee4240b38
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 94f7add8-10f0-4053-876c-8cd382882019
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 26b2ceea-aa27-487e-82e2-2826fcde9f2b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 555f5f4b-1e17-4a3c-900c-47c7fd5b6844
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 061ca307-2f54-461c-aa40-e035f1f9cbf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8b3c4bc4-fd35-434c-83f5-3989e4743454
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c4c114fd-ba5c-4ee6-b354-ff0ce8a8ecf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: af8366f1-6a2b-43e1-aa91-de282039e62c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: b5c69022-e7f9-48db-a8c6-701f5258f2c5
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 0e56d093-aad4-4c55-ba6e-4d827530fa53
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: de36eedb-d2d6-45f5-8f22-89fd23986193
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8a75892e-929e-441e-9576-76029f547a69
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 573d6ac6-490b-433e-9b7b-9ddc8dbe6168
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: faa2bfc1-24d3-41b9-b6bb-9b54cf46156c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 21ed7f66-85e9-4e94-8ffb-43845a660607
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7bdb1804-cca4-4d21-b27d-d2f10f695a41
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 149b8505-8e06-4de5-96a3-414755e8ef89
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e827403f-0b59-4f91-8b3b-8717903ffef0
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: df58c1fb-67ba-475f-b84c-0ca9edd3d6d7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 13bcc5ff-6ccd-4f8d-9b43-4615c5c74ca9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 57c0b2c6-89b3-4449-bb68-ed4b9d881abb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e39fa5bf-013f-4eb8-9c7f-c7d3d8af2339
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 56f927da-61ca-40f8-95fc-e867d50f5a58
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: afd17a91-8aa6-4eeb-ae58-b43eb9c2948e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c44177ca-223d-47a8-a8b4-98203a298ad9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: d8eaafc9-983d-4228-926a-96be32401a1e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: ea64554e-9198-4f96-9824-9eac90ae45b3
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 40ea4739-e7de-4807-bf1e-5600e0ad687a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 745947d7-5e2e-43df-b107-e6ef05f61c17
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c1d794d6-1f3a-44f6-a20e-1ecc0a52150a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7b90c482-63c5-4da7-b700-a4635351fb0c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 42431887-deb7-42e7-8099-709f34775ef2
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 4afe2cb2-763e-4b23-9a91-9c78c0cc7880
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: da82d9d5-6304-4afe-b1cd-3e585be711a7
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 2a4e3bdd-eb68-49db-854a-fe4f9e500634
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 86b8059d-bd11-4d70-a17a-357d57e8be5b
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 5ad031c0-a90a-4294-a8fd-e76a52a664ef
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 77ee8488-41dc-4edb-b4a8-bd7b43a85df9
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 27df67c6-8aac-432b-bf00-ed5f3e9ebde3
+FlightTile.tsx:89   - event.type: ftd
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 256fb108-14bd-4349-9bd2-b766f6a31551
+FlightTile.tsx:89   - event.type: ftd
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 8f3e60af-c967-4f4a-8661-c2d2da87942f
+FlightTile.tsx:89   - event.type: ground
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c0eb2b5d-b6f3-4d4f-8865-23dfce229f67
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 6af2dee0-1803-44a2-8a13-4dc97c0b2b0a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8898fda2-479e-4f6c-8ecd-272f431b71cb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7a4d888d-1b2c-460d-b436-076fd6ef2bc6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 88581e4d-1ccc-4901-9970-5beeee97be45
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: a944e103-3bfb-4af5-ba51-971d8ab40e6d
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 442dcd14-59a8-4474-bec2-f4de0c442a33
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: aa87aa4b-c82e-4dcf-8ae7-d2cee4240b38
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 94f7add8-10f0-4053-876c-8cd382882019
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 26b2ceea-aa27-487e-82e2-2826fcde9f2b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 555f5f4b-1e17-4a3c-900c-47c7fd5b6844
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 061ca307-2f54-461c-aa40-e035f1f9cbf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8b3c4bc4-fd35-434c-83f5-3989e4743454
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c4c114fd-ba5c-4ee6-b354-ff0ce8a8ecf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: af8366f1-6a2b-43e1-aa91-de282039e62c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: b5c69022-e7f9-48db-a8c6-701f5258f2c5
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 0e56d093-aad4-4c55-ba6e-4d827530fa53
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: de36eedb-d2d6-45f5-8f22-89fd23986193
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8a75892e-929e-441e-9576-76029f547a69
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 573d6ac6-490b-433e-9b7b-9ddc8dbe6168
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: faa2bfc1-24d3-41b9-b6bb-9b54cf46156c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 21ed7f66-85e9-4e94-8ffb-43845a660607
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7bdb1804-cca4-4d21-b27d-d2f10f695a41
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 149b8505-8e06-4de5-96a3-414755e8ef89
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e827403f-0b59-4f91-8b3b-8717903ffef0
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: df58c1fb-67ba-475f-b84c-0ca9edd3d6d7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 13bcc5ff-6ccd-4f8d-9b43-4615c5c74ca9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 57c0b2c6-89b3-4449-bb68-ed4b9d881abb
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e39fa5bf-013f-4eb8-9c7f-c7d3d8af2339
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 56f927da-61ca-40f8-95fc-e867d50f5a58
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: afd17a91-8aa6-4eeb-ae58-b43eb9c2948e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c44177ca-223d-47a8-a8b4-98203a298ad9
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: d8eaafc9-983d-4228-926a-96be32401a1e
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: ea64554e-9198-4f96-9824-9eac90ae45b3
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 40ea4739-e7de-4807-bf1e-5600e0ad687a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 745947d7-5e2e-43df-b107-e6ef05f61c17
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c1d794d6-1f3a-44f6-a20e-1ecc0a52150a
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7b90c482-63c5-4da7-b700-a4635351fb0c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 42431887-deb7-42e7-8099-709f34775ef2
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 4afe2cb2-763e-4b23-9a91-9c78c0cc7880
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: da82d9d5-6304-4afe-b1cd-3e585be711a7
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 2a4e3bdd-eb68-49db-854a-fe4f9e500634
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 86b8059d-bd11-4d70-a17a-357d57e8be5b
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 5ad031c0-a90a-4294-a8fd-e76a52a664ef
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 77ee8488-41dc-4edb-b4a8-bd7b43a85df9
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 27df67c6-8aac-432b-bf00-ed5f3e9ebde3
+FlightTile.tsx:89   - event.type: ftd
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 256fb108-14bd-4349-9bd2-b766f6a31551
+FlightTile.tsx:89   - event.type: ftd
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 8f3e60af-c967-4f4a-8661-c2d2da87942f
+FlightTile.tsx:89   - event.type: ground
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: c0eb2b5d-b6f3-4d4f-8865-23dfce229f67
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 6af2dee0-1803-44a2-8a13-4dc97c0b2b0a
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 8898fda2-479e-4f6c-8ecd-272f431b71cb
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 7a4d888d-1b2c-460d-b436-076fd6ef2bc6
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 88581e4d-1ccc-4901-9970-5beeee97be45
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: a944e103-3bfb-4af5-ba51-971d8ab40e6d
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: 442dcd14-59a8-4474-bec2-f4de0c442a33
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+FlightTile.tsx:87 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+FlightTile.tsx:88   - event.id: aa87aa4b-c82e-4dcf-8ae7-d2cee4240b38
+FlightTile.tsx:89   - event.type: flight
+FlightTile.tsx:90   - personnelData size: 37
+FlightTile.tsx:91   - seatConfigs type: object
+FlightTile.tsx:92   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+FlightTile.tsx:93   - seatConfigs === undefined: false
+FlightTile.tsx:94   - seatConfigs === null: false
+FlightTile.tsx:99 ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 94f7add8-10f0-4053-876c-8cd382882019
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 26b2ceea-aa27-487e-82e2-2826fcde9f2b
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 555f5f4b-1e17-4a3c-900c-47c7fd5b6844
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 061ca307-2f54-461c-aa40-e035f1f9cbf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8b3c4bc4-fd35-434c-83f5-3989e4743454
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c4c114fd-ba5c-4ee6-b354-ff0ce8a8ecf6
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: af8366f1-6a2b-43e1-aa91-de282039e62c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: b5c69022-e7f9-48db-a8c6-701f5258f2c5
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 0e56d093-aad4-4c55-ba6e-4d827530fa53
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: de36eedb-d2d6-45f5-8f22-89fd23986193
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 8a75892e-929e-441e-9576-76029f547a69
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 573d6ac6-490b-433e-9b7b-9ddc8dbe6168
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: faa2bfc1-24d3-41b9-b6bb-9b54cf46156c
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 21ed7f66-85e9-4e94-8ffb-43845a660607
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 7bdb1804-cca4-4d21-b27d-d2f10f695a41
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 149b8505-8e06-4de5-96a3-414755e8ef89
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: e827403f-0b59-4f91-8b3b-8717903ffef0
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: df58c1fb-67ba-475f-b84c-0ca9edd3d6d7
+   - event.type: flight
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Wright, Jennifer' => 'Normal', 'Baker, Theodore' => 'Normal', 'Jackson, Robert' => 'Normal', 'Robinson, Robert' => 'Normal', 'Walker, Daniel' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 13bcc5ff-6ccd-4f8d-9b43-4615c5c74ca9
