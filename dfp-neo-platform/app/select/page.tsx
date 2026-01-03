@@ -5,28 +5,40 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Image from 'next/image';
 
-const versions = [
+const apps = [
   {
     id: 'flight-school',
-    name: 'DFP-NEO Flight School',
-    description: 'Comprehensive flight training scheduling and management',
-    icon: '✈️',
+    name: 'DFP-NEO',
+    subtitle: 'Flight School Edition',
+    description: 'Comprehensive Flight Training Scheduling and Training Management System (TMS)',
+    image: '/images/trainer-aircraft.jpg',
     status: 'active',
     href: '/flight-school',
   },
   {
-    id: 'advanced-training',
-    name: 'DFP-NEO Advanced Training',
-    description: 'Advanced pilot training and certification management',
-    icon: '🚁',
+    id: 'reconnaissance',
+    name: 'DFP-NEO', 
+    subtitle: 'Reconnaissance Edition',
+    description: 'Advanced reconnaissance mission planning and execution',
+    image: '/images/p8-aircraft.jpg',
     status: 'coming-soon',
     href: '#',
   },
   {
-    id: 'commercial-ops',
-    name: 'DFP-NEO Commercial Operations',
-    description: 'Commercial flight operations and crew scheduling',
-    icon: '🛫',
+    id: 'air-movements',
+    name: 'DFP-NEO',
+    subtitle: 'Air Movements Edition', 
+    description: 'Strategic air transport and logistics management',
+    image: '/images/c17-aircraft.jpg',
+    status: 'coming-soon',
+    href: '#',
+  },
+  {
+    id: 'hybrid',
+    name: 'DFP-NEO',
+    subtitle: 'Hybrid Edition',
+    description: 'Multi-role aviation operations platform',
+    image: '/images/b300-aircraft.jpg', 
     status: 'coming-soon',
     href: '#',
   },
@@ -44,126 +56,199 @@ export default function SelectPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-neo-silver text-xl">Loading...</div>
+      <div className="h-screen w-screen bg-black flex items-center justify-center">
+        <div className="text-neutral-300 text-xl">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-8">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/images/logo.png"
-              alt="DFP-NEO"
-              width={200}
-              height={80}
-              className="h-16 w-auto"
-            />
+    <div className="h-screen w-screen bg-black overflow-hidden flex flex-col">
+      {/* Header with Logo and User Info */}
+      <div className="flex items-center justify-between p-8 relative z-10">
+        <div className="flex items-center gap-4">
+          <Image
+            src="/images/logo.png"
+            alt="DFP-NEO"
+            width={400}
+            height={160}
+            unoptimized
+            className="h-24 w-auto"
+          />
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-neutral-400 text-sm">Welcome back,</p>
+            <p className="text-neutral-200 font-semibold">{session?.user?.name || session?.user?.username}</p>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-neo-silver text-sm">Welcome back,</p>
-              <p className="text-white font-semibold">{session?.user?.name || session?.user?.username}</p>
-            </div>
-            {session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' ? (
-              <button
-                onClick={() => router.push('/admin')}
-                className="metal-button text-sm py-2 px-4"
-              >
-                Admin Panel
-              </button>
-            ) : null}
+          {session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' ? (
             <button
-              onClick={() => router.push('/api/auth/signout')}
-              className="text-gray-400 hover:text-white transition-colors text-sm"
+              onClick={() => router.push('/admin')}
+              className="bg-gray-800/80 border border-gray-600 text-neutral-200 px-4 py-2 rounded text-sm hover:bg-gray-700/80 transition"
             >
-              Sign Out
+              Admin Panel
             </button>
-          </div>
+          ) : null}
+          <button
+            onClick={() => router.push('/api/auth/signout')}
+            className="text-neutral-400 hover:text-neutral-200 transition-colors text-sm"
+          >
+            Sign Out
+          </button>
         </div>
+      </div>
 
-        {/* Title */}
-        <div className="text-center mb-16 animate-fade-in">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Select Your Platform
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Choose the DFP-NEO version that matches your needs
-          </p>
-        </div>
-
-        {/* Version Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {versions.map((version, index) => (
-            <div
-              key={version.id}
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 0.1}s` }}
+      {/* Main Content - 2x2 Grid */}
+      <div className="flex-1 overflow-y-auto px-8 py-8">
+        <div className="grid grid-cols-2 gap-6 max-w-4xl mx-auto w-full">
+          {apps.map((app, index) => (
+            <button
+              key={app.id}
+              onClick={() => {
+                if (app.status === 'active') {
+                  router.push(app.href);
+                }
+              }}
+              disabled={app.status !== 'active'}
+              className={`relative group transition-all duration-300 ${
+                app.status === 'active' 
+                  ? 'hover:scale-105 cursor-pointer' 
+                  : 'opacity-60 cursor-not-allowed'
+              }`}
             >
-              <button
-                onClick={() => {
-                  if (version.status === 'active') {
-                    router.push(version.href);
-                  }
-                }}
-                disabled={version.status !== 'active'}
-                className={`metal-plate w-full h-full text-left transition-all duration-300 ${
-                  version.status === 'active'
-                    ? 'hover:scale-105 cursor-pointer'
-                    : 'opacity-50 cursor-not-allowed'
-                }`}
+              {/* Metal Plate Background */}
+              <div className="relative bg-gradient-to-br from-gray-700 via-gray-600 to-gray-700 rounded-lg border-2 border-gray-500 shadow-xl p-5 h-full min-h-[280px] overflow-hidden"
+                   style={{
+                     backgroundImage: `
+                       repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255,255,255,0.03) 1px, rgba(255,255,255,0.03) 2px),
+                       repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0.1) 2px),
+                       linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 25%, #2a2a2a 50%, #3a3a3a 75%, #4a4a4a 100%)
+                     `,
+                     backgroundSize: '200px 200px, 200px 200px, 100% 100%',
+                     backgroundPosition: '0 0, 0 0, 0 0'
+                   }}
               >
-                <div className="flex flex-col h-full">
-                  {/* Icon */}
-                  <div className="text-6xl mb-4">{version.icon}</div>
-
-                  {/* Title */}
-                  <h3 className="text-2xl font-bold text-white mb-3">
-                    {version.name}
-                  </h3>
-
-                  {/* Description */}
-                  <p className="text-gray-400 mb-6 flex-grow">
-                    {version.description}
-                  </p>
-
-                  {/* Status Badge */}
-                  <div className="flex items-center justify-between">
-                    {version.status === 'active' ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-400 border border-green-500">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-900/30 text-yellow-400 border border-yellow-500">
-                        Coming Soon
-                      </span>
-                    )}
-                    {version.status === 'active' && (
-                      <span className="text-neo-silver text-sm">
-                        Click to launch →
-                      </span>
-                    )}
+                {/* Corner Screws */}
+                <div className="absolute top-3 left-3 w-4 h-4 rounded-full border-2 border-gray-400 shadow-inner"
+                     style={{
+                       background: 'radial-gradient(circle at 30% 30%, #8a8a8a, #4a4a4a, #2a2a2a)',
+                       boxShadow: 'inset -1px -1px 2px rgba(0,0,0,0.5), 1px 1px 2px rgba(255,255,255,0.2)'
+                     }}>
+                  <div className="absolute inset-1 bg-gray-600 rounded-full" 
+                       style={{
+                         background: 'radial-gradient(circle at 40% 40%, #6a6a6a, #3a3a3a)'
+                       }}>
                   </div>
                 </div>
-              </button>
-            </div>
+                <div className="absolute top-3 right-3 w-4 h-4 rounded-full border-2 border-gray-400 shadow-inner"
+                     style={{
+                       background: 'radial-gradient(circle at 30% 30%, #8a8a8a, #4a4a4a, #2a2a2a)',
+                       boxShadow: 'inset -1px -1px 2px rgba(0,0,0,0.5), 1px 1px 2px rgba(255,255,255,0.2)'
+                     }}>
+                  <div className="absolute inset-1 bg-gray-600 rounded-full" 
+                       style={{
+                         background: 'radial-gradient(circle at 40% 40%, #6a6a6a, #3a3a3a)'
+                       }}>
+                  </div>
+                </div>
+                <div className="absolute bottom-3 left-3 w-4 h-4 rounded-full border-2 border-gray-400 shadow-inner"
+                     style={{
+                       background: 'radial-gradient(circle at 30% 30%, #8a8a8a, #4a4a4a, #2a2a2a)',
+                       boxShadow: 'inset -1px -1px 2px rgba(0,0,0,0.5), 1px 1px 2px rgba(255,255,255,0.2)'
+                     }}>
+                  <div className="absolute inset-1 bg-gray-600 rounded-full" 
+                       style={{
+                         background: 'radial-gradient(circle at 40% 40%, #6a6a6a, #3a3a3a)'
+                       }}>
+                  </div>
+                </div>
+                <div className="absolute bottom-3 right-3 w-4 h-4 rounded-full border-2 border-gray-400 shadow-inner"
+                     style={{
+                       background: 'radial-gradient(circle at 30% 30%, #8a8a8a, #4a4a4a, #2a2a2a)',
+                       boxShadow: 'inset -1px -1px 2px rgba(0,0,0,0.5), 1px 1px 2px rgba(255,255,255,0.2)'
+                     }}>
+                  <div className="absolute inset-1 bg-gray-600 rounded-full" 
+                       style={{
+                         background: 'radial-gradient(circle at 40% 40%, #6a6a6a, #3a3a3a)'
+                       }}>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="relative z-10 h-full flex flex-col">
+                  {/* Aircraft Image */}
+                  <div className="relative h-36 mb-3 rounded overflow-hidden bg-gray-900/50">
+                    <Image
+                      src={app.image}
+                      alt={app.subtitle}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                      onError={(e) => {
+                        // Fallback to placeholder if image not found
+                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDIwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMWExYTFiIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNTUiIGZpbGw9IiNjMGMwYzAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCI+QWlyY3JhZnQgSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=';
+                      }}
+                    />
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 to-transparent"></div>
+                  </div>
+
+                  {/* Text Content */}
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      {/* DFP-NEO Title */}
+                      <h3 className="text-2xl font-bold text-neutral-200 mb-1 tracking-wider">
+                        {app.name}
+                      </h3>
+                      {/* Subtitle */}
+                      <p className="text-lg text-neutral-400 mb-3 font-medium">
+                        {app.subtitle}
+                      </p>
+                      {/* Description */}
+                      <p className="text-neutral-500 text-xs mb-4 leading-tight">
+                        {app.description}
+                      </p>
+                    </div>
+
+                    {/* Status and Launch */}
+                    <div className="flex items-center justify-between">
+                      {app.status === 'active' ? (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-900/30 text-green-400 border border-green-600">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-900/30 text-yellow-400 border border-yellow-600">
+                          Coming Soon
+                        </span>
+                      )}
+                      {app.status === 'active' && (
+                        <span className="text-neutral-400 text-sm group-hover:text-neutral-300 transition-colors">
+                          Click to launch →
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hover Effect */}
+                {app.status === 'active' && (
+                  <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                )}
+              </div>
+            </button>
           ))}
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="mt-16 text-center text-gray-600 text-sm">
-          <p>DFP-NEO Platform | Powered by NinjaTech AI</p>
-          <p className="mt-2">
-            For support, contact{' '}
-            <a href="mailto:support@dfp-neo.com" className="text-neo-silver hover:text-white transition-colors">
-              support@dfp-neo.com
-            </a>
-          </p>
-        </div>
+      {/* Footer */}
+      <div className="text-center p-4 text-neutral-600 text-sm border-t border-gray-800">
+        <p>DFP-NEO Platform | Powered by NinjaTech AI</p>
+        <p className="mt-1">
+          For support, contact{' '}
+          <a href="mailto:support@dfp-neo.com" className="text-neutral-400 hover:text-neutral-300 transition-colors">
+            support@dfp-neo.com
+          </a>
+        </p>
       </div>
     </div>
   );

@@ -16,6 +16,29 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
+        // Development hardcoded users - remove in production
+        const testUsers = [
+          { username: 'admin', password: 'admin123', role: 'ADMIN', name: 'Admin User', email: 'admin@dfp-neo.com' },
+          { username: 'pilot', password: 'pilot123', role: 'PILOT', name: 'Test Pilot', email: 'pilot@dfp-neo.com' },
+          { username: 'instructor', password: 'instructor123', role: 'INSTRUCTOR', name: 'Flight Instructor', email: 'instructor@dfp-neo.com' },
+        ];
+
+        const testUser = testUsers.find(user => 
+          user.username === credentials.username && user.password === credentials.password
+        );
+
+        if (testUser) {
+          return {
+            id: testUser.username,
+            username: testUser.username,
+            email: testUser.email,
+            role: testUser.role,
+            name: testUser.name,
+          };
+        }
+
+        // Production database code (commented out for development)
+        /*
         const user = await prisma.user.findUnique({
           where: { username: credentials.username as string },
         });
@@ -46,6 +69,8 @@ export const authConfig: NextAuthConfig = {
           role: user.role,
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         };
+        */
+        return null;
       },
     }),
   ],
