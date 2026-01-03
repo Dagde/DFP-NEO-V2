@@ -1,6 +1,6 @@
 // Production user setup script
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -9,7 +9,7 @@ const productionUsers = [
     username: 'admin',
     email: 'admin@dfp-neo.com',
     password: 'Admin2024!Secure',
-    role: 'ADMIN',
+    role: Role.ADMIN,
     firstName: 'System',
     lastName: 'Administrator',
   },
@@ -17,7 +17,7 @@ const productionUsers = [
     username: 'john.pilot',
     email: 'john.pilot@dfp-neo.com', 
     password: 'Pilot2024!Secure',
-    role: 'PILOT',
+    role: Role.PILOT,
     firstName: 'John',
     lastName: 'Smith',
   },
@@ -25,7 +25,7 @@ const productionUsers = [
     username: 'jane.instructor',
     email: 'jane.instructor@dfp-neo.com',
     password: 'Instructor2024!Secure', 
-    role: 'INSTRUCTOR',
+    role: Role.INSTRUCTOR,
     firstName: 'Jane',
     lastName: 'Wilson',
   }
