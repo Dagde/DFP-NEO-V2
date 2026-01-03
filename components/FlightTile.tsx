@@ -607,6 +607,29 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 }}
             />
         )}
+        {(event as any).isCancelled && !isPreview && (
+            <svg 
+                className="absolute inset-0 pointer-events-none z-20"
+                style={{ width: '100%', height: '100%' }}
+            >
+                <line 
+                    x1="0" 
+                    y1="0" 
+                    x2="100%" 
+                    y2="100%" 
+                    stroke="rgb(239, 68, 68)" 
+                    strokeWidth="2"
+                />
+                <line 
+                    x1="100%" 
+                    y1="0" 
+                    x2="0" 
+                    y2="100%" 
+                    stroke="rgb(239, 68, 68)" 
+                    strokeWidth="2"
+                />
+            </svg>
+        )}
         <div className="relative w-full h-full text-white">
             {isDutySup ? (
                 <>

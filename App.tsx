@@ -5238,8 +5238,8 @@ const App: React.FC = () => {
     const handleVisualAdjustEnd = (event: ScheduleEvent) => {
         setIsVisualAdjustMode(false);
         setVisualAdjustEvent(null);
-        // Update the selected event so the modal shows the new times
-        setSelectedEvent(event);
+        // Close the modal completely when visual adjust ends
+        setSelectedEvent(null);
         // The event has already been updated in the events array during dragging
     };
     
@@ -8642,6 +8642,8 @@ updates.forEach(update => {
                     />;
                 }
                 return null;
+            case 'AUTH':
+                return <AuthorisationView />;
             default:
                 return <div>View not found</div>;
         }
