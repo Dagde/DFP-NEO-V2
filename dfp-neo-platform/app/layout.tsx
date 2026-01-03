@@ -17,6 +17,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* IMMEDIATE Purple Button Destruction - Maximum Specificity */
+            button[style*="rgb(118, 75, 162)"],
+            button[style*="118, 75, 162"],
+            button[style*="#764ba2"],
+            *[style*="background: rgb(118, 75, 162)"],
+            *[style*="background-color: rgb(118, 75, 162)"],
+            *[style*="rgb(118, 75, 162)"] {
+              background-color: #374151 !important;
+              background: #374151 !important;
+              color: #ffffff !important;
+              border-color: #4b5563 !important;
+            }
+          `
+        }} />
+      </head>
       <body>
         <Providers>{children}</Providers>
         <script dangerouslySetInnerHTML={{
