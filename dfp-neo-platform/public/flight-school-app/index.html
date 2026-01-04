@@ -37,14 +37,17 @@
       /* DO NOT hide buttons globally - only target sidebar buttons specifically */
       /* This ensures Save buttons in Flight Details modal still work */
       
-      /* Only hide purple buttons that are in the left sidebar area */
-      .sidebar button[style*="rgb(118, 75, 162)"],
-      [class*="sidebar"] button[style*="rgb(118, 75, 162)"],
-      .courses-section button[style*="rgb(118, 75, 162)"] {
+      /* Hide ALL purple buttons everywhere - Edit and Save buttons serve no purpose */
+      button[style*="rgb(118, 75, 162)"],
+      button[style*="#764ba2"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
     </style>
     <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
@@ -502,17 +505,27 @@
       const buttons = document.querySelectorAll('button');
       
       buttons.forEach(btn => {
+        const style = window.getComputedStyle(btn);
+        const bg = style.backgroundColor;
         const text = btn.textContent || '';
         const hasEditEmoji = text.includes('✏️');
         const hasSaveEmoji = text.includes('💾');
         
-        // If it has Edit or Save emoji, force blue background
-        if (hasEditEmoji || hasSaveEmoji) {
-          // Remove inline styles
-          btn.style.background = '#3b82f6';
-          btn.style.backgroundColor = '#3b82f6';
+        // Check if purple background
+        const isPurple = bg === 'rgb(118, 75, 162)' || bg === 'rgba(118, 75, 162, 1)';
+        
+        // If it has Edit/Save emoji OR purple background, HIDE IT COMPLETELY
+        if (hasEditEmoji || hasSaveEmoji || isPurple) {
+          btn.style.setProperty('display', 'none', 'important');
+          btn.style.setProperty('visibility', 'hidden', 'important');
+          btn.style.setProperty('opacity', '0', 'important');
+          btn.style.setProperty('pointer-events', 'none', 'important');
+          btn.style.setProperty('height', '0', 'important');
+          btn.style.setProperty('width', '0', 'important');
+          btn.style.setProperty('margin', '0', 'important');
+          btn.style.setProperty('padding', '0', 'important');
           
-          console.log('DFP-NEO: Nuked purple button:', text.trim());
+          console.log('DFP-NEO: HIDDEN useless button:', text.trim());
         }
       });
     }
