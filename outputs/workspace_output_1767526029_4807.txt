@@ -1,0 +1,33 @@
+[feature/comprehensive-build-algorithm a10b8ad] Fix Solo flight duplicate names in FlightTile - prevent pilot name from appearing twice
+ Committer: root <root@172.16.0.108>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 21 files changed, 902 insertions(+), 24 deletions(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-C2PVgj_X.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-C2PVgj_X.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-D-CxPbrL.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-D-CxPbrL.js.map
+ create mode 100644 outputs/workspace_output_1767525938_3605.txt
+ create mode 100644 outputs/workspace_output_1767525943_7124.txt
+ create mode 100644 outputs/workspace_output_1767525949_7685.txt
+ create mode 100644 outputs/workspace_output_1767525957_8611.txt
+ create mode 100644 outputs/workspace_output_1767525963_7636.txt
+ create mode 100644 outputs/workspace_output_1767525967_331.txt
+ create mode 100644 outputs/workspace_output_1767525980_188.txt
+ create mode 100644 outputs/workspace_output_1767525997_9192.txt
+ create mode 100644 outputs/workspace_output_1767526011_9478.txt
+ create mode 100644 outputs/workspace_output_1767526015_8664.txt
+ create mode 100644 outputs/workspace_output_1767526019_385.txt
+ create mode 100644 outputs/workspace_output_1767526024_9686.txt
+ create mode 100644 outputs/workspace_output_1767526029_4807.txt
+To https://github.com/Dagde/DFP---NEO.git
+   0813591..a10b8ad  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
