@@ -1,0 +1,4 @@
+app/api/admin/users/[id]/route.ts
+app/api/admin/users/route.ts
+app/api/schedule/filter/route.ts
+app/api/auth/[...nextauth]/route.ts

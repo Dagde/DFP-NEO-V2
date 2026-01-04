@@ -1,0 +1,9 @@
+-rw-r--r-- 1 root root 186K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/framework-d7de93249215fb06.js
+-rw-r--r-- 1 root root 169K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/4bd1b696-c023c6e3521b1417.js
+-rw-r--r-- 1 root root 169K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/255-cb395327542b56ef.js
+-rw-r--r-- 1 root root 125K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/main-a4753544b5b73813.js
+-rw-r--r-- 1 root root 110K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/polyfills-42372ed130431b0a.js
+-rw-r--r-- 1 root root  15K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/394-b9e790b2947ff25e.js
+-rw-r--r-- 1 root root 7.7K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/199-d68807470d310e91.js
+-rw-r--r-- 1 root root 3.4K Jan  4 12:02 dfp-neo-platform/.next/static/chunks/webpack-74c939c87fa0092a.js
+-rw-r--r-- 1 root root  557 Jan  4 12:02 dfp-neo-platform/.next/static/chunks/main-app-c5d5af050ad54be3.js

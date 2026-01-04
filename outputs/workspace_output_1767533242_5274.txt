@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Remove all purple colors from the application */
+button[style*="rgb(118, 75, 162)"],
+button[style*="#764ba2"],
+button[style*="rgb(128, 0, 128)"],
+.bg-purple,
+.text-purple,
+.border-purple,
+.purple {
+  background-color: #4b5563 !important; /* gray-600 */
+  color: #ffffff !important;
+  border-color: #374151 !important; /* gray-700 */
+}
+
+/* AGGRESSIVE Override any inline purple styles */
+*[style*="rgb(118, 75, 162)"],
+*[style*="118, 75, 162"],
+*[style*="#764ba2"],
+*[style*="background: rgb(118, 75, 162)"],
+*[style*="background-color: rgb(118, 75, 162)"],
+*[style*="background: #764ba2"],
+*[style*="background-color: #764ba2"] {
+  background-color: #374151 !important;
+  background: #374151 !important;
+  color: #ffffff !important;
+  border-color: #4b5563 !important;
+}
+
+/* Override any element with purple styling */
+button[style*="rgb(118, 75, 162)"],
+button[style*="118, 75, 162"],
+button[style*="#764ba2"] {
+  background-color: #374151 !important;
+  background: #374151 !important;
+  color: #ffffff !important;
+  border-color: #4b5563 !important;
+}
+
+/* Specific override for Edit/Save buttons that might be purple */
+button.edit-button,
+button.save-button,
+button:contains("Edit"),
+button:contains("Save") {
+  background-color: #374151 !important; /* gray-700 */
+  color: #ffffff !important;
+}
+

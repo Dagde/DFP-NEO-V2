@@ -1,0 +1,10 @@
+55:    flightType: 'Dual' | 'Solo';
+541:                setCrew(prev => prev.map(c => ({ ...c, flightType: syllabusItem.flightType as 'Dual' | 'Solo' })));
+718:                return crew[i] || { flightType: defaultFlightType as 'Dual' | 'Solo', instructor: '', student: '', pilot: '', group: '', groupTraineeIds: [] };
+860:            const flightTypeValue = value as 'Dual' | 'Solo';
+962:                    flightType: 'Solo' as 'Dual' | 'Solo'
+1142:                    flightType: 'Dual',
+1179:        const traineeFullName = event.flightType === 'Dual' ? event.student : event.pilot;
+1293:    const showCrewField = (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && crewMember.flightType === 'Dual';
+1307:            {crewMember.flightType === 'Dual' ? (
+1818:                                    {event.flightType === 'Dual' ? (

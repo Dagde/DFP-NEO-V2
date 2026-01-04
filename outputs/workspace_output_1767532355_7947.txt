@@ -1,0 +1,5 @@
+0f9af00 Fix production deployment: embed purple button fix script directly in HTML to resolve missing script file issue
+edc9fba Add purple button fix script to remove purple Edit/Save buttons
+c4f4719 Optimize landing page images for faster loading
+f48ea15 Fix SCT Solo to Dual conversion bug
+1538e76 Add fallback for SCT Solo events - detect Solo by empty student field

@@ -1,0 +1,10 @@
+-rw-r--r-- 1 root root  258815 Jan  3 18:00 /workspace/Screen Shot 2026-01-04 at 4.59.52 am.jpg
+-rw-r--r-- 1 root root  246386 Jan  3 22:16 /workspace/Screen Shot 2026-01-04 at 9.16.27 am.jpg
+-rw-r--r-- 1 root root  373629 Jan  4 13:37 /workspace/Screen Shot 2026-01-05 at 12.37.41 am.jpg
+-rw-r--r-- 1 root root  202628 Jan  4 13:39 /workspace/Screen Shot 2026-01-05 at 12.38.50 am.jpg
+-rw-r--r-- 1 root root   11790 Jan  3 15:33 /workspace/Trainer Aircraft copy.png
+-rw-r--r-- 1 root root  764337 Jan  2 14:44 /workspace/Username 1 copy.png
+-rw-r--r-- 1 root root   23994 Jan  4 12:13 /workspace/logo.png
+-rw-r--r-- 1 root root   64198 Jan  4 12:13 /workspace/password.png
+-rw-r--r-- 1 root root  255179 Jan  4 13:12 /workspace/plate.png
+-rw-r--r-- 1 root root   80158 Jan  4 12:13 /workspace/username.png
