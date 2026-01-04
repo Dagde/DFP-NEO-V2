@@ -1,0 +1,1 @@
+  <script type="module" crossorigin src="./assets/index-uPhlgI5U.js?v=1767499865"></script>

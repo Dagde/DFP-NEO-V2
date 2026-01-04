@@ -1,0 +1,2 @@
+fatal: path 'dfp-neo-platform/public/flight-school-app/index.html' exists, but not 'public/flight-school-app/index.html'
+hint: Did you mean '071829e:dfp-neo-platform/public/flight-school-app/index.html' aka '071829e:./public/flight-school-app/index.html'?

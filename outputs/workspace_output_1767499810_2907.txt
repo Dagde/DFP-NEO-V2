@@ -1,0 +1,20 @@
+620fd3a Add SOLO flight fix documentation
+2e6ee9f Add cache-busting parameter to force browser refresh of SOLO fix
+a9ae65b Rebuild flight-school-app with SOLO detection fix
+e2ee8ec Fix SOLO flight display - rebuild flight-school-app with correct SOLO detection logic
+00450e1 ENHANCED: Multiple timing strategies for SOLO flight fix
+089b4a9 FIX: SOLO flight detection using TreeWalker + Purple button complete removal
+c280c79 DEBUG: Add comprehensive console logging for SOLO flight detection
+291ad5b FIX: Complete removal of purple Edit/Save buttons + Enhanced SOLO flight detection
+52dd7dd NUCLEAR FIX: Strip inline purple background styles every 100ms - force blue on Edit/Save buttons + Enhanced SOLO flight detection
+6e396e5 NUCLEAR FIX: Strip inline purple background styles every 100ms - force blue on Edit/Save buttons
+3a8f5d6 ULTRA AGGRESSIVE FIX: Simplified and direct fixes
+0829449 COMPREHENSIVE FIX: Visual Adjust + Solo Flights + Course Colors
+071829e FIX: Restore Visual Adjust button + Fix solo flight display
+907042d FIX: Restore Save button in Flight Details modal
+ed95c95 Remove Edit/Save buttons completely - they serve no purpose
+8f16111 FINAL FIX: Direct inline script + CSS in flight-school-app HTML
+93deb37 NUCLEAR OPTION: CSS injection + cache busting for purple buttons
+121d5bb AGGRESSIVE FIX: Destroy persistent purple inline styles
+d7a73c9 COMPREHENSIVE FIX: Eliminate purple buttons from entire application
+35c5d98 Implement proper event handling for cancelled and STBY events

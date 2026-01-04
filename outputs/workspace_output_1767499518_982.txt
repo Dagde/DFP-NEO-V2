@@ -1,0 +1,17 @@
+[feature/comprehensive-build-algorithm 620fd3a] Add SOLO flight fix documentation
+ Committer: root <root@172.16.0.151>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 1 file changed, 101 insertions(+)
+ create mode 100644 dfp-neo-platform/SOLO_FLIGHT_FIX_SUMMARY.md
+To https://github.com/Dagde/DFP---NEO.git
+   2e6ee9f..620fd3a  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
