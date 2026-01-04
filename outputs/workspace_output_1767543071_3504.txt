@@ -1,0 +1,5 @@
+8:    username: 'admin',
+19:    username: 'john.pilot',
+30:    username: 'jane.instructor',
+70:    if (!username || !password) {
+74:    const existingUser = mockUsers.find(u => u.username === username);

@@ -1,0 +1,40 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth/auth';
+
+// Mock user data for development (will be replaced with real database once connected)
+const mockUsers = [
+  {
+    id: '1',
+    username: 'admin',
+    email: 'admin@dfp-neo.com',
+    role: 'ADMIN',
+    firstName: 'System',
+    lastName: 'Administrator',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    username: 'john.pilot',
+    email: 'john.pilot@dfp-neo.com',
+    role: 'PILOT',
+    firstName: 'John',
+    lastName: 'Smith',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: null,
+  },
+  {
+    id: '3',
+    username: 'jane.instructor',
+    email: 'jane.instructor@dfp-neo.com',
+    role: 'INSTRUCTOR',
+    firstName: 'Jane',
+    lastName: 'Wilson',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: null,
+  }
+];
+

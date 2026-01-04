@@ -1,0 +1,18 @@
+2026-01-04T16:09:27.506489354Z [inf]  Failed to compile.
+
+
+2026-01-04T16:09:27.506947695Z [inf]  ./app/api/admin/users/route.ts:45:35
+Type error: Property 'role' does not exist on type '{ id: string; userId: string; displayName: string | null; email: string | null; status: UserStatus; permissionsRole: { id: string; name: string; }; mustChangePassword: boolean; } & User'.
+
+[0m [90m 43 |[39m     [36mconst[39m session [33m=[39m [36mawait[39m auth()[33m;[39m
+ [90m 44 |[39m     
+[31m[1m>[22m[39m[90m 45 |[39m     [36mif[39m ([33m![39msession [33m||[39m (session[33m.[39muser[33m.[39mrole [33m!==[39m [32m'ADMIN'[39m [33m&&[39m session[33m.[39muser[33m.[39mrole [33m!==[39m [32m'SUPER_ADMIN'[39m)) {
+ [90m    |[39m                                   [31m[1m^[22m[39m
+ [90m 46 |[39m       [36mreturn[39m [33mNextResponse[39m[33m.[39mjson({ error[33m:[39m [32m'Unauthorized'[39m }[33m,[39m { status[33m:[39m [35m401[39m })[33m;[39m
+ [90m 47 |[39m     }
+ [90m 48 |[39m[0m
+
+2026-01-04T16:09:27.543732672Z [inf]  Next.js build worker exited with code: 1 and signal: null
+
+2026-01-04T16:09:28.730113861Z [err]  npm run build
+2026-01-04T16:09:28.746183650Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1
