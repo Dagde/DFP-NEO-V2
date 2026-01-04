@@ -1,0 +1,5 @@
+121d5bb AGGRESSIVE FIX: Destroy persistent purple inline styles
+d7a73c9 COMPREHENSIVE FIX: Eliminate purple buttons from entire application
+35c5d98 Implement proper event handling for cancelled and STBY events
+02756bd Fix: Remove purple buttons and resolve TypeScript build error
+2f290d3 Fix: Remove purple color from Tailwind config in flight-school-app

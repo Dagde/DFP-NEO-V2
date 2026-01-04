@@ -1,0 +1,100 @@
+          const isEditingView = element.closest('.editing-view, .admin-view, .scheduler-view');
+          
+          if (isScheduleView && !isEditingView) {
+            element.style.display = 'none';
+            element.setAttribute('data-stby-hidden', 'true');
+            console.log('DFP-NEO: Hidden STBY event from schedule');
+          }
+        });
+      });
+    }
+
+    function ensureCancelledEventsDisplay() {
+      const cancelledSelectors = [
+        '[data-status="CANCELLED"]',
+        '[data-cancelled="true"]',
+        '.cancelled-event',
+        '.event-cancelled',
+        '[data-event*="CANCELLED"]'
+      ];
+      
+      cancelledSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          // Ensure cancelled events are visible with proper styling
+          element.style.display = '';
+          element.style.opacity = '0.6';
+          
+          // Add or ensure red X indicator
+          if (!element.querySelector('.dfp-cancel-x')) {
+            const redX = document.createElement('div');
+            redX.className = 'dfp-cancel-x';
+            redX.innerHTML = '❌';
+            redX.title = 'Cancelled Event';
+            redX.style.cssText = `
+              position: absolute;
+              top: 2px;
+              right: 2px;
+              font-size: 14px;
+              z-index: 100;
+              pointer-events: none;
+              text-shadow: 0 0 2px rgba(0,0,0,0.8);
+            `;
+            
+            if (element.style.position !== 'absolute' && element.style.position !== 'relative') {
+              element.style.position = 'relative';
+            }
+            
+            element.appendChild(redX);
+            console.log('DFP-NEO: Added red X to cancelled event');
+          }
+        });
+      });
+    }
+
+    function setupEventMonitoring() {
+      // Monitor for DOM changes to apply fixes dynamically
+      const observer = new MutationObserver(function(mutations) {
+        let shouldReapply = false;
+        
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'childList') {
+            // Check if any schedule or event elements were added
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) { // Element node
+                if (node.querySelector && (
+                  node.querySelector('[data-event-type]') ||
+                  node.querySelector('.event') ||
+                  node.querySelector('.schedule-item')
+                )) {
+                  shouldReapply = true;
+                }
+              }
+            });
+          }
+        });
+        
+        if (shouldReapply) {
+          setTimeout(applyUIFixes, 100);
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // Also reapply fixes periodically
+      setInterval(applyUIFixes, 5000);
+    }
+
+    // Add global function to manually trigger fixes
+    window.applyDFPFixes = applyEventHandlingFixes;
+    
+    console.log('DFP-NEO: Event handling system ready');
+  </script>
+</head>
+    <body class="bg-gray-800 text-white">
+      <div id="root"></div>
+    </body>
+  </html>

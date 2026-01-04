@@ -1,0 +1,3 @@
+dfp-neo-platform/app/api/admin/users/[id]/route.ts
+dfp-neo-platform/app/api/admin/users/route.ts
+dfp-neo-platform/app/api/auth/[...nextauth]/route.ts

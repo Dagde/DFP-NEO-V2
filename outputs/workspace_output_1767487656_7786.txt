@@ -1,0 +1,2 @@
+221:    // IMMEDIATE purple button elimination - runs BEFORE React loads
+283:    // Fix solo flight display - ensure SOLO flights show correctly

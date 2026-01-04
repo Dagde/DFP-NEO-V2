@@ -1,0 +1,1 @@
+283:    // Fix solo flight display - ensure SOLO flights show correctly

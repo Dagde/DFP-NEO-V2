@@ -493,6 +493,109 @@
     
     console.log('DFP-NEO: Event handling system ready');
   </script>
+
+  <script>
+    // NUCLEAR OPTION: Strip ALL inline background styles from buttons with emojis
+    
+    function nukeInlineStyles() {
+      // Get ALL buttons
+      const buttons = document.querySelectorAll('button');
+      
+      buttons.forEach(btn => {
+        const text = btn.textContent || '';
+        const hasEditEmoji = text.includes('✏️');
+        const hasSaveEmoji = text.includes('💾');
+        
+        // If it has Edit or Save emoji, force blue background
+        if (hasEditEmoji || hasSaveEmoji) {
+          // Remove inline styles
+          btn.style.background = '#3b82f6';
+          btn.style.backgroundColor = '#3b82f6';
+          
+          console.log('DFP-NEO: Nuked purple button:', text.trim());
+        }
+      });
+    }
+
+    // 2. FIX SOLO FLIGHTS - Replace duplicate names with SOLO
+    function fixSoloFlights() {
+      const tiles = document.querySelectorAll('[data-tile-id]');
+      tiles.forEach(tile => {
+        if (tile.dataset.soloFixed) return;
+        
+        const nameElements = tile.querySelectorAll('div');
+        const names = Array.from(nameElements)
+          .map(el => el.textContent?.trim())
+          .filter(text => text &amp;&amp; text.length > 3);
+        
+        if (names.length >= 2 &amp;&amp; names[0] === names[1]) {
+          nameElements.forEach((el, idx) => {
+            if (idx > 0 &amp;&amp; el.textContent?.trim() === names[0]) {
+              el.textContent = 'SOLO';
+              el.style.color = '#fbbf24';
+              el.style.fontWeight = 'bold';
+            }
+          });
+          tile.dataset.soloFixed = 'true';
+        }
+      });
+    }
+
+    // 3. FIX GREY COURSES - Change non-SCT grey to blue
+    function fixGreyCourses() {
+      const tiles = document.querySelectorAll('[data-tile-id]');
+      tiles.forEach(tile => {
+        const style = window.getComputedStyle(tile);
+        const bg = style.backgroundColor;
+        const text = tile.textContent || '';
+        
+        // If grey but NOT SCT, make it blue
+        if ((bg === 'rgb(156, 163, 175)' || bg === 'rgba(156, 163, 175, 1)') &amp;&amp; !text.includes('SCT')) {
+          tile.style.backgroundColor = '#3b82f6';
+        }
+      });
+    }
+
+    // Run immediately on load
+    setTimeout(() => {
+      nukeInlineStyles();
+      fixSoloFlights();
+      fixGreyCourses();
+      console.log('DFP-NEO: Initial fixes applied');
+    }, 100);
+
+    // Run solo fix 10 times in first 3 seconds (rapid fire)
+    for (let i = 1; i <= 10; i++) {
+      setTimeout(() => {
+        fixSoloFlights();
+      }, i * 300);
+    }
+
+    // Then continue every 2 seconds
+    setInterval(() => {
+      fixSoloFlights();
+      fixGreyCourses();
+    }, 2000);
+
+    // CRITICAL: Nuke inline styles every 100ms (10 times per second)
+    setInterval(nukeInlineStyles, 100);
+
+    // MutationObserver for dynamic content
+    const styleObserver = new MutationObserver(() => {
+      nukeInlineStyles();
+      fixSoloFlights();
+      fixGreyCourses();
+    });
+
+    styleObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style']
+    });
+
+    console.log('DFP-NEO: Nuclear style fix active - running every 100ms');
+  </script>
 </head>
     <body class="bg-gray-800 text-white">
       <div id="root"></div>

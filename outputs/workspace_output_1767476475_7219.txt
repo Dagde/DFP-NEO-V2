@@ -1,0 +1,14 @@
+total 320
+drwxr-xr-x  7 root root   4096 Jan  3 21:40 .
+drwxr-xr-x 15 root root   4096 Jan  3 17:29 ..
+-rw-r--r--  1 root root   4385 Jan  3 21:40 app-build-manifest.json
+-rw-r--r--  1 root root    995 Jan  3 21:40 build-manifest.json
+drwxr-xr-x  4 root root   4096 Jan  3 05:49 cache
+drwxr-xr-x  2 root root   4096 Jan  3 21:40 diagnostics
+-rw-r--r--  1 root root     20 Jan  3 21:40 package.json
+-rw-r--r--  1 root root      2 Jan  3 21:40 react-loadable-manifest.json
+drwxr-xr-x  5 root root   4096 Jan  3 21:40 server
+drwxr-xr-x  5 root root   4096 Jan  3 21:40 static
+-rw-r--r--  1 root root 276148 Jan  3 21:40 trace
+drwxr-xr-x  3 root root   4096 Jan  3 21:40 types
+Build completed

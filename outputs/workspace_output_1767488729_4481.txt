@@ -1,0 +1,26 @@
+└ ○ /test-login                            905 B         106 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/255-cb395327542b56ef.js       45.9 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.92 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[feature/comprehensive-build-algorithm 3a8f5d6] ULTRA AGGRESSIVE FIX: Simplified and direct fixes
+ Committer: root <root@172.16.0.26>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 1 file changed, 46 insertions(+), 146 deletions(-)
+To https://github.com/Dagde/DFP---NEO.git
+   0829449..3a8f5d6  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
