@@ -534,8 +534,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [eventCategory]);
 
     // Effect to pull Type (Dual/Solo) from syllabus when flight number changes
+    // IMPORTANT: SCT is explicitly excluded because SCT events default to Solo and should not be overridden by syllabus
     useEffect(() => {
-        if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di')) {
+        if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && eventCategory !== 'sct') {
             const syllabusItem = syllabusDetails.find(item => item.id === flightNumber);
             if (syllabusItem && syllabusItem.flightType) {
                 setCrew(prev => prev.map(c => ({ ...c, flightType: syllabusItem.flightType as 'Dual' | 'Solo' })));
