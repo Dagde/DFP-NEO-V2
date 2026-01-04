@@ -532,57 +532,62 @@
 
     // 2. FIX SOLO FLIGHTS - Replace duplicate names with SOLO
     function fixSoloFlights() {
-      // Find all text elements that might contain pilot names
-      const allElements = document.querySelectorAll('div, span, p');
+      console.log('=== SOLO FLIGHT DEBUG START ===');
+      
+      // Find all elements that might be flight tiles
+      const allElements = document.querySelectorAll('*');
       
       allElements.forEach(el => {
         const text = el.textContent?.trim() || '';
         
-        // Look for pattern: "#001 Name, Name" or "Name (N)" followed by "#001 Name"
-        // Check if element contains a name pattern with (N) indicator
-        if (text.includes('(N)') &amp;&amp; !el.dataset.soloChecked) {
-          el.dataset.soloChecked = 'true';
+        // Look for elements with (N) indicator - this marks a trainee
+        if (text.includes('(N)') &amp;&amp; !el.dataset.soloDebug) {
+          el.dataset.soloDebug = 'true';
           
-          // Get parent container
-          const parent = el.parentElement;
-          if (!parent) return;
+          console.log('--- Found (N) element ---');
+          console.log('Element:', el.tagName, el.className);
+          console.log('Text:', text);
+          console.log('Parent:', el.parentElement?.tagName, el.parentElement?.className);
+          console.log('Parent text:', el.parentElement?.textContent?.trim());
           
-          // Find all text in parent
-          const parentText = parent.textContent || '';
+          // Get the parent container
+          let container = el.parentElement;
+          let depth = 0;
           
-          // Extract name from first occurrence (before #)
-          const nameMatch = text.match(/^[\d:]+\s*([A-Za-z]+,\s*[A-Za-z]+)/);
-          if (!nameMatch) return;
-          
-          const pilotName = nameMatch[1];
-          
-          // Check if the same name appears twice (indicating SOLO flight)
-          const nameOccurrences = (parentText.match(new RegExp(pilotName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;'), 'g')) || []).length;
-          
-          if (nameOccurrences >= 2) {
-            // Find the second occurrence and replace with SOLO
-            const siblings = Array.from(parent.querySelectorAll('div, span, p'));
-            let foundFirst = false;
+          // Try to find the flight tile container (go up max 5 levels)
+          while (container &amp;&amp; depth < 5) {
+            const containerText = container.textContent || '';
+            console.log(`Level ${depth}:`, container.tagName, container.className);
+            console.log(`Level ${depth} text:`, containerText.substring(0, 200));
             
-            siblings.forEach(sibling => {
-              const siblingText = sibling.textContent?.trim() || '';
-              if (siblingText.includes(pilotName) &amp;&amp; !sibling.dataset.soloFixed) {
-                if (foundFirst) {
-                  // This is the second occurrence - replace with SOLO
-                  sibling.textContent = sibling.textContent?.replace(pilotName, 'SOLO') || 'SOLO';
-                  sibling.style.color = '#fbbf24';
-                  sibling.style.fontWeight = 'bold';
-                  sibling.dataset.soloFixed = 'true';
-                  console.log('DFP-NEO: Fixed SOLO flight for', pilotName);
-                } else {
-                  foundFirst = true;
-                  sibling.dataset.soloFixed = 'true';
-                }
+            // Count how many times a name appears
+            const nameMatch = text.match(/([A-Za-z]+,\s*[A-Za-z]+)\s*\(N\)/);
+            if (nameMatch) {
+              const pilotName = nameMatch[1];
+              console.log('Pilot name extracted:', pilotName);
+              
+              // Count occurrences in container
+              const regex = new RegExp(pilotName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;'), 'g');
+              const matches = containerText.match(regex);
+              const count = matches ? matches.length : 0;
+              
+              console.log(`Name "${pilotName}" appears ${count} times in container`);
+              
+              if (count >= 2) {
+                console.log('✓ This is a SOLO flight!');
+                console.log('Container HTML:', container.innerHTML.substring(0, 500));
               }
-            });
+            }
+            
+            container = container.parentElement;
+            depth++;
           }
+          
+          console.log('--- End (N) element ---\n');
         }
       });
+      
+      console.log('=== SOLO FLIGHT DEBUG END ===\n');
     }
 
     // 3. FIX GREY COURSES - Change non-SCT grey to blue
