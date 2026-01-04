@@ -1,0 +1,9 @@
+222:  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
+223:  const studentName = isSctEvent ? event.student : (event.student || (event.flightType === 'Solo' ? event.pilot : ''));
+270:        // For SCT Solo events, show SOLO label
+271:        if (isSctEvent && event.flightType === 'Solo') {
+274:                       SOLO
+284:        if (event.flightType === 'Solo') {
+287:                    SOLO
+341:     const isSoloFlight = event.flightType === 'Solo';
+344:     if (isSoloFlight && event.pilot) {
