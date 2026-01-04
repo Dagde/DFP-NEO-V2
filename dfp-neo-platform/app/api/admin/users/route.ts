@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth';
+import { auth } from '@/lib/auth';
 import { PrismaClient, UserStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         displayName,
         email,
         permissionsRole: { connect: { id: permissionsRoleId } },
-        status: 'ACTIVE',
+        status: 'active',
         mustChangePassword: true,
       },
       include: { permissionsRole: true },

@@ -1,0 +1,18 @@
+2026-01-04T16:13:36.092080649Z [inf]  Failed to compile.
+
+
+2026-01-04T16:13:36.092464249Z [inf]  ./app/api/admin/users/route.ts:61:9
+Type error: Type '"ACTIVE"' is not assignable to type 'UserStatus | undefined'. Did you mean '"active"'?
+
+[0m [90m 59 |[39m         email[33m,[39m
+ [90m 60 |[39m         permissionsRole[33m:[39m { connect[33m:[39m { id[33m:[39m permissionsRoleId } }[33m,[39m
+[31m[1m>[22m[39m[90m 61 |[39m         status[33m:[39m [32m'ACTIVE'[39m[33m,[39m
+ [90m    |[39m         [31m[1m^[22m[39m
+ [90m 62 |[39m         mustChangePassword[33m:[39m [36mtrue[39m[33m,[39m
+ [90m 63 |[39m       }[33m,[39m
+ [90m 64 |[39m       include[33m:[39m { permissionsRole[33m:[39m [36mtrue[39m }[33m,[39m[0m
+
+2026-01-04T16:13:36.119789622Z [inf]  Next.js build worker exited with code: 1 and signal: null
+
+2026-01-04T16:13:36.177839412Z [err]  npm run build
+2026-01-04T16:13:36.191203350Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1

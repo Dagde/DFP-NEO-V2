@@ -1,0 +1,11 @@
+enum UserStatus {
+  active
+  disabled
+  pending
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PILOT
+  INSTRUCTOR

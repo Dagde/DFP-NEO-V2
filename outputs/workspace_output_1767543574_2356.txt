@@ -1,0 +1,10 @@
+          </form>
+        </div>
+
+        <div className="text-center text-sm text-gray-400">
+          <p>For support, contact your system administrator</p>
+        </div>
+      </div>
+    </div>
+  );
+}
