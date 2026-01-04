@@ -1,0 +1,16 @@
+2026-01-04T16:32:01.234414633Z [inf]  Failed to compile.
+
+
+2026-01-04T16:32:01.23477447Z [inf]  app/(auth)/login/page.tsx
+You cannot have two parallel pages that resolve to the same path. Please check /(auth)/login/page and /login/page. Refer to the route group docs for more information: https://nextjs.org/docs/app/building-your-application/routing/route-groups
+
+app/login/page.tsx
+You cannot have two parallel pages that resolve to the same path. Please check /(auth)/login/page and /login/page. Refer to the route group docs for more information: https://nextjs.org/docs/app/building-your-application/routing/route-groups
+
+
+2026-01-04T16:32:01.247052676Z [inf]  
+
+2026-01-04T16:32:01.247208327Z [inf]  > Build failed because of webpack errors
+
+2026-01-04T16:32:01.364896697Z [err]  npm run build
+2026-01-04T16:32:01.379278893Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1
