@@ -1,60 +1,62 @@
-// Ultra-aggressive button hiding script - removes buttons completely from DOM
+// Selective button removal - only remove debug buttons with emojis
 (function() {
   'use strict';
   
-  console.log('🔴 Button hiding script loaded');
+  console.log('🔴 Selective button removal script loaded');
   
-  function hideButtons() {
+  function removeDebugButtons() {
     // Find all buttons on the page
     const allButtons = document.querySelectorAll('button');
-    let hiddenCount = 0;
+    let removedCount = 0;
     
     allButtons.forEach(button => {
       const buttonText = button.textContent.trim();
       const buttonHTML = button.innerHTML;
       
-      // Check if button contains Edit or Save text/emoji
-      if (
-        buttonText.includes('Edit') ||
-        buttonText.includes('✏️') ||
-        buttonText.includes('Save') ||
-        buttonText.includes('💾') ||
-        buttonHTML.includes('Edit') ||
-        buttonHTML.includes('✏️') ||
-        buttonHTML.includes('Save') ||
-        buttonHTML.includes('💾')
-      ) {
+      // ONLY remove buttons that have BOTH emoji AND text (debug buttons)
+      // This preserves normal "Edit" and "Save" buttons without emojis
+      const hasEditEmoji = buttonText.includes('✏️') || buttonHTML.includes('✏️');
+      const hasSaveEmoji = buttonText.includes('💾') || buttonHTML.includes('💾');
+      const hasEditText = buttonText.includes('Edit');
+      const hasSaveText = buttonText.includes('Save');
+      
+      // Remove ONLY if it has emoji (debug buttons have emojis)
+      if (hasEditEmoji || hasSaveEmoji) {
+        // Additional check: debug buttons are usually positioned fixed/absolute at bottom left
+        const styles = window.getComputedStyle(button);
+        const position = styles.position;
+        
         // COMPLETELY REMOVE THE BUTTON FROM THE DOM
         button.remove();
-        hiddenCount++;
-        console.log('🔴 REMOVED button from DOM:', buttonText);
+        removedCount++;
+        console.log('🔴 REMOVED debug button from DOM:', buttonText);
       }
     });
     
-    if (hiddenCount > 0) {
-      console.log(`🔴 Total buttons REMOVED: ${hiddenCount}`);
+    if (removedCount > 0) {
+      console.log(`🔴 Total debug buttons REMOVED: ${removedCount}`);
     }
   }
   
   // Run immediately - multiple times
-  hideButtons();
-  setTimeout(hideButtons, 0);
-  setTimeout(hideButtons, 10);
-  setTimeout(hideButtons, 50);
-  setTimeout(hideButtons, 100);
-  setTimeout(hideButtons, 200);
-  setTimeout(hideButtons, 500);
-  setTimeout(hideButtons, 1000);
-  setTimeout(hideButtons, 2000);
+  removeDebugButtons();
+  setTimeout(removeDebugButtons, 0);
+  setTimeout(removeDebugButtons, 10);
+  setTimeout(removeDebugButtons, 50);
+  setTimeout(removeDebugButtons, 100);
+  setTimeout(removeDebugButtons, 200);
+  setTimeout(removeDebugButtons, 500);
+  setTimeout(removeDebugButtons, 1000);
+  setTimeout(removeDebugButtons, 2000);
   
   // Run after DOM is fully loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', hideButtons);
+    document.addEventListener('DOMContentLoaded', removeDebugButtons);
   }
   
   // Set up a MutationObserver to watch for new buttons being added
   const observer = new MutationObserver(function(mutations) {
-    hideButtons(); // Just run it immediately on any DOM change
+    removeDebugButtons(); // Just run it immediately on any DOM change
   });
   
   // Start observing
@@ -64,7 +66,7 @@
   });
   
   // Also run very frequently as a fallback
-  setInterval(hideButtons, 500); // Every 0.5 seconds instead of 3 seconds
+  setInterval(removeDebugButtons, 500); // Every 0.5 seconds
   
-  console.log('🔴 Button hiding script initialized - REMOVING buttons from DOM');
+  console.log('🔴 Selective button removal initialized - only removing buttons with emojis');
 })();
