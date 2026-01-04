@@ -1,0 +1,71 @@
+                color: eventColor,
+                flightType: c.flightType,
+                instructor: c.instructor,
+                student: c.student,
+                pilot: c.pilot,
+                group: c.group,
+                groupTraineeIds: c.groupTraineeIds,
+                locationType,
+                origin: locationType === 'Local' ? school : origin,
+                destination: locationType === 'Local' ? school : destination,
+                formationType: flightNumber === 'SCT FORM' ? formationType : undefined,
+                formationPosition: flightNumber === 'SCT FORM' ? index + 1 : undefined,
+                callsign: flightNumber === 'SCT FORM' ? `${formationType}${index + 1}` : undefined,
+                formationId: undefined,
+                isDeploy: eventType === 'flight' && locationType === 'Land Away' ? isDeploy : undefined,
+                
+                // Explicit Deployment Period
+                deploymentStartDate: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentStartDate : undefined,
+                deploymentStartTime: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentStartTime : undefined,
+                deploymentEndDate: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentEndDate : undefined,
+                deploymentEndTime: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentEndTime : undefined,
+                deploymentAircraftCount: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentAircraftCount : undefined,
+                
+                // Save event category for LMP Currency handling
+                eventCategory: eventCategory,
+            };
+            
+            // Debug logging for SCT events
+            if (eventCategory === 'sct') {
+                console.log('💾 Saving SCT event:', {
+                    id: savedEvent.id,
+                    flightType: savedEvent.flightType,
+                    pilot: savedEvent.pilot,
+                    student: savedEvent.student,
+                    instructor: savedEvent.instructor,
+                    eventCategory: savedEvent.eventCategory,
+                    crewData: c,
+                    allCrew: crew
+                });
+            }
+            
+            return savedEvent;
+        });
+        
+        // Create Deployment Tile if deployment period is populated and isDeploy is true
+        console.log('Deployment Check:', {
+            eventType,
+            locationType,
+            isDeploy,
+            deploymentStartDate,
+            deploymentStartTime,
+            deploymentEndDate,
+            deploymentEndTime
+        });
+        
+        if (eventType === 'flight' && locationType === 'Land Away' && isDeploy && 
+            deploymentStartDate && deploymentStartTime && deploymentEndDate && deploymentEndTime) {
+            
+            console.log('Creating deployment tile...');
+            
+            // Convert deployment time strings to hours
+            const deployStartHour = parseTimeStringToHours(deploymentStartTime);
+            const deployEndHour = parseTimeStringToHours(deploymentEndTime);
+            
+            // Calculate deployment duration in hours, accounting for multi-day deployments
+            const startDate = new Date(deploymentStartDate);
+            const endDate = new Date(deploymentEndDate);
+            
+            // Calculate the number of days between start and end dates
+            const daysDifference = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            
