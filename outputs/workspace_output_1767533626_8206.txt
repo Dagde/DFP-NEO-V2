@@ -1,0 +1,18 @@
+commit edc9fbafeb6274fe7c3260305de4aea517c4883a
+Author: root <root@172.16.0.108>
+Date:   Sun Jan 4 12:26:48 2026 +0000
+
+    Add purple button fix script to remove purple Edit/Save buttons
+    
+    - Created comprehensive purple-button-fix.js script
+    - Script runs every 100ms to aggressively overwrite inline styles
+    - Includes MutationObserver to catch dynamically added buttons
+    - Also fixes solo flights and grey courses
+    - Added script reference to both index.html files
+    - Fixes issue where purple buttons reappeared after previous fixes
+
+dfp-neo-platform/index.html
+dfp-neo-platform/index.html.backup
+dfp-neo-platform/public/flight-school-app/index.html
+dfp-neo-platform/public/flight-school-app/index.html.backup
+dfp-neo-platform/public/purple-button-fix.js

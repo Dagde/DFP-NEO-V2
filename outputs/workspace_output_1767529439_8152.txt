@@ -1,0 +1,5 @@
+./node_modules/next/dist/next-devtools/dev-overlay/components/copy-button/index.d.ts
+./node_modules/next/dist/next-devtools/dev-overlay/components/errors/error-overlay-toolbar/docs-link-button.d.ts
+./node_modules/next/dist/next-devtools/dev-overlay/components/errors/error-overlay-toolbar/issue-feedback-button.d.ts
+./node_modules/next/dist/next-devtools/dev-overlay/components/errors/error-overlay-toolbar/nodejs-inspector-button.d.ts
+./node_modules/next/dist/next-devtools/dev-overlay/components/errors/error-overlay-toolbar/copy-error-button.d.ts

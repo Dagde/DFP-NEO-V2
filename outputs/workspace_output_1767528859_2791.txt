@@ -1,0 +1,4 @@
+-rw-r--r-- 1 root root  24K Jan  4 12:13 /workspace/logo.png
+-rw-r--r-- 1 root root  63K Jan  4 12:13 /workspace/password.png
+-rw-r--r-- 1 root root  12K Jan  4 12:13 /workspace/plate-temp.png
+-rw-r--r-- 1 root root  79K Jan  4 12:13 /workspace/username.png

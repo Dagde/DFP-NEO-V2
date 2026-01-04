@@ -1,0 +1,3 @@
+1d6ef7e Fix black screen issue: make CDN scripts load with defer to prevent blocking when xlsx CDN times out
+b3f55e9 Remove aggressive purple button CSS selectors causing performance issues
+e0b9bda Fix black screen issue: remove problematic cache headers and dynamic build IDs from next.config.js

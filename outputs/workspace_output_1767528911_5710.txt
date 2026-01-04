@@ -1,0 +1,76 @@
+  return (
+    <form onSubmit={handleSubmit} className="h-screen w-screen bg-black overflow-hidden flex flex-col items-center justify-center relative">
+      {/* LOGO */}
+      <div className="absolute top-[80px]">
+        <Image
+          src="/images/logo.png"
+          alt="DFP NEO"
+          width={600}
+          height={200}
+          unoptimized
+          className="w-[600px] max-w-[90vw] h-auto"
+        />
+      </div>
+
+      {/* LOGIN AREA */}
+      <div className="relative mt-[260px]">
+        {/* USERNAME ROW */}
+        <div className="flex items-center mb-[20px] relative top-[55px]">
+          {/* Username label */}
+          <Image
+            src="/images/username.png"
+            alt="Username"
+            width={160}
+            height={60}
+            unoptimized
+            className="w-[160px] mr-[20px] mt-[10px]"
+          />
+
+          {/* Plate + input (RIGHT 5px, UP 5px) */}
+          <div className="relative w-[340px] h-[60px] left-[5px] -top-[5px]">
+            {/* Plate image (still offset left 30px as before) */}
+            <Image
+              src="/images/plate.png"
+              alt="Plate"
+              width={340}
+              height={60}
+              unoptimized
+              className="absolute inset-0 w-full h-full object-fill relative -left-[30px]"
+            />
+
+            {/* Invisible input */}
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="absolute inset-0 bg-transparent px-6 text-neutral-300 outline-none"
+              required
+              disabled={isLoading}
+            />
+          </div>
+        </div>
+
+        {/* PASSWORD ROW */}
+        <div className="flex items-center">
+          {/* Password label */}
+          <Image
+            src="/images/password.png"
+            alt="Password"
+            width={160}
+            height={60}
+            unoptimized
+            className="w-[160px] mr-[20px] mt-[10px]"
+          />
+
+          {/* Plate + input (RIGHT 5px, UP 5px) */}
+          <div className="relative w-[340px] h-[60px] left-[5px] -top-[5px]">
+            {/* Plate image (still offset left 30px as before) */}
+            <Image
+              src="/images/plate.png"
+              alt="Plate"
+              width={340}
+              height={60}
+              unoptimized
+              className="absolute inset-0 w-full h-full object-fill relative -left-[30px]"
+            />
+

@@ -1,0 +1,164 @@
+    const handleSave = () => {
+        const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
+            let eventColor = event.color;
+            
+            const traineeName = c.student || c.pilot;
+            if (traineeName) {
+                const traineeDetails = traineesData.find(t => t.fullName === traineeName);
+                if (traineeDetails && courseColors[traineeDetails.course]) {
+                    eventColor = courseColors[traineeDetails.course];
+                }
+            }
+            
+            // Handle deployment assignment
+            let resourceId = event.resourceId;
+            if (selectedDeploymentId) {
+                // Find the selected deployment and assign its resourceId
+                const selectedDeployment = getCurrentDeployments().find(d => d.id === selectedDeploymentId);
+                if (selectedDeployment) {
+                    resourceId = selectedDeployment.resourceId;
+                    console.log(`Assigning event to deployment: ${selectedDeployment.id} (${resourceId})`);
+                }
+            }
+            
+            // For SCT FORM events with multiple aircraft, generate unique IDs for each event
+            const eventId = (flightNumber === 'SCT FORM' && crew.length > 1) 
+                ? `${event.id}-${index}-${Date.now()}` 
+                : event.id;
+            
+            // For SCT FORM events with multiple aircraft, clear resourceId so findAvailableResourceId assigns them to different lines
+            if (flightNumber === 'SCT FORM' && crew.length > 1) {
+                resourceId = '';
+            }
+            
+            const savedEvent = {
+                ...event,
+                id: eventId,
+                type: eventType,
+                flightNumber,
+                startTime: typeof startTime === 'string' ? convertTimeToDecimal(startTime) : startTime,
+                resourceId,
+                duration: typeof duration === 'number' ? duration : 0, // Ensure duration is a number
+                area: eventType === 'flight' ? area : undefined,
+                aircraftNumber: eventType === 'flight' ? aircraftNumber : undefined,
+                color: eventColor,
+                flightType: c.flightType,
+                instructor: c.instructor,
+                student: c.student,
+                pilot: c.pilot,
+                group: c.group,
+                groupTraineeIds: c.groupTraineeIds,
+                locationType,
+                origin: locationType === 'Local' ? school : origin,
+                destination: locationType === 'Local' ? school : destination,
+                formationType: flightNumber === 'SCT FORM' ? formationType : undefined,
+                formationPosition: flightNumber === 'SCT FORM' ? index + 1 : undefined,
+                callsign: flightNumber === 'SCT FORM' ? `${formationType}${index + 1}` : undefined,
+                formationId: undefined,
+                isDeploy: eventType === 'flight' && locationType === 'Land Away' ? isDeploy : undefined,
+                
+                // Explicit Deployment Period
+                deploymentStartDate: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentStartDate : undefined,
+                deploymentStartTime: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentStartTime : undefined,
+                deploymentEndDate: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentEndDate : undefined,
+                deploymentEndTime: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentEndTime : undefined,
+                deploymentAircraftCount: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentAircraftCount : undefined,
+                
+                // Save event category for LMP Currency handling
+                eventCategory: eventCategory,
+            };
+            
+            // Debug logging for SCT events
+            if (eventCategory === 'sct') {
+                console.log('💾 Saving SCT event:', {
+                    id: savedEvent.id,
+                    flightType: savedEvent.flightType,
+                    pilot: savedEvent.pilot,
+                    student: savedEvent.student,
+                    instructor: savedEvent.instructor,
+                    eventCategory: savedEvent.eventCategory,
+                    crewData: c,
+                    allCrew: crew
+                });
+            }
+            
+            return savedEvent;
+        });
+        
+        // Create Deployment Tile if deployment period is populated and isDeploy is true
+        console.log('Deployment Check:', {
+            eventType,
+            locationType,
+            isDeploy,
+            deploymentStartDate,
+            deploymentStartTime,
+            deploymentEndDate,
+            deploymentEndTime
+        });
+        
+        if (eventType === 'flight' && locationType === 'Land Away' && isDeploy && 
+            deploymentStartDate && deploymentStartTime && deploymentEndDate && deploymentEndTime) {
+            
+            console.log('Creating deployment tile...');
+            
+            // Convert deployment time strings to hours
+            const deployStartHour = parseTimeStringToHours(deploymentStartTime);
+            const deployEndHour = parseTimeStringToHours(deploymentEndTime);
+            
+            // Calculate deployment duration in hours, accounting for multi-day deployments
+            const startDate = new Date(deploymentStartDate);
+            const endDate = new Date(deploymentEndDate);
+            
+            // Calculate the number of days between start and end dates
+            const daysDifference = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // Calculate total duration including multiple days
+            let deployDuration = (daysDifference * 24) + (deployEndHour - deployStartHour);
+            
+            // If duration is negative or zero, something is wrong with the dates/times
+            if (deployDuration <= 0) {
+                deployDuration = 1; // Default to 1 hour minimum
+            }
+            
+            // Create multiple deployment tiles based on aircraft count
+            console.log(`Creating ${deploymentAircraftCount} deployment tiles...`);
+            
+            for (let i = 0; i < deploymentAircraftCount; i++) {
+                const deploymentTile: ScheduleEvent = {
+                    id: `deployment-${event.id}-${i}-${Date.now()}`,
+                    date: deploymentStartDate,
+                    type: 'deployment',
+                    startTime: deployStartHour,
+                    duration: deployDuration,
+                    resourceId: 'Deployed', // Will be reassigned by findAvailableResourceId
+                    color: 'bg-gray-600/30', // Base color, styling handled in FlightTile
+                    flightNumber: 'DEPLOYMENT',
+                    flightType: 'Dual',
+                    locationType: 'Land Away',
+                    origin: 'DEPLOY',
+                    destination: 'DEPLOY',
+                    instructor: '',
+                    student: '',
+                    pilot: '',
+                    isDeploy: true,
+                    deploymentStartDate: deploymentStartDate,
+                    deploymentStartTime: deploymentStartTime,
+                    deploymentEndDate: deploymentEndDate,
+                    deploymentEndTime: deploymentEndTime,
+                    deploymentAircraftCount: deploymentAircraftCount,
+                };
+                
+                console.log(`Deployment tile ${i + 1} created:`, deploymentTile);
+                eventsToSave.push(deploymentTile);
+            }
+        }
+        
+        console.log('Events to save:', eventsToSave);
+        onSave(eventsToSave);
+    }
+
+    const timeOptions = useMemo(() => {
+        const options = [];
+        for (let h = 0; h < 24; h++) {
+            for (let m = 0; m < 60; m += 5) {
+                const totalHours = h + m / 60;

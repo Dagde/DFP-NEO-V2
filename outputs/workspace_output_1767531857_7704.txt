@@ -1,0 +1,10 @@
+.next/static/purple-fix-1767531775417/_buildManifest.js
+.next/static/purple-fix-1767531775417/_ssgManifest.js
+.next/static/chunks/4bd1b696-c023c6e3521b1417.js
+.next/static/chunks/webpack-74c939c87fa0092a.js
+.next/static/chunks/199-d68807470d310e91.js
+.next/static/chunks/pages/_error-cb2a52f75f2162e2.js
+.next/static/chunks/pages/_app-7d307437aca18ad4.js
+.next/static/chunks/main-app-c5d5af050ad54be3.js
+.next/static/chunks/framework-d7de93249215fb06.js
+.next/static/chunks/255-cb395327542b56ef.js

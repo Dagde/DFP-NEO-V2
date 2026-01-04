@@ -219,6 +219,25 @@
       background: #3b82f6 !important;
       background-color: #3b82f6 !important;
     }
+    
+    /* Hide Edit and Save buttons completely */
+    button.edit-button,
+    button.save-button,
+    button:contains("Edit"),
+    button:contains("Save"),
+    button[style*="#764ba2"],
+    button[style*="118, 75, 162"],
+    button[style*="rgb(118, 75, 162)"],
+    button[style*="rgb(128, 0, 128)"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
   </style>
   <script type="module" crossorigin src="./assets/index-CHdj6ICi.js"></script>
 </head>

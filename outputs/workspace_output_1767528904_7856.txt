@@ -1,0 +1,4 @@
+dfp-neo-platform/app/layout.tsx
+dfp-neo-platform/app/select/page.tsx
+dfp-neo-platform/app/admin/page.tsx
+dfp-neo-platform/app/login/page.tsx

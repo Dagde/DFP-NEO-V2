@@ -1,0 +1,50 @@
+import type { Metadata } from 'next';
+import './globals.css';
+import { Providers } from './providers';
+
+export const metadata: Metadata = {
+  title: 'DFP-NEO | Daily Flying Program',
+  description: 'Advanced flight scheduling and management system',
+  icons: {
+    icon: '/images/logo.png',
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <head>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            /* IMMEDIATE Purple Button Destruction - Maximum Specificity */
+            button[style*="rgb(118, 75, 162)"],
+            button[style*="118, 75, 162"],
+            button[style*="#764ba2"],
+            *[style*="background: rgb(118, 75, 162)"],
+            *[style*="background-color: rgb(118, 75, 162)"],
+            *[style*="rgb(118, 75, 162)"] {
+              background-color: #374151 !important;
+              background: #374151 !important;
+              color: #ffffff !important;
+              border-color: #4b5563 !important;
+            }
+          `
+        }} />
+      </head>
+      <body>
+        <Providers>{children}</Providers>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // DFP-NEO AGGRESSIVE Purple Button Elimination Script
+            function eliminatePurpleButtons() {
+              // Target specific purple RGB values
+              const purpleRGB = 'rgb(118, 75, 162)';
+              const purpleRGBValues = ['118, 75, 162', '118,75,162'];
+              
+              // Find ALL buttons with any purple styling
+              const buttons = document.querySelectorAll('button');
+              buttons.forEach(button => {

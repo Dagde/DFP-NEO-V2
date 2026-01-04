@@ -1,0 +1,63 @@
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <style>
+  @keyframes fade-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-slide-in-right {
+    animation: slide-in-right 0.2s ease-out forwards;
+  }
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  .btn-shape-fill {
+    background-color: #9ca3af; /* gray-400 fallback */
+    background-image: linear-gradient(to bottom, #e5e7eb, #b8bec7); /* light gray to mid gray */
+    border: 1px solid #6b7280; /* gray-500 */
+    color: #1f2937; /* gray-800 */
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-shape-fill:hover {
+    background-color: #e5e7eb;
+    background-image: linear-gradient(to bottom, #f3f4f6, #cdd2d9);
+  }
+  .btn-shape-fill.active, .btn-shape-fill:active {
+    background-color: #b8bec7;
+    background-image: linear-gradient(to top, #e5e7eb, #b8bec7);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    border-color: #4b5563; /* gray-600 */
+    color: #111827; /* gray-900 */
+    transform: translateY(1px);
+  }
+  .btn-gold-brushed {
+    background-color: #eab308; /* yellow-500 fallback */
+    background-image: linear-gradient(to bottom, #fde047, #ca8a04); /* yellow-300 to yellow-600 */
+    border: 1px solid #a16207; /* yellow-700 */
+    color: #422006; /* yellow-950 */
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: all 0.1s ease-in-out;
+--
+  <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+  <script type="module" crossorigin src="./assets/index-CHdj6ICi.js"></script>
+</head>
+    <body class="bg-gray-800 text-white">
+      <div id="root"></div>
+    </body>
+  </html>

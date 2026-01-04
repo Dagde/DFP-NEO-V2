@@ -1,0 +1,5 @@
+e0b9bda Fix black screen issue: remove problematic cache headers and dynamic build IDs from next.config.js
+c4f4719 Optimize landing page images for faster loading
+f48ea15 Fix SCT Solo to Dual conversion bug
+1538e76 Add fallback for SCT Solo events - detect Solo by empty student field
+68bcabc Add debug logging for SCT Solo events to identify flightType issue
