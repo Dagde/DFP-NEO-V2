@@ -1,0 +1,18 @@
+2026-01-04T16:01:00.780865765Z [inf]  Failed to compile.
+
+
+2026-01-04T16:01:00.781197782Z [inf]  ./lib/auth.ts:31:5
+Type error: All declarations of 'email' must have identical modifiers.
+
+[0m [90m 29 |[39m     userId[33m:[39m string[33m;[39m
+ [90m 30 |[39m     displayName[33m:[39m string [33m|[39m [36mnull[39m[33m;[39m
+[31m[1m>[22m[39m[90m 31 |[39m     email[33m:[39m string [33m|[39m [36mnull[39m[33m;[39m
+ [90m    |[39m     [31m[1m^[22m[39m
+ [90m 32 |[39m     status[33m:[39m [33mUserStatus[39m[33m;[39m
+ [90m 33 |[39m     permissionsRole[33m:[39m {
+ [90m 34 |[39m       id[33m:[39m string[33m;[39m[0m
+
+2026-01-04T16:01:00.808698588Z [inf]  Next.js build worker exited with code: 1 and signal: null
+
+2026-01-04T16:01:01.002701580Z [err]  npm run build
+2026-01-04T16:01:01.015582093Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1
