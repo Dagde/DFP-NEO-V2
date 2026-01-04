@@ -1,0 +1,40 @@
+  const getStudentDisplay = () => {
+      if (isPreview) {
+          return studentName;
+      }
+
+        // For SCT Solo events, show SOLO label
+        if (isSctEvent && event.flightType === 'Solo') {
+            return (
+                   <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
+                       SOLO
+                   </span>
+               );
+           }
+
+      // For SCT Dual events, show crew name from student field
+      if (isSctEvent && event.flightType === 'Dual' && event.student) {
+          return event.student.split(' – ')[0];
+      }
+
+        if (event.flightType === 'Solo') {
+            return (
+--
+  const studentDisplay = getStudentDisplay();
+
+    // Helper function to get seat config abbreviation
+    const getSeatConfigAbbr = (personName: string | undefined): string => {
+        if (!personName) return "";
+        const seatConfig = seatConfigs.get(personName);
+        if (!seatConfig) return "";
+        
+        switch (seatConfig) {
+            case "Normal": return " (N)";
+            case "FWD/SHORT": return " (F/S)";
+            case "FWD/LONG": return " (F/L)";
+            case "REAR/SHORT": return " (R/S)";
+            default: return "";
+        }
+    };
+
+    // Get seat config abbreviations for pilot and student
