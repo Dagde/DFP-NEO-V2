@@ -1,0 +1,75 @@
+  <script>
+    // ========================================
+    // DFP-NEO COMPREHENSIVE FIXES
+    // ========================================
+    
+    // FIX 1: Remove purple Edit/Save buttons from sidebar
+    (function() {
+      function killPurpleButtons() {
+        document.querySelectorAll('button').forEach(btn => {
+          const style = btn.getAttribute('style') || '';
+          const text = btn.textContent.trim();
+          
+          // Purple button with Edit or Save emoji
+          if ((style.includes('rgb(118, 75, 162)') || style.includes('#764ba2')) &&
+              (text.includes('✏️') || text.includes('💾'))) {
+            btn.remove();
+            console.log('💥 Removed:', text);
+          }
+        });
+      }
+      
+      killPurpleButtons();
+      setInterval(killPurpleButtons, 500);
+      new MutationObserver(killPurpleButtons).observe(document.body, {childList: true, subtree: true});
+    })();
+    
+    // FIX 2: Solo flights - show SOLO instead of duplicate name
+    (function() {
+      function fixSolo() {
+        document.querySelectorAll('*').forEach(el => {
+          if (el.dataset.soloFixed) return;
+          
+          const txt = el.textContent;
+          const html = el.innerHTML;
+          
+          if (/(SCT|TWR\s+DI)/i.test(txt)) {
+            const names = [...txt.matchAll(/([A-Z][a-z]+,\s*[A-Z][a-z]+)/g)];
+            if (names.length >= 2 && names[0][1] === names[1][1]) {
+              let c = 0;
+              const n = names[0][1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              el.innerHTML = html.replace(new RegExp(n, 'g'), m => ++c === 1 ? m : '<b style="color:#fbbf24">SOLO</b>');
+              el.dataset.soloFixed = '1';
+              console.log('✅ SOLO:', names[0][1]);
+            }
+          }
+        });
+      }
+      
+      for(let i=0; i<10; i++) setTimeout(fixSolo, i*300);
+      setInterval(fixSolo, 2000);
+      new MutationObserver(() => setTimeout(fixSolo, 100)).observe(document.body, {childList:true, subtree:true, characterData:true});
+    })();
+    
+    // FIX 3: Grey color only for SCT courses
+    (function() {
+      function fixColors() {
+        document.querySelectorAll('[class*="ADF"],[class*="FIC"],[class*="course"]').forEach(el => {
+          const bg = getComputedStyle(el).backgroundColor;
+          const txt = el.textContent;
+          
+          if ((bg.includes('128') || bg.includes('169')) && !txt.includes('SCT')) {
+            el.style.setProperty('background-color', '#3b82f6', 'important');
+            el.style.setProperty('color', '#fff', 'important');
+            console.log('🎨 Fixed:', txt);
+          }
+        });
+      }
+      
+      fixColors();
+      setInterval(fixColors, 3000);
+      new MutationObserver(fixColors).observe(document.body, {childList:true, subtree:true, attributes:true});
+    })();
+    
+    console.log('✅ All fixes loaded');
+  </script>

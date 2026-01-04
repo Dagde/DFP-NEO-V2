@@ -1,31 +1,21 @@
-# DFP-NEO Visual Adjust Fix - Todo List
+# DFP-NEO Project Todo List
 
-## 1. Investigation Phase
-- [x] Analyze the Visual Adjust feature behavior
-- [x] Identify the issue: dashed lines persist after modal close
-- [x] Review App.tsx handleVisualAdjustEnd function
-- [x] Understand the modal closing mechanism
+## Visual Adjust + Solo Flight Fixes - COMPLETED ✅
+[x] Visual Adjust button was accidentally hidden - RESTORED
+[x] Solo flights showing duplicate pilot names - FIXED
+[x] Refined button hiding to only target sidebar bottom-left
+[x] Added runtime solo flight detection and correction
+[x] Build completed successfully
+[x] Deployed to Railway
 
-## 2. Fix Implementation
-- [x] Modify handleVisualAdjustEnd to properly close modal
-- [x] Ensure visual adjust state is cleared
-- [x] Test the fix locally
+## Previously Completed Tasks
+[x] Edit/Save Button Removal from sidebar
+[x] Save Button Restoration in Flight Details
+[x] Event Cancellation & STBY Handling
+[x] Visual Adjust Modal Persistence Issue
+[x] Delete Functionality Fix  
+[x] AuthorisationView Routing Fix
+[x] Production Login Issue Fix
+[x] Build Synchronization Fix
 
-## 3. Build and Deploy
-- [x] Run npm run build to create production build
-- [x] Copy dist files to dfp-neo-platform/public/flight-school-app/
-- [x] Verify build completed successfully
-
-## 4. Git Operations
-- [x] Stage changes (App.tsx, FlightTile.tsx, build files)
-- [x] Commit with descriptive message
-- [x] Push to GitHub
-
-## 5. Documentation
-- [x] Create VISUAL_ADJUST_FIX.md documenting the fix
-- [x] Update DEPLOYMENT_STATUS.md
-- [x] Create summary for user
-
-## All Tasks Complete! ✅
-All fixes have been implemented, tested, committed, and pushed to GitHub.
-Railway should automatically deploy the changes.
+## All Tasks Complete ✅

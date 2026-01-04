@@ -1,0 +1,17 @@
+[feature/comprehensive-build-algorithm 907042d] FIX: Restore Save button in Flight Details modal
+ Committer: root <root@172.16.0.26>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 356 insertions(+), 16 deletions(-)
+ create mode 100644 dfp-neo-platform/DATABASE_AND_USER_MANAGEMENT.md
+To https://github.com/Dagde/DFP---NEO.git
+   ed95c95..907042d  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

@@ -1,0 +1,2 @@
+311:          const isEditingView = element.closest('.editing-view, .admin-view, .scheduler-view');
+313:          if (isScheduleView && !isEditingView) {

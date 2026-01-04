@@ -1,0 +1,4 @@
+grep: dfp-neo-platform/node_modules/.prisma: Is a directory
+dfp-neo-platform/node_modules/.prisma/client/schema.prisma
+dfp-neo-platform/node_modules/.prisma/client/index.d.ts
+dfp-neo-platform/prisma/schema.prisma

@@ -1,0 +1,31 @@
+    // IMMEDIATE purple button elimination - runs BEFORE React loads
+    (function() {
+      function destroyPurpleButtons() {
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+          const style = button.getAttribute('style');
+          if (style && (style.includes('rgb(118, 75, 162)') || style.includes('118, 75, 162') || style.includes('#764ba2'))) {
+            button.style.setProperty('background-color', '#374151', 'important');
+            button.style.setProperty('background', '#374151', 'important');
+            button.style.setProperty('color', '#ffffff', 'important');
+            console.log('DESTROYED purple button:', button.textContent);
+          }
+        });
+      }
+      
+      // Run immediately
+      destroyPurpleButtons();
+      
+      // Run every 100ms for the first 10 seconds
+      let count = 0;
+      const interval = setInterval(() => {
+        destroyPurpleButtons();
+        count++;
+        if (count > 100) clearInterval(interval);
+      }, 100);
+      
+      // Run on DOM changes
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(destroyPurpleButtons);
+        observer.observe(document.documentElement, {
+          childList: true,

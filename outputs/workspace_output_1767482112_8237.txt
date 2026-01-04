@@ -1,0 +1,6 @@
+dfp-neo-platform/node_modules/typescript/lib/typescript.d.ts
+dfp-neo-platform/node_modules/typescript/lib/lib.es2015.collection.d.ts
+dfp-neo-platform/node_modules/typescript/lib/lib.es2015.reflect.d.ts
+dfp-neo-platform/node_modules/typescript/lib/lib.webworker.iterable.d.ts
+dfp-neo-platform/node_modules/typescript/lib/lib.es2015.proxy.d.ts
+xargs: grep: terminated by signal 13
