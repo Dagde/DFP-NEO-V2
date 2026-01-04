@@ -227,17 +227,26 @@
           const text = button.textContent.trim();
           
           // Only hide buttons with purple styling in the SIDEBAR (bottom left)
-          // Do NOT hide Save buttons in modals/dialogs (Flight Details page)
+          // Do NOT hide buttons in modals/dialogs (Flight Details, Visual Adjust, etc.)
           const isInSidebar = button.closest('.sidebar, [class*="sidebar"]') || 
                              button.closest('.courses-section, [class*="courses"]') ||
-                             (button.getBoundingClientRect().left < 250); // Left side of screen
+                             (button.getBoundingClientRect().left < 250 && 
+                              button.getBoundingClientRect().top > 400); // Bottom left corner only
           
           const isPurpleButton = style && (style.includes('rgb(118, 75, 162)') || 
                                           style.includes('118, 75, 162') || 
                                           style.includes('#764ba2'));
           
-          // Only hide purple buttons in sidebar, NOT in modals/dialogs
-          if (isPurpleButton && isInSidebar) {
+          // Exclude Visual Adjust, Save, and other functional buttons
+          const isFunctionalButton = text.includes('Visual Adjust') || 
+                                     text.includes('Save') ||
+                                     text.includes('Cancel') ||
+                                     text.includes('Close') ||
+                                     text.includes('Apply') ||
+                                     text.includes('Confirm');
+          
+          // Only hide purple buttons in sidebar that are NOT functional
+          if (isPurpleButton && isInSidebar && !isFunctionalButton) {
             button.style.setProperty('display', 'none', 'important');
             button.style.setProperty('visibility', 'hidden', 'important');
             button.style.setProperty('opacity', '0', 'important');
@@ -266,6 +275,67 @@
           subtree: true,
           attributes: true,
           attributeFilter: ['style']
+        });
+      }
+    })();
+  </script>
+  <script>
+    // Fix solo flight display - ensure SOLO flights show correctly
+    (function() {
+      function fixSoloFlights() {
+        // Find all flight tiles/events
+        const flightElements = document.querySelectorAll('[class*="flight"], [class*="event"], [data-event-type]');
+        
+        flightElements.forEach(element => {
+          const text = element.textContent;
+          
+          // Check if this is a solo flight (SCT, SOLO, or similar indicators)
+          const isSolo = text.includes('SCT') || 
+                        text.includes('SOLO') || 
+                        text.includes('[SOLO]') ||
+                        text.includes('Solo');
+          
+          if (isSolo) {
+            // Find duplicate names in the element
+            const nameMatches = text.match(/([A-Z][a-z]+,\s*[A-Z][a-z]+)/g);
+            
+            if (nameMatches &amp;&amp; nameMatches.length >= 2) {
+              // Check if the same name appears twice (indicating incorrect solo display)
+              const firstName = nameMatches[0];
+              const secondName = nameMatches[1];
+              
+              if (firstName === secondName) {
+                // This is a solo flight showing the same pilot twice
+                // Find the second occurrence and replace with "SOLO"
+                const innerHTML = element.innerHTML;
+                let count = 0;
+                const fixedHTML = innerHTML.replace(new RegExp(firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;'), 'g'), (match) => {
+                  count++;
+                  return count === 1 ? match : '<strong style="color: #fbbf24;">SOLO</strong>';
+                });
+                
+                if (fixedHTML !== innerHTML) {
+                  element.innerHTML = fixedHTML;
+                  console.log('Fixed solo flight display for:', firstName);
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      // Run immediately
+      fixSoloFlights();
+      
+      // Run periodically
+      setInterval(fixSoloFlights, 2000);
+      
+      // Run on DOM changes
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(fixSoloFlights);
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
         });
       }
     })();
