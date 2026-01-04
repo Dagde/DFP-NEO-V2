@@ -249,11 +249,17 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
         // Check for SOLO flights - applies to ALL event types
         if (event.flightType === 'Solo') {
+            console.log('🎯 SOLO badge returned for event:', event.id, 'flightType:', event.flightType, 'eventCategory:', event.eventCategory);
             return (
                 <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
                     SOLO
                 </span>
             );
+        }
+        
+        // Debug: Log SCT events that are not Solo
+        if (isSctEvent) {
+            console.log('🔍 SCT event check:', event.id, 'flightType:', event.flightType, 'student:', event.student, 'pilot:', event.pilot);
         }
 
       // For SCT Dual events, show crew name from student field
