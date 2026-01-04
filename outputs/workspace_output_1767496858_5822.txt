@@ -1,0 +1,5 @@
+* feature/comprehensive-build-algorithm
+  main
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/feature/comprehensive-build-algorithm
+  remotes/origin/main

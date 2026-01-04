@@ -1,0 +1,6 @@
+dfp-neo-platform/DATABASE_AND_USER_MANAGEMENT.md:The flight-school-app currently stores some permissions in:
+dfp-neo-platform/DEPLOYMENT_CHECKLIST_FINAL.md:- [x] Protected `/flight-school` route created
+dfp-neo-platform/DEPLOYMENT_CHECKLIST_FINAL.md:- Verify `/flight-school-app/index.html` exists in public folder
+dfp-neo-platform/README.md:│   ├── flight-school/     # DFP-NEO Flight School
+dfp-neo-platform/EVENT_HANDLING_CHANGES.md:### Client-Side Fixes (flight-school-app/index.html)
+dfp-neo-platform/EVENT_HANDLING_CHANGES.md:1. `public/flight-school-app/index.html` - Client-side event handling

@@ -1,0 +1,100 @@
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: b7e8f1bf-2156-4680-ab43-ab2c200c36f1
+   - event.type: ftd
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: c632c374-9f0a-4f2c-8395-7a7c465a4b49
+   - event.type: ftd
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 33607100-f3e8-440b-95e0-5a4c32a76d2f
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: ea7d4fd3-968e-4da6-8234-26253e3e6579
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 5f2d6c16-2d84-432b-ac3f-5fdb67701cca
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: a04ede90-ca2f-401e-9c14-4ebde90b7bf1
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 5044ebca-2969-4562-beb3-685ee42f463b
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 053d0fdf-b331-4f23-9d68-83238fae8779
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 37fa241b-114a-4ba2-9161-953cd0ddea8d
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 60d6a7b6-4e8b-47f9-9855-5e152196e2b4
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful
+ 🔍 FLIGHT TILE ERROR TRACKING - Props received:
+   - event.id: 0fbbed27-3c66-4e99-a741-db31c77e7c38
+   - event.type: cpt
+   - personnelData size: 37
+   - seatConfigs type: object
+   - seatConfigs value: Map(130) {'Smith, James' => 'Normal', 'Edwards, Mia' => 'Normal', 'Hill, Charlotte' => 'Normal', 'King, John' => 'Normal', 'Turner, Sophia' => 'Normal', …}
+   - seatConfigs === undefined: false
+   - seatConfigs === null: false
+ ✅ seatConfigs access successful

@@ -1,0 +1,40 @@
+          tile.style.backgroundColor = '#3b82f6';
+        }
+      });
+    }
+
+    // Run immediately on load
+    setTimeout(() => {
+      nukeInlineStyles();
+      fixSoloFlights();
+      fixGreyCourses();
+      console.log('DFP-NEO: Initial fixes applied');
+    }, 100);
+
+    // Run solo fix 10 times in first 3 seconds (rapid fire)
+    for (let i = 1; i <= 10; i++) {
+      setTimeout(() => {
+        fixSoloFlights();
+      }, i * 300);
+    }
+
+    // Then continue every 2 seconds
+    setInterval(() => {
+      fixSoloFlights();
+      fixGreyCourses();
+    }, 2000);
+
+    // CRITICAL: Nuke inline styles every 100ms (10 times per second)
+    setInterval(nukeInlineStyles, 100);
+
+    // MutationObserver for dynamic content
+    const styleObserver = new MutationObserver(() => {
+      nukeInlineStyles();
+      fixSoloFlights();
+      fixGreyCourses();
+    });
+
+    styleObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,

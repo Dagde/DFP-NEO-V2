@@ -609,13 +609,17 @@
       });
     }
 
-    // Run immediately on load
-    setTimeout(() => {
-      nukeInlineStyles();
-      fixSoloFlights();
-      fixGreyCourses();
-      console.log('DFP-NEO: Initial fixes applied');
-    }, 100);
+    // Wait for React app to fully load before applying fixes
+    // Try multiple times with increasing delays
+    const delays = [500, 1000, 2000, 3000, 5000];
+    delays.forEach(delay => {
+      setTimeout(() => {
+        console.log(`DFP-NEO: Attempting fixes at ${delay}ms`);
+        nukeInlineStyles();
+        fixSoloFlights();
+        fixGreyCourses();
+      }, delay);
+    });
 
     // Run solo fix 10 times in first 3 seconds (rapid fire)
     for (let i = 1; i <= 10; i++) {
@@ -646,6 +650,18 @@
       attributes: true,
       attributeFilter: ['style']
     });
+
+    // Wait for React root to be ready
+    const waitForReact = setInterval(() => {
+      const root = document.getElementById('root');
+      if (root &amp;&amp; root.children.length > 0) {
+        console.log('DFP-NEO: React app detected, applying fixes');
+        clearInterval(waitForReact);
+        nukeInlineStyles();
+        fixSoloFlights();
+        fixGreyCourses();
+      }
+    }, 100);
 
     console.log('DFP-NEO: Nuclear style fix active - running every 100ms');
   </script>
