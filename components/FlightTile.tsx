@@ -84,22 +84,11 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
-  console.log('🔍 FLIGHT TILE ERROR TRACKING - Props received:');
-  console.log('  - event.id:', event?.id);
-  console.log('  - event.type:', event?.type);
-  console.log('  - personnelData size:', personnelData?.size);
-  console.log('  - seatConfigs type:', typeof seatConfigs);
-  console.log('  - seatConfigs value:', seatConfigs);
-  console.log('  - seatConfigs === undefined:', seatConfigs === undefined);
-  console.log('  - seatConfigs === null:', seatConfigs === null);
   
   try {
     // Test access to seatConfigs to trigger the error
     const testAccess = seatConfigs;
-    console.log('✅ seatConfigs access successful');
   } catch (error) {
-    console.error('❌ seatConfigs access failed:', error);
-    console.error('❌ Error stack:', error.stack);
   }
   // Determine if this is a segment and use effective start/duration
   const segment = event as EventSegment;
@@ -206,18 +195,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
   const isSctEvent = event.eventCategory === 'sct';
   
-  // Debug logging for SCT events
-  if (isSctEvent) {
-      console.log('🎯 FlightTile rendering SCT event:', {
-          id: event.id,
-          flightType: event.flightType,
-          pilot: event.pilot,
-          student: event.student,
-          instructor: event.instructor,
-          eventCategory: event.eventCategory,
-          fullEvent: event
-      });
-  }
+  
   
   const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
   const studentName = isSctEvent ? event.student : (event.student || (event.flightType === 'Solo' ? event.pilot : ''));
@@ -267,20 +245,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
           return studentName;
       }
 
-        // For SCT Solo events, show SOLO label
-        if (isSctEvent && event.flightType === 'Solo') {
-            return (
-                   <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
-                       SOLO
-                   </span>
-               );
-           }
+        
 
-      // For SCT Dual events, show crew name from student field
-      if (isSctEvent && event.flightType === 'Dual' && event.student) {
-          return event.student.split(' – ')[0];
-      }
-
+        // Check for SOLO flights - applies to ALL event types
         if (event.flightType === 'Solo') {
             return (
                 <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
@@ -288,11 +255,15 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 </span>
             );
         }
-        
+
+      // For SCT Dual events, show crew name from student field
+      if (isSctEvent && event.flightType === 'Dual' && event.student) {
+          return event.student.split(' – ')[0];
+      }
+
         // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
         // This handles cases where flightType is not set correctly in the database
         if (event.pilot && event.student && event.pilot === event.student) {
-            console.log('🎯 FALLBACK SOLO DETECTION: Pilot and student are the same:', event.pilot);
             return (
                 <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
                     SOLO
@@ -599,7 +570,6 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       className={finalClasses.join(' ')}
       onClick={onSelectEvent}
       onMouseDown={(e) => {
-          console.log('FlightTile onMouseDown called for event:', (event as any).id);
           e.stopPropagation(); // Prevent grid's handleMouseDown from being called
           onMouseDown(e);
       }}
