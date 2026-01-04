@@ -9,10 +9,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flight School Scheduler - v2024-12-08-2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js" defer></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js" defer></script>
+    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js" defer onerror="console.warn('Failed to load suncalc')"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" defer onerror="console.warn('Failed to load xlsx - Excel features may not work')"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer onerror="console.warn('Failed to load jspdf')"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js" defer onerror="console.warn('Failed to load jspdf-autotable')"></script>
   <style>
   @keyframes fade-in {
     from { opacity: 0; transform: scale(0.95); }
