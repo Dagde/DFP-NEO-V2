@@ -1,0 +1,13 @@
+87:  console.log('🔍 FLIGHT TILE ERROR TRACKING - Props received:');
+88:  console.log('  - event.id:', event?.id);
+89:  console.log('  - event.type:', event?.type);
+90:  console.log('  - personnelData size:', personnelData?.size);
+91:  console.log('  - seatConfigs type:', typeof seatConfigs);
+92:  console.log('  - seatConfigs value:', seatConfigs);
+93:  console.log('  - seatConfigs === undefined:', seatConfigs === undefined);
+94:  console.log('  - seatConfigs === null:', seatConfigs === null);
+99:    console.log('✅ seatConfigs access successful');
+211:      console.log('🎯 FlightTile rendering SCT event:', {
+272:            console.log('🔍 TWR DI EVENT:', {
+299:            console.log('🎯 FALLBACK SOLO DETECTION: Pilot and student are the same:', event.pilot);
+606:          console.log('FlightTile onMouseDown called for event:', (event as any).id);

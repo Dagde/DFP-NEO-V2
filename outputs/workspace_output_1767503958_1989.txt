@@ -1,0 +1,18 @@
+/workspace/components/FlightTile.tsx:interface FlightTileProps {
+/workspace/components/FlightTile.tsx:const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+/workspace/components/FlightTile.tsx:export default FlightTile;
+/workspace/components/TraineeScheduleView.tsx:import FlightTile from './FlightTile';
+/workspace/components/TraineeScheduleView.tsx:                  <FlightTile
+/workspace/components/NextDayBuildView.tsx:import FlightTile from './FlightTile';
+/workspace/components/NextDayBuildView.tsx:                    <FlightTile
+/workspace/components/NextDayBuildView.tsx:                            <FlightTile
+/workspace/components/NextDayInstructorScheduleView.tsx:import FlightTile from './FlightTile';
+/workspace/components/NextDayInstructorScheduleView.tsx:                  <FlightTile
+/workspace/components/FlightDetailModal.tsx:                    color: 'bg-gray-600/30', // Base color, styling handled in FlightTile
+/workspace/components/ScheduleView.tsx:import FlightTile from './FlightTile';
+/workspace/components/ScheduleView.tsx:                    <FlightTile
+/workspace/components/ScheduleView.tsx:                            <FlightTile
+/workspace/components/InstructorScheduleView.tsx:import FlightTile from './FlightTile';
+/workspace/components/InstructorScheduleView.tsx:                  <FlightTile
+/workspace/components/NextDayTraineeScheduleView.tsx:import FlightTile from './FlightTile';
+/workspace/components/NextDayTraineeScheduleView.tsx:                  <FlightTile

@@ -1,0 +1,16 @@
+  // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
+  const isSctEvent = event.eventCategory === 'sct';
+  
+  // Debug logging for SCT events
+  if (isSctEvent) {
+          id: event.id,
+          flightType: event.flightType,
+          pilot: event.pilot,
+          student: event.student,
+          instructor: event.instructor,
+          eventCategory: event.eventCategory,
+          fullEvent: event
+      });
+  }
+  
+  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);

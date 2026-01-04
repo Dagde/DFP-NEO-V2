@@ -1837,7 +1837,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <p><strong>Student:</strong> {event.student || event.group}</p>
                                             )}
                                         </>
-                                    ) : <p><strong>Pilot:</strong> {event.pilot}</p>}
+                                    ) : (
+                                        <>
+                                            <p><strong>PIC:</strong> {event.pilot}</p>
+                                            <p className="flex items-center gap-2">
+                                                <strong>Second Position:</strong>
+                                                <span className="inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold">
+                                                    SOLO
+                                                </span>
+                                            </p>
+                                        </>
+                                    )}
                                     <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
                                     <p><strong>Start Time:</strong> {Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</p>
                                 </div>

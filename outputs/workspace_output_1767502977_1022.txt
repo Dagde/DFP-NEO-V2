@@ -1,0 +1,1 @@
+./components/FlightTile.tsx.backup:  console.log('🔍 FLIGHT TILE ERROR TRACKING - Props received:');

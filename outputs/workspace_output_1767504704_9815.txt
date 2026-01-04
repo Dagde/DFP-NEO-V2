@@ -1,0 +1,401 @@
+                                                onFocus={handleSyllabusFocus}
+                                                disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0)}
+                                                className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed`}
+                                            >
+                                                <option value="" disabled>
+                                                    {isOracleContext ? 'Select a crew member first' : 'Select an item'}
+                                                </option>
+                                                {isAddingTile && <option value="SCT FORM">SCT FORM</option>}
+                                                {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => <option key={item} value={item}>{item}</option>)}
+                                            </select>
+                                            {syllabusSelectionError && (
+                                                <div className="absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in">Select a crew member first.</div>
+                                            )}
+                                        </div>
+                                        {eventType === 'flight' && (
+                                        <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Area</label>
+                                            <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Aircraft Number</label>
+                                            <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num}>{num}</option>)}
+                                            </select>
+                                        </div>
+                                        </>
+                                        )}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Start Time</label>
+                                            <select 
+                                                value={startTime} 
+                                                onChange={e => {
+                                                    setStartTime(parseFloat(e.target.value));
+                                                    setLocalHighlight(null);
+                                                }} 
+                                                disabled={isDeploy}
+                                                className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === 'startTime' ? 'ring-2 ring-red-500' : ''}`}
+                                            >
+                                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Duration</label>
+                                            <input 
+                                                type="number" 
+                                                step="0.1" 
+                                                min="0.1"
+                                                value={duration} 
+                                                onChange={e => setDuration(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                                disabled={isDeploy}
+                                                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                            />
+                                        </div>
+                                    </div>
+        
+                                    {eventType === 'flight' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Location</label>
+                                            <select
+                                                value={locationType}
+                                                onChange={e => setLocationType(e.target.value as 'Local' | 'Land Away')}
+                                                disabled={isDeploy}
+                                                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="Local">Local</option>
+                                                <option value="Land Away">Land Away</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                    {eventType === 'flight' && locationType === 'Land Away' && !isDeploy && (
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex-1">
+                                                <label className="block text-sm font-medium text-gray-400">Origin</label>
+                                                <input
+                                                    type="text"
+                                                    value={origin}
+                                                    onChange={e => setOrigin(e.target.value.toUpperCase())}
+                                                    maxLength={3}
+                                                    placeholder="e.g. ESL"
+                                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-sm font-medium text-gray-400">Destination</label>
+                                                <input
+                                                    type="text"
+                                                    value={destination}
+                                                    onChange={e => setDestination(e.target.value.toUpperCase())}
+                                                    maxLength={3}
+                                                    placeholder="e.g. PEA"
+                                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {eventType === 'flight' && locationType === 'Land Away' && (
+                                        <>
+                                            <fieldset className="p-4 border border-gray-600 rounded-lg mb-4">
+                                                <legend className="px-2 text-sm font-semibold text-gray-300">Deployment Period</legend>
+                                                <div className="mt-2 grid grid-cols-4 gap-2 bg-gray-700/30 p-3 rounded-lg">
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-400">Start Time</label>
+                                                        <input type="text" value={deploymentStartTime} onChange={e => {
+                                                            // Remove colon and ensure 24-hour format
+                                                            const value = e.target.value.replace(/:/g, '').replace(/\D/g, '').slice(0, 4);
+                                                            setDeploymentStartTime(value);
+                                                        }} placeholder="0800" className="mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center"/>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-400">Start Date</label>
+                                                        <input type="date" value={deploymentStartDate} onChange={e => setDeploymentStartDate(e.target.value)} style={{colorScheme: 'dark'}} className="mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm"/>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-400">End Time</label>
+                                                        <input type="text" value={deploymentEndTime} onChange={e => {
+                                                            // Remove colon and ensure 24-hour format
+                                                            const value = e.target.value.replace(/:/g, '').replace(/\D/g, '').slice(0, 4);
+                                                            setDeploymentEndTime(value);
+                                                        }} placeholder="1700" className="mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center"/>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-400">End Date</label>
+                                                        <input type="date" value={deploymentEndDate} onChange={e => setDeploymentEndDate(e.target.value)} style={{colorScheme: 'dark'}} className="mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm"/>
+                                                    </div>
+                                                </div>
+                                                   <div className="mt-2 bg-gray-700/30 p-3 rounded-lg">
+                                                       <label className="block text-xs font-medium text-gray-400 mb-1">Number of Aircraft</label>
+                                                       <input 
+                                                           type="number" 
+                                                           min="1" 
+                                                           max="20" 
+                                                           value={deploymentAircraftCount} 
+                                                           onChange={e => setDeploymentAircraftCount(parseInt(e.target.value) || 1)} 
+                                                           className="w-24 bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center"
+                                                       />
+                                                       <span className="ml-2 text-xs text-gray-500">aircraft deploying</span>
+                                                   </div>
+                                            </fieldset>
+
+                                        </>
+                                    )}
+        
+                                    {flightNumber === 'SCT FORM' && (
+                                        <div className="p-3 bg-gray-900/50 rounded-lg space-y-4">
+                                            <h3 className="font-semibold text-gray-300">Formation Details</h3>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-400">Formation Callsign</label>
+                                                    <select value={formationType} onChange={e => setFormationType(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                           {filteredCallsigns ? (
+                                                               filteredCallsigns.map(cs => (
+                                                                   <option key={cs.code} value={cs.code}>
+                                                                       {cs.name} ({cs.code}) - {cs.unit}
+                                                                   </option>
+                                                               ))
+                                                           ) : (
+                                                               formationTypes.map(type => <option key={type} value={type}>{type}</option>)
+                                                           )}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-400">Aircraft Count</label>
+                                                    <select value={aircraftCount} onChange={e => setAircraftCount(parseInt(e.target.value))} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                        {Array.from({length: 7}, (_, i) => i + 2).map(n => <option key={n} value={n}>{n}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="space-y-4">{crew.map(renderCrewFields)}</div>
+                                    
+                                    {/* Add to Deployment Section */}
+                                    {(eventType === 'flight' || eventType === 'ftd' || eventType === 'cpt') && (
+                                        <div className="border-t border-gray-600 pt-6 mt-6">
+                                            <h3 className="text-lg font-semibold text-white mb-4">Add to Deployment</h3>
+                                            <div className="space-y-3">
+                                                {getCurrentDeployments().length > 0 ? (
+                                                    getCurrentDeployments().map(deployment => (
+                                                        <label key={deployment.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedDeploymentId === deployment.id}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedDeploymentId(deployment.id);
+                                                                    } else {
+                                                                        setSelectedDeploymentId('');
+                                                                    }
+                                                                }}
+                                                                className="h-4 w-4 text-sky-600 bg-gray-700 border-gray-600 rounded focus:ring-sky-500"
+                                                            />
+                                                            <span className="text-sm text-gray-300">
+                                                                {formatDeploymentTitle(deployment)}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500 ml-2">
+                                                                ({deployment.resourceId})
+                                                            </span>
+                                                        </label>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 italic">
+                                                        No deployments available for this event type
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-gray-300 space-y-2">
+                                    <p><strong>Syllabus Item:</strong> {event.flightNumber}</p>
+                                    {event.type === 'flight' && <p><strong>Route:</strong> {event.origin}-{event.destination}</p>}
+                                    {event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
+                                    <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
+                                    {event.flightType === 'Dual' ? (
+                                        <>
+                                            {event.eventCategory === 'sct' ? (
+                                                <p><strong>Instructor:</strong> {event.instructor || event.pilot}</p>
+                                            ) : (
+                                                <p><strong>Instructor:</strong> {event.instructor}</p>
+                                            )}
+                                            {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
+                                                <div>
+                                                    <p><strong>Attendees ({event.attendees.length}):</strong></p>
+                                                    <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
+                                                        <ul className="space-y-1">
+                                                            {event.attendees.map(attendee => (
+                                                                <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            ) : event.eventCategory === 'sct' ? null : (
+                                                <p><strong>Student:</strong> {event.student || event.group}</p>
+                                            )}
+                                        </>
+                                    ) : <p><strong>Pilot:</strong> {event.pilot}</p>}
+                                    <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
+                                    <p><strong>Start Time:</strong> {Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</p>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Button Panel */}
+                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
+                            {!isEditing && (
+                                <>
+                                    <div className="p-3 border border-gray-600 rounded-lg text-center">
+                                        <label className="block text-sm font-semibold text-gray-400">Conflict?</label>
+                                        {isConflict ? (
+                                            <p className="text-2xl font-bold text-red-500">YES</p>
+                                        ) : (
+                                            <p className="text-2xl font-bold text-green-500">NO</p>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => onNeoClick(event)}
+                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-orange-brushed"
+                                    >
+                                        NEO
+                                    </button>
+                                    <button
+                                        onClick={handleTraineeScoresClick}
+                                        disabled={!traineeObject}
+                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        Trainee Scores
+                                    </button>
+                                    <button
+                                        onClick={handleLmpClick}
+                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                    >
+                                        LMP
+                                    </button>
+                                    {event.type === 'flight' && (
+                                        <button onClick={handleAuthClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed">
+                                            Auth
+                                        </button>
+                                    )}
+                                    {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                        <button
+                                            onClick={handleCompleteClick}
+                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                        >
+                                            Complete
+                                        </button>
+                                    )}
+                                    {traineeObject && (
+                                        <button
+                                            onClick={handlePt051Click}
+                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                        >
+                                            PT-051
+                                        </button>
+                                    )}
+                                    {event.type === 'flight' && (
+                                        <button onClick={handlePostFlightClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-shape-fill">
+                                            Post Flight
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            <div className="flex-grow" /> {/* Spacer */}
+                            {isEditing ? (
+                                   <>
+                                <button onClick={handleSave} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-sky-600 hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save</button>
+                                       <button onClick={handleVisualAdjust} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-purple-600 hover:bg-purple-700">Visual Adjust</button>
+                                   </>
+                            ) : (
+                                <button onClick={() => setIsEditing(true)} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-gray-600 hover:bg-gray-700">Edit</button>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end flex-shrink-0">
+                        <button onClick={onClose} className="px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm">Close</button>
+                    </div>
+                </div>
+            </div>
+            {showCancelConfirm && (
+                <CancelEventFlyout 
+                    eventId={event.id}
+                    eventType={event.type === 'ftd' ? 'ftd' : 'flight'}
+                    onConfirm={(eventId, cancellationCode, manualCodeEntry) => {
+                        if (onCancelEvent) {
+                            onCancelEvent(eventId, cancellationCode, manualCodeEntry);
+                        } else {
+                            // Fallback to old delete behavior if onCancelEvent not provided
+                            onDeleteRequest();
+                        }
+                        setShowCancelConfirm(false);
+                    }}
+                    onClose={() => setShowCancelConfirm(false)}
+                    cancellationCodes={cancellationCodes}
+                />
+            )}
+            {showMassBriefComplete && (
+                <MassBriefCompleteFlyout
+                    isOpen={showMassBriefComplete}
+                    onClose={() => setShowMassBriefComplete(false)}
+                    event={event}
+                    trainees={
+                        (() => {
+                            console.log('🔍 Processing trainees for MassBriefCompleteFlyout');
+                            console.log('🔍 Event:', event);
+                            console.log('🔍 Event.attendees:', event.attendees);
+                            console.log('🔍 Event.group:', event.group);
+                            console.log('🔍 Event.selectedTrainees:', event.selectedTrainees);
+                            console.log('🔍 Event.trainees:', event.trainees);
+                            console.log('🔍 Event keys:', Object.keys(event));
+                            console.log('🔍 Available trainees (strings):', trainees);
+                            console.log('🔍 Available traineesData (objects):', traineesData);
+                            
+                            // First try attendees array
+                            if (event.attendees) {
+                                console.log('🔍 Processing attendees array');
+                                const processedAttendees = event.attendees.map((attendeeName, index) => {
+                                    console.log(`🔍 Processing attendee ${index}: "${attendeeName}"`);
+                                    
+                                    // Find the trainee object from the traineesData list
+                                    const trainee = traineesData.find(t => {
+                                        const fullName = `${t.rank} ${t.name}`;
+                                        console.log(`🔍 Comparing "${fullName}" with "${attendeeName.split(' – ')[0]}"`);
+                                        return fullName === attendeeName.split(' – ')[0];
+                                    });
+                                    
+                                    if (trainee) {
+                                        console.log('🔍 Found matching trainee:', trainee);
+                                        return trainee;
+                                    } else {
+                                        console.log('🔍 Creating fallback trainee object');
+                                        const nameParts = attendeeName.split(' – ');
+                                        const fullName = nameParts[0];
+                                        const course = nameParts[1] || '';
+                                        
+                                        // Parse "Last, First" format
+                                        let rank = '';
+                                        let name = fullName;
+                                        const commaIndex = fullName.indexOf(',');
+                                        if (commaIndex !== -1) {
+                                            const lastName = fullName.substring(0, commaIndex).trim();
+                                            const firstName = fullName.substring(commaIndex + 1).trim();
+                                            name = `${firstName} ${lastName}`;
+                                        } else {
+                                            // Try "Rank Last First" format
+                                            const parts = fullName.trim().split(' ');
+                                            if (parts.length >= 2) {
+                                                rank = parts[0];
+                                                name = parts.slice(1).join(' ');
+                                            }
+                                        }
+                                        
+                                        const fallbackTrainee = {
+                                            idNumber: 0,
+                                            fullName: fullName,
+                                            name: name,
+                                            rank: rank,

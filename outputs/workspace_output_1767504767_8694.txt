@@ -1,0 +1,24 @@
+                                    {event.flightType === 'Dual' ? (
+                                        <>
+                                            {event.eventCategory === 'sct' ? (
+                                                <p><strong>Instructor:</strong> {event.instructor || event.pilot}</p>
+                                            ) : (
+                                                <p><strong>Instructor:</strong> {event.instructor}</p>
+                                            )}
+                                            {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
+                                                <div>
+                                                    <p><strong>Attendees ({event.attendees.length}):</strong></p>
+                                                    <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
+                                                        <ul className="space-y-1">
+                                                            {event.attendees.map(attendee => (
+                                                                <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            ) : event.eventCategory === 'sct' ? null : (
+                                                <p><strong>Student:</strong> {event.student || event.group}</p>
+                                            )}
+                                        </>
+                                    ) : <p><strong>Pilot:</strong> {event.pilot}</p>}
+                                    <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>

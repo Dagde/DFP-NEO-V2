@@ -1,0 +1,28 @@
+                        } else {
+                            // Fallback to old delete behavior if onCancelEvent not provided
+                            onDeleteRequest();
+                        }
+                        setShowCancelConfirm(false);
+                    }}
+                    onClose={() => setShowCancelConfirm(false)}
+                    cancellationCodes={cancellationCodes}
+                />
+            )}
+            {showMassBriefComplete && (
+                <MassBriefCompleteFlyout
+                    isOpen={showMassBriefComplete}
+                    onClose={() => setShowMassBriefComplete(false)}
+                    event={event}
+                    trainees={
+                        (() => {
+                            console.log('🔍 Processing trainees for MassBriefCompleteFlyout');
+                            console.log('🔍 Event:', event);
+                            console.log('🔍 Event.attendees:', event.attendees);
+                            console.log('🔍 Event.group:', event.group);
+                            console.log('🔍 Event.selectedTrainees:', event.selectedTrainees);
+                            console.log('🔍 Event.trainees:', event.trainees);
+                            console.log('🔍 Event keys:', Object.keys(event));
+                            console.log('🔍 Available trainees (strings):', trainees);
+                            console.log('🔍 Available traineesData (objects):', traineesData);
+                            
+                            // First try attendees array

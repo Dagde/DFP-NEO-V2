@@ -1,0 +1,31 @@
+            console.log('🎯 FALLBACK SOLO DETECTION: Pilot and student are the same:', event.pilot);
+            return (
+                <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
+                    SOLO
+                </span>
+            );
+        }
+      if ((event.groupTraineeIds && event.groupTraineeIds.length > 1) || 
+          (event.attendees && event.attendees.length > 1) || 
+          event.student === 'Multiple') {
+          return 'Group';
+      }
+      
+      if (event.student && event.student !== 'Multiple') {
+          return event.student.split(' – ')[0];
+      }
+
+      if (event.attendees && event.attendees.length === 1) {
+          return event.attendees[0].split(' – ')[0];
+      }
+      
+      if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
+          const trainee = traineesData.find(t => t.idNumber === event.groupTraineeIds![0]);
+          return trainee ? trainee.name.split(',')[0] : 'Group';
+      }
+      
+      return '';
+  };
+  const studentDisplay = getStudentDisplay();
+
+    // Helper function to get seat config abbreviation

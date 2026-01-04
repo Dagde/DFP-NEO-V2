@@ -1,0 +1,157 @@
+On branch feature/comprehensive-build-algorithm
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   components/FlightTile.tsx
+	modified:   dfp-neo-platform/public/flight-school-app/index.html
+	modified:   outputs/workspace_output_1767500449_4555.txt
+	modified:   todo.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	Screen Shot 2026-01-04 at 3.25.12 pm.jpg
+	Screen Shot 2026-01-04 at 3.28.10 pm.jpg
+	Screen Shot 2026-01-04 at 3.33.56 pm.jpg
+	Screen Shot 2026-01-04 at 3.45.06 pm.jpg
+	_superninja_startup.conf
+	components/FlightTile.tsx.backup
+	dfp-neo-platform/public/flight-school-app/assets/index-BCojCDFQ.js
+	dfp-neo-platform/public/flight-school-app/assets/index-BCojCDFQ.js.map
+	dfp-neo-platform/public/flight-school-app/assets/index.es-YN8ENOcZ.js
+	dfp-neo-platform/public/flight-school-app/assets/index.es-YN8ENOcZ.js.map
+	outputs/workspace_output_1767501452_2722.txt
+	outputs/workspace_output_1767501455_7039.txt
+	outputs/workspace_output_1767501458_4639.txt
+	outputs/workspace_output_1767501462_3537.txt
+	outputs/workspace_output_1767501473_5822.txt
+	outputs/workspace_output_1767501486_4214.txt
+	outputs/workspace_output_1767501489_3888.txt
+	outputs/workspace_output_1767501492_5209.txt
+	outputs/workspace_output_1767501496_5107.txt
+	outputs/workspace_output_1767501685_501.txt
+	outputs/workspace_output_1767501688_6288.txt
+	outputs/workspace_output_1767501692_5078.txt
+	outputs/workspace_output_1767501697_174.txt
+	outputs/workspace_output_1767501718_2573.txt
+	outputs/workspace_output_1767501731_3401.txt
+	outputs/workspace_output_1767501735_756.txt
+	outputs/workspace_output_1767501738_9016.txt
+	outputs/workspace_output_1767502048_6554.txt
+	outputs/workspace_output_1767502053_5200.txt
+	outputs/workspace_output_1767502064_7339.txt
+	outputs/workspace_output_1767502078_4238.txt
+	outputs/workspace_output_1767502082_7743.txt
+	outputs/workspace_output_1767502086_2305.txt
+	outputs/workspace_output_1767502364_6047.txt
+	outputs/workspace_output_1767502640_1901.txt
+	outputs/workspace_output_1767502644_2200.txt
+	outputs/workspace_output_1767502645_7107.txt
+	outputs/workspace_output_1767502658_2704.txt
+	outputs/workspace_output_1767502661_3849.txt
+	outputs/workspace_output_1767502663_8486.txt
+	outputs/workspace_output_1767502664_3931.txt
+	outputs/workspace_output_1767502666_6234.txt
+	outputs/workspace_output_1767502668_5180.txt
+	outputs/workspace_output_1767502669_5540.txt
+	outputs/workspace_output_1767502670_9724.txt
+	outputs/workspace_output_1767502673_6116.txt
+	outputs/workspace_output_1767502674_8891.txt
+	outputs/workspace_output_1767502676_9788.txt
+	outputs/workspace_output_1767502688_423.txt
+	outputs/workspace_output_1767502691_1628.txt
+	outputs/workspace_output_1767502702_6852.txt
+	outputs/workspace_output_1767502706_1207.txt
+	outputs/workspace_output_1767502718_7241.txt
+	outputs/workspace_output_1767502722_2859.txt
+	outputs/workspace_output_1767502724_5313.txt
+	outputs/workspace_output_1767502726_4726.txt
+	outputs/workspace_output_1767502729_8921.txt
+	outputs/workspace_output_1767502732_246.txt
+	outputs/workspace_output_1767502977_1022.txt
+	outputs/workspace_output_1767502978_3395.txt
+	outputs/workspace_output_1767502980_3875.txt
+	outputs/workspace_output_1767502981_3264.txt
+	outputs/workspace_output_1767502984_6571.txt
+	outputs/workspace_output_1767502987_7565.txt
+	outputs/workspace_output_1767502989_6533.txt
+	outputs/workspace_output_1767502990_8890.txt
+	outputs/workspace_output_1767502994_2209.txt
+	outputs/workspace_output_1767502998_2348.txt
+	outputs/workspace_output_1767503004_8714.txt
+	outputs/workspace_output_1767503006_8486.txt
+	outputs/workspace_output_1767503008_6331.txt
+	outputs/workspace_output_1767503010_4204.txt
+	outputs/workspace_output_1767503011_5407.txt
+	outputs/workspace_output_1767503013_7762.txt
+	outputs/workspace_output_1767503031_2974.txt
+	outputs/workspace_output_1767503033_5410.txt
+	outputs/workspace_output_1767503037_8447.txt
+	outputs/workspace_output_1767503040_8820.txt
+	outputs/workspace_output_1767503042_6951.txt
+	outputs/workspace_output_1767503051_3721.txt
+	outputs/workspace_output_1767503053_2990.txt
+	outputs/workspace_output_1767503055_3998.txt
+	outputs/workspace_output_1767503093_683.txt
+	outputs/workspace_output_1767503104_6774.txt
+	outputs/workspace_output_1767503107_1649.txt
+	outputs/workspace_output_1767503110_6220.txt
+	outputs/workspace_output_1767503124_4299.txt
+	outputs/workspace_output_1767503126_8699.txt
+	outputs/workspace_output_1767503127_4789.txt
+	outputs/workspace_output_1767503130_709.txt
+	outputs/workspace_output_1767503132_2067.txt
+	outputs/workspace_output_1767503136_3102.txt
+	outputs/workspace_output_1767503139_522.txt
+	outputs/workspace_output_1767503143_6671.txt
+	outputs/workspace_output_1767503144_3876.txt
+	outputs/workspace_output_1767503146_9185.txt
+	outputs/workspace_output_1767503148_1295.txt
+	outputs/workspace_output_1767503149_7815.txt
+	outputs/workspace_output_1767503152_2596.txt
+	outputs/workspace_output_1767503154_8168.txt
+	outputs/workspace_output_1767503158_5439.txt
+	outputs/workspace_output_1767503160_7521.txt
+	outputs/workspace_output_1767503162_9779.txt
+	outputs/workspace_output_1767503167_8095.txt
+	outputs/workspace_output_1767503173_8443.txt
+	outputs/workspace_output_1767503175_4733.txt
+	outputs/workspace_output_1767503177_1310.txt
+	outputs/workspace_output_1767503179_3211.txt
+	outputs/workspace_output_1767503181_6279.txt
+	outputs/workspace_output_1767503182_670.txt
+	outputs/workspace_output_1767503264_151.txt
+	outputs/workspace_output_1767503267_2113.txt
+	outputs/workspace_output_1767503271_861.txt
+	outputs/workspace_output_1767503274_5242.txt
+	outputs/workspace_output_1767503277_1625.txt
+	outputs/workspace_output_1767503280_6516.txt
+	outputs/workspace_output_1767503285_3371.txt
+	outputs/workspace_output_1767503289_7954.txt
+	outputs/workspace_output_1767503292_5860.txt
+	outputs/workspace_output_1767503295_8631.txt
+	outputs/workspace_output_1767503298_1819.txt
+	outputs/workspace_output_1767503302_5580.txt
+	outputs/workspace_output_1767503958_1989.txt
+	outputs/workspace_output_1767503961_8061.txt
+	outputs/workspace_output_1767503965_6964.txt
+	outputs/workspace_output_1767503968_8499.txt
+	outputs/workspace_output_1767503972_4507.txt
+	outputs/workspace_output_1767503976_1116.txt
+	outputs/workspace_output_1767503979_8229.txt
+	outputs/workspace_output_1767503983_5870.txt
+	outputs/workspace_output_1767503990_4679.txt
+	outputs/workspace_output_1767503994_5443.txt
+	outputs/workspace_output_1767504008_5772.txt
+	outputs/workspace_output_1767504021_8619.txt
+	outputs/workspace_output_1767504025_3123.txt
+	outputs/workspace_output_1767504036_6931.txt
+	outputs/workspace_output_JAVASCRIPT_SOURCE_MAP_4159.txt
+	summarized_conversations/original_conversation_1767501444_967.txt
+	summarized_conversations/original_conversation_1767501448_6711.txt
+	summarized_conversations/original_conversation_1767502631_2974.txt
+	summarized_conversations/original_conversation_1767502635_2975.txt
+	summarized_conversations/original_conversation_1767502971_5258.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")
