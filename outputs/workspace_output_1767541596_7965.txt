@@ -6,16 +6,15 @@ const prisma = new PrismaClient();
 export default async function AuditLogsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ 
+  searchParams: { 
     actionType?: string; 
     userId?: string;
     page?: string;
-  }>;
+  };
 }) {
-  const params = await searchParams;
-  const actionTypeFilter = params.actionType || '';
-  const userIdFilter = params.userId || '';
-  const page = parseInt(params.page || '1');
+  const actionTypeFilter = searchParams.actionType || '';
+  const userIdFilter = searchParams.userId || '';
+  const page = parseInt(searchParams.page || '1');
   const pageSize = 50;
 
   const where: any = {};

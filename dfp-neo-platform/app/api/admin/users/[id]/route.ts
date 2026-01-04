@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -25,8 +25,9 @@ export async function PATCH(
     const body = await request.json();
     const { displayName, email, permissionsRoleId, status } = body;
 
+    const { id } = await params;
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!user) {
@@ -51,7 +52,7 @@ export async function PATCH(
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         displayName: displayName ? displayName.trim() : null,
         email: email ? email.trim() : null,
@@ -108,7 +109,7 @@ export async function DELETE(
     await requireCapability('users:manage');
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!user) {
@@ -127,7 +128,7 @@ export async function DELETE(
     }
 
     await prisma.user.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     await createAuditLog({

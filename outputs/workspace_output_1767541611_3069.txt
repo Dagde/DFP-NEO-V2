@@ -7,12 +7,11 @@ const prisma = new PrismaClient();
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; role?: string; status?: string }>;
+  searchParams: { search?: string; role?: string; status?: string };
 }) {
-  const params = await searchParams;
-  const search = params.search || '';
-  const roleFilter = params.role || '';
-  const statusFilter = params.status || '';
+  const search = searchParams.search || '';
+  const roleFilter = searchParams.role || '';
+  const statusFilter = searchParams.status || '';
 
   // Build where clause
   const where: any = {};
