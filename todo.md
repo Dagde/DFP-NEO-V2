@@ -1,21 +1,21 @@
-# DFP-NEO Project Todo List
+# SOLO Flight Display Fix
 
-## All Tasks Complete ✅
+## Problem Analysis
+- [x] Identified that SOLO flight is showing pilot name twice instead of "SOLO" badge
+- [x] Confirmed the issue is that `event.flightType` is not set to "Solo" in the event data
+- [x] The FlightTile component logic is correct, but the data coming from the backend is wrong
 
-### Recently Completed
-[x] Edit/Save Button Removal - Buttons completely hidden
-[x] Event Cancellation & STBY Handling - Fully implemented
-[x] Visual Adjust Modal Persistence Issue - Fixed
-[x] Delete Functionality Fix - Working correctly
-[x] AuthorisationView Routing Fix - Resolved
-[x] Production Login Issue Fix - AUTH_TRUST_HOST added
-[x] Build Synchronization Fix - Completed
-[x] Purple Button Elimination - Completely removed
+## Tasks to Fix
 
-### Database & User Management Documentation
-[x] Created comprehensive DATABASE_AND_USER_MANAGEMENT.md
-[x] Documented all user management methods
-[x] Explained permissions storage options
-[x] Provided migration path from mock to database users
+### 1. Backend Data Investigation
+- [ ] Check how SOLO flights are stored in the database
+- [ ] Verify the `flightType` field is being set correctly when creating SOLO flights
+- [ ] Check if there's a data migration needed to fix existing SOLO flights
 
-## Status: All Issues Resolved ✅
+### 2. Frontend Detection Enhancement
+- [ ] Add fallback SOLO detection logic that checks if pilot and student are the same person
+- [ ] Implement this in the FlightTile component as a backup detection method
+
+### 3. Testing
+- [ ] Verify SOLO flights display correctly after fix
+- [ ] Test with both new and existing SOLO flights
