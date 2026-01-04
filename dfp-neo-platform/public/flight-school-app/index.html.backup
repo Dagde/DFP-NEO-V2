@@ -218,180 +218,127 @@
   }
   </style>
   <script>
-  <script>
-    // COMPREHENSIVE FIXES FOR DFP-NEO
-    
-    // FIX 1: Hide only useless sidebar buttons, preserve all functional buttons
+    // IMMEDIATE purple button elimination - runs BEFORE React loads
     (function() {
       function hideUselessButtons() {
         const buttons = document.querySelectorAll('button');
         buttons.forEach(button => {
           const style = button.getAttribute('style');
           const text = button.textContent.trim();
-          const rect = button.getBoundingClientRect();
           
-          // Only target bottom-left sidebar buttons
-          const isInBottomLeftSidebar = rect.left < 250 && rect.top > 400;
+          // Only hide buttons with purple styling in the SIDEBAR (bottom left)
+          // Do NOT hide buttons in modals/dialogs (Flight Details, Visual Adjust, etc.)
+          const isInSidebar = button.closest('.sidebar, [class*="sidebar"]') || 
+                             button.closest('.courses-section, [class*="courses"]') ||
+                             (button.getBoundingClientRect().left < 250 && 
+                              button.getBoundingClientRect().top > 400); // Bottom left corner only
           
-          const isPurpleButton = style && (
-            style.includes('rgb(118, 75, 162)') || 
-            style.includes('118, 75, 162') || 
-            style.includes('#764ba2')
-          );
+          const isPurpleButton = style && (style.includes('rgb(118, 75, 162)') || 
+                                          style.includes('118, 75, 162') || 
+                                          style.includes('#764ba2'));
           
-          // NEVER hide these functional buttons
-          const isFunctionalButton = 
-            text.includes('Visual Adjust') || 
-            text.includes('Save') ||
-            text.includes('Cancel') ||
-            text.includes('Close') ||
-            text.includes('Apply') ||
-            text.includes('Confirm') ||
-            text.includes('Add') ||
-            text.includes('Delete') ||
-            text.includes('Update');
+          // Exclude Visual Adjust, Save, and other functional buttons
+          const isFunctionalButton = text.includes('Visual Adjust') || 
+                                     text.includes('Save') ||
+                                     text.includes('Cancel') ||
+                                     text.includes('Close') ||
+                                     text.includes('Apply') ||
+                                     text.includes('Confirm');
           
-          // Only hide purple buttons in bottom-left sidebar that are NOT functional
-          if (isPurpleButton && isInBottomLeftSidebar && !isFunctionalButton) {
+          // Only hide purple buttons in sidebar that are NOT functional
+          if (isPurpleButton && isInSidebar && !isFunctionalButton) {
             button.style.setProperty('display', 'none', 'important');
             button.style.setProperty('visibility', 'hidden', 'important');
             button.style.setProperty('opacity', '0', 'important');
             button.style.setProperty('pointer-events', 'none', 'important');
-            console.log('🗑️ HIDDEN sidebar button:', text);
+            console.log('HIDDEN sidebar button:', text);
           }
         });
       }
       
+      // Run immediately
       hideUselessButtons();
-      setInterval(hideUselessButtons, 2000);
       
+      // Run every 100ms for the first 10 seconds
+      let count = 0;
+      const interval = setInterval(() => {
+        hideUselessButtons();
+        count++;
+        if (count > 100) clearInterval(interval);
+      }, 100);
+      
+      // Run on DOM changes
       if (typeof MutationObserver !== 'undefined') {
         const observer = new MutationObserver(hideUselessButtons);
-        observer.observe(document.body, {
+        observer.observe(document.documentElement, {
           childList: true,
-          subtree: true
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style']
         });
       }
     })();
-    
-    // FIX 2: Solo flight display - replace duplicate names with SOLO
+  </script>
+  <script>
+    // Fix solo flight display - ensure SOLO flights show correctly
     (function() {
       function fixSoloFlights() {
-        // Find ALL elements that might contain flight information
-        const allElements = document.querySelectorAll('*');
+        // Find all flight tiles/events
+        const flightElements = document.querySelectorAll('[class*="flight"], [class*="event"], [data-event-type]');
         
-        allElements.forEach(element => {
+        flightElements.forEach(element => {
           const text = element.textContent;
-          const innerHTML = element.innerHTML;
           
-          // Skip if no text or already processed
-          if (!text || element.dataset.soloFixed === 'true') return;
-          
-          // Check for solo flight indicators
-          const isSolo = /\b(SCT|SOLO|TWR\s+DI)\b/i.test(text);
+          // Check if this is a solo flight (SCT, SOLO, or similar indicators)
+          const isSolo = text.includes('SCT') || 
+                        text.includes('SOLO') || 
+                        text.includes('[SOLO]') ||
+                        text.includes('Solo');
           
           if (isSolo) {
-            // Look for duplicate names pattern
-            const namePattern = /([A-Z][a-z]+,\s*[A-Z][a-z]+)(?:\s*\([A-Z]\))?/g;
-            const names = [];
-            let match;
+            // Find duplicate names in the element
+            const nameMatches = text.match(/([A-Z][a-z]+,\s*[A-Z][a-z]+)/g);
             
-            while ((match = namePattern.exec(text)) !== null) {
-              names.push(match[1].trim());
-            }
-            
-            // If we found the same name twice, it's a solo flight with duplicate
-            if (names.length >= 2 && names[0] === names[1]) {
-              let count = 0;
-              const escapedName = names[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const regex = new RegExp('(' + escapedName + ')(?:\\s*\\([A-Z]\\))?', 'g');
+            if (nameMatches &amp;&amp; nameMatches.length >= 2) {
+              // Check if the same name appears twice (indicating incorrect solo display)
+              const firstName = nameMatches[0];
+              const secondName = nameMatches[1];
               
-              const fixedHTML = innerHTML.replace(regex, (match) => {
-                count++;
-                if (count === 1) {
-                  return match; // Keep first occurrence
-                } else {
-                  return '<span style="color: #fbbf24; font-weight: bold;">SOLO</span>';
+              if (firstName === secondName) {
+                // This is a solo flight showing the same pilot twice
+                // Find the second occurrence and replace with "SOLO"
+                const innerHTML = element.innerHTML;
+                let count = 0;
+                const fixedHTML = innerHTML.replace(new RegExp(firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;'), 'g'), (match) => {
+                  count++;
+                  return count === 1 ? match : '<strong style="color: #fbbf24;">SOLO</strong>';
+                });
+                
+                if (fixedHTML !== innerHTML) {
+                  element.innerHTML = fixedHTML;
+                  console.log('Fixed solo flight display for:', firstName);
                 }
-              });
-              
-              if (fixedHTML !== innerHTML) {
-                element.innerHTML = fixedHTML;
-                element.dataset.soloFixed = 'true';
-                console.log('✅ Fixed SOLO flight:', names[0]);
               }
             }
           }
         });
       }
       
-      // Run aggressively at start
+      // Run immediately
       fixSoloFlights();
-      setTimeout(fixSoloFlights, 500);
-      setTimeout(fixSoloFlights, 1000);
-      setTimeout(fixSoloFlights, 2000);
       
-      // Then run periodically
-      setInterval(fixSoloFlights, 3000);
+      // Run periodically
+      setInterval(fixSoloFlights, 2000);
       
-      // Watch for changes
+      // Run on DOM changes
       if (typeof MutationObserver !== 'undefined') {
-        const observer = new MutationObserver(() => {
-          setTimeout(fixSoloFlights, 200);
-        });
+        const observer = new MutationObserver(fixSoloFlights);
         observer.observe(document.body, {
           childList: true,
-          subtree: true,
-          characterData: true
+          subtree: true
         });
       }
     })();
-    
-    // FIX 3: Remove grey color from trainee courses (grey is reserved for SCT)
-    (function() {
-      function fixCourseColors() {
-        // Find all course elements
-        const courseElements = document.querySelectorAll('[class*="course"], [data-course], .course-item, [class*="ADF"], [class*="FIC"]');
-        
-        courseElements.forEach(element => {
-          const style = window.getComputedStyle(element);
-          const bgColor = style.backgroundColor;
-          const text = element.textContent;
-          
-          // Check if this is a grey course (not SCT)
-          const isGrey = bgColor.includes('128, 128, 128') || 
-                        bgColor.includes('169, 169, 169') ||
-                        bgColor === 'rgb(128, 128, 128)' ||
-                        bgColor === 'rgb(169, 169, 169)' ||
-                        style.color === 'rgb(128, 128, 128)';
-          
-          const isSCT = text.includes('SCT');
-          
-          // If grey but NOT SCT, change to a different color
-          if (isGrey && !isSCT) {
-            // Change to blue for trainee courses
-            element.style.setProperty('background-color', '#3b82f6', 'important'); // blue-500
-            element.style.setProperty('color', '#ffffff', 'important');
-            console.log('🎨 Fixed grey course color for:', text);
-          }
-        });
-      }
-      
-      fixCourseColors();
-      setInterval(fixCourseColors, 3000);
-      
-      if (typeof MutationObserver !== 'undefined') {
-        const observer = new MutationObserver(fixCourseColors);
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-          attributes: true,
-          attributeFilter: ['style', 'class']
-        });
-      }
-    })();
-    
-    console.log('✅ DFP-NEO Comprehensive Fixes Loaded');
   </script>
   <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
   <script type="module" crossorigin src="./assets/index-uPhlgI5U.js"></script>
