@@ -288,6 +288,17 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 </span>
             );
         }
+        
+        // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
+        // This handles cases where flightType is not set correctly in the database
+        if (event.pilot && event.student && event.pilot === event.student) {
+            console.log('🎯 FALLBACK SOLO DETECTION: Pilot and student are the same:', event.pilot);
+            return (
+                <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
+                    SOLO
+                </span>
+            );
+        }
       if ((event.groupTraineeIds && event.groupTraineeIds.length > 1) || 
           (event.attendees && event.attendees.length > 1) || 
           event.student === 'Multiple') {
