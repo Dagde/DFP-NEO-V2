@@ -34,22 +34,17 @@
       }
     </script>
     <style>
-      /* HIDE Edit and Save buttons completely - they serve no purpose */
-      button[style*="rgb(118, 75, 162)"],
-      button[style*="118, 75, 162"],
-      button[style*="#764ba2"],
-      *[style*="background: rgb(118, 75, 162)"],
-      *[style*="background-color: rgb(118, 75, 162)"] {
+      /* DO NOT hide buttons globally - only target sidebar buttons specifically */
+      /* This ensures Save buttons in Flight Details modal still work */
+      
+      /* Only hide purple buttons that are in the left sidebar area */
+      .sidebar button[style*="rgb(118, 75, 162)"],
+      [class*="sidebar"] button[style*="rgb(118, 75, 162)"],
+      .courses-section button[style*="rgb(118, 75, 162)"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-      }
-      
-      /* Hide any buttons containing Edit or Save text */
-      button:has-text("Edit"),
-      button:has-text("Save") {
-        display: none !important;
       }
     </style>
     <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
@@ -231,14 +226,23 @@
           const style = button.getAttribute('style');
           const text = button.textContent.trim();
           
-          // Hide buttons with purple styling OR Edit/Save text
-          if ((style && (style.includes('rgb(118, 75, 162)') || style.includes('118, 75, 162') || style.includes('#764ba2'))) ||
-              text.includes('Edit') || text.includes('Save') || text.includes('✏️') || text.includes('💾')) {
+          // Only hide buttons with purple styling in the SIDEBAR (bottom left)
+          // Do NOT hide Save buttons in modals/dialogs (Flight Details page)
+          const isInSidebar = button.closest('.sidebar, [class*="sidebar"]') || 
+                             button.closest('.courses-section, [class*="courses"]') ||
+                             (button.getBoundingClientRect().left < 250); // Left side of screen
+          
+          const isPurpleButton = style && (style.includes('rgb(118, 75, 162)') || 
+                                          style.includes('118, 75, 162') || 
+                                          style.includes('#764ba2'));
+          
+          // Only hide purple buttons in sidebar, NOT in modals/dialogs
+          if (isPurpleButton && isInSidebar) {
             button.style.setProperty('display', 'none', 'important');
             button.style.setProperty('visibility', 'hidden', 'important');
             button.style.setProperty('opacity', '0', 'important');
             button.style.setProperty('pointer-events', 'none', 'important');
-            console.log('HIDDEN useless button:', text);
+            console.log('HIDDEN sidebar button:', text);
           }
         });
       }
