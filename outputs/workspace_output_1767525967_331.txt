@@ -1,0 +1,1 @@
+196:  const isSctEvent = event.eventCategory === 'sct';
