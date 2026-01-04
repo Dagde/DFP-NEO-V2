@@ -8,34 +8,106 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum UserStatus {
+  active
+  disabled
+  pending
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PILOT
+  INSTRUCTOR
+  USER
+}
+
+// ============================================================================
+// AUTHENTICATION & USER MANAGEMENT
+// ============================================================================
+
 model User {
-  id            String    @id @default(cuid())
-  username      String    @unique
-  email         String?   @unique
-  password      String
-  role          Role      @default(USER)
-  firstName     String?
-  lastName      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  lastLogin     DateTime?
-  isActive      Boolean   @default(true)
+  id                  String        @id @default(cuid())
+  
+  // Login credentials (NEW: userId is the login identifier, NOT email)
+  userId              String        @unique  // Login identifier (e.g., employee ID, service number)
+  email               String?       @unique  // Optional, for recovery/notifications only
+  passwordHash        String?                // bcrypt hash, null until set
+  
+  // User information
+  displayName         String?
+  firstName           String?
+  lastName            String?
+  
+  // Status and permissions
+  status              UserStatus    @default(active)
+  permissionsRoleId   String
+  permissionsRole     PermissionsRole @relation(fields: [permissionsRoleId], references: [id])
+  
+  // Password management
+  mustChangePassword  Boolean       @default(true)
+  passwordSetAt       DateTime?
+  lastLoginAt         DateTime?
+  
+  // Legacy fields (keeping for backward compatibility)
+  username            String?       @unique  // Deprecated, use userId
+  password            String?                // Deprecated, use passwordHash
+  role                Role          @default(USER)  // Deprecated, use permissionsRole
+  isActive            Boolean       @default(true)  // Deprecated, use status
+  
+  // Timestamps
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
   
   // Relations
-  sessions      Session[]
-  schedules     Schedule[]
-  settings      UserSettings?
-  createdBy     User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
-  createdById   String?
-  createdUsers  User[]    @relation("UserCreatedBy")
-  flightSchedules FlightSchedule[] @relation("FlightSchedules")
-  personnel     Personnel[] @relation("Personnel")
-  aircraft      Aircraft[] @relation("Aircraft")
-  cancellations CancellationHistory[] @relation("CancellationHistory")
-  auditLogs     AuditLog[] @relation("AuditLog")
+  sessions            Session[]
+  accounts            Account[]
+  inviteTokens        InviteToken[]
+  passwordResetTokens PasswordResetToken[]
+  auditLogsAsActor    AuditLog[]    @relation("AuditLogActor")
+  auditLogsAsTarget   AuditLog[]    @relation("AuditLogTarget")
   
-  @@index([username])
+  // Legacy relations (keeping for backward compatibility)
+  schedules           Schedule[]
+  settings            UserSettings?
+  createdBy           User?         @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdById         String?
+  createdUsers        User[]        @relation("UserCreatedBy")
+  flightSchedules     FlightSchedule[] @relation("FlightSchedules")
+  personnel           Personnel[]   @relation("Personnel")
+  aircraft            Aircraft[]    @relation("Aircraft")
+  cancellations       CancellationHistory[] @relation("CancellationHistory")
+  legacyAuditLogs     LegacyAuditLog[] @relation("LegacyAuditLog")
+  
+  @@index([userId])
   @@index([email])
+  @@index([status])
+  @@index([permissionsRoleId])
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -47,6 +119,117 @@ model Session {
   
   @@index([userId])
 }
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================================================
+// PERMISSIONS SYSTEM
+// ============================================================================
+
+model PermissionsRole {
+  id          String   @id @default(cuid())
+  name        String   @unique  // e.g., Administrator, Instructor, Trainee, Programmer, Maintenance
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  users       User[]
+  capabilities PermissionsRoleCapability[]
+  
+  @@index([name])
+}
+
+model PermissionCapability {
+  id          String   @id @default(cuid())
+  key         String   @unique  // e.g., "admin:access_panel", "users:manage", "launch:access"
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  roles       PermissionsRoleCapability[]
+  
+  @@index([key])
+}
+
+model PermissionsRoleCapability {
+  id           String   @id @default(cuid())
+  roleId       String
+  capabilityId String
+  
+  role         PermissionsRole      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  capability   PermissionCapability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, capabilityId])
+  @@index([roleId])
+  @@index([capabilityId])
+}
+
+// ============================================================================
+// PASSWORD MANAGEMENT
+// ============================================================================
+
+model InviteToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique  // SHA-256 hash of the token
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+  
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique  // SHA-256 hash of the token
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+  
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+// AUDIT LOGGING
+// ============================================================================
+
+model AuditLog {
+  id            String   @id @default(cuid())
+  actorUserId   String?  // Who performed the action (null for system actions)
+  actionType    String   // e.g., "login_success", "login_failure", "user_created", "password_changed"
+  targetUserId  String?  // User affected by the action
+  metadata      Json?    // Additional context
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  
+  actor         User?    @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  target        User?    @relation("AuditLogTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// LEGACY MODELS (keeping for backward compatibility)
+// ============================================================================
 
 model Schedule {
   id          String   @id @default(cuid())
@@ -85,15 +268,6 @@ model DataBackup {
   @@index([createdAt])
 }
 
-enum Role {
-  SUPER_ADMIN
-  ADMIN
-  PILOT
-  INSTRUCTOR
-  USER
-}
-
-// Enhanced Flight Scheduling Models
 model FlightSchedule {
   id          String   @id @default(cuid())
   userId      String
@@ -170,7 +344,8 @@ model CancellationHistory {
   @@index([cancellationCode])
 }
 
-model AuditLog {
+// Renamed from AuditLog to avoid conflict
+model LegacyAuditLog {
   id          String   @id @default(cuid())
   userId      String
   action      String   // 'create', 'update', 'delete', 'login', etc.
@@ -181,7 +356,7 @@ model AuditLog {
   userAgent   String?
   createdAt   DateTime @default(now())
   
-  user        User     @relation("AuditLog", fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation("LegacyAuditLog", fields: [userId], references: [id], onDelete: Cascade)
   
   @@index([userId])
   @@index([action])

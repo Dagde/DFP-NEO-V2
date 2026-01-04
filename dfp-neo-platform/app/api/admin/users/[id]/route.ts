@@ -1,107 +1,158 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/auth';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
+import { PrismaClient, UserStatus } from '@prisma/client';
+import { createAuditLog } from '@/lib/audit';
 
-// Mock user data (same as in the main users route)
-const mockUsers = [
-  {
-    id: '1',
-    username: 'admin',
-    email: 'admin@dfp-neo.com',
-    role: 'ADMIN',
-    firstName: 'System',
-    lastName: 'Administrator',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    username: 'john.pilot',
-    email: 'john.pilot@dfp-neo.com',
-    role: 'PILOT',
-    firstName: 'John',
-    lastName: 'Smith',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: null,
-  },
-  {
-    id: '3',
-    username: 'jane.instructor',
-    email: 'jane.instructor@dfp-neo.com',
-    role: 'INSTRUCTOR',
-    firstName: 'Jane',
-    lastName: 'Wilson',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: null,
-  }
-];
+const prisma = new PrismaClient();
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
   try {
     const session = await auth();
     
-    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+
+    await requireCapability('users:manage');
 
     const body = await request.json();
-    const { isActive } = body;
+    const { displayName, email, permissionsRoleId, status } = body;
 
-    const userIndex = mockUsers.findIndex(u => u.id === id);
-    if (userIndex === -1) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Update user
-    if (body.hasOwnProperty('isActive')) {
-      mockUsers[userIndex].isActive = isActive;
-      console.log(`🔄 User ${mockUsers[userIndex].username} ${isActive ? 'activated' : 'deactivated'}`);
-    }
-
-    return NextResponse.json({
-      id: mockUsers[userIndex].id,
-      username: mockUsers[userIndex].username,
-      isActive: mockUsers[userIndex].isActive,
+    const user = await prisma.user.findUnique({
+      where: { id: params.id },
     });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if email already exists (if changed)
+    if (email && email !== user.email) {
+      const existingEmail = await prisma.user.findUnique({
+        where: { email: email.trim() },
+      });
+
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: 'Email already exists' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: params.id },
+      data: {
+        displayName: displayName ? displayName.trim() : null,
+        email: email ? email.trim() : null,
+        permissionsRoleId,
+        status: status as UserStatus,
+      },
+      include: {
+        permissionsRole: true,
+      },
+    });
+
+    await createAuditLog({
+      actionType: 'user_updated',
+      actorUserId: session.user.id,
+      targetUserId: updatedUser.id,
+      metadata: {
+        userId: updatedUser.userId,
+        changes: { displayName, email, permissionsRoleId, status },
+      },
+    });
+
+    return NextResponse.json({ success: true, user: updatedUser });
+  } catch (error: any) {
+    console.error('Update user error:', error);
     
-  } catch (error) {
-    console.error('Failed to update user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage users' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
   try {
     const session = await auth();
     
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const userIndex = mockUsers.findIndex(u => u.id === id);
-    if (userIndex === -1) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    await requireCapability('users:manage');
+
+    const user = await prisma.user.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
     }
 
-    const deletedUser = mockUsers[userIndex];
-    mockUsers.splice(userIndex, 1);
+    // Prevent deleting yourself
+    if (user.id === session.user.id) {
+      return NextResponse.json(
+        { error: 'You cannot delete your own account' },
+        { status: 400 }
+      );
+    }
 
-    console.log(`🗑️ Deleted user: ${deletedUser.username}`);
+    await prisma.user.delete({
+      where: { id: params.id },
+    });
+
+    await createAuditLog({
+      actionType: 'user_deleted',
+      actorUserId: session.user.id,
+      metadata: {
+        deletedUserId: user.id,
+        deletedUserUserId: user.userId,
+      },
+    });
 
     return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Delete user error:', error);
     
-  } catch (error) {
-    console.error('Failed to delete user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage users' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

@@ -1,0 +1,159 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
+import { PrismaClient, UserStatus } from '@prisma/client';
+import { createInviteToken, setTemporaryPassword } from '@/lib/password';
+import { createAuditLog } from '@/lib/audit';
+
+const prisma = new PrismaClient();
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has permission to manage users
+    await requireCapability('users:manage');
+
+    const body = await request.json();
+    const { userId, email, displayName, permissionsRoleId, method, temporaryPassword } = body;
+
+    // Validate required fields
+    if (!userId || !permissionsRoleId) {
+      return NextResponse.json(
+        { error: 'User ID and Permissions Role are required' },
+        { status: 400 }
+      );
+    }
+
+    // Normalize userId
+    const normalizedUserId = userId.trim().toUpperCase();
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        userId: {
+          equals: normalizedUserId,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User ID already exists' },
+        { status: 400 }
+      );
+    }
+
+    // Check if email already exists (if provided)
+    if (email) {
+      const existingEmail = await prisma.user.findUnique({
+        where: { email: email.trim() },
+      });
+
+      if (existingEmail) {
+        return NextResponse.json(
+          { error: 'Email already exists' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Verify role exists
+    const role = await prisma.permissionsRole.findUnique({
+      where: { id: permissionsRoleId },
+    });
+
+    if (!role) {
+      return NextResponse.json(
+        { error: 'Invalid permissions role' },
+        { status: 400 }
+      );
+    }
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        userId: normalizedUserId,
+        email: email ? email.trim() : null,
+        displayName: displayName ? displayName.trim() : null,
+        permissionsRoleId,
+        status: UserStatus.active,
+        mustChangePassword: true,
+        passwordHash: null,
+      },
+    });
+
+    // Log user creation
+    await createAuditLog({
+      actionType: 'user_created',
+      actorUserId: session.user.id,
+      targetUserId: user.id,
+      metadata: {
+        userId: user.userId,
+        role: role.name,
+        method,
+      },
+    });
+
+    let inviteLink = '';
+
+    if (method === 'invite') {
+      // Create invite token
+      const token = await createInviteToken(user.id, 72);
+      inviteLink = `${process.env.NEXTAUTH_URL}/set-password?token=${token}`;
+
+      // TODO: Send email if user has email
+      if (user.email) {
+        console.log(`Invite link for ${user.userId}: ${inviteLink}`);
+        // Integrate with email service here
+      }
+    } else if (method === 'temporary') {
+      // Set temporary password
+      if (!temporaryPassword) {
+        return NextResponse.json(
+          { error: 'Temporary password is required' },
+          { status: 400 }
+        );
+      }
+
+      const result = await setTemporaryPassword(user.id, temporaryPassword, session.user.id);
+
+      if (!result.success) {
+        // Delete the user if password setting failed
+        await prisma.user.delete({ where: { id: user.id } });
+        return NextResponse.json(
+          { error: result.errors?.join(', ') || 'Failed to set temporary password' },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      userId: user.id,
+      inviteLink: inviteLink || undefined,
+    });
+  } catch (error: any) {
+    console.error('Create user error:', error);
+    
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage users' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
