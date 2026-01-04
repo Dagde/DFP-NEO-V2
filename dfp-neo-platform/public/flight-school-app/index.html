@@ -9,10 +9,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Flight School Scheduler - v2024-12-08-2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js" defer onerror="console.warn('Failed to load suncalc')"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" defer onerror="console.warn('Failed to load xlsx - Excel features may not work')"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer onerror="console.warn('Failed to load jspdf')"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js" defer onerror="console.warn('Failed to load jspdf-autotable')"></script>
   <style>
   @keyframes fade-in {
     from { opacity: 0; transform: scale(0.95); }
@@ -180,6 +176,41 @@
   }
   </style>
   <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+  <script>
+    // Timeout wrapper for slow-loading CDN scripts
+    (function() {
+      const scripts = [
+        'https://unpkg.com/suncalc@1.9.0/suncalc.js',
+        'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js'
+      ];
+      
+      scripts.forEach(src => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        
+        // Set a timeout to give up on slow scripts
+        const timeout = setTimeout(() => {
+          console.warn('Script timed out after 5s:', src);
+          script.remove();
+        }, 5000);
+        
+        script.onload = () => {
+          clearTimeout(timeout);
+          console.log('Script loaded:', src);
+        };
+        
+        script.onerror = () => {
+          clearTimeout(timeout);
+          console.warn('Script failed to load:', src);
+        };
+        
+        document.head.appendChild(script);
+      });
+    })();
+  </script>
   <script type="module" crossorigin src="./assets/index-CHdj6ICi.js"></script>
 </head>
     <body class="bg-gray-800 text-white">
