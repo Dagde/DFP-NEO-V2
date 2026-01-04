@@ -1,25 +1,18 @@
-# Fix Button Display and Watermark Issues
+# Fix Button Removal - Restore Flight Details Edit Button
 
-## Current Status
-User reports that despite previous fixes:
-1. Edit ✏️ and Save 💾 buttons are still visible on the site
-2. "Powered by SuperNinja" watermark is still showing
+## Problem
+The ultra-aggressive button removal script removed ALL Edit/Save buttons, including:
+- ❌ The legitimate "Edit" button in the Flight Details modal (NEEDED)
+- ✅ The debug Edit ✏️ and Save 💾 buttons on bottom left (should be removed)
 
-## Investigation Completed
-- [x] Found existing hide-buttons.js script in public folder
-- [x] Verified script is loaded in both index.html files (line 246)
-- [x] Verified watermark was removed from app/select/page.tsx
-- [x] Rebuilt the application successfully
-- [x] Restarted dev server on port 3000
+## Solution
+Make the script more specific to only target the debug buttons by:
+1. Looking for buttons that contain BOTH text AND emoji (✏️ Edit, 💾 Save)
+2. OR buttons with specific styling that matches the debug buttons
+3. Preserve all other Edit/Save buttons
 
-## Root Cause Analysis
-- [ ] The changes are in the source code but user is viewing the production site
-- [ ] Production site needs to be redeployed with the new build
-- [ ] Need to verify what URL the user is actually viewing
-
-## Next Steps
-- [ ] Ask user for the exact URL they're viewing
-- [ ] Check if they're viewing the Railway production site or local dev server
-- [ ] Verify the hide-buttons.js script loads on their site
-- [ ] Check browser console for any JavaScript errors
-- [ ] Confirm the watermark text they're seeing (is it "SuperNinja" or "NinjaTech AI"?)
+## Tasks
+- [ ] Update hide-buttons.js to be more selective
+- [ ] Test that Flight Details Edit button works
+- [ ] Verify debug buttons are still removed
+- [ ] Rebuild and deploy
