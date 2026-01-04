@@ -1,0 +1,3 @@
+39:      where: { id: params.id },
+45:    await revokeAllUserSessions(params.id, session.user.id);
+50:      targetUserId: params.id,

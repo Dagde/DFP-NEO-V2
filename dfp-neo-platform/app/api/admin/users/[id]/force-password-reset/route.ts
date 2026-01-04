@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -23,8 +23,9 @@ export async function POST(
 
     await requireCapability('users:manage');
 
+    const { id } = await params;
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!user) {
@@ -35,18 +36,18 @@ export async function POST(
     }
 
     await prisma.user.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         mustChangePassword: true,
       },
     });
 
-    await revokeAllUserSessions(params.id, session.user.id);
+    await revokeAllUserSessions(id, session.user.id);
 
     await createAuditLog({
       actionType: 'password_reset_forced',
       actorUserId: session.user.id,
-      targetUserId: params.id,
+      targetUserId: id,
       metadata: {
         userId: user.userId,
       },

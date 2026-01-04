@@ -1,0 +1,26 @@
+
+> dfp-neo-platform@1.0.0 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 9.8s
+   Linting and checking validity of types ...
+Failed to compile.
+
+app/api/admin/users/[id]/force-password-reset/route.ts
+Type error: Route "app/api/admin/users/[id]/force-password-reset/route.ts" has an invalid "POST" export:
+  Type "{ params: { id: string; }; }" is not a valid type for the function's second argument.
+
+Next.js build worker exited with code: 1 and signal: null

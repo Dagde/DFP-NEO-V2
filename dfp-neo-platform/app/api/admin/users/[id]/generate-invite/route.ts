@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -22,8 +22,9 @@ export async function POST(
 
     await requireCapability('users:manage');
 
+    const { id } = await params;
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!user) {
@@ -33,7 +34,7 @@ export async function POST(
       );
     }
 
-    const token = await createInviteToken(params.id, 72);
+    const token = await createInviteToken(id, 72);
     const inviteLink = `${process.env.NEXTAUTH_URL}/set-password?token=${token}`;
 
     return NextResponse.json({ success: true, inviteLink });
