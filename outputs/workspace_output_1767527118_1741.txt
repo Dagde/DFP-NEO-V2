@@ -1,0 +1,4 @@
+196:  const isSctEvent = event.eventCategory === 'sct';
+200:  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
+201:  const studentName = isSctEvent ? event.student : (event.flightType === 'Solo' ? '' : event.student || '');
+260:      if (isSctEvent && event.flightType === 'Dual' && event.student) {

@@ -1,6 +1,6 @@
 # Fix Solo Flight Display - Complete Investigation and Fix
 
-## Status: In Progress - Final Fix
+## Status: In Progress - SCT Solo Fix
 
 ## Tasks
 
@@ -19,27 +19,40 @@
 - [x] Ready for testing all event types (LMP, SCT, TWR DI)
 
 ### 3. Build and Deploy
-- [ ] Build application with final fix
-- [ ] Deploy to public directory
-- [ ] Push to GitHub
-- [ ] Verify SOLO badge appears correctly
+- [x] Build application with final fix
+- [x] Deploy to public directory
+- [x] Push to GitHub
+- [x] Ready for verification of SOLO badge
 
-## Root Cause Found
+## Root Causes Found and Fixed
+
+### Issue 1: Duplicate Names (TWR DI)
 **Line 201 in FlightTile.tsx:**
 - OLD: `const studentName = isSctEvent ? event.student : (event.student || (event.flightType === 'Solo' ? event.pilot : ''));`
 - NEW: `const studentName = isSctEvent ? event.student : (event.flightType === 'Solo' ? '' : event.student || '');`
+- **Problem:** For Solo flights, studentName was being set to event.pilot, causing duplicate display
+- **Fix:** For Solo flights, studentName is now set to empty string
 
-**Issue:** For Solo flights, studentName was being set to event.pilot, causing duplicate display in TWR DI events
-**Fix:** For Solo flights, studentName is now set to empty string, allowing getStudentDisplay() to return the SOLO badge
+### Issue 2: SOLO Badge Not Displaying (SCT, LMP, TWR DI)
+**Lines 421 and 440 in FlightTile.tsx:**
+- OLD (line 440): `{typeof studentDisplay === 'string' ? <>{studentDisplay}...</> : displayStudentName?.split(' – ')[0]}`
+- NEW: `{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}...</> : studentDisplay}`
+- **Problem:** The ternary logic was backwards - when studentDisplay was NOT a string (i.e., the SOLO badge component), it was trying to display displayStudentName (which was empty)
+- **Fix:** Corrected the logic to display studentDisplay (the SOLO badge component) when it's not a string
 
 ## Changes Summary
 1. **FlightTile.tsx (line 201)**: Fixed duplicate name issue for Solo flights
 2. **FlightDetailModal.tsx (lines 1818-1841)**: Fixed modal display to show PIC and SOLO badge
 
-## Deployment
-- New build: index-C2PVgj_X.js (created at 11:26)
-- Pushed to GitHub: feature/comprehensive-build-algorithm
-- Commit: a10b8ad "Fix Solo flight duplicate names in FlightTile - prevent pilot name from appearing twice"
+## Deployment History
+1. **First fix (duplicate names):**
+   - Build: index-C2PVgj_X.js (created at 11:26)
+   - Commit: a10b8ad "Fix Solo flight duplicate names in FlightTile - prevent pilot name from appearing twice"
+   
+2. **Second fix (SOLO badge display):**
+   - Build: index-BiUszwTI.js (created at 11:43)
+   - Commit: ef07b9d "Fix SOLO badge display in FlightTile - show badge component instead of empty string"
+   - Pushed to GitHub: feature/comprehensive-build-algorithm
 
 ## Preview
 https://8080-f50e58f5-efd2-45fb-9f1f-9911f1134081.sandbox-service.public.prod.myninja.ai
