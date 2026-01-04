@@ -1,0 +1,49 @@
+[feature/comprehensive-build-algorithm 70c8b7f] COMPREHENSIVE FIX - Remove all authentication conflicts and fix build issues
+ Committer: root <root@172.16.0.74>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 42 files changed, 454 insertions(+), 733 deletions(-)
+ delete mode 100644 dfp-neo-platform/lib/auth/auth.ts
+ delete mode 100644 dfp-neo-platform/scripts/add-user.ts
+ delete mode 100644 dfp-neo-platform/scripts/add-users-from-json.ts
+ delete mode 100644 dfp-neo-platform/scripts/add-users-from-template.ts
+ delete mode 100644 dfp-neo-platform/scripts/create-super-admin.js
+ delete mode 100644 dfp-neo-platform/scripts/setup-production-users.ts
+ create mode 100644 outputs/workspace_output_1767543131_2261.txt
+ create mode 100644 outputs/workspace_output_1767543301_6042.txt
+ create mode 100644 outputs/workspace_output_1767543303_5867.txt
+ create mode 100644 outputs/workspace_output_1767543308_5444.txt
+ create mode 100644 outputs/workspace_output_1767543315_4204.txt
+ create mode 100644 outputs/workspace_output_1767543318_2838.txt
+ create mode 100644 outputs/workspace_output_1767543321_5800.txt
+ create mode 100644 outputs/workspace_output_1767543324_588.txt
+ create mode 100644 outputs/workspace_output_1767543328_4759.txt
+ create mode 100644 outputs/workspace_output_1767543339_6219.txt
+ create mode 100644 outputs/workspace_output_1767543341_3856.txt
+ create mode 100644 outputs/workspace_output_1767543344_2355.txt
+ create mode 100644 outputs/workspace_output_1767543347_6666.txt
+ create mode 100644 outputs/workspace_output_1767543369_8200.txt
+ create mode 100644 outputs/workspace_output_1767543378_1975.txt
+ create mode 100644 outputs/workspace_output_1767543383_7553.txt
+ create mode 100644 outputs/workspace_output_1767543395_6983.txt
+ create mode 100644 outputs/workspace_output_1767543457_7102.txt
+ create mode 100644 outputs/workspace_output_1767543464_6891.txt
+ create mode 100644 outputs/workspace_output_1767543479_5097.txt
+ create mode 100644 outputs/workspace_output_1767543482_4630.txt
+ create mode 100644 outputs/workspace_output_1767543484_7662.txt
+ create mode 100644 outputs/workspace_output_1767543498_4820.txt
+ create mode 100644 outputs/workspace_output_1767543565_2639.txt
+ create mode 100644 outputs/workspace_output_1767543569_8325.txt
+ create mode 100644 outputs/workspace_output_1767543574_2356.txt
+ create mode 100644 outputs/workspace_output_1767543584_2570.txt
+ create mode 100644 outputs/workspace_output_1767543599_6610.txt
+ create mode 100644 outputs/workspace_output_1767543604_9845.txt

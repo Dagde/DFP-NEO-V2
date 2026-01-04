@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function SetPasswordPage() {
+function SetPasswordPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -175,5 +175,17 @@ export default function SetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
+      <SetPasswordPageContent />
+    </Suspense>
   );
 }
