@@ -1,0 +1,4 @@
+app/(auth)/set-password/page.tsx:import { useRouter, useSearchParams } from 'next/navigation';
+app/(auth)/set-password/page.tsx:  const searchParams = useSearchParams();
+app/(auth)/reset-password/page.tsx:import { useRouter, useSearchParams } from 'next/navigation';
+app/(auth)/reset-password/page.tsx:  const searchParams = useSearchParams();
