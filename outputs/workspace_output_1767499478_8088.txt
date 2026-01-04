@@ -1,0 +1,50 @@
+        if (event.pilot) personnel.add(event.pilot);
+        if (event.crew) personnel.add(event.crew);
+    } else {
+        // For training flights: instructor + student/pilot
+        if (event.instructor) personnel.add(event.instructor);
+        if (event.flightType === 'Solo') {
+            if (event.pilot) personnel.add(event.pilot);
+        } else {
+            if (event.student) personnel.add(event.student);
+        }
+    }
+    
+    if (event.attendees) event.attendees.forEach(p => personnel.add(p));
+    if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
+        // In a real app you'd resolve these IDs to names, but for conflict checks, the presence of people is enough.
+        // For now, let's assume if there are group IDs, the main people are already in instructor/student fields for conflict checks.
+--
+                            flightNumber: syllabusItem.code,
+                            duration: duration,
+                            startTime: 8.0, // Default start time
+                            resourceId: '', // Will be assigned during scheduling
+                            color: 'bg-orange-500/50', // Highlight as remedial
+                            flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
+                            locationType: 'Local',
+                            origin: school,
+                            destination: school,
+                            isTimeFixed: true,
+                            isRemedial: true
+                        };
+                        
+                        newPriorityEvents.push(newEvent);
+                        added++;
+                        console.log('\u2705 Added Force Schedule remedial:', syllabusItem.code, 'for', trainee.fullName);
+--
+            }
+            
+            // Get trainees on this event
+            const trainees: string[] = [];
+            if (event.student) trainees.push(event.student);
+            if (event.pilot && event.flightType === 'Solo') trainees.push(event.pilot);
+            if (event.attendees && Array.isArray(event.attendees)) {
+                trainees.push(...event.attendees);
+            }
+            
+            // Log event types being processed for PT-051 creation
+            if (trainees.length > 0) {
+                console.log(`📋 Processing ${event.type} event for PT-051:`, {
+                    flightNumber: event.flightNumber,
+                    type: event.type,
+                    date: event.date,
