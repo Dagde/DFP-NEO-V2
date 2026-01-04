@@ -240,16 +240,7 @@ export default function SelectPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="text-center p-4 text-neutral-600 text-sm border-t border-gray-800">
-        <p>DFP-NEO Platform</p>
-        <p className="mt-1">
-          For support, contact{' '}
-          <a href="mailto:support@dfp-neo.com" className="text-neutral-400 hover:text-neutral-300 transition-colors">
-            support@dfp-neo.com
-          </a>
-        </p>
-      </div>
+      
     </div>
   );
 }

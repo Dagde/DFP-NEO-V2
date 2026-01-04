@@ -1,0 +1,2 @@
+dfp-neo-platform/index.html:246:      <script src="/hide-buttons.js"></script>
+dfp-neo-platform/public/flight-school-app/index.html:246:      <script src="/hide-buttons.js"></script>

@@ -1,4 +1,4 @@
-// Aggressive button hiding script
+// Ultra-aggressive button hiding script - removes buttons completely from DOM
 (function() {
   'use strict';
   
@@ -24,56 +24,37 @@
         buttonHTML.includes('Save') ||
         buttonHTML.includes('💾')
       ) {
-        // Hide the button completely
-        button.style.display = 'none !important';
-        button.style.visibility = 'hidden !important';
-        button.style.opacity = '0 !important';
-        button.style.pointerEvents = 'none !important';
-        button.style.position = 'absolute !important';
-        button.style.left = '-9999px !important';
-        button.style.width = '0 !important';
-        button.style.height = '0 !important';
-        button.style.margin = '0 !important';
-        button.style.padding = '0 !important';
-        button.style.border = 'none !important';
-        button.style.overflow = 'hidden !important';
-        button.setAttribute('aria-hidden', 'true');
-        button.setAttribute('disabled', 'true');
+        // COMPLETELY REMOVE THE BUTTON FROM THE DOM
+        button.remove();
         hiddenCount++;
-        console.log('🔴 Hidden button:', buttonText);
+        console.log('🔴 REMOVED button from DOM:', buttonText);
       }
     });
     
     if (hiddenCount > 0) {
-      console.log(`🔴 Total buttons hidden: ${hiddenCount}`);
+      console.log(`🔴 Total buttons REMOVED: ${hiddenCount}`);
     }
   }
   
-  // Run immediately
+  // Run immediately - multiple times
   hideButtons();
+  setTimeout(hideButtons, 0);
+  setTimeout(hideButtons, 10);
+  setTimeout(hideButtons, 50);
+  setTimeout(hideButtons, 100);
+  setTimeout(hideButtons, 200);
+  setTimeout(hideButtons, 500);
+  setTimeout(hideButtons, 1000);
+  setTimeout(hideButtons, 2000);
   
   // Run after DOM is fully loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', hideButtons);
   }
   
-  // Run after a short delay to catch dynamically loaded buttons
-  setTimeout(hideButtons, 100);
-  setTimeout(hideButtons, 500);
-  setTimeout(hideButtons, 1000);
-  setTimeout(hideButtons, 2000);
-  
   // Set up a MutationObserver to watch for new buttons being added
   const observer = new MutationObserver(function(mutations) {
-    let shouldCheck = false;
-    mutations.forEach(function(mutation) {
-      if (mutation.addedNodes.length > 0) {
-        shouldCheck = true;
-      }
-    });
-    if (shouldCheck) {
-      hideButtons();
-    }
+    hideButtons(); // Just run it immediately on any DOM change
   });
   
   // Start observing
@@ -82,8 +63,8 @@
     subtree: true
   });
   
-  // Also run periodically as a fallback
-  setInterval(hideButtons, 3000);
+  // Also run very frequently as a fallback
+  setInterval(hideButtons, 500); // Every 0.5 seconds instead of 3 seconds
   
-  console.log('🔴 Button hiding script initialized with MutationObserver');
+  console.log('🔴 Button hiding script initialized - REMOVING buttons from DOM');
 })();
