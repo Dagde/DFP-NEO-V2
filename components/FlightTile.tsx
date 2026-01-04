@@ -198,7 +198,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   
   const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
-  const studentName = isSctEvent ? event.student : (event.flightType === 'Solo' ? '' : event.student || '');
+  const studentName = event.flightType === 'Solo' ? '' : (isSctEvent ? event.student : event.student || '');
   
   let picClasses = `font-semibold truncate`;
   let studentClasses = `truncate`;
