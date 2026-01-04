@@ -94,7 +94,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -108,8 +108,9 @@ export async function DELETE(
 
     await requireCapability('users:manage');
 
+    const { id } = await params;
     const user = await prisma.user.findUnique({
-      where: { id: id },
+      where: { id },
     });
 
     if (!user) {
