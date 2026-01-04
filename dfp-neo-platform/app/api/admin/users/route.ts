@@ -1,54 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/auth';
+import { PrismaClient, UserStatus } from '@prisma/client';
 
-// Mock user data for development (will be replaced with real database once connected)
-const mockUsers = [
-  {
-    id: '1',
-    username: 'admin',
-    email: 'admin@dfp-neo.com',
-    role: 'ADMIN',
-    firstName: 'System',
-    lastName: 'Administrator',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    username: 'john.pilot',
-    email: 'john.pilot@dfp-neo.com',
-    role: 'PILOT',
-    firstName: 'John',
-    lastName: 'Smith',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: null,
-  },
-  {
-    id: '3',
-    username: 'jane.instructor',
-    email: 'jane.instructor@dfp-neo.com',
-    role: 'INSTRUCTOR',
-    firstName: 'Jane',
-    lastName: 'Wilson',
-    isActive: true,
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: null,
-  }
-];
+const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
-    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    if (!session || session.user.permissionsRole.name !== 'Administrator') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('📋 Fetching users for admin:', session.user.username);
+    console.log('📋 Fetching users for admin:', session.user.userId);
     
-    return NextResponse.json(mockUsers);
+    const users = await prisma.user.findMany({
+      include: { permissionsRole: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    return NextResponse.json(users);
     
   } catch (error) {
     console.error('Failed to fetch users:', error);
@@ -60,35 +31,38 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     
-    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    if (!session || session.user.permissionsRole.name !== 'Administrator') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { username, password, email, firstName, lastName, role } = body;
+    const { userId, displayName, email, permissionsRoleId } = body;
 
-    if (!username || !password) {
-      return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+    if (!userId || !displayName || !permissionsRoleId) {
+      return NextResponse.json({ error: 'User ID, display name, and role are required' }, { status: 400 });
     }
 
-    const existingUser = mockUsers.find(u => u.username === username);
+    const prisma = new PrismaClient();
+    
+    const existingUser = await prisma.user.findUnique({
+      where: { userId },
+    });
+    
     if (existingUser) {
-      return NextResponse.json({ error: 'Username already exists' }, { status: 400 });
+      return NextResponse.json({ error: 'User ID already exists' }, { status: 400 });
     }
 
-    const newUser = {
-      id: Date.now().toString(),
-      username,
-      email: email || `${username}@dfp-neo.com`,
-      role: role || 'USER',
-      firstName: firstName || '',
-      lastName: lastName || '',
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: null,
-    };
-
-    mockUsers.push(newUser);
+    const newUser = await prisma.user.create({
+      data: {
+        userId,
+        displayName,
+        email,
+        permissionsRole: { connect: { id: permissionsRoleId } },
+        status: 'ACTIVE',
+        mustChangePassword: true,
+      },
+      include: { permissionsRole: true },
+    });
 
     console.log('✅ Created new user:', newUser);
 
