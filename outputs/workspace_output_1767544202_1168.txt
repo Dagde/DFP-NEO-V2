@@ -1,0 +1,3 @@
+b7f9f99 Fix duplicate login page route - remove app/login/page.tsx to resolve Next.js routing conflict
+d3e311d Implement exact Stackblitz login design with metallic plate inputs
+87d5cca Add web platform with authentication, admin panel, and landing page
