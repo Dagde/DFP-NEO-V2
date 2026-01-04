@@ -1,0 +1,131 @@
+  }
+  
+  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
+  const studentName = isSctEvent ? event.student : (event.student || (event.flightType === 'Solo' ? event.pilot : ''));
+  
+  let picClasses = `font-semibold truncate`;
+  let studentClasses = `truncate`;
+
+  if (isPreview) {
+      if (picName?.includes('✓')) {
+          picClasses = 'font-bold truncate text-green-400';
+      } else if (picName?.includes('✕')) {
+          picClasses = 'font-bold truncate text-red-500';
+      }
+
+      if (studentName?.includes('✓')) {
+          studentClasses = 'font-bold truncate text-green-400';
+      } else if (studentName?.includes('✕')) {
+          studentClasses = 'font-bold truncate text-red-500';
+      }
+  } else {
+      const textColorClass = getAuthorizationTextColorClass(event, currentTime);
+      const picHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(picName || '');
+      const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
+      
+      // Check for event finish to stop highlighting unavailability on past events
+      const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+      const eventEndTime = event.startTime + event.duration;
+      const isEventFinished = nowInHours >= eventEndTime && event.date === new Date().toISOString().split('T')[0];
+
+      if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
+          picClasses = 'font-bold truncate text-red-500';
+      } else if (textColorClass) {
+          picClasses += ` ${textColorClass}`;
+      }
+
+      if ((conflictedPersonnelName === studentName) || (studentHasUnavailability && !isEventFinished)) {
+          studentClasses = 'font-bold truncate text-red-500';
+      } else if (textColorClass) {
+          studentClasses += ' text-white/80';
+      } else {
+          studentClasses += ' text-white/80';
+      }
+  }
+  
+  const getStudentDisplay = () => {
+      if (isPreview) {
+          return studentName;
+      }
+
+        // For SCT Solo events, show SOLO label
+        if (isSctEvent && event.flightType === 'Solo') {
+            return (
+                   <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
+                       SOLO
+                   </span>
+               );
+           }
+
+      // For SCT Dual events, show crew name from student field
+      if (isSctEvent && event.flightType === 'Dual' && event.student) {
+          return event.student.split(' – ')[0];
+      }
+
+        if (event.flightType === 'Solo') {
+            return (
+                <span className="bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold" style={{fontSize: isSmallTile ? '10px' : `${scaledFontSize * 0.85}px`}}>
+                    SOLO
+                </span>
+            );
+        }
+      if ((event.groupTraineeIds && event.groupTraineeIds.length > 1) || 
+          (event.attendees && event.attendees.length > 1) || 
+          event.student === 'Multiple') {
+          return 'Group';
+      }
+      
+      if (event.student && event.student !== 'Multiple') {
+          return event.student.split(' – ')[0];
+      }
+
+      if (event.attendees && event.attendees.length === 1) {
+          return event.attendees[0].split(' – ')[0];
+      }
+      
+      if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
+          const trainee = traineesData.find(t => t.idNumber === event.groupTraineeIds![0]);
+          return trainee ? trainee.name.split(',')[0] : 'Group';
+      }
+      
+      return '';
+  };
+  const studentDisplay = getStudentDisplay();
+
+    // Helper function to get seat config abbreviation
+    const getSeatConfigAbbr = (personName: string | undefined): string => {
+        if (!personName) return "";
+        const seatConfig = seatConfigs.get(personName);
+        if (!seatConfig) return "";
+        
+        switch (seatConfig) {
+            case "Normal": return " (N)";
+            case "FWD/SHORT": return " (F/S)";
+            case "FWD/LONG": return " (F/L)";
+            case "REAR/SHORT": return " (R/S)";
+            default: return "";
+        }
+    };
+
+    // Get seat config abbreviations for pilot and student
+    const picSeatConfig = getSeatConfigAbbr(picName);
+    const studentSeatConfig = getSeatConfigAbbr(typeof studentDisplay === "string" ? studentDisplay : "");
+
+  const storedCallsign = event.callsign || '';
+  
+  const callsignInfo = picName ? personnelData.get(picName) : undefined;
+  const pilotCallsign = callsignInfo && callsignInfo.callsignNumber > 0
+      ? `${callsignInfo.callsignPrefix} ${String(callsignInfo.callsignNumber).padStart(3, '0')}`
+      : '';
+  
+  // For solo flights, use trainee callsign instead of instructor callsign
+     const isSoloFlight = event.flightType === 'Solo';
+     let callsign = storedCallsign || pilotCallsign;
+     
+     if (isSoloFlight && event.pilot) {
+         const trainee = traineesData.find(t => t.fullName === event.pilot);
+         if (trainee?.traineeCallsign) {
+             callsign = trainee.traineeCallsign;
+         }
+     }
+
