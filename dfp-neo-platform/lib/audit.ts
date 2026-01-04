@@ -18,7 +18,7 @@ export async function createAuditLog(data: AuditLogData) {
         actorUserId: data.actorUserId || null,
         actionType: data.actionType,
         targetUserId: data.targetUserId || null,
-        metadata: data.metadata || null,
+        metadata: data.metadata ? data.metadata : undefined,
         ipAddress: data.ipAddress || null,
         userAgent: data.userAgent || null,
       },
