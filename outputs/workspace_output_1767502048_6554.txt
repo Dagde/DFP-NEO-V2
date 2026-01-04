@@ -1,0 +1,153 @@
+    const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di'>(event.eventCategory || 'lmp_event');
+
+    const [flightNumber, setFlightNumber] = useState(event.flightNumber);
+    const [duration, setDuration] = useState<number | ''>(event.duration);
+    const [eventType, setEventType] = useState(event.type);
+    const [startTime, setStartTime] = useState(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
+    const [area, setArea] = useState(event.area || 'A');
+    const [aircraftNumber, setAircraftNumber] = useState(event.aircraftNumber || '001');
+    const [aircraftCount, setAircraftCount] = useState(1);
+    const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
+    const [visualAdjustEndTime, setVisualAdjustEndTime] = useState(event.startTime + event.duration);
+    
+    // Sync visual adjust times when event changes (from parent drag updates)
+    useEffect(() => {
+        if (isVisualAdjustMode) {
+            setVisualAdjustStartTime(event.startTime);
+            setVisualAdjustEndTime(event.startTime + event.duration);
+        }
+    }, [event.startTime, event.duration, isVisualAdjustMode]);
+    const [crew, setCrew] = useState<CrewMember[]>([{
+--
+        } else if (eventCategory === 'twr_di') {
+            // TWR DI can use any syllabus items (no filtering)
+            options = syllabusDetails.map(item => item.id);
+        } else {
+            options = dynamicSyllabusOptions;
+        }
+        
+        // Always ensure SCT FORM is available when adding a tile
+        if (isAddingTile && !options.includes('SCT FORM')) {
+            options = [...options, 'SCT FORM'];
+        }
+        
+        
+        
+        return options;
+    }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile]);
+
+    // Get staff-only instructors (exclude trainees) grouped by unit
+    const staffInstructorsByUnit = useMemo(() => {
+        const traineeNames = new Set(traineesData.map(t => t.fullName));
+        
+--
+        } else if (eventCategory === 'twr_di') {
+            // TWR DI defaults to Solo
+            setCrew(prev => prev.map(c => ({ ...c, flightType: 'Solo' })));
+            // Set default duration to 1.2 for TWR DI
+            if (!duration) setDuration(1.2);
+            // Set default start time to 0800 only for new events
+            if (isAddingTile || !event.startTime || event.startTime === 0) {
+                setStartTime('08:00');
+            }
+        }
+    }, [eventCategory]);
+
+    // Effect to pull Type (Dual/Solo) from syllabus when flight number changes
+    useEffect(() => {
+        if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di')) {
+            const syllabusItem = syllabusDetails.find(item => item.id === flightNumber);
+            if (syllabusItem && syllabusItem.flightType) {
+                setCrew(prev => prev.map(c => ({ ...c, flightType: syllabusItem.flightType as 'Dual' | 'Solo' })));
+            }
+        }
+    }, [flightNumber, eventCategory, syllabusDetails]);
+
+    // Effect to set Dual/Solo from Individual LMP when flight number changes (before pilot selection)
+    useEffect(() => {
+        if (isAddingTile || (isEditingDefault && (!event.id || event.id.startsWith('2d1b6a22')))) {
+            // This is a new event or tile (check for generated IDs that start with our prefix)
+            console.log(`\ud83d\udcdd [Flight Number Change] isAddingTile: ${isAddingTile}, isEditingDefault: ${isEditingDefault}, event.id: ${event.id}, flightNumber: ${flightNumber}`);
+            
+            if (flightNumber && crew[0] && traineeLMPs) {
+                const traineeName = crew[0]?.student || crew[0]?.pilot;
+                
+                if (traineeName) {
+                    // If pilot is selected, use their Individual LMP
+                    console.log(`\ud83d\udcdd [Flight Number Change] Using selected trainee: ${traineeName}`);
+                    const individualLMPFlightType = getDualSoloFromIndividualLMP(flightNumber, traineeName);
+--
+    const useStaffOnly = eventCategory === 'lmp_currency' || eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di';
+    
+    // Determine if we should show Trainee/Group fields (only for LMP Event and LMP Currency)
+    const showTraineeFields = eventCategory === 'lmp_event' || eventCategory === 'lmp_currency';
+    
+    // Determine if we should show Crew field (only for SCT and Staff CAT when Dual)
+    const showCrewField = (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && crewMember.flightType === 'Dual';
+    
+    return (
+        <div key={index} className={`space-y-4 ${crew.length > 1 ? 'p-3 bg-gray-700/50 rounded-lg' : ''}`}>
+            {crew.length > 1 && <h4 className="text-sm font-bold text-sky-400">{formationCallsign}</h4>}
+
+            <div>
+                <label className="block text-sm font-medium text-gray-400">Dual/Solo</label>
+                <select value={crewMember.flightType} onChange={e => handleCrewChange(index, 'flightType', e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                    <option value="Dual">Dual</option>
+                    <option value="Solo">Solo</option>
+                </select>
+            </div>
+
+            {crewMember.flightType === 'Dual' ? (
+                <>
+                    {/* Instructor/Pilot Field - Staff only for certain categories */}
+                    {useStaffOnly ? (
+                        renderStaffInstructorDropdown(
+                            // For SCT, use pilot field; for others, use instructor field
+                            eventCategory === 'sct' ? crewMember.pilot : crewMember.instructor,
+--
+                            (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') ? 'Pilot' : 'Instructor',
+                            isDeploy
+                        )
+                       ) : (
+                           renderStaffInstructorDropdown(
+                               crewMember.instructor,
+                               (value) => handleCrewChange(index, 'instructor', value),
+                               'Instructor',
+                               isDeploy
+                           )
+                       )}
+                    
+                    {/* Trainee/Group Fields - Only for LMP Event and LMP Currency */}
+                    {showTraineeFields && (
+                        <>
+                            {renderTraineeDropdown(
+                                crewMember.student,
+                                (value) => handleCrewChange(index, 'student', value),
+                                isDeploy,
+                                localHighlight === 'student'
+                            )}
+--
+                                                      onClick={() => setEventCategory('twr_di')}
+                                                      className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                          eventCategory === 'twr_di'
+                                                              ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                      }`}
+                                                  >
+                                                      TWR DI
+                                                  </button>                                           </div>
+                                       </div>
+
+                                    <div className={`grid grid-cols-1 ${eventType === 'flight' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
+                                        <div className="relative">
+                                            <label className="block text-sm font-medium text-gray-400">Syllabus Item</label>
+                                            <select 
+                                                value={flightNumber} 
+                                                onChange={handleFlightNumberChange} 
+                                                onFocus={handleSyllabusFocus}
+                                                disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0)}
+                                                className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed`}
+                                            >
+                                                <option value="" disabled>
+                                                    {isOracleContext ? 'Select a crew member first' : 'Select an item'}

@@ -1,0 +1,51 @@
+                                                            </span>
+                                                        </label>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-gray-500 italic">
+                                                        No deployments available for this event type
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-gray-300 space-y-2">
+                                    <p><strong>Syllabus Item:</strong> {event.flightNumber}</p>
+                                    {event.type === 'flight' && <p><strong>Route:</strong> {event.origin}-{event.destination}</p>}
+                                    {event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
+                                    <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
+                                    {event.flightType === 'Dual' ? (
+                                        <>
+                                            {event.eventCategory === 'sct' ? (
+                                                <p><strong>Instructor:</strong> {event.instructor || event.pilot}</p>
+                                            ) : (
+                                                <p><strong>Instructor:</strong> {event.instructor}</p>
+                                            )}
+                                            {(event.type === 'ground' && event.attendees && event.attendees.length > 0) ? (
+                                                <div>
+                                                    <p><strong>Attendees ({event.attendees.length}):</strong></p>
+                                                    <div className="mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto">
+                                                        <ul className="space-y-1">
+                                                            {event.attendees.map(attendee => (
+                                                                <li key={attendee} className="text-sm text-gray-300">{attendee.split(' – ')[0]}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            ) : event.eventCategory === 'sct' ? null : (
+                                                <p><strong>Student:</strong> {event.student || event.group}</p>
+                                            )}
+                                        </>
+                                    ) : <p><strong>Pilot:</strong> {event.pilot}</p>}
+                                    <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
+                                    <p><strong>Start Time:</strong> {Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</p>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Button Panel */}
+                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
+                            {!isEditing && (
+                                <>

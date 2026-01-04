@@ -1,0 +1,2 @@
+92:    console.error('❌ seatConfigs access failed:', error);
+93:    console.error('❌ Error stack:', error.stack);
