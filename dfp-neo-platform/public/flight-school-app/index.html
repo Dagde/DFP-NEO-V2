@@ -519,24 +519,55 @@
 
     // 2. FIX SOLO FLIGHTS - Replace duplicate names with SOLO
     function fixSoloFlights() {
-      const tiles = document.querySelectorAll('[data-tile-id]');
-      tiles.forEach(tile => {
-        if (tile.dataset.soloFixed) return;
+      // Find all text elements that might contain pilot names
+      const allElements = document.querySelectorAll('div, span, p');
+      
+      allElements.forEach(el => {
+        const text = el.textContent?.trim() || '';
         
-        const nameElements = tile.querySelectorAll('div');
-        const names = Array.from(nameElements)
-          .map(el => el.textContent?.trim())
-          .filter(text => text &amp;&amp; text.length > 3);
-        
-        if (names.length >= 2 &amp;&amp; names[0] === names[1]) {
-          nameElements.forEach((el, idx) => {
-            if (idx > 0 &amp;&amp; el.textContent?.trim() === names[0]) {
-              el.textContent = 'SOLO';
-              el.style.color = '#fbbf24';
-              el.style.fontWeight = 'bold';
-            }
-          });
-          tile.dataset.soloFixed = 'true';
+        // Look for pattern: "#001 Name, Name" or "Name (N)" followed by "#001 Name"
+        // Check if element contains a name pattern with (N) indicator
+        if (text.includes('(N)') &amp;&amp; !el.dataset.soloChecked) {
+          el.dataset.soloChecked = 'true';
+          
+          // Get parent container
+          const parent = el.parentElement;
+          if (!parent) return;
+          
+          // Find all text in parent
+          const parentText = parent.textContent || '';
+          
+          // Extract name from first occurrence (before #)
+          const nameMatch = text.match(/^[\d:]+\s*([A-Za-z]+,\s*[A-Za-z]+)/);
+          if (!nameMatch) return;
+          
+          const pilotName = nameMatch[1];
+          
+          // Check if the same name appears twice (indicating SOLO flight)
+          const nameOccurrences = (parentText.match(new RegExp(pilotName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;'), 'g')) || []).length;
+          
+          if (nameOccurrences >= 2) {
+            // Find the second occurrence and replace with SOLO
+            const siblings = Array.from(parent.querySelectorAll('div, span, p'));
+            let foundFirst = false;
+            
+            siblings.forEach(sibling => {
+              const siblingText = sibling.textContent?.trim() || '';
+              if (siblingText.includes(pilotName) &amp;&amp; !sibling.dataset.soloFixed) {
+                if (foundFirst) {
+                  // This is the second occurrence - replace with SOLO
+                  sibling.textContent = sibling.textContent?.replace(pilotName, 'SOLO') || 'SOLO';
+                  sibling.style.color = '#fbbf24';
+                  sibling.style.fontWeight = 'bold';
+                  sibling.dataset.soloFixed = 'true';
+                  console.log('DFP-NEO: Fixed SOLO flight for', pilotName);
+                } else {
+                  foundFirst = true;
+                  sibling.dataset.soloFixed = 'true';
+                }
+              }
+            });
+          }
         }
       });
     }

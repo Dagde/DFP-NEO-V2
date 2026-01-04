@@ -1,0 +1,31 @@
+    function fixSoloFlights() {
+      const tiles = document.querySelectorAll('[data-tile-id]');
+      tiles.forEach(tile => {
+        if (tile.dataset.soloFixed) return;
+        
+        const nameElements = tile.querySelectorAll('div');
+        const names = Array.from(nameElements)
+          .map(el => el.textContent?.trim())
+          .filter(text => text &amp;&amp; text.length > 3);
+        
+        if (names.length >= 2 &amp;&amp; names[0] === names[1]) {
+          nameElements.forEach((el, idx) => {
+            if (idx > 0 &amp;&amp; el.textContent?.trim() === names[0]) {
+              el.textContent = 'SOLO';
+              el.style.color = '#fbbf24';
+              el.style.fontWeight = 'bold';
+            }
+          });
+          tile.dataset.soloFixed = 'true';
+        }
+      });
+    }
+
+    // 3. FIX GREY COURSES - Change non-SCT grey to blue
+    function fixGreyCourses() {
+      const tiles = document.querySelectorAll('[data-tile-id]');
+      tiles.forEach(tile => {
+        const style = window.getComputedStyle(tile);
+        const bg = style.backgroundColor;
+        const text = tile.textContent || '';
+        
