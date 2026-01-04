@@ -1,0 +1,11 @@
+2026-01-04T15:58:05.836745865Z [inf]  Failed to compile.
+
+
+2026-01-04T15:58:05.83713165Z [inf]  ./lib/audit.ts:21:9
+Type error: Type 'Record<string, any> | null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+  Type 'null' is not assignable to type 'NullableJsonNullValueInput | InputJsonValue | undefined'.
+
+[0m [90m 19 |[39m         actionType[33m:[39m data[33m.[39mactionType[33m,[39m
+ [90m 20 |[39m         targetUserId[33m:[39m data[33m.[39mtargetUserId [33m||[39m [36mnull[39m[33m,[39m
+[31m[1m>[22m[39m[90m 21 |[39m         metadata[33m:[39m data[33m.[39mmetadata [33m||[39m [36mnull[39m[33m,[39m
+ [90m    |[39m         [31m[1m^[22m[39m
