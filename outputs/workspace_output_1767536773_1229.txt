@@ -1,0 +1,46 @@
+commit 19b0165cb0c596197cf903e0a8a3dcbb3cb64d2f
+Author: root <root@172.16.0.74>
+Date:   Sun Jan 4 13:58:24 2026 +0000
+
+    Add simple CSS fix for purple buttons using attribute selectors with !important
+
+diff --git a/dfp-neo-platform/index.html b/dfp-neo-platform/index.html
+index aa29975..6f8b030 100644
+--- a/dfp-neo-platform/index.html
++++ b/dfp-neo-platform/index.html
+@@ -211,6 +211,15 @@
+       });
+     })();
+   </script>
++  <style>
++    /* Purple button fix - override inline styles with !important */
++    button[style*="rgb(118, 75, 162)"],
++    button[style*="118, 75, 162"],
++    button[style*="#764ba2"] {
++      background: #3b82f6 !important;
++      background-color: #3b82f6 !important;
++    }
++  </style>
+   <script type="module" crossorigin src="./assets/index-uPhlgI5U.js"></script>
+ </head>
+     <body class="bg-gray-800 text-white">
+diff --git a/dfp-neo-platform/public/flight-school-app/index.html b/dfp-neo-platform/public/flight-school-app/index.html
+index 47b4eb9..e970095 100644
+--- a/dfp-neo-platform/public/flight-school-app/index.html
++++ b/dfp-neo-platform/public/flight-school-app/index.html
+@@ -211,6 +211,15 @@
+       });
+     })();
+   </script>
++  <style>
++    /* Purple button fix - override inline styles with !important */
++    button[style*="rgb(118, 75, 162)"],
++    button[style*="118, 75, 162"],
++    button[style*="#764ba2"] {
++      background: #3b82f6 !important;
++      background-color: #3b82f6 !important;
++    }
++  </style>
+   <script type="module" crossorigin src="./assets/index-CHdj6ICi.js"></script>
+ </head>
+     <body class="bg-gray-800 text-white">

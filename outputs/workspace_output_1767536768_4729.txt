@@ -1,0 +1,9 @@
+commit 19b0165cb0c596197cf903e0a8a3dcbb3cb64d2f
+Author: root <root@172.16.0.74>
+Date:   Sun Jan 4 13:58:24 2026 +0000
+
+    Add simple CSS fix for purple buttons using attribute selectors with !important
+
+ dfp-neo-platform/index.html                          | 9 +++++++++
+ dfp-neo-platform/public/flight-school-app/index.html | 9 +++++++++
+ 2 files changed, 18 insertions(+)

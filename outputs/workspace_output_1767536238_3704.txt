@@ -18,3 +18,10 @@
 
  ✓ Starting...
  ✓ Ready in 1235ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4.5s (557 modules)
+ GET / 307 in 4890ms
+ ✓ Compiled in 505ms (233 modules)
+ ✓ Compiled /_not-found in 473ms (548 modules)
+ GET / 404 in 887ms
+ ✓ Compiled in 285ms (233 modules)
