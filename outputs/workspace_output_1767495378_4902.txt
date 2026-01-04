@@ -1,0 +1,50 @@
+import type { NextAuthConfig } from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
+
+// Mock user data for development (matching admin API mock users)
+const mockUsers = [
+  {
+    id: '1',
+    username: 'admin',
+    email: 'admin@dfp-neo.com',
+    password: '$2a$10$UQW34KIPs5Cmkg3Ni4.hUuVQInCsT1VVLKTIR78cgtrSqnrpkKvvS', // 'admin123' hashed
+    role: 'ADMIN',
+    firstName: 'System',
+    lastName: 'Administrator',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    username: 'john.pilot',
+    email: 'john.pilot@dfp-neo.com',
+    password: '$2a$10$k42WWwZ5MUhk3V0W6W58Dupj1zSkQoJ0Vvbvf2dGiHWwUyYQZomJi', // 'pilot123' hashed
+    role: 'PILOT',
+    firstName: 'John',
+    lastName: 'Smith',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: null,
+  },
+  {
+    id: '3',
+    username: 'jane.instructor',
+    email: 'jane.instructor@dfp-neo.com',
+    password: '$2a$10$eTq2oMUhI9R8MMoU0CGuX.VCZ66NQD/a/JVKdqorD/PXdmWTOttA6', // 'instructor123' hashed
+    role: 'INSTRUCTOR',
+    firstName: 'Jane',
+    lastName: 'Wilson',
+    isActive: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    lastLogin: null,
+  }
+];
+
+export const authConfig: NextAuthConfig = {
+  providers: [
+    Credentials({
+      name: 'credentials',
+      credentials: {
+        username: { label: 'Username', type: 'text' },
