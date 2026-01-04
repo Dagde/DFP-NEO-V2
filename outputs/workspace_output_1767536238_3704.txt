@@ -17,5 +17,4 @@
      · serverActions
 
  ✓ Starting...
- ✓ Ready in 1250ms
-[?25h
+ ✓ Ready in 1235ms
