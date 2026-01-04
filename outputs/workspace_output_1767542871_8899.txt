@@ -1,0 +1,7 @@
+./types/next-auth.d.ts:  interface User {
+./lib/auth.ts:  interface User {
+./app/admin/users/[id]/EditUserForm.tsx:interface User {
+./app/admin/users/UsersList.tsx:interface User {
+./scripts/add-users-from-json.ts:interface UserConfig {
+./scripts/add-users-from-json.ts:interface UserConfigFile {
+./scripts/add-users-from-template.ts:interface UserTemplate {
