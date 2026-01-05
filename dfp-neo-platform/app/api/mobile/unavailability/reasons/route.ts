@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import { authenticateMobileRequest } from '@/lib/mobile-middleware';
 
 export async function GET(request: NextRequest) {
@@ -8,24 +7,47 @@ export async function GET(request: NextRequest) {
     const { user, error } = await authenticateMobileRequest(request);
     if (error) return error;
 
-    // Get all active unavailability reasons
-    const reasons = await prisma.unavailabilityReason.findMany({
-      where: {
-        isActive: true,
+    // Return static unavailability reasons (temporary solution until database is updated)
+    const reasons = [
+      {
+        id: 'reason1',
+        code: 'SICK',
+        description: 'Sick Leave',
+        requiresApproval: true,
       },
-      orderBy: {
-        code: 'asc',
+      {
+        id: 'reason2',
+        code: 'LEAVE',
+        description: 'Annual Leave',
+        requiresApproval: true,
       },
-    });
+      {
+        id: 'reason3',
+        code: 'MEDICAL',
+        description: 'Medical Appointment',
+        requiresApproval: false,
+      },
+      {
+        id: 'reason4',
+        code: 'PERSONAL',
+        description: 'Personal Reasons',
+        requiresApproval: true,
+      },
+      {
+        id: 'reason5',
+        code: 'FAMILY',
+        description: 'Family Emergency',
+        requiresApproval: true,
+      },
+      {
+        id: 'reason6',
+        code: 'TRAINING',
+        description: 'External Training',
+        requiresApproval: false,
+      },
+    ];
 
-    return NextResponse.json({
-      reasons: reasons.map((reason) => ({
-        id: reason.id,
-        code: reason.code,
-        description: reason.description,
-        requiresApproval: reason.requiresApproval,
-      })),
-    });
+    return NextResponse.json({ reasons });
   } catch (error) {
     console.error('Get unavailability reasons error:', error);
     return NextResponse.json(
