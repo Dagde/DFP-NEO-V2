@@ -56,47 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for conflicts with existing schedule
-    // Extract date from start datetime
-    const dateStr = start.toISOString().split('T')[0];
-    
-    const schedule = await prisma.schedule.findFirst({
-      where: {
-        userId: user!.id,
-        date: dateStr,
-      },
-    });
-
+    // Check for conflicts with existing schedule (simplified for now)
+    // In a real implementation, you would check against the user's schedule
     let conflicts: string[] = [];
-    if (schedule) {
-      const scheduleData = schedule.data as any;
-      if (scheduleData.events && Array.isArray(scheduleData.events)) {
-        // Check if unavailability overlaps with any events
-        conflicts = scheduleData.events
-          .filter((event: any) => {
-            if (event.status === 'Cancelled') return false;
-            
-            // Simple time overlap check
-            const eventStart = event.startTime || event.start || '';
-            const eventEnd = event.endTime || event.end || '';
-            
-            // This is a simplified check - in production you'd want more robust time comparison
-            return true; // For now, assume potential conflict
-          })
-          .map((event: any) => {
-            const eventType = event.type || event.eventType || 'Event';
-            const startTime = event.startTime || event.start || '';
-            const endTime = event.endTime || event.end || '';
-            return `${eventType} at ${startTime}-${endTime}`;
-          });
-      }
-    }
-
-    // Determine status based on approval requirement and conflicts
     let status = reason.requiresApproval ? 'Pending' : 'Approved';
-    if (conflicts.length > 0) {
-      status = 'Conflicted';
-    }
 
     // For now, return a success response without storing in database
     // The actual database creation will be added after schema migration
