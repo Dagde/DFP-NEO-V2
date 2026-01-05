@@ -19,9 +19,9 @@ export default async function UsersPage({
 
   if (search) {
     where.OR = [
-      { userId: { contains: search, mode: 'insensitive' } },
-      { displayName: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } },
+      { userId: { contains: search } },
+      { displayName: { contains: search } },
+      { email: { contains: search } },
     ];
   }
 
