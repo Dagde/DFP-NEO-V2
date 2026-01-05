@@ -1,0 +1,3 @@
+./public/flight-school-app/_next/chunks/app/login
+./app/(auth)/login
+./app/login

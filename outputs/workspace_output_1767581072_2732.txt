@@ -1,0 +1,50 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { requireCapability } from '@/lib/permissions';
+import { PrismaClient, UserStatus } from '@prisma/client';
+import { createInviteToken, setTemporaryPassword } from '@/lib/password';
+import { createAuditLog } from '@/lib/audit';
+
+const prisma = new PrismaClient();
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has permission to manage users
+    await requireCapability('users:manage');
+
+    const body = await request.json();
+    const { userId, email, displayName, permissionsRoleId, method, temporaryPassword } = body;
+
+    // Validate required fields
+    if (!userId || !permissionsRoleId) {
+      return NextResponse.json(
+        { error: 'User ID and Permissions Role are required' },
+        { status: 400 }
+      );
+    }
+
+    // Normalize userId
+    const normalizedUserId = userId.trim().toUpperCase();
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        userId: {
+          equals: normalizedUserId,
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User ID already exists' },

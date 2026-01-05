@@ -1,0 +1,5 @@
+        password: { label: 'Password', type: 'password' },
+        if (!credentials?.userId || !credentials?.password) {
+        if (!user || !user.password) {
+          credentials.password as string,
+          user.password

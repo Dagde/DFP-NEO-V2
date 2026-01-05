@@ -1,0 +1,30 @@
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Error: Prisma schema validation - (get-dmmf wasm)
+Error code: P1012
+[1;91merror[0m: [1mNative type Text is not supported for sqlite connector.[0m
+  [1;94m-->[0m  [4mprisma/schema.prisma:99[0m
+[1;94m   | [0m
+[1;94m98 | [0m  providerAccountId String
+[1;94m99 | [0m  refresh_token     String? [1;91m@db.Text[0m
+[1;94m   | [0m
+[1;91merror[0m: [1mNative type Text is not supported for sqlite connector.[0m
+  [1;94m-->[0m  [4mprisma/schema.prisma:100[0m
+[1;94m   | [0m
+[1;94m99 | [0m  refresh_token     String? @db.Text
+[1;94m100 | [0m  access_token      String? [1;91m@db.Text[0m
+[1;94m   | [0m
+[1;91merror[0m: [1mNative type Text is not supported for sqlite connector.[0m
+  [1;94m-->[0m  [4mprisma/schema.prisma:104[0m
+[1;94m   | [0m
+[1;94m103 | [0m  scope             String?
+[1;94m104 | [0m  id_token          String? [1;91m@db.Text[0m
+[1;94m   | [0m
+
+Validation Error Count: 3
+[Context: getDmmf]
+
+Prisma CLI Version : 6.19.1

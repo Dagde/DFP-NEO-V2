@@ -1,0 +1,10 @@
+./.next/types/app/api/admin/users/[id]/generate-invite/route.ts
+./.next/types/app/api/admin/users/[id]/route.ts
+./.next/types/app/api/admin/users/[id]/force-password-reset/route.ts
+./.next/types/app/api/admin/users/route.ts
+./.next/types/app/api/admin/users/create/route.ts
+./app/api/admin/users/[id]/generate-invite/route.ts
+./app/api/admin/users/[id]/route.ts
+./app/api/admin/users/[id]/force-password-reset/route.ts
+./app/api/admin/users/route.ts
+./app/api/admin/users/create/route.ts

@@ -54,13 +54,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           include: { permissionsRole: true },
         });
 
-        if (!user || !user.passwordHash) {
+        if (!user || !user.password) {
           return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
-          user.passwordHash
+          user.password
         );
 
         if (!isPasswordValid) {

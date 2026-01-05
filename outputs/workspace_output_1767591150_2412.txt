@@ -1,0 +1,91 @@
+2026-01-05T05:23:11.000000000Z [inf]  Starting Container
+2026-01-05T05:23:12.715477740Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-05T05:23:13.470631912Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-05T05:23:13.470638141Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-05T05:23:13.470643372Z [err]  
+2026-01-05T05:23:13.941010831Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-05T05:23:13.941015951Z [inf]  Datasource "db": SQLite database "dev.db" at "file:./dev.db"
+2026-01-05T05:23:13.962606249Z [inf]  
+2026-01-05T05:23:13.962611473Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-05T05:23:13.962616488Z [inf]  
+2026-01-05T05:23:13.963235874Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-05T05:23:14.219055979Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-05T05:23:14.768565055Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 397ms
+2026-01-05T05:23:14.768572921Z [inf]  
+2026-01-05T05:23:14.849631401Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-05T05:23:16.115300162Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-05T05:23:16.115311352Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-05T05:23:16.115318679Z [err]  
+2026-01-05T05:23:16.504763923Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-05T05:23:17.066324660Z [inf]  📋 Creating permission capabilities...
+2026-01-05T05:23:17.066336800Z [inf]    ✓ Created capability: launch:access
+2026-01-05T05:23:17.066345882Z [inf]    ✓ Created capability: admin:access_panel
+2026-01-05T05:23:17.066354094Z [inf]    ✓ Created capability: users:manage
+2026-01-05T05:23:17.066390314Z [inf]  🌱 Starting database seed...
+2026-01-05T05:23:17.071749764Z [inf]    ✓ Created capability: audit:read
+2026-01-05T05:23:17.077307316Z [inf]    ✓ Created capability: training:manage
+2026-01-05T05:23:17.082881015Z [inf]    ✓ Created capability: maintenance:edit
+2026-01-05T05:23:17.083782085Z [inf]    ✓ Created capability: developer:tools_access
+2026-01-05T05:23:17.095387119Z [inf]    ✓ Created capability: schedule:create
+2026-01-05T05:23:17.095394505Z [inf]    ✓ Created capability: schedule:edit
+2026-01-05T05:23:17.100792541Z [inf]    ✓ Created capability: schedule:delete
+2026-01-05T05:23:17.107007008Z [inf]    ✓ Created capability: personnel:manage
+2026-01-05T05:23:17.112303807Z [inf]    ✓ Created capability: aircraft:manage
+2026-01-05T05:23:17.112313420Z [inf]  
+2026-01-05T05:23:17.112320844Z [inf]  👥 Creating permissions roles...
+2026-01-05T05:23:17.133858519Z [inf]    ✓ Created role: Administrator with 12 capabilities
+2026-01-05T05:23:17.139804588Z [inf]    ✓ Created role: Instructor with 5 capabilities
+2026-01-05T05:23:17.145053105Z [inf]    ✓ Created role: Trainee with 1 capabilities
+2026-01-05T05:23:17.152951700Z [inf]    ✓ Created role: Programmer with 4 capabilities
+2026-01-05T05:23:17.164818426Z [inf]  📝 Summary:
+2026-01-05T05:23:17.164829110Z [inf]     - 12 capabilities created
+2026-01-05T05:23:17.164837621Z [inf]     - 5 roles created
+2026-01-05T05:23:17.164840529Z [inf]    ✓ Created role: Maintenance with 3 capabilities
+2026-01-05T05:23:17.164844563Z [inf]     - Initial admin user created (userId: admin)
+2026-01-05T05:23:17.164848289Z [inf]  
+2026-01-05T05:23:17.164854406Z [inf]  👤 Creating initial administrator user...
+2026-01-05T05:23:17.164854819Z [inf]  
+2026-01-05T05:23:17.164860520Z [inf]    ⚠️  Admin user 'admin' already exists, skipping creation
+2026-01-05T05:23:17.164862972Z [inf]  ⚠️  IMPORTANT SECURITY NOTES:
+2026-01-05T05:23:17.164867139Z [inf]  
+2026-01-05T05:23:17.164870441Z [inf]     1. Change the admin password immediately after first login
+2026-01-05T05:23:17.164874290Z [inf]  ✅ Database seed completed successfully!
+2026-01-05T05:23:17.164877947Z [inf]     2. Set strong passwords for all users
+2026-01-05T05:23:17.164880860Z [inf]  
+2026-01-05T05:23:17.164885326Z [inf]     3. Review and adjust role capabilities as needed
+2026-01-05T05:23:17.164890769Z [inf]     4. Enable rate limiting in production
+2026-01-05T05:23:17.190486126Z [inf]  
+2026-01-05T05:23:17.190497330Z [inf]  🌱  The seed command has been executed.
+2026-01-05T05:23:17.349378585Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-05T05:23:17.370811050Z [inf]  
+2026-01-05T05:23:17.370819230Z [inf]  > dfp-neo-platform@1.0.0 start
+2026-01-05T05:23:17.370824876Z [inf]  > next start
+2026-01-05T05:23:17.370830999Z [inf]  
+2026-01-05T05:23:17.656295376Z [inf]  
+2026-01-05T05:23:17.656309469Z [inf]   ✓ Starting...
+2026-01-05T05:23:17.656313260Z [inf]     ▲ Next.js 15.5.9
+2026-01-05T05:23:17.656319339Z [inf]     - Local:        http://localhost:8080
+2026-01-05T05:23:17.656327907Z [inf]     - Network:      http://10.254.58.5:8080
+2026-01-05T05:23:17.920178653Z [inf]   ✓ Ready in 418ms
+2026-01-05T05:24:17.921443218Z [err]      at async NextNodeServer.renderToResponseWithComponentsImpl (/app/node_modules/next/dist/server/base-server.js:1422:9)
+2026-01-05T05:24:17.921447896Z [err]      at async ft (/app/.next/server/chunks/508.js:404:50389)
+2026-01-05T05:24:17.921460945Z [err]      at async fv (/app/.next/server/chunks/508.js:404:54641)
+2026-01-05T05:24:17.921469564Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-05T05:24:17.921477860Z [err]      at async rN.handle (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:25860)
+2026-01-05T05:24:17.921486413Z [err]      at async k (/app/.next/server/app/api/auth/[...nextauth]/route.js:1:7468)
+2026-01-05T05:24:17.921492310Z [err]  [31m[auth][error][0m CredentialsSignin: Read more at https://errors.authjs.dev#credentialssignin
+2026-01-05T05:24:17.921495934Z [err]      at async rN.handleResponse (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:1:105568)
+2026-01-05T05:24:17.921502771Z [err]      at async g (/app/.next/server/app/api/auth/[...nextauth]/route.js:1:8471)
+2026-01-05T05:24:17.921504622Z [err]      at fk (/app/.next/server/chunks/508.js:404:40964)
+2026-01-05T05:24:17.921509167Z [err]      at async B (/app/.next/server/app/api/auth/[...nextauth]/route.js:1:9593)
+2026-01-05T05:24:47.930641713Z [err]  [31m[auth][error][0m CredentialsSignin: Read more at https://errors.authjs.dev#credentialssignin
+2026-01-05T05:24:47.930651685Z [err]      at fk (/app/.next/server/chunks/508.js:404:40964)
+2026-01-05T05:24:47.930661270Z [err]      at async ft (/app/.next/server/chunks/508.js:404:50389)
+2026-01-05T05:24:47.930671609Z [err]      at async fv (/app/.next/server/chunks/508.js:404:54641)
+2026-01-05T05:24:47.930681449Z [err]      at async rN.do (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21042)
+2026-01-05T05:24:47.930690588Z [err]      at async rN.handle (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:25860)
+2026-01-05T05:24:47.930700570Z [err]      at async k (/app/.next/server/app/api/auth/[...nextauth]/route.js:1:7468)
+2026-01-05T05:24:47.930709688Z [err]      at async rN.handleResponse (/app/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:1:105568)
+2026-01-05T05:24:47.930725005Z [err]      at async g (/app/.next/server/app/api/auth/[...nextauth]/route.js:1:8471)
+2026-01-05T05:24:47.930733480Z [err]      at async B (/app/.next/server/app/api/auth/[...nextauth]/route.js:1:9593)
+2026-01-05T05:24:47.930742134Z [err]      at async NextNodeServer.renderToResponseWithComponentsImpl (/app/node_modules/next/dist/server/base-server.js:1422:9)
