@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { verifyPassword } from '@/lib/password';
+import { comparePassword } from '@/lib/password';
 import { generateAccessToken, generateRefreshToken, formatUserForMobile } from '@/lib/mobile-auth';
 
 export async function POST(request: NextRequest) {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isValidPassword = await verifyPassword(password, user.passwordHash);
+    const isValidPassword = await comparePassword(password, user.passwordHash);
     if (!isValidPassword) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid user ID or password' },
