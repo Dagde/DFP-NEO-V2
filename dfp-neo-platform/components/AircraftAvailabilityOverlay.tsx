@@ -38,11 +38,17 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
         if (stored) {
             const data = JSON.parse(stored);
-            setSnapshots(data.snapshots.map((s: any) => ({
-                ...s,
-                timestamp: new Date(s.timestamp)
-            })));
-            setCurrentAvailable(data.snapshots[data.snapshots.length - 1]?.available || plannedAvailability);
+            // Sort snapshots by timestamp to ensure correct chronological order
+            const sortedSnapshots = data.snapshots
+                .map((s: any) => ({
+                    ...s,
+                    timestamp: new Date(s.timestamp)
+                }))
+                .sort((a: AircraftAvailabilitySnapshot, b: AircraftAvailabilitySnapshot) => 
+                    a.timestamp.getTime() - b.timestamp.getTime()
+                );
+            setSnapshots(sortedSnapshots);
+            setCurrentAvailable(sortedSnapshots[sortedSnapshots.length - 1]?.available || plannedAvailability);
         } else {
             // Initialize with planned availability at start of day (0001)
             const initialSnapshot: AircraftAvailabilitySnapshot = {
@@ -257,14 +263,16 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 
                 setSnapshots(prev => {
                     const updated = [...prev, newSnapshot];
+                    // Sort snapshots by timestamp to ensure correct chronological order
+                    const sorted = updated.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
                     console.log('📊 SNAPSHOTS UPDATED:', {
-                        count: updated.length,
-                        all: updated.map(s => ({
+                        count: sorted.length,
+                        all: sorted.map(s => ({
                             time: s.timestamp.toLocaleTimeString(),
                             available: s.available
                      }))
                  });
-                    return updated;
+                    return sorted;
                 });
             } else {
                 console.log('⏭️ NO SNAPSHOT CREATED - Value unchanged');
@@ -310,11 +318,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         const now = new Date();
         const currentTimeX = getXPosition(now);
         
-           // ✅ FIX: Sort snapshots by timestamp in ascending order (oldest to newest)
-           // This ensures the line always moves left-to-right chronologically
-           const filteredSnapshots = [...snapshots].sort((a, b) => 
-               a.timestamp.getTime() - b.timestamp.getTime()
-           );
+           // Use all snapshots without filtering (already sorted)
+           const filteredSnapshots = snapshots;
 
            console.log("📏 RENDER HISTORICAL LINES:", {
                originalCount: snapshots.length,
