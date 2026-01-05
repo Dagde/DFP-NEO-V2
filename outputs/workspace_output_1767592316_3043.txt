@@ -18,7 +18,7 @@ export default async function AdminLayout({
   const hasAdminAccess = await currentUserHasCapability('admin:access_panel');
 
   if (!hasAdminAccess) {
-    redirect('/select');
+    redirect('/launch');
   }
 
   return (
@@ -61,7 +61,7 @@ export default async function AdminLayout({
                 {session.user.displayName || session.user.userId}
               </span>
               <Link
-                href="/select"
+                href="/launch"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
               >
                 Back to Launch
