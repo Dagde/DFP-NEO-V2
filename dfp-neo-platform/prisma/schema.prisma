@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -82,6 +82,7 @@ model User {
   aircraft            Aircraft[]    @relation("Aircraft")
   cancellations       CancellationHistory[] @relation("CancellationHistory")
   legacyAuditLogs     LegacyAuditLog[] @relation("LegacyAuditLog")
+  unavailabilities    Unavailability[] @relation("UserUnavailability")
   
   @@index([userId])
   @@index([email])
@@ -257,6 +258,23 @@ model UserSettings {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model WebsiteAnalytics {
+  id          String   @id @default(cuid())
+  pageType    String   // 'landing', 'launch', 'login', 'admin'
+  ipAddress   String?
+  userAgent   String?
+  country     String?  // Country code from IP geolocation
+  city        String?  // City from IP geolocation
+  location    String?  // Full location string "City, Country"
+  metadata    Json?    // Additional tracking data
+  createdAt   DateTime @default(now())
+  
+  @@index([pageType])
+  @@index([createdAt])
+  @@index([ipAddress])
+  @@index([country])
+}
+
 model DataBackup {
   id          String   @id @default(cuid())
   type        String   // 'schedule', 'settings', 'full'
@@ -362,4 +380,48 @@ model LegacyAuditLog {
   @@index([action])
   @@index([entityType])
   @@index([createdAt])
+}
+
+// ============================================================================
+// UNAVAILABILITY MANAGEMENT (for Mobile App)
+// ============================================================================
+
+model UnavailabilityReason {
+  id                String   @id @default(cuid())
+  code              String   @unique  // e.g., 'SICK', 'LEAVE', 'MEDICAL', 'PERSONAL'
+  description       String              // e.g., 'Sick Leave', 'Annual Leave'
+  requiresApproval  Boolean  @default(true)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  unavailabilities  Unavailability[]
+  
+  @@index([code])
+  @@index([isActive])
+}
+
+model Unavailability {
+  id              String   @id @default(cuid())
+  userId          String
+  reasonId        String
+  startDateTime   DateTime
+  endDateTime     DateTime
+  status          String   @default("Pending")  // 'Pending', 'Approved', 'Rejected', 'Conflicted'
+  notes           String?
+  submittedAt     DateTime @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  conflicts       Json?    // Array of conflicting events
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation("UserUnavailability", fields: [userId], references: [id], onDelete: Cascade)
+  reason          UnavailabilityReason @relation(fields: [reasonId], references: [id])
+  
+  @@index([userId])
+  @@index([reasonId])
+  @@index([status])
+  @@index([startDateTime])
+  @@index([endDateTime])
 }
