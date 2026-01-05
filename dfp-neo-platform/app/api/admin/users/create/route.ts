@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       where: {
         userId: {
           equals: normalizedUserId,
-          mode: 'insensitive',
+          
         },
       },
     });

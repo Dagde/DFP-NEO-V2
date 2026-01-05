@@ -26,8 +26,8 @@ export default async function AuditLogsPage({
 
   if (userIdFilter) {
     where.OR = [
-      { actor: { userId: { contains: userIdFilter, mode: 'insensitive' } } },
-      { target: { userId: { contains: userIdFilter, mode: 'insensitive' } } },
+      { actor: { userId: { contains: userIdFilter } } },
+      { target: { userId: { contains: userIdFilter } } },
     ];
   }
 
