@@ -48,7 +48,16 @@ export async function generateRefreshToken(userId: string): Promise<string> {
 export async function verifyToken(token: string): Promise<MobileTokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as MobileTokenPayload;
+    
+    // Validate that the payload has the required fields
+    if (
+      typeof payload.userId === 'string' &&
+      (payload.type === 'access' || payload.type === 'refresh')
+    ) {
+      return payload as unknown as MobileTokenPayload;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Token verification failed:', error);
     return null;
