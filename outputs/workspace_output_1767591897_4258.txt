@@ -20,3 +20,55 @@ https://nextjs.org/telemetry
      · serverActions
 
    Creating an optimized production build ...
+ ✓ Compiled successfully in 9.9s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/26) ...
+   Generating static pages (6/26) 
+   Generating static pages (12/26) 
+   Generating static pages (19/26) 
+ ✓ Generating static pages (26/26)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                        Size  First Load JS
+┌ ○ /                                             158 B         102 kB
+├ ○ /_not-found                                   992 B         103 kB
+├ ƒ /admin                                        165 B         106 kB
+├ ƒ /admin/audit                                1.75 kB         107 kB
+├ ƒ /admin/permissions                            158 B         102 kB
+├ ƒ /admin/users                                1.66 kB         107 kB
+├ ƒ /admin/users/[id]                           2.39 kB         108 kB
+├ ƒ /admin/users/create                          2.2 kB         108 kB
+├ ƒ /api/admin/users                              158 B         102 kB
+├ ƒ /api/admin/users/[id]                         158 B         102 kB
+├ ƒ /api/admin/users/[id]/force-password-reset    158 B         102 kB
+├ ƒ /api/admin/users/[id]/generate-invite         158 B         102 kB
+├ ƒ /api/admin/users/create                       158 B         102 kB
+├ ƒ /api/auth/[...nextauth]                       158 B         102 kB
+├ ƒ /api/auth/change-password                     158 B         102 kB
+├ ƒ /api/auth/forgot-password                     158 B         102 kB
+├ ƒ /api/auth/reset-password                      158 B         102 kB
+├ ƒ /api/auth/set-password                        158 B         102 kB
+├ ƒ /api/auth/validate-invite-token               158 B         102 kB
+├ ƒ /api/auth/validate-reset-token                158 B         102 kB
+├ ƒ /api/schedule/filter                          158 B         102 kB
+├ ○ /change-password                            1.43 kB         107 kB
+├ ○ /flight-school                                567 B         106 kB
+├ ○ /forgot-password                            1.44 kB         107 kB
+├ ○ /login                                      1.19 kB         112 kB
+├ ○ /reset-password                             1.62 kB         104 kB
+├ ○ /select                                     2.44 kB         113 kB
+├ ○ /set-password                               1.64 kB         104 kB
+└ ○ /test-login                                   905 B         106 kB
++ First Load JS shared by all                    102 kB
+  ├ chunks/255-cb395327542b56ef.js              45.9 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js         54.2 kB
+  └ other shared chunks (total)                 1.92 kB
+
+
+ƒ Middleware                                    33.9 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
