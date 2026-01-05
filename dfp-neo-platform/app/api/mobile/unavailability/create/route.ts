@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
         requiresApproval: unavailability.reason.requiresApproval,
       },
       notes: unavailability.notes,
-      submittedAt: unavailability.submittedAt.toISOString(),
+      submittedAt: unavailability.submittedAt,
       message,
     });
   } catch (error) {

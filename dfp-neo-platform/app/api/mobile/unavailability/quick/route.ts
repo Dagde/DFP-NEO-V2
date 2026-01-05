@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: unavailability.id,
       status: unavailability.status,
-      startDateTime: unavailability.startDateTime.toISOString(),
-      endDateTime: unavailability.endDateTime.toISOString(),
+      startDateTime: unavailability.startDateTime,
+      endDateTime: unavailability.endDateTime,
       reason: {
         id: unavailability.reason.id,
         code: unavailability.reason.code,
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         requiresApproval: unavailability.reason.requiresApproval,
       },
       notes: unavailability.notes,
-      submittedAt: unavailability.submittedAt.toISOString(),
+      submittedAt: unavailability.submittedAt,
       message,
     });
   } catch (error) {
