@@ -1,0 +1,7 @@
+app/api/auth/forgot-password/route.ts:          { userId: { equals: normalizedIdentifier, mode: 'insensitive' } },
+app/api/auth/forgot-password/route.ts:          { email: { equals: identifier.trim(), mode: 'insensitive' } },
+app/admin/audit/page.tsx:      { actor: { userId: { contains: userIdFilter, mode: 'insensitive' } } },
+app/admin/audit/page.tsx:      { target: { userId: { contains: userIdFilter, mode: 'insensitive' } } },
+app/admin/users/page.tsx:      { userId: { contains: search, mode: 'insensitive' } },
+app/admin/users/page.tsx:      { displayName: { contains: search, mode: 'insensitive' } },
+app/admin/users/page.tsx:      { email: { contains: search, mode: 'insensitive' } },

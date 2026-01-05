@@ -1,0 +1,86 @@
+2026-01-05T05:22:38.558341709Z [inf]  
+2026-01-05T05:22:42.808408724Z [inf]  [35m[Region: us-west1][0m
+2026-01-05T05:22:42.872078703Z [inf]  
+2026-01-05T05:22:42.872117356Z [inf]  [38;2;125;86;243m╭─────────────────╮[0m
+2026-01-05T05:22:42.872121624Z [inf]  [38;2;125;86;243m│[0m Railpack 0.15.4 [38;2;125;86;243m│[0m
+2026-01-05T05:22:42.872125215Z [inf]  [38;2;125;86;243m╰─────────────────╯[0m
+2026-01-05T05:22:42.872131555Z [inf]  
+2026-01-05T05:22:42.872135497Z [inf]  [97m↳ Detected Node[0m
+2026-01-05T05:22:42.872138857Z [inf]  [97m↳ Using npm package manager[0m
+2026-01-05T05:22:42.872142466Z [inf]  
+2026-01-05T05:22:42.872145304Z [inf]  [1mPackages[0m
+2026-01-05T05:22:42.872148948Z [inf]  [38;5;238m──────────[0m
+2026-01-05T05:22:42.872151892Z [inf]  [95mnode[0m  [38;5;238m│[0m  [96m22.21.1[0m  [38;5;238m│[0m  railpack default (22)
+2026-01-05T05:22:42.872154769Z [inf]  
+2026-01-05T05:22:42.872158175Z [inf]  [1mSteps[0m
+2026-01-05T05:22:42.872161099Z [inf]  [38;5;238m──────────[0m
+2026-01-05T05:22:42.872163849Z [inf]  [95m▸ install[0m
+2026-01-05T05:22:42.872166894Z [inf]  [38;5;245m$[0m [1mnpm ci[0m
+2026-01-05T05:22:42.872169755Z [inf]  
+2026-01-05T05:22:42.872172848Z [inf]  [95m▸ build[0m
+2026-01-05T05:22:42.872175572Z [inf]  [38;5;245m$[0m [1mnpm run build[0m
+2026-01-05T05:22:42.872178357Z [inf]  
+2026-01-05T05:22:42.872181597Z [inf]  [1mDeploy[0m
+2026-01-05T05:22:42.872184172Z [inf]  [38;5;238m──────────[0m
+2026-01-05T05:22:42.872186931Z [inf]  [38;5;245m$[0m [1mnpx prisma db push && npx prisma db seed && npm run start[0m
+2026-01-05T05:22:42.872189665Z [inf]  
+2026-01-05T05:22:42.872192539Z [inf]  
+2026-01-05T05:22:42.873509423Z [inf]  Successfully prepared Railpack plan for build
+2026-01-05T05:22:42.873560461Z [inf]  
+2026-01-05T05:22:42.873567402Z [inf]  
+2026-01-05T05:22:42.874604757Z [inf]  context: 4llx-ZUz4
+2026-01-05T05:22:43.026588847Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-05T05:22:43.026637427Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-05T05:22:43.026652829Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-05T05:22:43.026663163Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-05T05:22:43.036461395Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-05T05:22:43.039023283Z [inf]  resolve image config for docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4
+2026-01-05T05:22:43.262066837Z [inf]  resolve image config for docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4
+2026-01-05T05:22:43.364766652Z [inf]  load build definition from railpack-plan.json
+2026-01-05T05:22:43.364814488Z [inf]  load build definition from railpack-plan.json
+2026-01-05T05:22:43.365164301Z [inf]  load build definition from railpack-plan.json
+2026-01-05T05:22:43.378091412Z [inf]  load build definition from railpack-plan.json
+2026-01-05T05:22:43.510598002Z [inf]  [railpack] merge $packages:apt:runtime, $packages:mise, $build, $build
+2026-01-05T05:22:43.510647607Z [inf]  copy /app
+2026-01-05T05:22:43.510656269Z [inf]  copy /root/.cache
+2026-01-05T05:22:43.510664413Z [inf]  copy /app/node_modules
+2026-01-05T05:22:43.510671734Z [inf]  npm run build
+2026-01-05T05:22:43.510677042Z [inf]  copy .
+2026-01-05T05:22:43.510682910Z [inf]  copy / /app
+2026-01-05T05:22:43.510688493Z [inf]  npm ci
+2026-01-05T05:22:43.510699407Z [inf]  mkdir -p /app/node_modules/.cache
+2026-01-05T05:22:43.510706614Z [inf]  [railpack] copy used secrets hash
+2026-01-05T05:22:43.510713792Z [inf]  [railpack] hash used secrets
+2026-01-05T05:22:43.510720196Z [inf]  [railpack] copy secrets hash
+2026-01-05T05:22:43.510731107Z [inf]  [railpack] secrets hash
+2026-01-05T05:22:43.510736929Z [inf]  loading .
+2026-01-05T05:22:43.510748092Z [inf]  loading .
+2026-01-05T05:22:43.514202366Z [inf]  loading .
+2026-01-05T05:22:43.540011357Z [inf]  loading .
+2026-01-05T05:22:43.547338789Z [inf]  install apt packages: libatomic1
+2026-01-05T05:22:43.547385078Z [inf]  mkdir /etc/mise
+2026-01-05T05:22:43.547394987Z [inf]  create mise config
+2026-01-05T05:22:43.547402162Z [inf]  install mise packages: node
+2026-01-05T05:22:43.547409462Z [inf]  copy /mise/shims
+2026-01-05T05:22:43.547424978Z [inf]  copy /mise/installs
+2026-01-05T05:22:43.547433157Z [inf]  copy /usr/local/bin/mise
+2026-01-05T05:22:43.547439292Z [inf]  copy /etc/mise/config.toml
+2026-01-05T05:22:43.547447234Z [inf]  copy /root/.local/state/mise
+2026-01-05T05:22:43.547453869Z [inf]  copy / /app
+2026-01-05T05:22:43.547460672Z [inf]  [railpack] copy secrets hash
+2026-01-05T05:22:43.547467439Z [inf]  [railpack] hash used secrets
+2026-01-05T05:22:43.547480108Z [inf]  [railpack] copy used secrets hash
+2026-01-05T05:22:43.547487516Z [inf]  mkdir -p /app/node_modules/.cache
+2026-01-05T05:22:43.547493928Z [inf]  npm ci
+2026-01-05T05:22:43.547500238Z [inf]  copy / /app
+2026-01-05T05:22:43.547506543Z [inf]  copy .
+2026-01-05T05:22:43.547512712Z [inf]  npm run build
+2026-01-05T05:22:43.547518640Z [inf]  copy /app/node_modules
+2026-01-05T05:22:43.547525653Z [inf]  copy /root/.cache
+2026-01-05T05:22:43.547531711Z [inf]  copy /app
+2026-01-05T05:22:43.547543760Z [inf]  [railpack] merge $packages:apt:runtime, $packages:mise, $build, $build
+2026-01-05T05:22:43.753376582Z [inf]  [auth] sharing credentials for production-us-west2.railway-registry.com
+2026-01-05T05:22:43.753444736Z [inf]  [auth] sharing credentials for production-us-west2.railway-registry.com
+2026-01-05T05:22:45.427696165Z [inf]  importing to docker
+2026-01-05T05:22:55.223976435Z [inf]  importing to docker
+2026-01-05T05:22:57.934278692Z [inf]  [92mBuild time: 15.06 seconds[0m

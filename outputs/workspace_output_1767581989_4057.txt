@@ -1,0 +1,25 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+   - Environments: .env
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 1232ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 690ms (114 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 4.3s (557 modules)
+ GET / 307 in 4644ms
+ ✓ Compiled in 506ms (233 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 744ms (588 modules)
+ GET /login 200 in 974ms

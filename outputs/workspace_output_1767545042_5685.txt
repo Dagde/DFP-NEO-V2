@@ -1,0 +1,46 @@
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+🌱 Starting database seed...
+📋 Creating permission capabilities...
+  ✓ Created capability: launch:access
+  ✓ Created capability: admin:access_panel
+  ✓ Created capability: users:manage
+  ✓ Created capability: audit:read
+  ✓ Created capability: training:manage
+  ✓ Created capability: maintenance:edit
+  ✓ Created capability: developer:tools_access
+  ✓ Created capability: schedule:create
+  ✓ Created capability: schedule:edit
+  ✓ Created capability: schedule:delete
+  ✓ Created capability: personnel:manage
+  ✓ Created capability: aircraft:manage
+
+👥 Creating permissions roles...
+  ✓ Created role: Administrator with 12 capabilities
+  ✓ Created role: Instructor with 5 capabilities
+  ✓ Created role: Trainee with 1 capabilities
+  ✓ Created role: Programmer with 4 capabilities
+  ✓ Created role: Maintenance with 3 capabilities
+
+👤 Creating initial administrator user...
+  ✓ Created admin user: admin
+  ⚠️  IMPORTANT: Default password is 'ChangeMe123!'
+  ⚠️  User MUST change password on first login
+
+✅ Database seed completed successfully!
+
+📝 Summary:
+   - 12 capabilities created
+   - 5 roles created
+   - Initial admin user created (userId: admin)
+
+⚠️  IMPORTANT SECURITY NOTES:
+   1. Change the admin password immediately after first login
+   2. Set strong passwords for all users
+   3. Review and adjust role capabilities as needed
+   4. Enable rate limiting in production
+
+🌱  The seed command has been executed.
