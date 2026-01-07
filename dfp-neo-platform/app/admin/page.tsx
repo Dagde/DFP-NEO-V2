@@ -13,7 +13,7 @@ export default async function AdminDashboard() {
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { userId: true, firstName: true, lastName: true } },
+        User: { select: { userId: true, firstName: true, lastName: true } },
       },
     }),
   ]);
