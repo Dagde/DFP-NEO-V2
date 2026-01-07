@@ -1,0 +1,13 @@
+PrismaClientKnownRequestError: 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Raw query failed. Code: `42703`. Message: `column "id" does not exist`
+    at ei.handleRequestError (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:7268)
+    at ei.handleAndLogRequestError (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6593)
+    at ei.request (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6300)
+    at async a (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:130:9551) {
+  code: 'P2010',
+  meta: { code: '42703', message: 'column "id" does not exist' },
+  clientVersion: '6.19.1'
+}

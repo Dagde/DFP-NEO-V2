@@ -1,0 +1,31 @@
+model User {
+  id              String                @id @default(cuid())
+  username        String                @unique
+  email           String?               @unique
+  password        String
+  role            Role                  @default(USER)
+  firstName       String?
+  lastName        String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  lastLogin       DateTime?
+  isActive        Boolean               @default(true)
+  createdById     String?
+  aircraft        Aircraft[]            @relation("Aircraft")
+  AuditLog        AuditLog[]
+  cancellations   CancellationHistory[] @relation("CancellationHistory")
+  flightSchedules FlightSchedule[]      @relation("FlightSchedules")
+  personnel       Personnel[]           @relation("Personnel")
+  schedules       Schedule[]
+  sessions        Session[]
+  createdBy       User?                 @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers    User[]                @relation("UserCreatedBy")
+  settings        UserSettings?
+
+  @@index([email])
+  @@index([username])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique

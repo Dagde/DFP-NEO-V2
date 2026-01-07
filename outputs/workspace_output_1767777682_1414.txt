@@ -1,0 +1,43 @@
+model User {
+  id                  String        @id @default(cuid())
+  
+  // Login credentials (NEW: userId is the login identifier, NOT email)
+  userId              String        @unique  // Login identifier (e.g., employee ID, service number)
+  email               String?       @unique  // Optional, for recovery/notifications only
+  passwordHash        String?                // bcrypt hash, null until set
+  
+  // User information
+  displayName         String?
+  firstName           String?
+  lastName            String?
+  
+  // Status and permissions
+  status              UserStatus    @default(active)
+  permissionsRoleId   String
+  permissionsRole     PermissionsRole @relation(fields: [permissionsRoleId], references: [id])
+  
+  // Password management
+  mustChangePassword  Boolean       @default(true)
+  passwordSetAt       DateTime?
+--
+model UserSettings {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  settings    Json     // Store all user settings as JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WebsiteAnalytics {
+  id          String   @id @default(cuid())
+  pageType    String   // 'landing', 'launch', 'login', 'admin'
+  ipAddress   String?
+  userAgent   String?
+  country     String?  // Country code from IP geolocation
+  city        String?  // City from IP geolocation
+  location    String?  // Full location string "City, Country"
+  metadata    Json?    // Additional tracking data
+  createdAt   DateTime @default(now())
+  

@@ -1,0 +1,18 @@
+bash: line 3: ALTER: command not found
+bash: line 3: UPDATE: command not found
+bash: line 3: ALTER: command not found
+bash: command substitution: line 3: syntax error near unexpected token `('
+bash: command substitution: line 3: `ALTER TABLE "User" ADD CONSTRAINT "User_userId_key" UNIQUE ("userId")'
+[eval]:1
+const {PrismaClient} = require('@prisma/client'); const prisma = new PrismaClient(); prisma..then(() => prisma.).then(() => prisma.).then(() => prisma.).then(() => console.log('Migration completed!')).then(() => prisma.$disconnect()).catch(console.error);
+                                                                                            ^
+
+SyntaxError: Unexpected token '.'
+    at makeContextifyScript (node:internal/vm:185:14)
+    at node:internal/process/execution:107:22
+    at [eval]-wrapper:6:24
+    at runScript (node:internal/process/execution:101:62)
+    at evalScript (node:internal/process/execution:133:3)
+    at node:internal/main/eval_string:51:3
+
+Node.js v20.19.6

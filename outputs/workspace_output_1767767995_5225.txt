@@ -1,0 +1,39 @@
+[feature/comprehensive-build-algorithm a789677] Move migration scripts outside build directory
+ Committer: root <root@172.16.93.227>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 25 files changed, 1862 insertions(+), 33 deletions(-)
+ create mode 100755 .agent_hooks/run_all_hooks.py
+ create mode 100755 .agent_hooks/shutdown/00_track_processes_on_ports.py
+ create mode 100644 .agent_hooks/shutdown/_readme.txt
+ create mode 100644 .agent_hooks/startup/_readme.txt
+ create mode 100644 GITHUB_PUSH_SUMMARY.md
+ delete mode 100644 _superninja_startup.conf
+ rename {dfp-neo-platform/scripts => migration-scripts}/migrate-aircraft.ts (100%)
+ rename {dfp-neo-platform/scripts => migration-scripts}/migrate-personnel.ts (97%)
+ rename {dfp-neo-platform/scripts => migration-scripts}/migrate-users.ts (100%)
+ create mode 100644 outputs/workspace_output_1767767397_7117.txt
+ create mode 100644 outputs/workspace_output_1767767400_2671.txt
+ create mode 100644 outputs/workspace_output_1767767402_5291.txt
+ create mode 100644 outputs/workspace_output_1767767408_7688.txt
+ create mode 100644 outputs/workspace_output_1767767412_415.txt
+ create mode 100644 outputs/workspace_output_1767767418_9845.txt
+ create mode 100644 outputs/workspace_output_1767767643_8774.txt
+ create mode 100644 outputs/workspace_output_1767767672_7660.txt
+ create mode 100644 outputs/workspace_output_1767767675_5060.txt
+ create mode 100644 outputs/workspace_output_1767767847_8492.txt
+ create mode 100644 outputs/workspace_output_1767767878_669.txt
+ create mode 100644 outputs/workspace_output_1767767882_6408.txt
+ create mode 100644 outputs/workspace_output_1767767947_1474.txt
+ create mode 100644 outputs/workspace_output_1767767963_8598.txt
+ create mode 100644 outputs/workspace_output_1767767973_4269.txt
+ create mode 100644 outputs/workspace_output_1767767995_5225.txt
