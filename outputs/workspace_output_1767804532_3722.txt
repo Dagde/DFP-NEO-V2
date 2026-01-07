@@ -1,0 +1,16 @@
+model Aircraft {
+  id             String   @id @default(cuid())
+  userId         String
+  aircraftNumber String
+  type           String
+  status         String   @default("available")
+  configuration  Json?
+  maintenanceLog Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation("Aircraft", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, aircraftNumber])
+  @@index([userId])
+  @@index([status])
