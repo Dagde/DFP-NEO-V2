@@ -1,0 +1,2 @@
+/workspace/dfp-neo-platform/public/flight-school-app/LMP_Syllabus_Template.xlsx
+/workspace/dfp-neo-platform/LMP_Syllabus_Template.xlsx
