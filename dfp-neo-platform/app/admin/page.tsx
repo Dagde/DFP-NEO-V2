@@ -5,11 +5,10 @@ const prisma = new PrismaClient();
 
 export default async function AdminDashboard() {
   // Get statistics
-  const [totalUsers, activeUsers, pendingUsers, totalRoles, recentAuditLogs] = await Promise.all([
+  const [totalUsers, activeUsers, inactiveUsers, recentAuditLogs] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),
     prisma.user.count({ where: { isActive: false } }),
-    prisma.permissionsRole.count(),
     prisma.auditLog.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
@@ -18,6 +17,12 @@ export default async function AdminDashboard() {
       },
     }),
   ]);
+
+  // Count users by role
+  const roleCounts = await prisma.user.groupBy({
+    by: ['role'],
+    _count: { role: true },
+  });
 
   return (
     <div className="space-y-8">
@@ -59,12 +64,12 @@ export default async function AdminDashboard() {
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400 mb-1">Pending Users</p>
-              <p className="text-3xl font-bold text-yellow-400">{pendingUsers}</p>
+              <p className="text-sm text-gray-400 mb-1">Inactive Users</p>
+              <p className="text-3xl font-bold text-yellow-400">{inactiveUsers}</p>
             </div>
             <div className="w-12 h-12 bg-yellow-900/30 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
             </div>
           </div>
@@ -73,12 +78,12 @@ export default async function AdminDashboard() {
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-400 mb-1">Permissions Roles</p>
-              <p className="text-3xl font-bold text-purple-400">{totalRoles}</p>
+              <p className="text-sm text-gray-400 mb-1">User Roles</p>
+              <p className="text-3xl font-bold text-purple-400">{roleCounts.length}</p>
             </div>
             <div className="w-12 h-12 bg-purple-900/30 rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
           </div>
