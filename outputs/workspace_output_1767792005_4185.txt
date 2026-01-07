@@ -1,0 +1,100 @@
+2026-01-07T13:17:45.129093662Z [inf]  npm warn config production Use `--omit=dev` instead.
+
+2026-01-07T13:17:45.184667088Z [inf]  debconf: delaying package configuration, since apt-utils is not installed
+
+2026-01-07T13:17:45.203392082Z [inf]  Fetched 9376 B in 0s (510 kB/s)
+
+2026-01-07T13:17:45.214709211Z [inf]  Selecting previously unselected package libatomic1:amd64.
+(Reading database ... 
+2026-01-07T13:17:45.215400367Z [inf]  (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%
+2026-01-07T13:17:45.21672566Z [inf]  (Reading database ... 75%
+2026-01-07T13:17:45.217072941Z [inf]  (Reading database ... 80%
+2026-01-07T13:17:45.217183599Z [inf]  (Reading database ... 85%
+2026-01-07T13:17:45.217372372Z [inf]  (Reading database ... 90%
+2026-01-07T13:17:45.21757963Z [inf]  (Reading database ... 95%
+2026-01-07T13:17:45.218286023Z [inf]  (Reading database ... 100%(Reading database ... 6622 files and directories currently installed.)
+
+2026-01-07T13:17:45.218651957Z [inf]  Preparing to unpack .../libatomic1_12.2.0-14+deb12u1_amd64.deb ...
+
+2026-01-07T13:17:45.221001914Z [inf]  Unpacking libatomic1:amd64 (12.2.0-14+deb12u1) ...
+
+2026-01-07T13:17:45.23681191Z [inf]  Setting up libatomic1:amd64 (12.2.0-14+deb12u1) ...
+
+2026-01-07T13:17:45.240553987Z [inf]  Processing triggers for libc-bin (2.36-9+deb12u13) ...
+
+2026-01-07T13:17:45.270940210Z [inf]  install apt packages: libatomic1
+2026-01-07T13:17:45.624923531Z [inf]  copy /mise/installs
+2026-01-07T13:17:45.624954053Z [inf]  copy /usr/local/bin/mise
+2026-01-07T13:17:45.624972567Z [inf]  copy /etc/mise/config.toml
+2026-01-07T13:17:45.624979179Z [inf]  copy /root/.local/state/mise
+2026-01-07T13:17:55.335503119Z [inf]  
+> dfp-neo-platform@1.0.0 postinstall
+> prisma generate
+
+
+2026-01-07T13:17:55.930535071Z [inf]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+
+2026-01-07T13:17:56.17136103Z [inf]  Prisma schema loaded from prisma/schema.prisma
+
+2026-01-07T13:17:56.465397635Z [inf]  
+✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 120ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+
+2026-01-07T13:17:56.481853539Z [inf]  
+added 157 packages, and audited 158 packages in 11s
+
+2026-01-07T13:17:56.482897619Z [inf]  
+found 0 vulnerabilities
+
+2026-01-07T13:17:56.612541099Z [inf]  npm ci
+2026-01-07T13:17:56.613335228Z [inf]  copy / /app
+2026-01-07T13:17:56.858215640Z [inf]  copy / /app
+2026-01-07T13:17:56.858922679Z [inf]  copy .
+2026-01-07T13:17:57.024818378Z [inf]  copy .
+2026-01-07T13:17:57.025586268Z [inf]  npm run build
+2026-01-07T13:17:57.201797924Z [inf]  npm warn config production Use `--omit=dev` instead.
+
+2026-01-07T13:17:57.213228338Z [inf]  
+> dfp-neo-platform@1.0.0 build
+> next build
+
+
+2026-01-07T13:17:57.738493003Z [inf]     ▲ Next.js 15.5.9
+
+2026-01-07T13:17:57.738658128Z [inf]     - Environments: .env.production
+   - Experiments (use with caution):
+
+2026-01-07T13:17:57.738695973Z [inf]       · serverActions
+
+2026-01-07T13:17:57.738832955Z [inf]  
+
+2026-01-07T13:17:57.764821779Z [inf]     Creating an optimized production build ...
+
+2026-01-07T13:18:06.663639748Z [inf]   ✓ Compiled successfully in 6.8s
+
+2026-01-07T13:18:06.665255111Z [inf]     Linting and checking validity of types ...
+
+2026-01-07T13:18:10.356821803Z [inf]  Failed to compile.
+
+
+2026-01-07T13:18:10.357175237Z [inf]  ./app/admin/permissions/page.tsx:6:30
+Type error: Property 'permissionsRole' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+
+[0m [90m 4 |[39m
+ [90m 5 |[39m [36mexport[39m [36mdefault[39m [36masync[39m [36mfunction[39m [33mPermissionsPage[39m() {
+[31m[1m>[22m[39m[90m 6 |[39m   [36mconst[39m roles [33m=[39m [36mawait[39m prisma[33m.[39mpermissionsRole[33m.[39mfindMany({
+ [90m   |[39m                              [31m[1m^[22m[39m
+ [90m 7 |[39m     include[33m:[39m {
+ [90m 8 |[39m       capabilities[33m:[39m {
+ [90m 9 |[39m         include[33m:[39m {[0m
+
+2026-01-07T13:18:10.380137428Z [inf]  Next.js build worker exited with code: 1 and signal: null
+
+2026-01-07T13:18:10.449897934Z [err]  npm run build
+2026-01-07T13:18:10.466495036Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1

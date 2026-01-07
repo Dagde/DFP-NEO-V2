@@ -1,0 +1,32 @@
+
+> dfp-neo-platform@1.0.0 build
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 9.7s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./lib/password.ts:24:17
+Type error: Property 'randomBytes' does not exist on type 'Crypto'.
+
+[0m [90m 22 |[39m [90m */[39m
+ [90m 23 |[39m [36mexport[39m [36mfunction[39m generateToken()[33m:[39m string {
+[31m[1m>[22m[39m[90m 24 |[39m   [36mreturn[39m crypto[33m.[39mrandomBytes([35m32[39m)[33m.[39mtoString([32m'hex'[39m)[33m;[39m
+ [90m    |[39m                 [31m[1m^[22m[39m
+ [90m 25 |[39m }
+ [90m 26 |[39m
+ [90m 27 |[39m [90m/**[39m[0m
+Next.js build worker exited with code: 1 and signal: null

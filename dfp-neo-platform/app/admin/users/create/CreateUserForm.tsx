@@ -4,12 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-interface Role {
-  id: string;
-  name: string;
-}
-
-export function CreateUserForm({ roles }: { roles: Role[] }) {
+export function CreateUserForm({ roles }: { roles: string[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +15,7 @@ export function CreateUserForm({ roles }: { roles: Role[] }) {
     userId: '',
     email: '',
     displayName: '',
-    permissionsRoleId: '',
+    role: 'USER',
     method: 'invite', // 'invite' or 'temporary'
     temporaryPassword: '',
   });
@@ -110,7 +105,7 @@ export function CreateUserForm({ roles }: { roles: Role[] }) {
                 userId: '',
                 email: '',
                 displayName: '',
-                permissionsRoleId: '',
+                role: 'USER',
                 method: 'invite',
                 temporaryPassword: '',
               });
@@ -185,21 +180,21 @@ export function CreateUserForm({ roles }: { roles: Role[] }) {
       </div>
 
       <div>
-        <label htmlFor="permissionsRoleId" className="block text-sm font-medium text-gray-300 mb-2">
-          Permissions Role <span className="text-red-400">*</span>
+        <label htmlFor="role" className="block text-sm font-medium text-gray-300 mb-2">
+          Role <span className="text-red-400">*</span>
         </label>
         <select
-          id="permissionsRoleId"
+          id="role"
           required
-          value={formData.permissionsRoleId}
-          onChange={(e) => setFormData({ ...formData, permissionsRoleId: e.target.value })}
+          value={formData.role}
+          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
           className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={loading}
         >
           <option value="">Select a role...</option>
           {roles.map((role) => (
-            <option key={role.id} value={role.id}>
-              {role.name}
+            <option key={role} value={role}>
+              {role}
             </option>
           ))}
         </select>

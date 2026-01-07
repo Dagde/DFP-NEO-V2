@@ -1,0 +1,14 @@
+total 52
+drwxr-xr-x  6 root root 4096 Jan  7 06:30 (auth)
+drwxr-xr-x  9 root root 4096 Jan  7 06:30 .
+drwxr-xr-x 15 root root 4096 Jan  7 12:25 ..
+drwxr-xr-x  5 root root 4096 Jan  7 06:30 admin
+drwxr-xr-x  6 root root 4096 Jan  7 06:30 api
+drwxr-xr-x  2 root root 4096 Jan  2 14:44 flight-school
+-rw-r--r--  1 root root 2845 Jan  7 06:30 globals.css
+-rw-r--r--  1 root root  507 Jan  7 06:30 layout.tsx
+drwxr-xr-x  2 root root 4096 Jan  7 06:30 login
+-rw-r--r--  1 root root  101 Jan  2 14:44 page.tsx
+-rw-r--r--  1 root root  197 Jan  2 14:44 providers.tsx
+drwxr-xr-x  2 root root 4096 Jan  7 06:30 select
+drwxr-xr-x  2 root root 4096 Jan  3 16:18 test-login

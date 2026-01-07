@@ -1,0 +1,28 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.2s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/admin/users/[id]/EditUserForm.tsx:309:29
+Type error: Property 'status' does not exist on type '{ displayName: string; email: string; role: string; isActive: boolean; }'.
+
+[0m [90m 307 |[39m           [33m<[39m[33mselect[39m
+ [90m 308 |[39m             id[33m=[39m[32m"status"[39m
+[31m[1m>[22m[39m[90m 309 |[39m             value[33m=[39m{formData[33m.[39mstatus}
+ [90m     |[39m                             [31m[1m^[22m[39m
+ [90m 310 |[39m             onChange[33m=[39m{(e) [33m=>[39m setFormData({ [33m...[39mformData[33m,[39m isActive[33m:[39m e[33m.[39mtarget[33m.[39mvalue [33m===[39m [32m'true'[39m })}
+ [90m 311 |[39m             className[33m=[39m[32m"w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"[39m
+ [90m 312 |[39m             disabled[33m=[39m{loading}[0m
+Next.js build worker exited with code: 1 and signal: null

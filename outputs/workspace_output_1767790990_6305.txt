@@ -1,0 +1,10 @@
+305:export const INITIAL_SYLLABUS_DETAILS: SyllabusItemDetail[] = populatePrerequisites(syllabusItems);
+307:export const DEFAULT_PHRASE_BANK: PhraseBank = {
+967:    const flightSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.code.startsWith('BGF') && s.type === 'Flight');
+1007:    const ftdSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.type === 'FTD');
+1008:    const groundSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.type === 'Ground School' && s.code.includes('MB'));
+1169:    const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
+1188:    const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
+1204:    allocatedTrainees.forEach(t => traineeLMPs.set(t.fullName, INITIAL_SYLLABUS_DETAILS));
+1221:export const ESL_DATA = generateDataSet('ESL');
+1222:export const PEA_DATA = generateDataSet('PEA');

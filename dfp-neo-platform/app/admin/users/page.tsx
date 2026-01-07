@@ -26,25 +26,19 @@ export default async function UsersPage({
   }
 
   if (roleFilter) {
-    where.permissionsRole = { name: roleFilter };
+    where.role = roleFilter;
   }
 
   if (statusFilter) {
     where.status = statusFilter;
   }
 
-  const [users, roles] = await Promise.all([
-    prisma.user.findMany({
-      where,
-      include: {
-        permissionsRole: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.permissionsRole.findMany({
-      orderBy: { name: 'asc' },
-    }),
-  ]);
+  const users = await prisma.user.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const roles = ['SUPER_ADMIN', 'ADMIN', 'PILOT', 'INSTRUCTOR', 'USER'];
 
   return (
     <div className="space-y-6">

@@ -1,0 +1,12 @@
+app/api/mobile/auth/login/route.ts
+app/api/admin/users/[id]/route.ts
+app/api/admin/users/route.ts
+app/api/admin/users/create/route.ts
+app/select/page.tsx
+app/admin/permissions/page.tsx
+app/admin/users/page.tsx
+app/admin/users/[id]/page.tsx
+app/admin/users/[id]/EditUserForm.tsx
+app/admin/users/create/page.tsx
+app/admin/users/create/CreateUserForm.tsx
+app/admin/users/UsersList.tsx

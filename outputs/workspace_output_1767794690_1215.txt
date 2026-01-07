@@ -1,0 +1,8 @@
+160:  const getStatusBadge = (status: string) => {
+161:    switch (status) {
+228:            <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-md border ${getStatusBadge(user.status)}`}>
+229:              {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+313:          <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-2">
+317:            id="status"
+318:            value={formData.status}
+319:            onChange={(e) => setFormData({ ...formData, status: e.target.value })}

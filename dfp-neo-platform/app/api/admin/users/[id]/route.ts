@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requireCapability } from '@/lib/permissions';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
 
 const prisma = new PrismaClient();
@@ -20,10 +20,15 @@ export async function PATCH(
       );
     }
 
-    await requireCapability('users:manage');
+    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
-    const { displayName, email, permissionsRoleId, status } = body;
+    const { firstName, lastName, email, role, status } = body;
 
     const { id } = await params;
     const user = await prisma.user.findUnique({
@@ -54,24 +59,20 @@ export async function PATCH(
     const updatedUser = await prisma.user.update({
       where: { id: id },
       data: {
-        displayName: displayName ? displayName.trim() : null,
+        firstName: firstName ? firstName.trim() : null,
+        lastName: lastName ? lastName.trim() : null,
         email: email ? email.trim() : null,
-        permissionsRoleId,
-        status: status as UserStatus,
-      },
-      include: {
-        permissionsRole: true,
+        role,
+        isActive: status === 'active',
       },
     });
 
     await createAuditLog({
-      actionType: 'user_updated',
-      actorUserId: session.user.id,
-      targetUserId: updatedUser.id,
-      metadata: {
-        userId: updatedUser.userId,
-        changes: { displayName, email, permissionsRoleId, status },
-      },
+      action: 'user_updated',
+      userId: session.user.id,
+      entityType: 'user',
+      entityId: updatedUser.id,
+      changes: { firstName, lastName, email, role, status },
     });
 
     return NextResponse.json({ success: true, user: updatedUser });
@@ -133,9 +134,11 @@ export async function DELETE(
     });
 
     await createAuditLog({
-      actionType: 'user_deleted',
-      actorUserId: session.user.id,
-      metadata: {
+      action: 'user_deleted',
+      userId: session.user.id,
+      entityType: 'user',
+      entityId: user.id,
+      changes: {
         deletedUserId: user.id,
         deletedUserUserId: user.userId,
       },

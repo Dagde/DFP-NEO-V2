@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -8,14 +8,13 @@ export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
-    if (!session || session.user.permissionsRole.name !== 'Administrator') {
+    if (!session || session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('📋 Fetching users for admin:', session.user.userId);
     
     const users = await prisma.user.findMany({
-      include: { permissionsRole: true },
       orderBy: { createdAt: 'desc' },
     });
     
@@ -31,19 +30,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     
-    if (!session || session.user.permissionsRole.name !== 'Administrator') {
+    if (!session || session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { userId, displayName, email, permissionsRoleId } = body;
+    const { userId, firstName, lastName, email, role, password } = body;
 
-    if (!userId || !displayName || !permissionsRoleId) {
-      return NextResponse.json({ error: 'User ID, display name, and role are required' }, { status: 400 });
+    if (!userId || !email || !role || !password) {
+      return NextResponse.json({ error: 'User ID, email, role, and password are required' }, { status: 400 });
     }
 
-    const prisma = new PrismaClient();
-    
     const existingUser = await prisma.user.findUnique({
       where: { userId },
     });
@@ -52,16 +49,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID already exists' }, { status: 400 });
     }
 
+    const bcrypt = require('bcryptjs');
+    const passwordHash = await bcrypt.hash(password, 12);
+
     const newUser = await prisma.user.create({
       data: {
         userId,
-        displayName,
+        username: userId, // username is required
+        firstName: firstName || null,
+        lastName: lastName || null,
         email,
-        permissionsRole: { connect: { id: permissionsRoleId } },
-        status: 'active',
-        mustChangePassword: true,
+        password: passwordHash,
+        role,
+        isActive: true,
       },
-      include: { permissionsRole: true },
     });
 
     console.log('✅ Created new user:', newUser);

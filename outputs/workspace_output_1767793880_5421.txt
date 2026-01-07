@@ -1,0 +1,30 @@
+import { PrismaClient } from '@prisma/client';
+import Link from 'next/link';
+import { UsersList } from './UsersList';
+
+const prisma = new PrismaClient();
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; role?: string; status?: string }>;
+}) {
+  const params = await searchParams;
+  const search = params.search || '';
+  const roleFilter = params.role || '';
+  const statusFilter = params.status || '';
+
+  // Build where clause
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { userId: { contains: search } },
+      { displayName: { contains: search } },
+      { email: { contains: search } },
+    ];
+  }
+
+  if (roleFilter) {
+    where.permissionsRole = { name: roleFilter };
+  }

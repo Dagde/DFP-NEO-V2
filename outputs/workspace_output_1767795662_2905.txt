@@ -1,0 +1,11 @@
+export async function createAuditLog(data: AuditLogData) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        actorUserId: data.actorUserId || null,
+        actionType: data.actionType,
+        targetUserId: data.targetUserId || null,
+        metadata: data.metadata ? data.metadata : undefined,
+        ipAddress: data.ipAddress || null,
+        userAgent: data.userAgent || null,
+      },

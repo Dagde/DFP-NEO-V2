@@ -1,0 +1,17 @@
+npm warn exec The following package was not found and will be installed: ts-node@10.9.2
+Error: Cannot find module '@prisma/client'
+Require stack:
+- /workspace/migration-scripts/check-duplicates.cjs
+    at Function.Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (/root/.npm/_npx/1bf7c3c15bf47d04/node_modules/@cspotcode/source-map-support/source-map-support.js:811:30)
+    at Function.Module._load (node:internal/modules/cjs/loader:1038:27)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (/workspace/migration-scripts/check-duplicates.cjs:1:26)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module.m._compile (/root/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1618:23)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Object.require.extensions.<computed> [as .js] (/root/.npm/_npx/1bf7c3c15bf47d04/node_modules/ts-node/src/index.ts:1621:12) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ '/workspace/migration-scripts/check-duplicates.cjs' ]
+}

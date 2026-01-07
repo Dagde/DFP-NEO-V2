@@ -19,9 +19,6 @@ export async function POST(request: NextRequest) {
     // Find user by userId
     const user = await prisma.user.findUnique({
       where: { userId },
-      include: {
-        permissionsRole: true,
-      },
     });
 
     if (!user) {
@@ -32,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is active
-    if (user.status !== 'active') {
+    if (!user.isActive) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Account is not active' },
         { status: 401 }
@@ -40,14 +37,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
-    if (!user.passwordHash) {
+    if (!user.password) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Password not set. Please use the web portal to set your password.' },
         { status: 401 }
       );
     }
 
-    const isValidPassword = await comparePassword(password, user.passwordHash);
+    const isValidPassword = await comparePassword(password, user.password);
     if (!isValidPassword) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid user ID or password' },
@@ -62,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Update last login
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: { lastLogin: new Date() },
     });
 
     // Return success response

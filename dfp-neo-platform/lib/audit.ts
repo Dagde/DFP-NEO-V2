@@ -3,10 +3,11 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 interface AuditLogData {
-  actorUserId?: string;
-  actionType: string;
-  targetUserId?: string;
-  metadata?: Record<string, any>;
+  userId: string;
+  action: string;
+  entityType?: string;
+  entityId?: string;
+  changes?: Record<string, any>;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -15,10 +16,11 @@ export async function createAuditLog(data: AuditLogData) {
   try {
     await prisma.auditLog.create({
       data: {
-        actorUserId: data.actorUserId || null,
-        actionType: data.actionType,
-        targetUserId: data.targetUserId || null,
-        metadata: data.metadata ? data.metadata : undefined,
+        userId: data.userId,
+        action: data.action,
+        entityType: data.entityType || 'system',
+        entityId: data.entityId || null,
+        changes: data.changes ? data.changes : undefined,
         ipAddress: data.ipAddress || null,
         userAgent: data.userAgent || null,
       },
@@ -30,9 +32,9 @@ export async function createAuditLog(data: AuditLogData) {
 }
 
 export async function getAuditLogs(options: {
-  actorUserId?: string;
-  targetUserId?: string;
-  actionType?: string;
+  userId?: string;
+  action?: string;
+  entityType?: string;
   startDate?: Date;
   endDate?: Date;
   limit?: number;
@@ -40,16 +42,16 @@ export async function getAuditLogs(options: {
 }) {
   const where: any = {};
 
-  if (options.actorUserId) {
-    where.actorUserId = options.actorUserId;
+  if (options.userId) {
+    where.userId = options.userId;
   }
 
-  if (options.targetUserId) {
-    where.targetUserId = options.targetUserId;
+  if (options.action) {
+    where.action = options.action;
   }
 
-  if (options.actionType) {
-    where.actionType = options.actionType;
+  if (options.entityType) {
+    where.entityType = options.entityType;
   }
 
   if (options.startDate || options.endDate) {
@@ -66,16 +68,11 @@ export async function getAuditLogs(options: {
     prisma.auditLog.findMany({
       where,
       include: {
-        actor: {
+        User: {
           select: {
             userId: true,
-            displayName: true,
-          },
-        },
-        target: {
-          select: {
-            userId: true,
-            displayName: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },

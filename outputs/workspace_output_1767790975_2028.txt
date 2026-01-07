@@ -1,0 +1,300 @@
+
+import { v4 as uuidv4 } from 'uuid';
+import { Instructor, Trainee, ScheduleEvent, SyllabusItemDetail, Score, TraineeRank, InstructorRank, InstructorCategory, Course, Pt051Assessment, PhraseBank } from './types';
+
+// ===================================================================================
+// --- SHARED DATA ---
+// ===================================================================================
+
+const createSyllabusItem = (
+    code: string,
+    description: string,
+    courses: string[] = ['BPC+IPC'] // Default to the standard pilot course
+): SyllabusItemDetail => {
+    // Safety checks for undefined parameters with error tracking
+    if (!code) {
+        console.error('❌ ERROR: createSyllabusItem called with undefined/null code parameter');
+        console.trace();
+    }
+    if (!description) {
+        console.error('❌ ERROR: createSyllabusItem called with undefined/null description parameter');
+        console.trace();
+    }
+    code = code || '';
+    description = description || '';
+    
+    let phase = 'BGF';
+    if (code.startsWith('BIF')) phase = 'BIF';
+    else if (code.startsWith('BNF')) phase = 'BNF';
+    else if (code.startsWith('BNAV')) phase = 'BNAV';
+    else if (code.startsWith('FIC')) phase = 'FIC';
+    else if (code.startsWith('WSO')) phase = 'WSO';
+    else if (code.startsWith('OFI')) phase = 'OFI';
+
+    let module = 'Basic General Flying';
+    if (phase === 'BIF') module = 'Basic Instrument Flying';
+    else if (phase === 'BNF') module = 'Basic Night Flying';
+    else if (phase === 'BNAV') module = 'Basic Navigation';
+    else if (phase === 'FIC') module = 'Flight Instructor Course';
+    else if (phase === 'WSO') module = 'Weapons Systems Officer';
+    else if (phase === 'OFI') module = 'Operational Flying Instructor';
+    
+    let methodOfDelivery: string[] = [];
+    let flightOrSimHours = 0;
+    let totalEventHours = 0;
+    let type: 'Flight' | 'FTD' | 'Ground School' = 'Flight';
+    let sortieType: 'Dual' | 'Solo' = 'Dual';
+    let preFlightTime = 0;
+    let postFlightTime = 0;
+    let location = '';
+
+    if (code.includes('FTD')) {
+        methodOfDelivery = ['FTD', 'Brief', 'Debrief'];
+        flightOrSimHours = 1.5;
+        totalEventHours = 2.5;
+        type = 'FTD';
+        preFlightTime = 40 / 60; // 40 minutes
+        postFlightTime = 30 / 60; // 30 minutes
+        location = 'FTD Complex';
+    } else if (code.includes('CPT')) {
+        methodOfDelivery = ['CPT', 'Brief'];
+        flightOrSimHours = 1.0;
+        totalEventHours = 1.5;
+        type = 'Ground School';
+        preFlightTime = 15 / 60; // 15 minutes
+        postFlightTime = 15 / 60; // 15 minutes
+        location = 'CPT Rooms';
+    } else if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('Lec')) {
+        methodOfDelivery = ['Classroom', 'Brief'];
+        flightOrSimHours = 0;
+        totalEventHours = 1.0;
+        type = 'Ground School';
+        preFlightTime = 0.0; 
+        postFlightTime = 0;
+        location = 'Classrooms';
+    } else { // It's a flight
+        methodOfDelivery = ['Aircraft', 'Brief', 'Debrief'];
+        if (code.startsWith('BNF')) {
+            flightOrSimHours = 1.0;
+            totalEventHours = 2.5; 
+        } else {
+            flightOrSimHours = 1.5;
+            totalEventHours = 3.0;
+        }
+        type = 'Flight';
+        
+        if (['BGF11', 'BGF18'].includes(code)) {
+             sortieType = 'Solo';
+        } else {
+             sortieType = 'Dual';
+        }
+
+        preFlightTime = 75 / 60; // 75 minutes (1.25 hours)
+        postFlightTime = 30 / 60; // 30 minutes (0.5 hours)
+        location = 'Airfield';
+    }
+
+    const cleanedDescription = (description || "").replace(/\n/g, ' ').replace(/;/g, '; ').replace(/\s\s+/g, ' ').trim();
+    const eventDetails = cleanedDescription.split(';').map(s => s.trim()).filter(Boolean);
+    const itemCode = (code || "").replace('*', '');
+    
+    const isGround = type === 'Ground School';
+    
+    // Determine Day/Night classification
+    // BNF events are Night flights, Night SCT is Night, all others are Day by default
+    const dayNight: 'Day' | 'Night' | 'Day/Night' = 
+        code.startsWith('BNF') || code === 'Night SCT' ? 'Night' : 'Day';
+
+    return {
+        id: itemCode,
+        code: itemCode,
+        dayNight,
+        phase,
+        module,
+        eventDescription: description,
+        prerequisites: [],
+        prerequisitesGround: [],
+        prerequisitesFlying: [],
+        eventDetailsCommon: eventDetails,
+        eventDetailsSortie: [],
+        totalEventHours,
+        flightOrSimHours,
+        duration: isGround ? totalEventHours : flightOrSimHours,
+        preFlightTime,
+        postFlightTime,
+        type,
+        sortieType,
+           twrDiReqd: (code === 'BGF11' || code === 'BGF18') ? 'YES' : 'NO',
+           cctOnly: (code === 'BGF10') ? 'YES' : 'NO',
+        location,
+        methodOfDelivery,
+        methodOfAssessment: ['Practical Assessment', 'Debrief'],
+        resourcesPhysical: methodOfDelivery.includes('Aircraft') ? ['PC-21 Aircraft'] : methodOfDelivery.includes('FTD') ? ['PC-21 FTD'] : ['Classroom'],
+        resourcesHuman: ['Qualified Flying Instructor', 'Trainee'],
+        courses,
+    };
+};
+
+const syllabusItems: SyllabusItemDetail[] = [
+    // BPC + IPC Items
+    createSyllabusItem('BGF MB1', 'Preparation and Pre / Post Flight Admin'),
+    createSyllabusItem('BGF MB2', 'Ground Operations and Checklist'),
+    createSyllabusItem('BGF CPT1', 'Checklist Procedures - Ground'),
+    createSyllabusItem('BGF TUT1A', 'Ejection Seat Strap-in'),
+    createSyllabusItem('BGF TUT1B', 'FTD Safety Brief'),
+    createSyllabusItem('BGF TUT2', 'Flight Preparation, Checklist and Walkaround'),
+    createSyllabusItem('BGF MB3', 'Effects of Controls; Attitude Flying; Straight and Level; Turning'),
+    createSyllabusItem('BGF MB4', 'Climbing and Descending and Climbing and Descending Turns'),
+    createSyllabusItem('BGF MB5', 'Re-join; Landing; Local Circuit Procedures'),
+    createSyllabusItem('BGF MB6', 'Emergency Handling and Procedures'),
+    createSyllabusItem('BGF CPT2', 'Airborne Procedures'),
+    createSyllabusItem('BGF FTD1', 'Strap in and Ground Procedures'),
+    createSyllabusItem('BGF MB7', 'Normal Circuits'),
+    createSyllabusItem('BGF1', 'Effects of Controls; Attitude Flying; Straight and Level; Turning; Steep Turn'),
+    createSyllabusItem('BGF FTD2', 'Climbing; Descending; Climbing, Turning and Descending'),
+    createSyllabusItem('BGF2', 'Basic AP Operation; Climbing; Descending; Climbing, Turning and Descending; Re-join; Landing'),
+    createSyllabusItem('BGF MB8', 'Ground and Airborne Emergency Procedures'),
+    createSyllabusItem('BGF CPT3', 'Emergency Procedures'),
+    createSyllabusItem('BGF MB9', 'Wingover and Stalling'),
+    createSyllabusItem('BGF TUT3', 'Stalling; Circuits'),
+    createSyllabusItem('BGF FTD3', 'Normal Circuits - Base & Final; Go Around; Wingovers; Clean Stalls; Accelerated Stall'),
+    createSyllabusItem('BGF3', 'Normal Circuit - Base and Final Technique; Go Around; Wingovers; Clean Stalls; Accelerated Stall'),
+    createSyllabusItem('BGF FTD4', 'Emergency Procedures; Normal Circuit'),
+    createSyllabusItem('BGF4', 'Configured Stalls; Normal Circuit'),
+    createSyllabusItem('BGF5', 'Consolidate Stalls and Circuits'),
+    createSyllabusItem('BGF MB10', 'Abnormal Recovery'),
+    createSyllabusItem('BGF MB11', 'Solo Malfunctions'),
+    createSyllabusItem('BGF MB12', 'Solo Briefing'),
+    createSyllabusItem('BGF CPT4', 'Emergency Procedures'),
+    createSyllabusItem('BGF6', 'Consolidate Circuits'),
+    createSyllabusItem('BGF MB13', 'HUD Intro - Handling, Stalls, Normal CCT'),
+    createSyllabusItem('BGF CPT5', 'HUD Intro'),
+    createSyllabusItem('PRE-SOLO QUIZ', 'Pre-Solo Quiz'),
+    createSyllabusItem('BGF7', 'HUD Intro - Handling, Stalls, Normal Circuit; Demo Abnormal Landing'),
+    createSyllabusItem('BGF FTD5', 'Flapless & AIL PWR OFF S-l app; Circuit Consolidation'),
+    createSyllabusItem('BGF8', 'Flapless & AIL PWR OFF S-1 app; Consolidation'),
+    createSyllabusItem('PERRT CPT1', 'Hypoxia'),
+    createSyllabusItem('BGF9', 'WSL Diversion; Controllability Check; Circuit Consolidation'),
+    createSyllabusItem('BGF MB14', 'Low Level Circuit: Glide Circuit; Forced Landings'),
+    createSyllabusItem('BGF FTD6', 'Emergency Handling - Solo'),
+    createSyllabusItem('BGF10', 'Day Circuit Solo Check'),
+    createSyllabusItem('BGF11', 'Day Circuit Solo'),
+    createSyllabusItem('BGF MB15', 'G Warm Up; Basic Aerobatics; Unusual Attitude Recovery'),
+    createSyllabusItem('BGF MB16', 'Spin Recovery'),
+    createSyllabusItem('BGF FTD7', 'Gliding; Glide Circuit; Low Level Circuit'),
+    createSyllabusItem('BGF12', 'Glide Circuit'),
+    createSyllabusItem('BGF13', 'Low Level Circuit'),
+    createSyllabusItem('BGF14', 'Unusual Attitude Recovery; G Warm Up; Wingover; Loop'),
+    createSyllabusItem('BGF FTD8', 'Practice Forced Landing'),
+    createSyllabusItem('BGF15', 'U/A NH NCR; Aileron Roll, Incipient Spin'),
+    createSyllabusItem('AREA SOLO QUIZ', 'Area Solo Quiz'),
+    createSyllabusItem('BGF16', 'Spin Recovery; PFL Area'),
+    createSyllabusItem('BGF TUT4', 'Glide Circuit; Practice Forced Landing; Spinning; G Stall; G Warm Up; Basic Aerobatics; Unusual Attitude Recovery'),
+    createSyllabusItem('BGF FTD9', 'Emergency Handling - Area Solo'),
+    createSyllabusItem('BGF17', 'Area Solo Check'),
+    createSyllabusItem('BGF18', 'Area Solo'),
+    createSyllabusItem('BGF19', 'GF Consolidation'),
+    createSyllabusItem('BGF20', 'General Flying Proficiency Test'),
+    createSyllabusItem('BIF MB1', 'Basic Instrument Flying'),
+    createSyllabusItem('BIF MB2', 'IF UA Recoveries; IF Orientation'),
+    createSyllabusItem('BIF TUT1', 'Instrument Flying Basics; Radial Intercepts & Tracking'),
+    createSyllabusItem('BIF CPT1', 'Instrument Flying Basics'),
+    createSyllabusItem('BIF CPT2', 'Radial Intercept and Tracking'),
+    createSyllabusItem('BIF FTD1*', 'IF Take-off; S&L, Climbing, Turning and Descending; Steep Turn; Radar Vectors to Initial'),
+    createSyllabusItem('BIF FTD2', 'Radial Intercept and Tracking; A Recovery'),
+    createSyllabusItem('BIF FTD3*', 'Basic IF Consolidation'),
+    createSyllabusItem('BIF1', 'IF Take-off; S&; Climbing, Turning and Descending; Steep Turn; UA Recovery; Radar Vectors to Straight In Approach'),
+    createSyllabusItem('BIF2', 'IF Consol; Radial Intercept and Tracking; RNP Demo'),
+    createSyllabusItem('BNF MB1', 'Night Flying'),
+    createSyllabusItem('BNF FTD1', 'Night Circuits'),
+    createSyllabusItem('BNF1', 'Night Circuits'),
+    createSyllabusItem('BNF2', 'Night Circuits'),
+    createSyllabusItem('BNF3', 'Night Solo Check'),
+    createSyllabusItem('BNF4', 'Night Solo'),
+    createSyllabusItem('BIF MB3', 'Instrument Approaches'),
+    createSyllabusItem('BIF MB4', 'Holding'),
+    createSyllabusItem('BIF MB5', 'RNP Approach'),
+    createSyllabusItem('BIF TUT2', 'RNP Approach; Missed & Circling Approach'),
+    createSyllabusItem('BIF CPT3', 'RNP Approach'),
+    createSyllabusItem('BIF FTD4', 'RNP Approach; Circling Approach'),
+    createSyllabusItem('BIF FTD5', 'RNP Approach; Missed Approach'),
+    createSyllabusItem('BIF FTD6', 'RNP Approach HUD Off'),
+    createSyllabusItem('BIF3', 'RNP Approach; Circling Approach; Missed Approach'),
+    createSyllabusItem('BIF4', 'IF Consol; RNP Approach - HUD Off'),
+    createSyllabusItem('BIF5', 'Instrument Flying Proficiency Test'),
+    createSyllabusItem('BGF MB17', 'Advanced GF'),
+    createSyllabusItem('BGF FTD10', 'GF Consol; Intermediate Emergency Handling; Unfamiliar Airfield'),
+    createSyllabusItem('BGF21', 'GF Consolidation; Barrel Roll; L MFD Fail'),
+    createSyllabusItem('BGF22', 'GF Consolidation; Stall Turn'),
+    createSyllabusItem('BGF23', 'GF Consolidation'),
+    createSyllabusItem('BGF24', 'General Flying Test'),
+    createSyllabusItem('BNAV MB1', 'Medium Level Nav'),
+    createSyllabusItem('BNAV TUT1', 'Nav Planning Tutorial'),
+    createSyllabusItem('BNAV FTD1', 'Medium Level Navigation'),
+    createSyllabusItem('BNAV1', 'Medium Level Navigation (Land Away)'),
+    createSyllabusItem('BNAV2', 'Medium Level Navigation (RTB)'),
+    createSyllabusItem('BNAV3 NAVPT', 'Navigation Proficiency Test'),
+    createSyllabusItem('SCT GF', 'Sector General Flying'),
+    createSyllabusItem('SCT IF', 'Sector Instrument Flying'),
+    createSyllabusItem('SCT NAV', 'Sector Navigation'),
+    createSyllabusItem('SCT FORM', 'Sector Formation'),
+    createSyllabusItem('Night SCT', 'Night Sector Training'),
+
+    // FIC Items
+    createSyllabusItem('FIC MB1', 'Instructional Technique Overview', ['FIC', 'FIC(I)']),
+    createSyllabusItem('FIC Lec1', 'Principles of Flight Instruction', ['FIC', 'FIC(I)']),
+    createSyllabusItem('FIC FTD1', 'Patter Development - Circuits', ['FIC']),
+    createSyllabusItem('FIC1', 'Right Hand Seat Familiarisation', ['FIC']),
+    createSyllabusItem('FIC2', 'Instructional Sortie - Turning', ['FIC']),
+    
+    // WSO Items
+    createSyllabusItem('WSO MB1', 'Role of the WSO', ['WSO']),
+    createSyllabusItem('WSO FTD1', 'Sensor Operations Basics', ['WSO']),
+    createSyllabusItem('WSO1', 'Navigational Systems Management', ['WSO']),
+    
+    // OFI Items
+    createSyllabusItem('OFI MB1', 'Advanced Operational Concepts', ['OFI']),
+    createSyllabusItem('OFI1', 'Tactical Formation Lead', ['OFI']),
+    
+    // PLT Refresh Items
+    createSyllabusItem('PLT REF MB1', 'Refresher Admin Brief', ['PLT Refresh', 'PLT CONV']),
+    createSyllabusItem('PLT REF FTD1', 'Emergency Procedures Refresh', ['PLT Refresh']),
+    createSyllabusItem('PLT REF1', 'General Handling Recency', ['PLT Refresh']),
+    
+    // QFI CONV
+    createSyllabusItem('QFI CONV MB1', 'QFI Conversion Requirements', ['QFI CONV']),
+    createSyllabusItem('QFI CONV1', 'Instructional Technique - Advanced', ['QFI CONV']),
+
+    // Staff CAT (Staff Continuous Training Categorisation)
+    createSyllabusItem('QIP 1', 'QFI Induction Program 1', ['Staff CAT']),
+    createSyllabusItem('QIP 2', 'QFI Induction Program 2', ['Staff CAT']),
+    createSyllabusItem('QIP 3', 'QFI Induction Program 3', ['Staff CAT']),
+    createSyllabusItem('QIP 4', 'QFI Induction Program 4', ['Staff CAT']),
+    createSyllabusItem('C CAT 1', 'C Categorisation 1', ['Staff CAT']),
+    createSyllabusItem('C CAT 2', 'C Categorisation 2', ['Staff CAT']),
+    createSyllabusItem('C CAT 3', 'C Categorisation 3', ['Staff CAT']),
+    createSyllabusItem('C CAT 4', 'C Categorisation 4', ['Staff CAT']),
+    createSyllabusItem('B CAT 1', 'B Categorisation 1', ['Staff CAT']),
+    createSyllabusItem('B CAT 2', 'B Categorisation 2', ['Staff CAT']),
+    createSyllabusItem('B CAT 3', 'B Categorisation 3', ['Staff CAT']),
+    createSyllabusItem('B CAT 4', 'B Categorisation 4', ['Staff CAT']),
+];
+
+const populatePrerequisites = (syllabus: SyllabusItemDetail[]): SyllabusItemDetail[] => {
+    return syllabus.map((item, index, arr) => {
+        const prerequisitesGround: string[] = [];
+        const prerequisitesFlying: string[] = [];
+        
+        // Find the immediate previous non-MB event within the same course(s)
+        // Simplified: looking for previous event in the array regardless of course for now to maintain dependency chain logic
+        for (let i = index - 1; i >= 0; i--) {
+            const prereqCandidate = arr[i];
+            if (!prereqCandidate.code.includes(' MB')) {
+                 if (prereqCandidate.type === 'Flight' || prereqCandidate.type === 'FTD') {
+                    prerequisitesFlying.push(prereqCandidate.code);
+                } else {
+                    prerequisitesGround.push(prereqCandidate.code);
+                }
+                break; 
+            }
+        }

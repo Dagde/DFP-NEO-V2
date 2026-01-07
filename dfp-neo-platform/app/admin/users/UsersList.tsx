@@ -7,20 +7,14 @@ import Link from 'next/link';
 interface User {
   id: string;
   userId: string;
-  displayName: string | null;
+  username: string;
   email: string | null;
-  status: string;
-  permissionsRole: {
-    id: string;
-    name: string;
-  };
-  lastLoginAt: Date | null;
+  role: string;
+  firstName: string | null;
+  lastName: string | null;
+  isActive: boolean;
+  lastLogin: Date | null;
   createdAt: Date;
-}
-
-interface Role {
-  id: string;
-  name: string;
 }
 
 export function UsersList({
@@ -31,7 +25,7 @@ export function UsersList({
   initialStatus,
 }: {
   users: User[];
-  roles: Role[];
+  roles: string[];
   initialSearch: string;
   initialRole: string;
   initialStatus: string;
@@ -56,17 +50,8 @@ export function UsersList({
     router.push('/admin/users');
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-900/30 text-green-400 border-green-700';
-      case 'disabled':
-        return 'bg-red-900/30 text-red-400 border-red-700';
-      case 'pending':
-        return 'bg-yellow-900/30 text-yellow-400 border-yellow-700';
-      default:
-        return 'bg-gray-700 text-gray-400 border-gray-600';
-    }
+  const getStatusBadge = (isActive: boolean) => {
+    return isActive ? 'bg-green-900/30 text-green-400 border-green-700' : 'bg-red-900/30 text-red-400 border-red-700';
   };
 
   return (
@@ -99,8 +84,8 @@ export function UsersList({
             >
               <option value="">All Roles</option>
               {roles.map((role) => (
-                <option key={role.id} value={role.name}>
-                  {role.name}
+                <option key={role} value={role}>
+                  {role}
                 </option>
               ))}
             </select>
@@ -175,7 +160,7 @@ export function UsersList({
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-white">
-                          {user.displayName || user.userId}
+                          {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username}
                         </div>
                         <div className="text-sm text-gray-400">
                           {user.userId}
@@ -187,17 +172,17 @@ export function UsersList({
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 text-xs font-medium rounded-md bg-purple-900/30 text-purple-400 border border-purple-700">
-                        {user.permissionsRole.name}
+                        {user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-md border ${getStatusBadge(user.status)}`}>
-                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-md border ${user.isActive ? 'bg-green-900/30 text-green-300 border-green-700' : 'bg-red-900/30 text-red-300 border-red-700'}`}>
+                        {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-400">
-                      {user.lastLoginAt
-                        ? new Date(user.lastLoginAt).toLocaleString()
+                      {user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleString()
                         : 'Never'}
                     </td>
                     <td className="px-6 py-4 text-right">

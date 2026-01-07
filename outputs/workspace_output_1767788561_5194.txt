@@ -1,0 +1,20 @@
+app/api/mobile/unavailability/quick/route.ts:import { authenticateMobileRequest } from '@/lib/mobile-middleware';
+app/api/mobile/unavailability/quick/route.ts:    const { user, error } = await authenticateMobileRequest(request);
+app/api/mobile/unavailability/create/route.ts:import { authenticateMobileRequest } from '@/lib/mobile-middleware';
+app/api/mobile/unavailability/create/route.ts:    const { user, error } = await authenticateMobileRequest(request);
+app/api/mobile/unavailability/reasons/route.ts:import { authenticateMobileRequest } from '@/lib/mobile-middleware';
+app/api/mobile/unavailability/reasons/route.ts:    const { user, error } = await authenticateMobileRequest(request);
+app/api/mobile/schedule/route.ts:import { authenticateMobileRequest } from '@/lib/mobile-middleware';
+app/api/mobile/schedule/route.ts:    const { user, error } = await authenticateMobileRequest(request);
+app/api/mobile/auth/me/route.ts:import { getUserFromToken, formatUserForMobile } from '@/lib/mobile-auth';
+app/api/mobile/auth/me/route.ts:    const authHeader = request.headers.get('authorization');
+app/api/mobile/auth/me/route.ts:    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+app/api/mobile/auth/me/route.ts:        { error: 'Unauthorized', message: 'Missing or invalid authorization header' },
+app/api/mobile/auth/me/route.ts:    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+app/api/mobile/auth/me/route.ts:        { error: 'Unauthorized', message: 'Invalid or expired token' },
+app/api/mobile/auth/login/route.ts:import { generateAccessToken, generateRefreshToken, formatUserForMobile } from '@/lib/mobile-auth';
+app/api/mobile/auth/login/route.ts:        { error: 'Unauthorized', message: 'Invalid user ID or password' },
+app/api/mobile/auth/login/route.ts:        { error: 'Unauthorized', message: 'Account is not active' },
+app/api/mobile/auth/login/route.ts:        { error: 'Unauthorized', message: 'Password not set. Please use the web portal to set your password.' },
+app/api/mobile/auth/login/route.ts:        { error: 'Unauthorized', message: 'Invalid user ID or password' },
+app/api/mobile/auth/refresh/route.ts:import { verifyToken, generateAccessToken } from '@/lib/mobile-auth';

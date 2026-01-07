@@ -1,0 +1,45 @@
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors };
+  }
+
+  // Hash password
+  const passwordHash = await hashPassword(newPassword);
+
+  // Update user
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash,
+      passwordSetAt: new Date(),
+      mustChangePassword: false,
+    },
+  });
+
+  // Revoke all existing sessions for this user
+  await prisma.session.deleteMany({
+    where: { userId },
+  });
+
+--
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors };
+  }
+
+  // Hash password
+  const passwordHash = await hashPassword(temporaryPassword);
+
+  // Update user
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash,
+      passwordSetAt: new Date(),
+      mustChangePassword: true, // Force change on next login
+    },
+  });
+
+  // Log the action
+  await createAuditLog({
+    actionType: 'temporary_password_set',
+    actorUserId,
+    targetUserId: userId,

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { requireCapability } from '@/lib/permissions';
-import { PrismaClient, UserStatus } from '@prisma/client';
-import { createInviteToken, setTemporaryPassword } from '@/lib/password';
+import { PrismaClient } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
+import { hashPassword } from '@/lib/password';
 
 const prisma = new PrismaClient();
 
@@ -18,16 +18,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has permission to manage users
-    await requireCapability('users:manage');
+    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
-    const { userId, email, displayName, permissionsRoleId, method, temporaryPassword } = body;
+    const { userId, email, firstName, lastName, role, password } = body;
 
     // Validate required fields
-    if (!userId || !permissionsRoleId) {
+    if (!userId || !email || !role || !password) {
       return NextResponse.json(
-        { error: 'User ID and Permissions Role are required' },
+        { error: 'User ID, email, role, and password are required' },
         { status: 400 }
       );
     }
@@ -40,7 +44,6 @@ export async function POST(request: NextRequest) {
       where: {
         userId: {
           equals: normalizedUserId,
-          
         },
       },
     });
@@ -66,80 +69,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify role exists
-    const role = await prisma.permissionsRole.findUnique({
-      where: { id: permissionsRoleId },
-    });
-
-    if (!role) {
+    // Validate role
+    const validRoles = ['SUPER_ADMIN', 'ADMIN', 'PILOT', 'INSTRUCTOR', 'USER'];
+    if (!validRoles.includes(role)) {
       return NextResponse.json(
-        { error: 'Invalid permissions role' },
+        { error: 'Invalid role' },
         { status: 400 }
       );
     }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
 
     // Create user
     const user = await prisma.user.create({
       data: {
         userId: normalizedUserId,
+        username: normalizedUserId,
         email: email ? email.trim() : null,
-        displayName: displayName ? displayName.trim() : null,
-        permissionsRoleId,
-        status: UserStatus.active,
-        mustChangePassword: true,
-        passwordHash: null,
+        firstName: firstName ? firstName.trim() : null,
+        lastName: lastName ? lastName.trim() : null,
+        role,
+        isActive: true,
+        password: passwordHash,
       },
     });
 
     // Log user creation
     await createAuditLog({
-      actionType: 'user_created',
-      actorUserId: session.user.id,
-      targetUserId: user.id,
-      metadata: {
+      action: 'user_created',
+      userId: session.user.id,
+      entityType: 'user',
+      entityId: user.id,
+      changes: {
         userId: user.userId,
-        role: role.name,
-        method,
+        role,
+        method: 'admin_created',
       },
     });
-
-    let inviteLink = '';
-
-    if (method === 'invite') {
-      // Create invite token
-      const token = await createInviteToken(user.id, 72);
-      inviteLink = `${process.env.NEXTAUTH_URL}/set-password?token=${token}`;
-
-      // TODO: Send email if user has email
-      if (user.email) {
-        console.log(`Invite link for ${user.userId}: ${inviteLink}`);
-        // Integrate with email service here
-      }
-    } else if (method === 'temporary') {
-      // Set temporary password
-      if (!temporaryPassword) {
-        return NextResponse.json(
-          { error: 'Temporary password is required' },
-          { status: 400 }
-        );
-      }
-
-      const result = await setTemporaryPassword(user.id, temporaryPassword, session.user.id);
-
-      if (!result.success) {
-        // Delete the user if password setting failed
-        await prisma.user.delete({ where: { id: user.id } });
-        return NextResponse.json(
-          { error: result.errors?.join(', ') || 'Failed to set temporary password' },
-          { status: 400 }
-        );
-      }
-    }
 
     return NextResponse.json({
       success: true,
       userId: user.id,
-      inviteLink: inviteLink || undefined,
     });
   } catch (error: any) {
     console.error('Create user error:', error);

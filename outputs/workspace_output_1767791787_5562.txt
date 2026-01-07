@@ -1,0 +1,2 @@
+157:                      {log.actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+160:                      {log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''} (${log.user.userId})` : 'System'}

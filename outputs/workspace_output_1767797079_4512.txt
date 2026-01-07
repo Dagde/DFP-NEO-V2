@@ -1,0 +1,25 @@
+        isActive: status === 'active',
+      },
+    });
+
+    await createAuditLog({
+      action: 'user_updated',
+      userId: session.user.id,
+      entityType: 'user',
+      entityId: updatedUser.id,
+      changes: { firstName, lastName, email, role, status },
+    });
+
+    return NextResponse.json({ success: true, user: updatedUser });
+  } catch (error: any) {
+    console.error('Update user error:', error);
+    
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage users' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },

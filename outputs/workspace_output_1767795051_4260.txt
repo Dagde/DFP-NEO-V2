@@ -1,0 +1,28 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 9.8s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/admin/users/[id]/EditUserForm.tsx:226:21
+Type error: Property 'lastLoginAt' does not exist on type 'User'. Did you mean 'lastLogin'?
+
+[0m [90m 224 |[39m             [33m<[39m[33mspan[39m className[33m=[39m[32m"text-gray-400"[39m[33m>[39m[33mLast[39m [33mLogin[39m[33m:[39m[33m<[39m[33m/[39m[33mspan[39m[33m>[39m
+ [90m 225 |[39m             [33m<[39m[33mspan[39m className[33m=[39m[32m"ml-2 text-white"[39m[33m>[39m
+[31m[1m>[22m[39m[90m 226 |[39m               {user[33m.[39mlastLoginAt [33m?[39m [36mnew[39m [33mDate[39m(user[33m.[39mlastLoginAt)[33m.[39mtoLocaleString() [33m:[39m [32m'Never'[39m}
+ [90m     |[39m                     [31m[1m^[22m[39m
+ [90m 227 |[39m             [33m<[39m[33m/[39m[33mspan[39m[33m>[39m
+ [90m 228 |[39m           [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 229 |[39m           [33m<[39m[33mdiv[39m[33m>[39m[0m
+Next.js build worker exited with code: 1 and signal: null

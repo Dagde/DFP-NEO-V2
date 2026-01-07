@@ -6,21 +6,15 @@ const prisma = new PrismaClient();
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [user, roles] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id },
-      include: {
-        permissionsRole: true,
-      },
-    }),
-    prisma.permissionsRole.findMany({
-      orderBy: { name: 'asc' },
-    }),
-  ]);
+  const user = await prisma.user.findUnique({
+    where: { id },
+  });
 
   if (!user) {
     notFound();
   }
+
+  const roles = ['SUPER_ADMIN', 'ADMIN', 'PILOT', 'INSTRUCTOR', 'USER'];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

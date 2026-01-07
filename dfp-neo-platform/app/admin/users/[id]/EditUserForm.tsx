@@ -7,24 +7,17 @@ import Link from 'next/link';
 interface User {
   id: string;
   userId: string;
-  displayName: string | null;
+  username: string;
   email: string | null;
-  status: string;
-  permissionsRole: {
-    id: string;
-    name: string;
-  };
-  mustChangePassword: boolean;
-  lastLoginAt: Date | null;
+  role: string;
+  firstName: string | null;
+  lastName: string | null;
+  isActive: boolean;
+  lastLogin: Date | null;
   createdAt: Date;
 }
 
-interface Role {
-  id: string;
-  name: string;
-}
-
-export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
+export function EditUserForm({ user, roles }: { user: User; roles: string[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,11 +25,15 @@ export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
   const [inviteLink, setInviteLink] = useState('');
   const [showInviteLink, setShowInviteLink] = useState(false);
 
+  const displayName = user.firstName && user.lastName 
+    ? `${user.firstName} ${user.lastName}` 
+    : user.username;
+
   const [formData, setFormData] = useState({
-    displayName: user.displayName || '',
+    displayName: displayName,
     email: user.email || '',
-    permissionsRoleId: user.permissionsRole.id,
-    status: user.status,
+    role: user.role,
+    isActive: user.isActive,
   });
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -160,17 +157,8 @@ export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
     alert('Invite link copied to clipboard!');
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-900/30 text-green-400 border-green-700';
-      case 'disabled':
-        return 'bg-red-900/30 text-red-400 border-red-700';
-      case 'pending':
-        return 'bg-yellow-900/30 text-yellow-400 border-yellow-700';
-      default:
-        return 'bg-gray-700 text-gray-400 border-gray-600';
-    }
+  const getStatusBadge = (isActive: boolean) => {
+    return isActive ? 'bg-green-900/30 text-green-400 border-green-700' : 'bg-red-900/30 text-red-400 border-red-700';
   };
 
   if (showInviteLink) {
@@ -228,14 +216,14 @@ export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
           </div>
           <div>
             <span className="text-gray-400">Status:</span>
-            <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-md border ${getStatusBadge(user.status)}`}>
-              {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+            <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-md border ${user.isActive ? 'bg-green-900/30 text-green-300 border-green-700' : 'bg-red-900/30 text-red-300 border-red-700'}`}>
+              {user.isActive ? 'Active' : 'Inactive'}
             </span>
           </div>
           <div>
             <span className="text-gray-400">Last Login:</span>
             <span className="ml-2 text-white">
-              {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : 'Never'}
+              {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
             </span>
           </div>
           <div>
@@ -244,7 +232,7 @@ export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
           </div>
           <div>
             <span className="text-gray-400">Must Change Password:</span>
-            <span className="ml-2 text-white">{user.mustChangePassword ? 'Yes' : 'No'}</span>
+            <span className="ml-2 text-white">N/A</span>
           </div>
         </div>
       </div>
@@ -294,19 +282,19 @@ export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
         </div>
 
         <div>
-          <label htmlFor="permissionsRoleId" className="block text-sm font-medium text-gray-300 mb-2">
-            Permissions Role
+          <label htmlFor="role" className="block text-sm font-medium text-gray-300 mb-2">
+            Role
           </label>
           <select
-            id="permissionsRoleId"
-            value={formData.permissionsRoleId}
-            onChange={(e) => setFormData({ ...formData, permissionsRoleId: e.target.value })}
+            id="role"
+            value={formData.role}
+            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           >
             {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
+              <option key={role} value={role}>
+                {role}
               </option>
             ))}
           </select>
@@ -317,15 +305,14 @@ export function EditUserForm({ user, roles }: { user: User; roles: Role[] }) {
             Status
           </label>
           <select
-            id="status"
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            id="isActive"
+            value={formData.isActive.toString()}
+            onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           >
-            <option value="active">Active</option>
-            <option value="pending">Pending</option>
-            <option value="disabled">Disabled</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
           </select>
         </div>
 

@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id },
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user || !user.password) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify current password
-    const isValid = await comparePassword(currentPassword, user.passwordHash);
+    const isValid = await comparePassword(currentPassword, user.password);
     if (!isValid) {
       return NextResponse.json(
         { error: 'Current password is incorrect' },
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Change password
-    const result = await changeUserPassword(session.user.id, newPassword, session.user.id);
+    const result = await changeUserPassword(session.user.id, newPassword);
 
     if (!result.success) {
       return NextResponse.json(
