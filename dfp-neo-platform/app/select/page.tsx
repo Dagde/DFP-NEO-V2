@@ -81,7 +81,7 @@ export default function SelectPage() {
             <p className="text-neutral-400 text-sm">Welcome back,</p>
             <p className="text-neutral-200 font-semibold">{session?.user?.name || session?.user?.displayName || session?.user?.userId}</p>
           </div>
-          {session?.user?.permissionsRole?.name === 'Administrator' ? (
+          {session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'ADMIN' ? (
             <button
               onClick={() => router.push('/admin')}
               className="bg-gray-800/80 border border-gray-600 text-neutral-200 px-4 py-2 rounded text-sm hover:bg-gray-700/80 transition"

@@ -1,0 +1,28 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.0s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/api/admin/users/[id]/force-password-reset/route.ts:49:7
+Type error: Object literal may only specify known properties, and 'action' does not exist in type 'AuditLogData'.
+
+[0m [90m 47 |[39m
+ [90m 48 |[39m     [36mawait[39m createAuditLog({
+[31m[1m>[22m[39m[90m 49 |[39m       action[33m:[39m [32m'password_reset_forced'[39m[33m,[39m
+ [90m    |[39m       [31m[1m^[22m[39m
+ [90m 50 |[39m       userId[33m:[39m session[33m.[39muser[33m.[39mid[33m,[39m
+ [90m 51 |[39m       entityType[33m:[39m [32m'user'[39m[33m,[39m
+ [90m 52 |[39m       entityId[33m:[39m id[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null

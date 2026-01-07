@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth';
 import { requireCapability } from '@/lib/permissions';
 import { PrismaClient } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
-import { revokeAllUserSessions } from '@/lib/password';
 
 const prisma = new PrismaClient();
 
@@ -35,20 +34,25 @@ export async function POST(
       );
     }
 
+    // Reset password to force user to change it
     await prisma.user.update({
       where: { id: id },
       data: {
-        mustChangePassword: true,
+        password: 'TEMP_PASSWORD_NEEDS_CHANGE', // This will trigger password reset
       },
     });
 
-    await revokeAllUserSessions(id, session.user.id);
+    // Revoke all sessions
+    await prisma.session.deleteMany({
+      where: { userId: id },
+    });
 
     await createAuditLog({
-      actionType: 'password_reset_forced',
-      actorUserId: session.user.id,
-      targetUserId: id,
-      metadata: {
+      action: 'password_reset_forced',
+      userId: session.user.id,
+      entityType: 'user',
+      entityId: id,
+      changes: {
         userId: user.userId,
       },
     });

@@ -1,13 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import { CreateUserForm } from './CreateUserForm';
 
-const prisma = new PrismaClient();
+const roles = ['SUPER_ADMIN', 'ADMIN', 'PILOT', 'INSTRUCTOR', 'USER'];
 
 export default async function CreateUserPage() {
-  const roles = await prisma.permissionsRole.findMany({
-    orderBy: { name: 'asc' },
-  });
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>

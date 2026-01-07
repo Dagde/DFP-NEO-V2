@@ -1,0 +1,3 @@
+ ✓ Compiled successfully in 10.0s
+Failed to compile.
+Type error: Module '"@prisma/client"' has no exported member 'UserStatus'.

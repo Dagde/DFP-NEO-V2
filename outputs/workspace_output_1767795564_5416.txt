@@ -1,0 +1,16 @@
+      );
+    }
+
+    await prisma.user.update({
+      where: { id: id },
+      data: {
+        mustChangePassword: true,
+      },
+    });
+
+    await revokeAllUserSessions(id, session.user.id);
+
+    await createAuditLog({
+      actionType: 'password_reset_forced',
+      actorUserId: session.user.id,
+      targetUserId: id,

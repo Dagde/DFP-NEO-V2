@@ -76,9 +76,6 @@ export async function getUserFromToken(token: string) {
   
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    include: {
-      permissionsRole: true,
-    },
   });
   
   return user;
@@ -88,16 +85,14 @@ export async function getUserFromToken(token: string) {
  * Format user data for mobile API response
  */
 export function formatUserForMobile(user: any) {
+  const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userId;
+  
   return {
     id: user.id,
     userId: user.userId,
-    displayName: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userId,
+    displayName,
     email: user.email,
-    status: user.status,
-    permissionsRole: {
-      id: user.permissionsRole.id,
-      name: user.permissionsRole.name,
-    },
-    mustChangePassword: user.mustChangePassword,
+    isActive: user.isActive,
+    role: user.role,
   };
 }

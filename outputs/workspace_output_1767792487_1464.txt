@@ -1,0 +1,70 @@
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /workspace/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /workspace/dfp-neo-platform/package-lock.json
+
+   ▲ Next.js 15.5.9
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./app/admin/users/UsersList.tsx
+Error:   [31mx[0m Unexpected eof
+    ,-[[36;1;4m/workspace/dfp-neo-platform/app/admin/users/UsersList.tsx[0m:12:19]
+ [2m10[0m |   displayName: string | null;
+ [2m11[0m |   email: string | null;
+ [2m12[0m |   status: string;
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/admin/users/UsersList.tsx
+./app/admin/users/page.tsx
+
+./app/admin/users/[id]/EditUserForm.tsx
+Error:   [31mx[0m Expected ';', got '('
+    ,-[[36;1;4m/workspace/dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx[0m:13:1]
+ [2m10[0m |   displayName: string | null;
+ [2m11[0m |   email: string | null;
+ [2m12[0m |   status: string;
+ [2m13[0m |         body: JSON.stringify(formData),
+    : [35;1m                            ^[0m
+ [2m14[0m |       });
+ [2m15[0m | 
+ [2m16[0m |       const data = await response.json();
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/admin/users/[id]/EditUserForm.tsx
+./app/admin/users/[id]/page.tsx
+
+./app/api/admin/users/route.ts
+Error:   [31mx[0m Expected ',', got ')'
+    ,-[[36;1;4m/workspace/dfp-neo-platform/app/api/admin/users/route.ts[0m:61:1]
+ [2m58[0m |         displayName,
+ [2m59[0m |         email,
+ [2m60[0m |       include: { permissionsRole: true },
+ [2m61[0m |     });
+    : [35;1m     ^[0m
+ [2m62[0m | 
+ [2m63[0m |     console.log('✅ Created new user:', newUser);
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/admin/users/route.ts
+
+
+> Build failed because of webpack errors

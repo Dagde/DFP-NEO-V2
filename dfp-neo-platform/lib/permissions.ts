@@ -1,7 +1,53 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import { auth } from './auth';
 
 const prisma = new PrismaClient();
+
+// Role-based capability mapping
+const ROLE_CAPABILITIES: Record<Role, string[]> = {
+  SUPER_ADMIN: [
+    'launch:access',
+    'admin:access_panel',
+    'users:manage',
+    'audit:read',
+    'training:manage',
+    'maintenance:edit',
+    'developer:tools_access',
+    'schedule:create',
+    'schedule:edit',
+    'schedule:delete',
+    'personnel:manage',
+    'aircraft:manage',
+  ],
+  ADMIN: [
+    'launch:access',
+    'admin:access_panel',
+    'users:manage',
+    'audit:read',
+    'training:manage',
+    'schedule:create',
+    'schedule:edit',
+    'schedule:delete',
+    'personnel:manage',
+    'aircraft:manage',
+  ],
+  PILOT: [
+    'launch:access',
+    'schedule:create',
+    'schedule:edit',
+    'schedule:delete',
+  ],
+  INSTRUCTOR: [
+    'launch:access',
+    'training:manage',
+    'schedule:create',
+    'schedule:edit',
+    'personnel:manage',
+  ],
+  USER: [
+    'launch:access',
+  ],
+};
 
 /**
  * Get all capabilities for a user
@@ -9,24 +55,13 @@ const prisma = new PrismaClient();
 export async function getUserCapabilities(userId: string): Promise<string[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      permissionsRole: {
-        include: {
-          capabilities: {
-            include: {
-              capability: true,
-            },
-          },
-        },
-      },
-    },
   });
 
   if (!user) {
     return [];
   }
 
-  return user.permissionsRole.capabilities.map((rc) => rc.capability.key);
+  return ROLE_CAPABILITIES[user.role] || [];
 }
 
 /**
@@ -91,12 +126,9 @@ export async function requireCapability(capabilityKey: string): Promise<void> {
 export async function getUserRole(userId: string): Promise<string | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      permissionsRole: true,
-    },
   });
 
-  return user?.permissionsRole.name || null;
+  return user?.role || null;
 }
 
 /**
@@ -104,7 +136,7 @@ export async function getUserRole(userId: string): Promise<string | null> {
  */
 export async function isAdministrator(userId: string): Promise<boolean> {
   const role = await getUserRole(userId);
-  return role === 'Administrator';
+  return role === 'SUPER_ADMIN' || role === 'ADMIN';
 }
 
 /**

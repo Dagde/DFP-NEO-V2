@@ -36,11 +36,28 @@
 - [x] Validate data completeness (82 Personnel + 127 Trainees)
 
 ### 5. Deployment
-- [ ] Commit schema changes
-- [ ] Push to GitHub
-- [ ] Deploy to Railway
-- [ ] Verify production deployment
+- [x] Commit schema changes
+- [x] Push to GitHub (commit ead8e0e)
+- [x] Fix admin page AuditLog relation (commit 75c2d90)
+- [x] Deploy to Railway (automatic on push)
+- [ ] Verify production deployment (awaiting Railway build)
 
-### 6. Future Phases (After Migration Complete)
-- [ ] Phase 3: Create API routes
-- [ ] Phase 4: Frontend integration
+### 6. Deployment Error Fixes (CURRENT - In Progress)
+- [x] Identify all files with permissionsRole references (11 files found)
+- [x] User approved Option A (remove all permissionsRole references)
+- [x] Automated sed fix attempted and reverted (broke syntax)
+- [ ] Manually fix app/admin/page.tsx (remove permissionsRole.count() references)
+- [ ] Fix app/admin/permissions/page.tsx.disabled (remove permissionsRole queries)
+- [ ] Fix lib/actions/user-actions.ts (remove permissionsRole imports/usage)
+- [ ] Fix any other files with permissionsRole references
+- [ ] Test TypeScript compilation locally
+- [ ] Commit changes to git
+- [ ] Push to GitHub
+- [ ] Verify Railway deployment succeeds
+- [ ] Verify app loads correctly at dfp-neo.com
+
+### 7. Future Phases (After Deployment Fixes Complete)
+- [ ] Verify Railway deployment successful
+- [ ] Test application at dfp-neo.com
+- [ ] Phase 3: Create API routes (requires user approval)
+- [ ] Phase 4: Frontend integration (requires user approval)

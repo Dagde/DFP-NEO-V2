@@ -1,0 +1,31 @@
+  }
+
+  if (statusFilter) {
+    where.status = statusFilter;
+  }
+
+  const [users, roles] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      include: {
+        permissionsRole: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.permissionsRole.findMany({
+      orderBy: { name: 'asc' },
+    }),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-2">Users</h2>
+          <p className="text-gray-400">Manage user accounts and permissions</p>
+        </div>
+        <Link
+          href="/admin/users/create"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors flex items-center space-x-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

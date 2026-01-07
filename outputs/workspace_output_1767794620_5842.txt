@@ -1,0 +1,4 @@
+interface User {
+  id: string;
+  userId: string;
+  displayName: string | null;

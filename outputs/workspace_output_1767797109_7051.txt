@@ -1,0 +1,50 @@
+      const token = await createInviteToken(user.id, 72);
+      inviteLink = `${process.env.NEXTAUTH_URL}/set-password?token=${token}`;
+
+      // TODO: Send email if user has email
+      if (user.email) {
+        console.log(`Invite link for ${user.userId}: ${inviteLink}`);
+        // Integrate with email service here
+      }
+    } else if (method === 'temporary') {
+      // Set temporary password
+      if (!temporaryPassword) {
+        return NextResponse.json(
+          { error: 'Temporary password is required' },
+          { status: 400 }
+        );
+      }
+
+      const result = await setTemporaryPassword(user.id, temporaryPassword, session.user.id);
+
+      if (!result.success) {
+        // Delete the user if password setting failed
+        await prisma.user.delete({ where: { id: user.id } });
+        return NextResponse.json(
+          { error: result.errors?.join(', ') || 'Failed to set temporary password' },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      userId: user.id,
+      inviteLink: inviteLink || undefined,
+    });
+  } catch (error: any) {
+    console.error('Create user error:', error);
+    
+    if (error.message?.includes('Missing required capability')) {
+      return NextResponse.json(
+        { error: 'You do not have permission to manage users' },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

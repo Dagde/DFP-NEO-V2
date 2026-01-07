@@ -1,0 +1,11 @@
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     · serverActions
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.0s
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/admin/users/[id]/page.tsx:13:9
+Type error: Object literal may only specify known properties, and 'permissionsRole' does not exist in type 'UserInclude<DefaultArgs>'.

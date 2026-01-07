@@ -1,0 +1,50 @@
+   Collecting page data ...
+   Generating static pages (0/27) ...
+   Generating static pages (6/27) 
+   Generating static pages (13/27) 
+   Generating static pages (20/27) 
+ ✓ Generating static pages (27/27)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                        Size  First Load JS
+┌ ○ /                                             161 B         102 kB
+├ ○ /_not-found                                   992 B         103 kB
+├ ƒ /admin                                        165 B         106 kB
+├ ƒ /admin/users                                1.59 kB         107 kB
+├ ƒ /admin/users/[id]                           2.31 kB         108 kB
+├ ƒ /admin/users/create                         2.18 kB         108 kB
+├ ƒ /api/admin/users                              161 B         102 kB
+├ ƒ /api/admin/users/[id]                         161 B         102 kB
+├ ƒ /api/admin/users/[id]/force-password-reset    161 B         102 kB
+├ ƒ /api/admin/users/create                       161 B         102 kB
+├ ƒ /api/auth/[...nextauth]                       161 B         102 kB
+├ ƒ /api/auth/change-password                     161 B         102 kB
+├ ƒ /api/mobile/auth/login                        161 B         102 kB
+├ ƒ /api/mobile/auth/logout                       161 B         102 kB
+├ ƒ /api/mobile/auth/me                           161 B         102 kB
+├ ƒ /api/mobile/auth/refresh                      161 B         102 kB
+├ ƒ /api/mobile/schedule                          161 B         102 kB
+├ ƒ /api/mobile/unavailability/create             161 B         102 kB
+├ ƒ /api/mobile/unavailability/quick              161 B         102 kB
+├ ƒ /api/mobile/unavailability/reasons            161 B         102 kB
+├ ƒ /api/schedule/filter                          161 B         102 kB
+├ ○ /change-password                            1.43 kB         107 kB
+├ ○ /flight-school                                568 B         106 kB
+├ ○ /forgot-password                            1.44 kB         107 kB
+├ ○ /login                                      1.19 kB         112 kB
+├ ○ /reset-password                             1.62 kB         104 kB
+├ ○ /select                                     2.44 kB         113 kB
+├ ○ /set-password                               1.64 kB         104 kB
+└ ○ /test-login                                   905 B         106 kB
++ First Load JS shared by all                    102 kB
+  ├ chunks/255-cb395327542b56ef.js              45.9 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js         54.2 kB
+  └ other shared chunks (total)                 1.92 kB
+
+
+ƒ Middleware                                    33.9 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

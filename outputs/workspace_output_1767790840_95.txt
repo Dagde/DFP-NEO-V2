@@ -1,0 +1,19 @@
+Checking Personnel userId values...
+
+First 10 Personnel records:
+ID: cmk3m40yf0001kyrlbgw7km6u, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Baker, Mia, idNumber: null
+ID: cmk3m40zq0003kyrlwt0ophj0, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Harris, Richard, idNumber: null
+ID: cmk3m410e0005kyrl1nl4wcn6, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Hill, William, idNumber: null
+ID: cmk3m41140007kyrlbjtnvwkh, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Scott, Susan, idNumber: null
+ID: cmk3m411r0009kyrln7ugwip1, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Stewart, Chris, idNumber: null
+ID: cmk3m412e000bkyrl7bkdown9, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Walker, Benjamin, idNumber: null
+ID: cmk3m4131000dkyrl052uf9ui, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Bloggs, Joe, idNumber: null
+ID: cmk3m413p000fkyrlkvfupc3r, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Brown, Luna, idNumber: null
+ID: cmk3m414c000hkyrlm7u58ye1, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Carter, Olivia, idNumber: null
+ID: cmk3m414y000jkyrlgkewn0v4, userId: cmk3m3d8w0000kymjmsdlxsy9, name: Clark, Steven, idNumber: null
+
+Total unique userId values: 1
+Unique userId counts:
+  userId: cmk3m3d8w0000kymjmsdlxsy9 - Count: 209
+
+Total Personnel records: 209

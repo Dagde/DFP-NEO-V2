@@ -1,0 +1,201 @@
+            let scoreValue: number;
+            if (event.code.includes('MB')) {
+                // Mass Brief events get score 5 to indicate completion
+                scoreValue = 5;
+            } else if (event.type === 'Ground School') {
+                // Other ground events get score 5 to indicate completion
+                scoreValue = 5;
+            } else {
+                // Flight events get random score between 1 and 5
+                scoreValue = Math.floor(Math.random() * 5) + 1;
+            }
+
+            const instructor = qfiInstructors.length > 0
+                ? qfiInstructors[Math.floor(Math.random() * qfiInstructors.length)].name
+                : 'Unknown Instructor';
+
+            // Move date forward for the next event
+            const daysToAdd = Math.floor(Math.random() * 3) + 1; // 1 to 3 days
+            startDate.setDate(startDate.getDate() + daysToAdd);
+            
+            const scoreDate = new Date(startDate);
+            
+            traineeScores.push({
+                event: event.code,
+                score: scoreValue as Score['score'],
+                date: scoreDate.toISOString().split('T')[0],
+                instructor,
+                notes: scoreValue === 5 ? `Ground event completed for ${event.code}.` : `Simulated score for ${event.code}.`,
+                details: scoreValue === 5 ? [] : [{ criteria: 'General Handling', score: scoreValue, comment: 'Auto-generated comment.' }],
+            });
+            
+            latestEventDate = scoreDate;
+            if (event.type === 'Flight') {
+                latestFlightDate = scoreDate;
+            }
+        });
+
+        scoreMap.set(trainee.fullName, traineeScores);
+        
+        // Update trainee object with the latest dates from the simulation
+        if (latestEventDate) {
+            trainee.lastEventDate = latestEventDate.toISOString().split('T')[0];
+        }
+        if (latestFlightDate) {
+            trainee.lastFlightDate = latestFlightDate.toISOString().split('T')[0];
+        } else if (latestEventDate) {
+             // If no flights were completed, last flight date is same as last event date (if any)
+            trainee.lastFlightDate = latestEventDate.toISOString().split('T')[0];
+        }
+    });
+
+    return scoreMap;
+};
+
+// --- INSTRUCTOR ALLOCATION ALGORITHM ---
+const allocateInstructors = (trainees: Trainee[], instructors: Instructor[]): Trainee[] => {
+    const allocatableInstructors = instructors.filter(i => i.role === 'QFI');
+
+    if (!allocatableInstructors.length || !trainees.length) return trainees;
+
+    const traineesWithAssignments: Trainee[] = JSON.parse(JSON.stringify(trainees));
+    const eligibleTrainees = traineesWithAssignments.filter(t => !t.course.includes('FIC'));
+
+    if (!eligibleTrainees.length) return traineesWithAssignments;
+    
+    const workload = new Map<string, { primary: number, secondary: number }>();
+    allocatableInstructors.forEach(i => workload.set(i.name, { primary: 0, secondary: 0 }));
+
+    const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+
+    const shuffledEligibleTrainees = shuffle(eligibleTrainees);
+    let shuffledInstructors = shuffle(allocatableInstructors);
+
+    // Primary Allocation
+    const remainingTraineesForPrimary: Trainee[] = [];
+    shuffledEligibleTrainees.forEach((trainee, index) => {
+        if (index < shuffledInstructors.length) {
+            const instructor = shuffledInstructors[index];
+            trainee.primaryInstructor = instructor.name;
+            workload.get(instructor.name)!.primary++;
+        } else {
+            remainingTraineesForPrimary.push(trainee);
+        }
+    });
+
+    let availableForSecondPrimary = shuffle(allocatableInstructors.filter(i => !i.isExecutive));
+    remainingTraineesForPrimary.forEach(trainee => {
+        if (!availableForSecondPrimary.length) {
+            availableForSecondPrimary = shuffle(allocatableInstructors.filter(i => !i.isExecutive));
+        }
+        const instructor = availableForSecondPrimary.shift()!;
+        trainee.primaryInstructor = instructor.name;
+        workload.get(instructor.name)!.primary++;
+    });
+
+    const getTotalAssignments = (ipName: string): number => {
+        const load = workload.get(ipName);
+        if (!load) return 999;
+        return load.primary + load.secondary;
+    };
+
+    const execs = new Set(allocatableInstructors.filter(i => i.isExecutive).map(i => i.name));
+
+    // Secondary Allocation
+    for (const trainee of eligibleTrainees) {
+        const sortedInstructors = shuffle(allocatableInstructors).sort((a, b) => getTotalAssignments(a.name) - getTotalAssignments(b.name));
+        
+        for (const instructor of sortedInstructors) {
+            if (instructor.name === trainee.primaryInstructor) continue;
+
+            const load = workload.get(instructor.name)!;
+            if (execs.has(instructor.name) && (load.primary + load.secondary >= 3 || load.secondary >= 1)) {
+                continue;
+            }
+
+            trainee.secondaryInstructor = instructor.name;
+            load.secondary++;
+            break; 
+        }
+    }
+
+    return traineesWithAssignments;
+};
+
+// --- Full Schedule Generation Helper ---
+const generateFullSchedule = (
+    instructors: Instructor[],
+    trainees: Trainee[],
+    courses: Course[],
+    aircraftCount: number,
+    location: 'ESL' | 'PEA',
+    date: string
+): ScheduleEvent[] => {
+    const newEvents: ScheduleEvent[] = [];
+    const personnelSchedule: { [key: string]: { start: number, end: number }[] } = {};
+    const areas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+    const courseColors = Object.fromEntries(courses.map(c => [c.name, c.color]));
+
+    const isAvailable = (personName: string, startTime: number, duration: number) => {
+        if (!personnelSchedule[personName]) {
+            return true;
+        }
+        const endTime = startTime + duration;
+        return !personnelSchedule[personName].some(slot => 
+            startTime < slot.end && endTime > slot.start
+        );
+    };
+
+    const bookPerson = (personName: string, startTime: number, duration: number) => {
+        if (!personnelSchedule[personName]) {
+            personnelSchedule[personName] = [];
+        }
+        personnelSchedule[personName].push({ start: startTime, end: startTime + duration });
+    };
+
+    const waves = [
+        { start: 8.0, name: 'AM' },
+        { start: 10.5, name: 'MID' },
+        { start: 13.5, name: 'PM' }
+    ];
+    
+    const timeBetweenTakeoffs = 0.1; // 6 minutes
+    
+    const qfis = instructors.filter(i => i.role === 'QFI');
+    const simIps = instructors.filter(i => i.role === 'SIM IP');
+    
+    const flightSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.code.startsWith('BGF') && s.type === 'Flight');
+
+    waves.forEach(wave => {
+        for (let i = 0; i < aircraftCount; i++) {
+            const startTime = wave.start + (i * timeBetweenTakeoffs);
+            const syllabusItem = flightSyllabus[Math.floor(Math.random() * flightSyllabus.length)];
+            if (!syllabusItem) continue;
+            
+            const duration = syllabusItem.flightOrSimHours;
+
+            const instructor = qfis.find(inst => isAvailable(inst.name, startTime, duration));
+            if (!instructor) continue; 
+            
+            const trainee = trainees.find(t => !t.isPaused && isAvailable(t.fullName, startTime, duration));
+            if (!trainee) continue;
+
+            bookPerson(instructor.name, startTime, duration);
+            bookPerson(trainee.fullName, startTime, duration);
+            
+            newEvents.push({
+                id: uuidv4(),
+                date: date,
+                type: 'flight',
+                instructor: instructor.name,
+                student: trainee.fullName,
+                flightNumber: syllabusItem.code,
+                duration: duration,
+                startTime: startTime,
+                resourceId: `PC-21 ${i + 1}`,
+                color: courseColors[trainee.course] || 'bg-gray-400/50',
+                flightType: 'Dual',
+                locationType: 'Local',
+                origin: location,
+                destination: location,

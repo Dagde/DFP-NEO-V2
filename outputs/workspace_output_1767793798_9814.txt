@@ -1,0 +1,50 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+interface User {
+  id: string;
+  userId: string;
+  displayName: string | null;
+  email: string | null;
+  status: string;
+  permissionsRole: {
+    id: string;
+    name: string;
+  };
+  lastLoginAt: Date | null;
+  createdAt: Date;
+}
+
+interface Role {
+  id: string;
+  name: string;
+}
+
+export function UsersList({
+  users,
+  roles,
+  initialSearch,
+  initialRole,
+  initialStatus,
+}: {
+  users: User[];
+  roles: Role[];
+  initialSearch: string;
+  initialRole: string;
+  initialStatus: string;
+}) {
+  const router = useRouter();
+  const [search, setSearch] = useState(initialSearch);
+  const [roleFilter, setRoleFilter] = useState(initialRole);
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+
+  const handleSearch = () => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (roleFilter) params.set('role', roleFilter);
+    if (statusFilter) params.set('status', statusFilter);
+    router.push(`/admin/users?${params.toString()}`);
+  };

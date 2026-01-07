@@ -1,0 +1,298 @@
+2026-01-07T13:06:09.831704622Z [inf]  
+2026-01-07T13:06:14.545717368Z [inf]  [35m[Region: us-west1][0m
+2026-01-07T13:06:14.863671319Z [inf]  
+2026-01-07T13:06:14.863687733Z [inf]  [38;2;125;86;243m╭─────────────────╮[0m
+2026-01-07T13:06:14.863691322Z [inf]  [38;2;125;86;243m│[0m Railpack 0.15.4 [38;2;125;86;243m│[0m
+2026-01-07T13:06:14.863694465Z [inf]  [38;2;125;86;243m╰─────────────────╯[0m
+2026-01-07T13:06:14.863698846Z [inf]  
+2026-01-07T13:06:14.863701850Z [inf]  [97m↳ Detected Node[0m
+2026-01-07T13:06:14.863705225Z [inf]  [97m↳ Using npm package manager[0m
+2026-01-07T13:06:14.863708362Z [inf]  
+2026-01-07T13:06:14.863711324Z [inf]  [1mPackages[0m
+2026-01-07T13:06:14.863714155Z [inf]  [38;5;238m──────────[0m
+2026-01-07T13:06:14.863717338Z [inf]  [95mnode[0m  [38;5;238m│[0m  [96m22.21.1[0m  [38;5;238m│[0m  railpack default (22)
+2026-01-07T13:06:14.863720560Z [inf]  
+2026-01-07T13:06:14.863723469Z [inf]  [1mSteps[0m
+2026-01-07T13:06:14.863740355Z [inf]  [38;5;238m──────────[0m
+2026-01-07T13:06:14.863743313Z [inf]  [95m▸ install[0m
+2026-01-07T13:06:14.863746320Z [inf]  [38;5;245m$[0m [1mnpm ci[0m
+2026-01-07T13:06:14.863749153Z [inf]  
+2026-01-07T13:06:14.863751895Z [inf]  [95m▸ build[0m
+2026-01-07T13:06:14.863754714Z [inf]  [38;5;245m$[0m [1mnpm run build[0m
+2026-01-07T13:06:14.863757785Z [inf]  
+2026-01-07T13:06:14.863761023Z [inf]  [1mDeploy[0m
+2026-01-07T13:06:14.863763978Z [inf]  [38;5;238m──────────[0m
+2026-01-07T13:06:14.863767182Z [inf]  [38;5;245m$[0m [1mnpx prisma db push && npx prisma db seed && npm run start[0m
+2026-01-07T13:06:14.863770191Z [inf]  
+2026-01-07T13:06:14.863773110Z [inf]  
+2026-01-07T13:06:14.864653989Z [inf]  Successfully prepared Railpack plan for build
+2026-01-07T13:06:14.864683336Z [inf]  
+2026-01-07T13:06:14.864690784Z [inf]  
+2026-01-07T13:06:14.865074107Z [inf]  context: k401-_1N_
+2026-01-07T13:06:15.010504519Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-07T13:06:15.010972886Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-07T13:06:15.011012492Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-07T13:06:15.011161160Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-07T13:06:15.022975893Z [inf]  [internal] load build definition from railpack-plan.json
+2026-01-07T13:06:15.024417665Z [inf]  resolve image config for docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4
+2026-01-07T13:06:15.735534205Z [inf]  resolve image config for docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4
+2026-01-07T13:06:15.735839955Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.735855803Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.740246345Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.741046394Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.741074179Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.741937738Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.751336939Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.752680142Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:15.934265619Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.15.4@sha256:7e0535e519d9d00793d0bb4e652be5d48373ab5e0c7d9b90ef6bc40147290ff7
+2026-01-07T13:06:16.199055057Z [inf]  load build definition from railpack-plan.json
+2026-01-07T13:06:16.199105334Z [inf]  load build definition from railpack-plan.json
+2026-01-07T13:06:16.199122691Z [inf]  load build definition from railpack-plan.json
+2026-01-07T13:06:16.206820872Z [inf]  load build definition from railpack-plan.json
+2026-01-07T13:06:16.324610503Z [inf]  copy /mise/shims
+2026-01-07T13:06:16.324643428Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.324653979Z [inf]  create mise config
+2026-01-07T13:06:16.324662988Z [inf]  [railpack] hash used secrets
+2026-01-07T13:06:16.324675310Z [inf]  copy / /app
+2026-01-07T13:06:16.324686847Z [inf]  mkdir /etc/mise
+2026-01-07T13:06:16.324697295Z [inf]  [railpack] copy used secrets hash
+2026-01-07T13:06:16.324705151Z [inf]  install apt packages: libatomic1
+2026-01-07T13:06:16.324716825Z [inf]  copy /etc/mise/config.toml
+2026-01-07T13:06:16.324734204Z [inf]  [railpack] copy secrets hash
+2026-01-07T13:06:16.324744209Z [inf]  [railpack] secrets hash
+2026-01-07T13:06:16.324753026Z [inf]  copy /mise/installs
+2026-01-07T13:06:16.324761755Z [inf]  install mise packages: node
+2026-01-07T13:06:16.324769904Z [inf]  [railpack] loading secrets
+2026-01-07T13:06:16.324780252Z [inf]  copy /usr/local/bin/mise
+2026-01-07T13:06:16.324801303Z [inf]  mkdir -p /app/node_modules/.cache
+2026-01-07T13:06:16.324811397Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:16.324819839Z [inf]  loading .
+2026-01-07T13:06:16.324829411Z [inf]  npm ci
+2026-01-07T13:06:16.324838891Z [inf]  copy /root/.local/state/mise
+2026-01-07T13:06:16.325495837Z [inf]  [railpack] merge $packages:apt:runtime, $packages:mise, $build, $build
+2026-01-07T13:06:16.325525777Z [inf]  copy /app
+2026-01-07T13:06:16.325533009Z [inf]  copy /root/.cache
+2026-01-07T13:06:16.325540559Z [inf]  copy /app/node_modules
+2026-01-07T13:06:16.325546098Z [inf]  npm run build
+2026-01-07T13:06:16.325555465Z [inf]  copy .
+2026-01-07T13:06:16.325564337Z [inf]  copy / /app
+2026-01-07T13:06:16.325587383Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.325595647Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:16.325603525Z [inf]  [railpack] loading secrets
+2026-01-07T13:06:16.325611892Z [inf]  loading .
+2026-01-07T13:06:16.325625731Z [inf]  [railpack] secrets hash
+2026-01-07T13:06:16.548505423Z [inf]  [auth] library/alpine:pull token for registry-1.docker.io
+2026-01-07T13:06:16.548542290Z [inf]  [auth] library/alpine:pull token for registry-1.docker.io
+2026-01-07T13:06:16.959484948Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.959538736Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.959551055Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.959784955Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.968828308Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.970215629Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:16.975738125Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:16.975847121Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:16.975937419Z [inf]  loading .
+2026-01-07T13:06:16.975995253Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:16.976002838Z [inf]  [railpack] secrets hash
+2026-01-07T13:06:16.988341123Z [inf]  [railpack] secrets hash
+2026-01-07T13:06:17.011149852Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:17.012135808Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2026-01-07T13:06:17.267884525Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2026-01-07T13:06:17.327015007Z [inf]  [railpack] loading secrets
+2026-01-07T13:06:17.327342369Z [inf]  [railpack] loading secrets
+2026-01-07T13:06:17.327486464Z [inf]  [railpack] loading secrets
+2026-01-07T13:06:17.330089479Z [inf]  [railpack] loading secrets
+2026-01-07T13:06:17.330881607Z [inf]  [railpack] copy secrets hash
+2026-01-07T13:06:17.366071733Z [inf]  [railpack] copy secrets hash
+2026-01-07T13:06:17.366946562Z [inf]  [railpack] hash used secrets
+2026-01-07T13:06:17.529251824Z [inf]  [railpack] hash used secrets
+2026-01-07T13:06:17.728154528Z [inf]  [railpack] copy used secrets hash
+2026-01-07T13:06:17.777133592Z [inf]  [railpack] copy used secrets hash
+2026-01-07T13:06:17.854746787Z [inf]  loading .
+2026-01-07T13:06:18.026463518Z [inf]  install apt packages: libatomic1
+2026-01-07T13:06:18.159337052Z [inf]  Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]
+
+2026-01-07T13:06:18.185665667Z [inf]  Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+
+2026-01-07T13:06:18.195253959Z [inf]  Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+
+2026-01-07T13:06:18.23609627Z [inf]  Get:4 http://deb.debian.org/debian bookworm/main amd64 Packages [8791 kB]
+
+2026-01-07T13:06:18.316158643Z [inf]  Get:5 http://deb.debian.org/debian bookworm-updates/main amd64 Packages [6924 B]
+
+2026-01-07T13:06:18.325057238Z [inf]  Get:6 http://deb.debian.org/debian-security bookworm-security/main amd64 Packages [290 kB]
+
+2026-01-07T13:06:19.217466193Z [inf]  Fetched 9343 kB in 1s (8504 kB/s)
+Reading package lists...
+2026-01-07T13:06:19.609217999Z [inf]  
+
+2026-01-07T13:06:19.623306994Z [inf]  Reading package lists...
+2026-01-07T13:06:20.011374177Z [inf]  
+
+2026-01-07T13:06:20.02137801Z [inf]  Building dependency tree...
+2026-01-07T13:06:20.098380041Z [inf]  
+Reading state information...
+2026-01-07T13:06:20.098438248Z [inf]  
+
+2026-01-07T13:06:20.208917345Z [inf]  The following NEW packages will be installed:
+
+2026-01-07T13:06:20.209281272Z [inf]    libatomic1
+
+2026-01-07T13:06:20.233229118Z [inf]  0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Need to get 9376 B of archives.
+After this operation, 46.1 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bookworm/main amd64 libatomic1 amd64 12.2.0-14+deb12u1 [9376 B]
+
+2026-01-07T13:06:20.309578999Z [inf]  debconf: delaying package configuration, since apt-utils is not installed
+
+2026-01-07T13:06:20.325897764Z [inf]  Fetched 9376 B in 0s (461 kB/s)
+
+2026-01-07T13:06:20.337058224Z [inf]  Selecting previously unselected package libatomic1:amd64.
+(Reading database ... 
+2026-01-07T13:06:20.337762003Z [inf]  (Reading database ... 5%
+2026-01-07T13:06:20.337842061Z [inf]  (Reading database ... 10%
+2026-01-07T13:06:20.337914413Z [inf]  (Reading database ... 15%(Reading database ... 20%
+2026-01-07T13:06:20.337941474Z [inf]  (Reading database ... 25%
+2026-01-07T13:06:20.337993814Z [inf]  (Reading database ... 30%
+2026-01-07T13:06:20.338139598Z [inf]  (Reading database ... 35%(Reading database ... 40%
+2026-01-07T13:06:20.338417379Z [inf]  (Reading database ... 45%
+2026-01-07T13:06:20.338624185Z [inf]  (Reading database ... 50%
+2026-01-07T13:06:20.338665957Z [inf]  (Reading database ... 55%(Reading database ... 60%
+2026-01-07T13:06:20.338701044Z [inf]  (Reading database ... 65%
+2026-01-07T13:06:20.338936702Z [inf]  (Reading database ... 70%
+2026-01-07T13:06:20.339061932Z [inf]  (Reading database ... 75%
+2026-01-07T13:06:20.33907171Z [inf]  (Reading database ... 80%
+2026-01-07T13:06:20.339147047Z [inf]  (Reading database ... 85%
+2026-01-07T13:06:20.339195887Z [inf]  (Reading database ... 90%
+2026-01-07T13:06:20.339393168Z [inf]  (Reading database ... 95%
+2026-01-07T13:06:20.339415881Z [inf]  (Reading database ... 100%(Reading database ... 6622 files and directories currently installed.)
+
+2026-01-07T13:06:20.340007925Z [inf]  Preparing to unpack .../libatomic1_12.2.0-14+deb12u1_amd64.deb ...
+
+2026-01-07T13:06:20.342189573Z [inf]  Unpacking libatomic1:amd64 (12.2.0-14+deb12u1) ...
+
+2026-01-07T13:06:20.355252633Z [inf]  Setting up libatomic1:amd64 (12.2.0-14+deb12u1) ...
+
+2026-01-07T13:06:20.358762867Z [inf]  Processing triggers for libc-bin (2.36-9+deb12u13) ...
+
+2026-01-07T13:06:20.536421673Z [inf]  install apt packages: libatomic1
+2026-01-07T13:06:24.750250796Z [inf]  mkdir /etc/mise
+2026-01-07T13:06:25.006055774Z [inf]  mkdir /etc/mise
+2026-01-07T13:06:25.006832809Z [inf]  create mise config
+2026-01-07T13:06:25.017364373Z [inf]  create mise config
+2026-01-07T13:06:25.018189722Z [inf]  install mise packages: node
+2026-01-07T13:06:25.372919106Z [inf]  mise node@22.21.1    install
+
+2026-01-07T13:06:25.373841038Z [inf]  mise node@22.21.1    download node-v22.21.1-linux-x64.tar.gz
+
+2026-01-07T13:06:25.766230578Z [inf]  mise node@22.21.1    extract node-v22.21.1-linux-x64.tar.gz
+
+2026-01-07T13:06:26.650007831Z [inf]  mise node@22.21.1    node -v
+
+2026-01-07T13:06:26.653149397Z [inf]  mise node@22.21.1    v22.21.1
+
+2026-01-07T13:06:26.65367629Z [inf]  mise node@22.21.1    npm -v
+
+2026-01-07T13:06:26.733705619Z [inf]  mise node@22.21.1    10.9.4
+
+2026-01-07T13:06:26.748028972Z [inf]  mise node@22.21.1  ✓ installed
+
+2026-01-07T13:06:26.843407705Z [inf]  install mise packages: node
+2026-01-07T13:06:26.844026215Z [inf]  copy / /app
+2026-01-07T13:06:27.043998301Z [inf]  copy / /app
+2026-01-07T13:06:27.044900944Z [inf]  mkdir -p /app/node_modules/.cache
+2026-01-07T13:06:27.168300729Z [inf]  mkdir -p /app/node_modules/.cache
+2026-01-07T13:06:27.169264305Z [inf]  npm ci
+2026-01-07T13:06:27.355117571Z [inf]  npm warn config production Use `--omit=dev` instead.
+
+2026-01-07T13:06:27.775006027Z [inf]  copy /mise/shims
+2026-01-07T13:06:27.786283022Z [inf]  copy /mise/shims
+2026-01-07T13:06:27.786981606Z [inf]  copy /mise/installs
+2026-01-07T13:06:28.360481666Z [inf]  copy /mise/installs
+2026-01-07T13:06:28.361421329Z [inf]  copy /usr/local/bin/mise
+2026-01-07T13:06:28.439283554Z [inf]  copy /usr/local/bin/mise
+2026-01-07T13:06:28.440363835Z [inf]  copy /etc/mise/config.toml
+2026-01-07T13:06:28.453254480Z [inf]  copy /etc/mise/config.toml
+2026-01-07T13:06:28.453855469Z [inf]  copy /root/.local/state/mise
+2026-01-07T13:06:28.464745476Z [inf]  copy /root/.local/state/mise
+2026-01-07T13:06:36.65210307Z [inf]  
+> dfp-neo-platform@1.0.0 postinstall
+> prisma generate
+
+
+2026-01-07T13:06:37.275348053Z [inf]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+
+2026-01-07T13:06:37.532312571Z [inf]  Prisma schema loaded from prisma/schema.prisma
+
+2026-01-07T13:06:37.863561679Z [inf]  ┌─────────────────────────────────────────────────────────┐
+│  Update available 6.19.1 -> 7.2.0                       │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+
+2026-01-07T13:06:37.863720359Z [inf]  
+✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 139ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+
+2026-01-07T13:06:37.878946507Z [inf]  
+added 157 packages, and audited 158 packages in 11s
+
+2026-01-07T13:06:37.879892823Z [inf]  
+found 0 vulnerabilities
+
+2026-01-07T13:06:38.148362088Z [inf]  npm ci
+2026-01-07T13:06:38.149079095Z [inf]  copy / /app
+2026-01-07T13:06:38.417014685Z [inf]  copy / /app
+2026-01-07T13:06:38.418154872Z [inf]  copy .
+2026-01-07T13:06:38.697394200Z [inf]  copy .
+2026-01-07T13:06:38.698180486Z [inf]  npm run build
+2026-01-07T13:06:38.893599283Z [inf]  npm warn config production Use `--omit=dev` instead.
+
+2026-01-07T13:06:38.905550609Z [inf]  
+> dfp-neo-platform@1.0.0 build
+> next build
+
+
+2026-01-07T13:06:39.449584633Z [inf]     ▲ Next.js 15.5.9
+
+2026-01-07T13:06:39.449762838Z [inf]     - Environments: .env.production
+   - Experiments (use with caution):
+     · serverActions
+
+2026-01-07T13:06:39.449910281Z [inf]  
+
+2026-01-07T13:06:39.481209564Z [inf]     Creating an optimized production build ...
+
+2026-01-07T13:06:48.017098222Z [inf]   ✓ Compiled successfully in 6.4s
+
+2026-01-07T13:06:48.018607385Z [inf]     Linting and checking validity of types ...
+
+2026-01-07T13:06:51.702156839Z [inf]  Failed to compile.
+
+
+2026-01-07T13:06:51.702534003Z [inf]  ./app/admin/page.tsx:16:9
+Type error: Object literal may only specify known properties, but 'user' does not exist in type 'AuditLogInclude<DefaultArgs>'. Did you mean to write 'User'?
+
+[0m [90m 14 |[39m       orderBy[33m:[39m { createdAt[33m:[39m [32m'desc'[39m }[33m,[39m
+ [90m 15 |[39m       include[33m:[39m {
+[31m[1m>[22m[39m[90m 16 |[39m         user[33m:[39m { select[33m:[39m { userId[33m:[39m [36mtrue[39m[33m,[39m firstName[33m:[39m [36mtrue[39m[33m,[39m lastName[33m:[39m [36mtrue[39m } }[33m,[39m
+ [90m    |[39m         [31m[1m^[22m[39m
+ [90m 17 |[39m       }[33m,[39m
+ [90m 18 |[39m     })[33m,[39m
+ [90m 19 |[39m   ])[33m;[39m[0m
+
+2026-01-07T13:06:51.720827426Z [inf]  Next.js build worker exited with code: 1 and signal: null
+
+2026-01-07T13:06:51.834953877Z [err]  npm run build
+2026-01-07T13:06:51.849312785Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1

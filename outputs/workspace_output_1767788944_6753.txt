@@ -1,0 +1,2 @@
+/workspace/components/InstructorProfileFlyout.tsx
+/workspace/components/TraineeProfileFlyout.tsx

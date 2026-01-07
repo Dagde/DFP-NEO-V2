@@ -1,0 +1,2 @@
+13:        permissionsRole: true,
+16:    prisma.permissionsRole.findMany({

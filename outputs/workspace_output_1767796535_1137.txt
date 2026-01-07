@@ -1,0 +1,11 @@
+app/api/admin/users/route.ts:38:    const { userId, displayName, email, role } = body;
+app/api/admin/users/route.ts:40:    if (!userId || !displayName || !email || !role) {
+app/api/admin/users/route.ts:55:        displayName,
+app/api/admin/users/create/route.ts:29:    const { userId, email, displayName, role, method, temporaryPassword } = body;
+app/api/admin/users/create/route.ts:86:        displayName: displayName ? displayName.trim() : null,
+lib/auth.ts:14:      displayName: string | null;
+lib/auth.ts:25:    displayName: string | null;
+lib/auth.ts:66:          displayName: user.displayName,
+lib/auth.ts:86:        token.displayName = user.displayName;
+lib/auth.ts:98:        session.user.displayName = token.displayName as string;
+lib/mobile-auth.ts:91:    displayName: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userId,

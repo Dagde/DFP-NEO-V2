@@ -1,6 +1,6 @@
 import NextAuth, { DefaultSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaClient, UserStatus } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -11,28 +11,24 @@ declare module 'next-auth' {
     user: {
       id: string;
       userId: string;
-      displayName: string | null;
+      firstName: string | null;
+      lastName: string | null;
+      displayName: string;
       email: string | null;
-      status: UserStatus;
-      permissionsRole: {
-        id: string;
-        name: string;
-      };
-      mustChangePassword: boolean;
+      isActive: boolean;
+      role: Role;
     } & DefaultSession['user'];
   }
 
   interface User {
     id: string;
     userId: string;
-    displayName: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string;
     email: string | null;
-    status: UserStatus;
-    permissionsRole: {
-      id: string;
-      name: string;
-    };
-    mustChangePassword: boolean;
+    isActive: boolean;
+    role: Role;
   }
 }
 
@@ -51,30 +47,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { userId: credentials.userId as string },
-          include: { permissionsRole: true },
         });
 
-        if (!user || !user.passwordHash) {
+        if (!user || !user.password) {
           return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password as string,
-          user.passwordHash
+          user.password
         );
 
         if (!isPasswordValid) {
           return null;
         }
 
+        const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userId;
+
         return {
           id: user.id,
           userId: user.userId,
-          displayName: user.displayName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          displayName,
           email: user.email,
-          status: user.status,
-          permissionsRole: user.permissionsRole,
-          mustChangePassword: user.mustChangePassword,
+          isActive: user.isActive,
+          role: user.role,
         };
       },
     }),
@@ -90,11 +88,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.userId = user.userId;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
         token.displayName = user.displayName;
         token.email = user.email;
-        token.status = user.status;
-        token.permissionsRole = user.permissionsRole;
-        token.mustChangePassword = user.mustChangePassword;
+        token.isActive = user.isActive;
+        token.role = user.role;
       }
       return token;
     },
@@ -102,11 +101,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.sub || '';
         session.user.userId = token.userId as string;
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
         session.user.displayName = token.displayName as string;
         session.user.email = token.email as string;
-        session.user.status = token.status as UserStatus;
-        session.user.permissionsRole = token.permissionsRole as { id: string; name: string; };
-        session.user.mustChangePassword = token.mustChangePassword as boolean;
+        session.user.isActive = token.isActive as boolean;
+        session.user.role = token.role as Role;
       }
       return session;
     },

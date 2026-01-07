@@ -1,0 +1,19 @@
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "railway", schema "public" at "caboose.proxy.rlwy.net:15652"
+
+⚠️  There might be data loss when applying the changes:
+
+  • A unique constraint covering the columns `[userId]` on the table `Personnel` will be added. If there are existing duplicate values, this will fail.
+
+
+
+🚀  Your database is now in sync with your Prisma schema. Done in 1.05s
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 183ms
+

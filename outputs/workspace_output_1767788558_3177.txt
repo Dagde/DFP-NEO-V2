@@ -1,0 +1,43 @@
+export interface Instructor {
+  idNumber: number;
+  name: string;
+  rank: InstructorRank;
+  role: 'QFI' | 'SIM IP';
+  callsignNumber: number;
+  service?: 'RAAF' | 'RAN' | 'ARA';
+  category: InstructorCategory;
+  isTestingOfficer: boolean;
+  seatConfig: SeatConfig;
+  isExecutive: boolean;
+  isFlyingSupervisor: boolean;
+  isIRE: boolean;
+  isCommandingOfficer?: boolean;
+  isCFI?: boolean;
+  isDeputyFlightCommander?: boolean;
+  isContractor?: boolean;
+  isAdminStaff?: boolean;
+  isQFI?: boolean;
+  isOFI?: boolean;
+  unavailability: UnavailabilityPeriod[];
+--
+export interface Trainee {
+  idNumber: number;
+  fullName: string;
+  name: string;
+  rank: TraineeRank;
+  course: string;
+  seatConfig: SeatConfig;
+  isPaused: boolean;
+  unit: string;
+  flight?: string;
+  service?: 'RAAF' | 'RAN' | 'ARA';
+  unavailability: UnavailabilityPeriod[];
+  lastEventDate?: string;
+  lastFlightDate?: string;
+  currencyStatus?: PersonCurrencyStatus[];
+  location?: string;
+  phoneNumber?: string;
+  email?: string;
+  primaryInstructor?: string;
+  secondaryInstructor?: string;
+  lmpType?: string;

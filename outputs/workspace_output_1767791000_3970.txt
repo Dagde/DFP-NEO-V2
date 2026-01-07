@@ -1,0 +1,201 @@
+        5: [
+            'Smooth, positive and coordinated.',
+            'Accurately trimmed.',
+            'Correct technique used at all times.',
+            'Errors and minor lapses rarely encountered, but rectified promptly.',
+            'Very good level of accuracy, no prompts necessary.',
+            'Always prioritised work cycles.'
+        ],
+        4: [
+            'Positive and coordinated.',
+            'Technique applied correctly and to a very high standard.',
+            'Errors recognised and corrected promptly.',
+            'Strived for good accuracy.',
+            'Consistent use of attitudes to correct.',
+            'Good work cycles.'
+        ],
+        3: [
+            'Usually positive and coordinated.',
+            'Applied the basics in a smooth coordinated manner.',
+            'Minor lapses detracted from the overall finesse.',
+            'Errors recognised and corrected.',
+            'Acceptable accuracy with only minor prompts.',
+            'Usually employed attitudes to correct.',
+            'Effective cycles.'
+        ],
+        2: [
+            'Normally applied the basic techniques.',
+            'Sometimes abrupt and slow but usually coordinated.',
+            'Errors corrected appropriately.',
+            'Acceptable accuracy but some prompting still required.',
+            'Generally employed attitudes to correct.',
+            'Developing work cycles.'
+        ],
+        1: [
+            'Had difficulty applying the basic techniques.',
+            'Responded to instruction, however poor retention.',
+            'Slow to act when errors occur.',
+            'Developing accuracy but frequent prompting required.',
+            'Sometimes weak attitude skills.',
+            'Sometimes work cycles were organised.'
+        ],
+        0: [
+            'Uncoordinated, abrupt and slow.',
+            'Seldom trimmed.',
+            'Frequently employed incorrect technique.',
+            'Unable to recognise errors.',
+            'Unacceptable accuracy despite frequent prompts.',
+            'Very weak attitude skills, lapses to performance flying.',
+            'Disorganised work cycles.',
+            'Could not reproduce previously learnt airborne sequences.'
+        ]
+    },
+    'Generic Flying Elements': {
+        5: [
+            'Smooth, positive and well-coordinated throughout.',
+            'Demonstrates strong situational awareness.',
+            'Maintains effective work cycles and prioritises tasks effectively.',
+            'Applies technique with confidence and precision, requiring no prompts.',
+            'Easily adapts to changing conditions and workload.',
+            'Shows consistently good scan technique and accurate control inputs.'
+        ],
+        4: [
+            'Positive control and well-applied basic technique.',
+            'Good accuracy with only occasional minor lapses.',
+            'Demonstrates effective scan and work cycles most of the time.',
+            'Recognises and corrects errors promptly.',
+            'Manages workload well and maintains situational awareness.'
+        ],
+        3: [
+            'Generally smooth and coordinated with acceptable technique.',
+            'Minor lapses evident but do not affect overall safety.',
+            'Adequate scan technique with some prompting required.',
+            'Responds appropriately to instruction and corrects most errors.',
+            'Maintains situational awareness in familiar situations.'
+        ],
+        2: [
+            'Basic technique applied but inconsistently.',
+            'Sometimes abrupt or slow to act, requiring moderate prompting.',
+            'Scan technique developing; occasionally fixates.',
+            'Work cycles are present but not always effective.',
+            'Situational awareness varies, especially under higher workload.'
+        ],
+        1: [
+            'Difficulty applying basic technique without frequent assistance.',
+            'Ineffective work cycles; task saturation common.',
+            'Slow recognition of errors; corrections often delayed.',
+            'Poor scan discipline with frequent lapses.',
+            'Limited situational awareness; struggles beyond familiar patterns.'
+        ],
+        0: [
+            'Uncoordinated and lacking basic control technique.',
+            'Unable to maintain situational awareness even in simple tasks.',
+            'Frequent errors with little or no self-correction.',
+            'Work cycles disorganised or absent.',
+            'Easily overwhelmed; demonstrates unsafe or inconsistent behaviour.'
+        ]
+    }
+};
+
+// --- Name Generation Helpers ---
+const firstNames = ['Olivia', 'Emma', 'Amelia', 'Ava', 'Sophia', 'Isabella', 'Mia', 'Charlotte', 'Luna', 'Harper', 'Liam', 'Noah', 'Oliver', 'Elijah', 'James', 'William', 'Henry', 'Lucas', 'Benjamin', 'Theodore', 'Emily', 'Michael', 'Jessica', 'David', 'Sarah', 'Chris', 'Daniel', 'Matthew', 'Ashley', 'Jennifer', 'Robert', 'John', 'Linda', 'Barbara', 'Susan', 'Mary', 'Patricia', 'Richard', 'Joseph', 'Thomas', 'Charles', 'Steven', 'Paul', 'Mark'];
+const lastNames = ['Smith', 'Jones', 'Williams', 'Brown', 'Taylor', 'Davies', 'Evans', 'Thomas', 'Roberts', 'Johnson', 'Walker', 'Robinson', 'Thompson', 'White', 'Green', 'Harris', 'Clark', 'Lewis', 'Hall', 'Baker', 'Martin', 'Jackson', 'Wood', 'Turner', 'Hill', 'Moore', 'Scott', 'Cooper', 'King', 'Wright', 'Lee', 'Mitchell', 'Anderson', 'Carter', 'Parker', 'Edwards', 'Stewart', 'Morris'];
+const usedNames = new Set<string>();
+
+const generateRandomName = (): string => {
+  let name = '';
+  do {
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    name = `${lastName}, ${firstName}`;
+  } while (usedNames.has(name));
+  usedNames.add(name);
+  return name;
+};
+
+const flightOptions = ['A', 'B', 'C', 'D'];
+const getRandomFlight = () => flightOptions[Math.floor(Math.random() * flightOptions.length)];
+
+// Helper for unique IDs
+const usedIdNumbers = new Set<number>();
+const generateRandomIdNumber = (): number => {
+  let id: number;
+  do {
+    id = Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000;
+  } while (usedIdNumbers.has(id));
+  usedIdNumbers.add(id);
+  return id;
+};
+
+const generateTraineesForCourse = (courseName: string, rankDistribution: { rank: TraineeRank; count: number }[], unit: '1FTS' | 'CFS' | '2FTS'): Trainee[] => {
+  const location = (unit === '2FTS') ? 'Pearce' : 'East Sale';
+  const trainees: Trainee[] = [];
+  rankDistribution.forEach(({ rank, count: numToGenerate }) => {
+    for (let i = 0; i < numToGenerate; i++) {
+      const name = generateRandomName();
+      let service: 'RAAF' | 'RAN' | 'ARA' = 'RAAF';
+      if(rank === 'MIDN' || rank === 'SBLT') service = 'RAN';
+      if(rank === '2LT') service = 'ARA';
+      const phoneNumber = `04${Math.floor(10000000 + Math.random() * 90000000)}`.substring(0, 10);
+      const nameParts = name.split(', ');
+      const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase();
+      
+      const traineeCallsign = `CHLE${Math.floor(Math.random() * 101) + 300}`;
+      trainees.push({
+        idNumber: generateRandomIdNumber(),
+        fullName: `${name} – ${courseName}`,
+        name: name,
+        rank: rank,
+        course: courseName,
+        seatConfig: 'Normal',
+        isPaused: Math.random() < 0.05, // 5% chance of being paused
+        unit: unit,
+        flight: getRandomFlight(),
+        service: service,
+        location,
+        phoneNumber,
+        email,
+        unavailability: [],
+           traineeCallsign,
+        permissions: ['Trainee'],
+        // lastEventDate and lastFlightDate will be populated by the scoring simulation
+      });
+    }
+  });
+  return trainees.sort(() => Math.random() - 0.5);
+};
+
+// --- Instructor Generation Helper ---
+const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
+    const qfis: Instructor[] = [];
+    const simIps: Instructor[] = [];
+    let qfiCallsignCounter = 10;
+    const categories: InstructorCategory[] = ['UnCat', 'D', 'C', 'B', 'A'];
+
+    const isESL = targetLocation === 'ESL';
+
+    // --- Generate Executives (WGCDR, SQNLDR) ---
+    // 6 Executives
+    const executiveRanks: InstructorRank[] = ['WGCDR', ...Array(5).fill('SQNLDR')];
+    for (const rank of executiveRanks) {
+        let service: 'RAAF' | 'RAN' | 'ARA' = 'RAAF';
+        const randService = Math.random();
+        if (randService > 0.95) service = 'ARA';
+        else if (randService > 0.9) service = 'RAN';
+        const name = generateRandomName();
+        const nameParts = name.split(', ');
+        const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, '');
+        
+        const isCommandingOfficer = rank === 'WGCDR';
+        const isCFI = !isCommandingOfficer && Math.random() < 0.2;
+
+        qfis.push({
+            idNumber: generateRandomIdNumber(),
+            name: name,
+            rank: rank,
+            role: 'QFI',
+            callsignNumber: qfiCallsignCounter++,
+            service,
+            category: 'A',
+            isTestingOfficer: true,
+            seatConfig: 'Normal',
