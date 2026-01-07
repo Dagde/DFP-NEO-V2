@@ -1,0 +1,112 @@
+🔄 Starting migration: Renaming username to userId...
+
+⚙️  Creating userId column...
+✅ Created userId column
+
+⚙️  Copying username values to userId...
+✅ Copied all username values to userId
+
+⚙️  Making userId required...
+✅ Made userId required
+
+⚙️  Making userId unique...
+✅ Made userId unique
+
+❌ Migration failed: PrismaClientValidationError: 
+Invalid `prisma.user.findMany()` invocation in
+/workspace/dfp-neo-platform/migrate.js:30:37
+
+  27 console.log('✅ Made userId unique\n');
+  28 
+  29 // Step 5: Verify
+→ 30 const users = await prisma.user.findMany({
+       select: {
+         id: true,
+         username: true,
+         userId: true,
+         ~~~~~~
+         email: true,
+     ?   password?: true,
+     ?   role?: true,
+     ?   firstName?: true,
+     ?   lastName?: true,
+     ?   createdAt?: true,
+     ?   updatedAt?: true,
+     ?   lastLogin?: true,
+     ?   isActive?: true,
+     ?   createdById?: true,
+     ?   aircraft?: true,
+     ?   AuditLog?: true,
+     ?   cancellations?: true,
+     ?   flightSchedules?: true,
+     ?   personnel?: true,
+     ?   schedules?: true,
+     ?   sessions?: true,
+     ?   createdBy?: true,
+     ?   createdUsers?: true,
+     ?   settings?: true,
+     ?   _count?: true
+       }
+     })
+
+Unknown field `userId` for select statement on model `User`. Available options are marked with ?.
+    at Nn (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at ei.handleRequestError (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6911)
+    at ei.handleAndLogRequestError (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6593)
+    at ei.request (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6300)
+    at async a (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:130:9551)
+    at async migrate (/workspace/dfp-neo-platform/migrate.js:30:19) {
+  clientVersion: '6.19.1'
+}
+node:internal/process/promises:391
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+PrismaClientValidationError: 
+Invalid `prisma.user.findMany()` invocation in
+/workspace/dfp-neo-platform/migrate.js:30:37
+
+  27 console.log('✅ Made userId unique\n');
+  28 
+  29 // Step 5: Verify
+→ 30 const users = await prisma.user.findMany({
+       select: {
+         id: true,
+         username: true,
+         userId: true,
+         ~~~~~~
+         email: true,
+     ?   password?: true,
+     ?   role?: true,
+     ?   firstName?: true,
+     ?   lastName?: true,
+     ?   createdAt?: true,
+     ?   updatedAt?: true,
+     ?   lastLogin?: true,
+     ?   isActive?: true,
+     ?   createdById?: true,
+     ?   aircraft?: true,
+     ?   AuditLog?: true,
+     ?   cancellations?: true,
+     ?   flightSchedules?: true,
+     ?   personnel?: true,
+     ?   schedules?: true,
+     ?   sessions?: true,
+     ?   createdBy?: true,
+     ?   createdUsers?: true,
+     ?   settings?: true,
+     ?   _count?: true
+       }
+     })
+
+Unknown field `userId` for select statement on model `User`. Available options are marked with ?.
+    at Nn (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:29:1363)
+    at ei.handleRequestError (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6911)
+    at ei.handleAndLogRequestError (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6593)
+    at ei.request (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:121:6300)
+    at async a (/workspace/dfp-neo-platform/node_modules/@prisma/client/runtime/library.js:130:9551)
+    at async migrate (/workspace/dfp-neo-platform/migrate.js:30:19) {
+  clientVersion: '6.19.1'
+}
+
+Node.js v20.19.6

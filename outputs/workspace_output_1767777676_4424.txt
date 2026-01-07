@@ -1,0 +1,177 @@
+2026-01-07T06:45:04.000000000Z [inf]  Starting Container
+2026-01-07T06:45:05.303732044Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:06.430487332Z [err]  
+2026-01-07T06:45:06.430576024Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:06.430581435Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:06.858912447Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:06.858922842Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:08.381125205Z [inf]  
+2026-01-07T06:45:08.386492811Z [err]  Error: 
+2026-01-07T06:45:08.386507751Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:08.386517554Z [err]  
+2026-01-07T06:45:08.386528682Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:08.386539888Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:08.386548603Z [err]  
+2026-01-07T06:45:08.386555341Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:08.386561281Z [err]  All data will be lost.
+2026-01-07T06:45:08.386567128Z [err]        
+2026-01-07T06:45:09.316801641Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:10.390968171Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:10.390975048Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:10.390980073Z [err]  
+2026-01-07T06:45:10.779622940Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:10.784994953Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:12.399703574Z [inf]  
+2026-01-07T06:45:12.399710376Z [err]  Error: 
+2026-01-07T06:45:12.399716996Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:12.399722416Z [err]  
+2026-01-07T06:45:12.399727742Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:12.399732711Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:12.399738014Z [err]  
+2026-01-07T06:45:12.399743339Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:12.399749584Z [err]  All data will be lost.
+2026-01-07T06:45:12.399755415Z [err]        
+2026-01-07T06:45:13.428729394Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:14.560140725Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:14.560148631Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:14.560153950Z [err]  
+2026-01-07T06:45:14.985260238Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:14.988195330Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:16.505731902Z [inf]  
+2026-01-07T06:45:16.505747418Z [err]  Error: 
+2026-01-07T06:45:16.505754305Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:16.505759926Z [err]  
+2026-01-07T06:45:16.505765664Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:16.505770887Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:16.505776071Z [err]  
+2026-01-07T06:45:16.505780849Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:16.505786135Z [err]  All data will be lost.
+2026-01-07T06:45:16.505791887Z [err]        
+2026-01-07T06:45:17.424493914Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:18.465142966Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:18.465153639Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:18.465160962Z [err]  
+2026-01-07T06:45:18.906355120Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:18.906365910Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:20.427004305Z [inf]  
+2026-01-07T06:45:20.427019777Z [err]  Error: 
+2026-01-07T06:45:20.427028108Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:20.427033929Z [err]  
+2026-01-07T06:45:20.427039991Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:20.427046606Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:20.427052187Z [err]  
+2026-01-07T06:45:20.427057740Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:20.427063777Z [err]  All data will be lost.
+2026-01-07T06:45:20.427069590Z [err]        
+2026-01-07T06:45:21.422473792Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:22.527451460Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:22.527460530Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:22.527466685Z [err]  
+2026-01-07T06:45:22.900594551Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:22.906342482Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:24.517947348Z [inf]  
+2026-01-07T06:45:24.517953403Z [err]  Error: 
+2026-01-07T06:45:24.517958477Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:24.517964169Z [err]  
+2026-01-07T06:45:24.517968560Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:24.517973757Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:24.517978766Z [err]  
+2026-01-07T06:45:24.517983576Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:24.517989414Z [err]  All data will be lost.
+2026-01-07T06:45:24.517994174Z [err]        
+2026-01-07T06:45:25.251227491Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:26.646339196Z [err]  
+2026-01-07T06:45:26.646430514Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:26.646445021Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:26.868826999Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:26.868831739Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:28.558237596Z [inf]  
+2026-01-07T06:45:28.558243891Z [err]  Error: 
+2026-01-07T06:45:28.558249447Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:28.558254367Z [err]  
+2026-01-07T06:45:28.558258996Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:28.558263932Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:28.558269062Z [err]  
+2026-01-07T06:45:28.558273922Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:28.558281710Z [err]  All data will be lost.
+2026-01-07T06:45:28.558286317Z [err]        
+2026-01-07T06:45:30.602518997Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:31.716201533Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:31.716209055Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:31.716214275Z [err]  
+2026-01-07T06:45:32.204358344Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:32.204369083Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:33.760490238Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:33.760504141Z [err]  All data will be lost.
+2026-01-07T06:45:33.760511548Z [err]        
+2026-01-07T06:45:33.760536057Z [inf]  
+2026-01-07T06:45:33.760543385Z [err]  Error: 
+2026-01-07T06:45:33.760550216Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:33.760556609Z [err]  
+2026-01-07T06:45:33.760563169Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:33.760568863Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:33.760575441Z [err]  
+2026-01-07T06:45:34.759490523Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:35.971673012Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:35.971684072Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:35.971691692Z [err]  
+2026-01-07T06:45:36.620919689Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:36.620928075Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:37.917449214Z [inf]  
+2026-01-07T06:45:37.917454224Z [err]  Error: 
+2026-01-07T06:45:37.917459590Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:37.917466194Z [err]  
+2026-01-07T06:45:37.917471250Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:37.917476093Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:37.917480923Z [err]  
+2026-01-07T06:45:37.917486560Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:37.917492299Z [err]  All data will be lost.
+2026-01-07T06:45:37.917497032Z [err]        
+2026-01-07T06:45:38.839656693Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:40.033039754Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:40.033047015Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:40.033052325Z [err]  
+2026-01-07T06:45:40.632924265Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:40.632929080Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:42.039903265Z [inf]  
+2026-01-07T06:45:42.039910214Z [err]  Error: 
+2026-01-07T06:45:42.039914974Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:42.039919627Z [err]  
+2026-01-07T06:45:42.039923855Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:42.039929717Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:42.039934090Z [err]  
+2026-01-07T06:45:42.039938680Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:42.039945748Z [err]  All data will be lost.
+2026-01-07T06:45:42.039950454Z [err]        
+2026-01-07T06:45:43.044161398Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:44.220019206Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:44.220024496Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:44.220033631Z [err]  
+2026-01-07T06:45:44.718881545Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:44.718890302Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:46.172022384Z [inf]  
+2026-01-07T06:45:46.172030776Z [err]  Error: 
+2026-01-07T06:45:46.172036486Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:46.172041526Z [err]  
+2026-01-07T06:45:46.172046825Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:46.172052678Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:46.172057081Z [err]  
+2026-01-07T06:45:46.172062163Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:46.172069939Z [err]  All data will be lost.
+2026-01-07T06:45:46.172075631Z [err]        
+2026-01-07T06:45:46.938740554Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T06:45:48.176412246Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T06:45:48.176420215Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T06:45:48.176425259Z [err]  
+2026-01-07T06:45:48.727435057Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T06:45:48.727444225Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T06:45:50.157252951Z [inf]  
+2026-01-07T06:45:50.157265656Z [err]  Error: 
+2026-01-07T06:45:50.157273177Z [err]  ⚠️ We found changes that cannot be executed:
+2026-01-07T06:45:50.157278535Z [err]  
+2026-01-07T06:45:50.157283977Z [err]    • Added the required column `permissionsRoleId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:50.157295299Z [err]    • Added the required column `userId` to the `User` table without a default value. There are 5 rows in this table, it is not possible to execute this step.
+2026-01-07T06:45:50.157300398Z [err]  
+2026-01-07T06:45:50.157305903Z [err]  You may use the --force-reset flag to drop the database before push like prisma db push --force-reset
+2026-01-07T06:45:50.157311478Z [err]  All data will be lost.
+2026-01-07T06:45:50.157317407Z [err]        
