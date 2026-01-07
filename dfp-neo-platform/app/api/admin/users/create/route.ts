@@ -26,12 +26,33 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, email, firstName, lastName, role, password } = body;
+    const { userId, email, displayName, firstName, lastName, role, password, temporaryPassword } = body;
 
-    // Validate required fields
-    if (!userId || !email || !role || !password) {
+    // Handle displayName - split into firstName and lastName if provided
+    let fName = firstName;
+    let lName = lastName;
+    
+    if (displayName && (!fName || !lName)) {
+      const names = displayName.trim().split(' ');
+      fName = names[0] || '';
+      lName = names.slice(1).join(' ') || '';
+    }
+
+    // Validate required fields (email is now optional)
+    if (!userId || !role) {
       return NextResponse.json(
-        { error: 'User ID, email, role, and password are required' },
+        { error: 'User ID and role are required' },
+        { status: 400 }
+      );
+    }
+
+    // If temporaryPassword is provided, use it as password
+    const pwd = password || temporaryPassword;
+    
+    // Validate password is provided
+    if (!pwd) {
+      return NextResponse.json(
+        { error: 'Password is required' },
         { status: 400 }
       );
     }
@@ -56,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists (if provided)
-    if (email) {
+    if (email && email.trim()) {
       const existingEmail = await prisma.user.findUnique({
         where: { email: email.trim() },
       });
@@ -86,9 +107,9 @@ export async function POST(request: NextRequest) {
       data: {
         userId: normalizedUserId,
         username: normalizedUserId,
-        email: email ? email.trim() : null,
-        firstName: firstName ? firstName.trim() : null,
-        lastName: lastName ? lastName.trim() : null,
+        email: (email && email.trim()) ? email.trim() : null,
+        firstName: fName ? fName.trim() : null,
+        lastName: lName ? lName.trim() : null,
         role,
         isActive: true,
         password: passwordHash,
