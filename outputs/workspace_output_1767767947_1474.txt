@@ -1,0 +1,10 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function main() {
+  console.log('🚀 Starting aircraft migration...\n');
+
+  // Get users for userId assignment
+  const adminUser = await prisma.user.findUnique({
+    where: { username: 'admin' },
