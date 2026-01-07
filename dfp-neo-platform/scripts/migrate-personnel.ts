@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ESL_DATA, PEA_DATA } from '../../mockData';
+import { ESL_DATA, PEA_DATA } from '../mockData';
 
 const prisma = new PrismaClient();
 
