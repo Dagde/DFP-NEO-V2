@@ -7,15 +7,14 @@ export default async function AdminDashboard() {
   // Get statistics
   const [totalUsers, activeUsers, pendingUsers, totalRoles, recentAuditLogs] = await Promise.all([
     prisma.user.count(),
-    prisma.user.count({ where: { status: 'active' } }),
-    prisma.user.count({ where: { status: 'pending' } }),
+    prisma.user.count({ where: { isActive: true } }),
+    prisma.user.count({ where: { isActive: false } }),
     prisma.permissionsRole.count(),
     prisma.auditLog.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
-        actor: { select: { userId: true, displayName: true } },
-        target: { select: { userId: true, displayName: true } },
+        user: { select: { userId: true, firstName: true, lastName: true } },
       },
     }),
   ]);
@@ -153,8 +152,7 @@ export default async function AdminDashboard() {
                       {log.actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {log.actor ? `${log.actor.displayName || log.actor.userId}` : 'System'}
-                      {log.target && ` → ${log.target.displayName || log.target.userId}`}
+                      {log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''} (${log.user.userId})` : 'System'}
                     </p>
                   </div>
                 </div>
