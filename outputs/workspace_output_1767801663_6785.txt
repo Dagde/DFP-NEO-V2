@@ -1,0 +1,9 @@
+/workspace/dfp-neo-platform/app/admin/page.tsx
+/workspace/dfp-neo-platform/app/admin/audit/AuditLogsList.tsx
+/workspace/dfp-neo-platform/app/admin/users/page.tsx
+/workspace/dfp-neo-platform/app/admin/users/[id]/page.tsx
+/workspace/dfp-neo-platform/app/admin/users/[id]/EditUserForm.tsx
+/workspace/dfp-neo-platform/app/admin/users/create/page.tsx
+/workspace/dfp-neo-platform/app/admin/users/create/CreateUserForm.tsx
+/workspace/dfp-neo-platform/app/admin/users/UsersList.tsx
+/workspace/dfp-neo-platform/app/admin/layout.tsx

@@ -7,8 +7,8 @@ import Link from 'next/link';
 interface AuditLog {
   id: string;
   actionType: string;
-  actor: { userId: string; displayName: string | null } | null;
-  target: { userId: string; displayName: string | null } | null;
+  actor: { userId: string; firstName: string | null; lastName: string | null } | null;
+  target: { userId: string; firstName: string | null; lastName: string | null } | null;
   metadata: any;
   ipAddress: string | null;
   createdAt: Date;
@@ -160,8 +160,12 @@ export function AuditLogsList({
                     <td className="px-6 py-4 text-sm text-white">
                       {log.actor ? (
                         <div>
-                          <div>{log.actor.displayName || log.actor.userId}</div>
-                          {log.actor.displayName && (
+                          <div>
+                            {log.actor.firstName && log.actor.lastName 
+                              ? `${log.actor.firstName} ${log.actor.lastName}` 
+                              : log.actor.userId}
+                          </div>
+                          {log.actor.firstName && log.actor.lastName && (
                             <div className="text-xs text-gray-400">{log.actor.userId}</div>
                           )}
                         </div>
@@ -172,8 +176,12 @@ export function AuditLogsList({
                     <td className="px-6 py-4 text-sm text-white">
                       {log.target ? (
                         <div>
-                          <div>{log.target.displayName || log.target.userId}</div>
-                          {log.target.displayName && (
+                          <div>
+                            {log.target.firstName && log.target.lastName 
+                              ? `${log.target.firstName} ${log.target.lastName}` 
+                              : log.target.userId}
+                          </div>
+                          {log.target.firstName && log.target.lastName && (
                             <div className="text-xs text-gray-400">{log.target.userId}</div>
                           )}
                         </div>

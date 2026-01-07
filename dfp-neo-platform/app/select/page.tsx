@@ -79,7 +79,7 @@ export default function SelectPage() {
         <div className="flex items-center gap-6">
           <div className="text-right">
             <p className="text-neutral-400 text-sm">Welcome back,</p>
-            <p className="text-neutral-200 font-semibold">{session?.user?.name || session?.user?.displayName || session?.user?.userId}</p>
+            <p className="text-neutral-200 font-semibold">{session?.user?.firstName && session?.user?.lastName ? `${session.user.firstName} ${session.user.lastName}` : session?.user?.userId}</p>
           </div>
           {session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'ADMIN' ? (
             <button

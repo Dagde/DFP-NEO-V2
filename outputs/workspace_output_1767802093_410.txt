@@ -20,8 +20,7 @@ export default async function UsersPage({
   if (search) {
     where.OR = [
       { userId: { contains: search } },
-      { firstName: { contains: search } },
-      { lastName: { contains: search } },
+      { displayName: { contains: search } },
       { email: { contains: search } },
     ];
   }

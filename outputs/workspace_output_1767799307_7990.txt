@@ -1,0 +1,784 @@
+2026-01-07T15:16:27.000000000Z [inf]  Starting Container
+2026-01-07T15:16:27.731175396Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:28.748873333Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:28.748881753Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:28.748889995Z [err]  
+2026-01-07T15:16:29.006901058Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:16:29.007423243Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:16:30.319023664Z [inf]  
+2026-01-07T15:16:30.319039576Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:16:30.319045017Z [inf]  
+2026-01-07T15:16:30.324063826Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:16:30.529830893Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:16:30.732727913Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 201ms
+2026-01-07T15:16:30.732733629Z [inf]  
+2026-01-07T15:16:30.931805492Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:32.273857867Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:32.273868029Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:32.273876699Z [err]  
+2026-01-07T15:16:32.736789935Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:16:32.981758781Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:16:32.981759063Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:16:32.981770256Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:16:32.981770727Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:16:32.981779976Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:16:32.981780746Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:16:32.981788525Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:16:32.981788594Z [err]  }
+2026-01-07T15:16:32.981796883Z [err]  
+2026-01-07T15:16:32.981796994Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:16:32.981804296Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767798992869:2:3744)
+2026-01-07T15:16:32.981805998Z [err]  Node.js v22.21.1
+2026-01-07T15:16:32.981809323Z [err]  
+2026-01-07T15:16:32.981811953Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767798992869:2:4237)
+2026-01-07T15:16:32.981816684Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:16:32.981821173Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767798992869:2:5355)
+2026-01-07T15:16:32.981826624Z [err]      triggerUncaughtException(
+2026-01-07T15:16:32.981828220Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:16:32.981833936Z [err]      ^
+2026-01-07T15:16:32.981836066Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:16:32.994870159Z [err]  
+2026-01-07T15:16:32.994875842Z [err]  An error occurred while running the seed command:
+2026-01-07T15:16:32.994880724Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:16:34.112934651Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:35.192147902Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:35.192157204Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:35.192165195Z [err]  
+2026-01-07T15:16:35.537145376Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:16:35.540939531Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:16:36.774638083Z [inf]  
+2026-01-07T15:16:36.774645410Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:16:36.774652382Z [inf]  
+2026-01-07T15:16:36.775284815Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:16:36.995841707Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:16:37.251847565Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 253ms
+2026-01-07T15:16:37.251853113Z [inf]  
+2026-01-07T15:16:37.397502581Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:38.509908335Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:38.509915872Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:38.509923917Z [err]  
+2026-01-07T15:16:38.959308832Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:16:39.263780549Z [err]  
+2026-01-07T15:16:39.263794874Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:16:39.263806910Z [err]      triggerUncaughtException(
+2026-01-07T15:16:39.263815763Z [err]      ^
+2026-01-07T15:16:39.263823873Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:16:39.263831043Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:16:39.263839429Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:16:39.263847253Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:16:39.263854916Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:16:39.263868817Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767798999143:2:3744)
+2026-01-07T15:16:39.263876069Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767798999143:2:4237)
+2026-01-07T15:16:39.263884363Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767798999143:2:5355)
+2026-01-07T15:16:39.263896407Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:16:39.263904474Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:16:39.263912258Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:16:39.263919723Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:16:39.263929479Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:16:39.263939954Z [err]  }
+2026-01-07T15:16:39.263947628Z [err]  
+2026-01-07T15:16:39.263955687Z [err]  Node.js v22.21.1
+2026-01-07T15:16:39.288070922Z [err]  
+2026-01-07T15:16:39.288079768Z [err]  An error occurred while running the seed command:
+2026-01-07T15:16:39.288089549Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:16:40.787475043Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:41.873077959Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:41.873096687Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:41.873102187Z [err]  
+2026-01-07T15:16:42.219135245Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:16:42.219143144Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:16:43.393610393Z [inf]  
+2026-01-07T15:16:43.393615886Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:16:43.393621147Z [inf]  
+2026-01-07T15:16:43.393626428Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:16:43.772609103Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:16:43.841076765Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 207ms
+2026-01-07T15:16:43.841086241Z [inf]  
+2026-01-07T15:16:44.127905905Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:45.283053291Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:45.283058376Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:45.283063969Z [err]  
+2026-01-07T15:16:45.778121178Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:16:45.994618157Z [err]  
+2026-01-07T15:16:45.994629865Z [err]  Node.js v22.21.1
+2026-01-07T15:16:45.994642380Z [err]  
+2026-01-07T15:16:45.994655840Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:16:45.994667420Z [err]      triggerUncaughtException(
+2026-01-07T15:16:45.994676800Z [err]      ^
+2026-01-07T15:16:45.994685033Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:16:45.994693905Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:16:45.994703025Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:16:45.994710877Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:16:45.994719130Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:16:45.994727860Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799005873:2:3744)
+2026-01-07T15:16:45.994735910Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799005873:2:4237)
+2026-01-07T15:16:45.994743914Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799005873:2:5355)
+2026-01-07T15:16:45.994752230Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:16:45.994760062Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:16:45.994767631Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:16:45.994775380Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:16:45.994783199Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:16:45.994796319Z [err]  }
+2026-01-07T15:16:46.006488583Z [err]  
+2026-01-07T15:16:46.006504122Z [err]  An error occurred while running the seed command:
+2026-01-07T15:16:46.006511524Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:16:47.236063896Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:48.352044827Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:48.352052192Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:48.352065763Z [err]  
+2026-01-07T15:16:48.790834712Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:16:48.795717755Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:16:49.923810887Z [inf]  
+2026-01-07T15:16:49.923817901Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:16:49.923823584Z [inf]  
+2026-01-07T15:16:49.923829779Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:16:50.152149083Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:16:50.398771221Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 248ms
+2026-01-07T15:16:50.398783713Z [inf]  
+2026-01-07T15:16:50.986023767Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:52.165965393Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:52.165971926Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:52.165977024Z [err]  
+2026-01-07T15:16:52.551115092Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:16:52.860012736Z [err]  
+2026-01-07T15:16:52.860019271Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:16:52.860024980Z [err]      triggerUncaughtException(
+2026-01-07T15:16:52.860030148Z [err]      ^
+2026-01-07T15:16:52.860035455Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:16:52.860040387Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:16:52.860045580Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:16:52.860051257Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:16:52.860056911Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:16:52.860066566Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799012743:2:3744)
+2026-01-07T15:16:52.860072242Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799012743:2:4237)
+2026-01-07T15:16:52.860077889Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799012743:2:5355)
+2026-01-07T15:16:52.860084069Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:16:52.860089097Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:16:52.860093871Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:16:52.860098585Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:16:52.860103788Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:16:52.860108734Z [err]  }
+2026-01-07T15:16:52.860113880Z [err]  
+2026-01-07T15:16:52.860118596Z [err]  Node.js v22.21.1
+2026-01-07T15:16:52.877593570Z [err]  
+2026-01-07T15:16:52.877601213Z [err]  An error occurred while running the seed command:
+2026-01-07T15:16:52.877610277Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:16:54.504343625Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:55.823745806Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:55.823754031Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:55.823762025Z [err]  
+2026-01-07T15:16:56.096965249Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:16:56.096973843Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:16:57.351419469Z [inf]  
+2026-01-07T15:16:57.351428492Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:16:57.351435262Z [inf]  
+2026-01-07T15:16:57.351442300Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:16:57.602142427Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:16:57.841441560Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 238ms
+2026-01-07T15:16:57.842143205Z [inf]  
+2026-01-07T15:16:57.990547341Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:16:59.216960902Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:16:59.216968546Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:16:59.216976538Z [err]  
+2026-01-07T15:16:59.592322772Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:16:59.915181657Z [err]  
+2026-01-07T15:16:59.915184507Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:16:59.915193764Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:16:59.915201266Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799019803:2:3744)
+2026-01-07T15:16:59.915203354Z [err]      triggerUncaughtException(
+2026-01-07T15:16:59.915209717Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799019803:2:4237)
+2026-01-07T15:16:59.915213009Z [err]      ^
+2026-01-07T15:16:59.915216565Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799019803:2:5355)
+2026-01-07T15:16:59.915223201Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:16:59.915223635Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:16:59.915231289Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:16:59.915233585Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:16:59.915239227Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:16:59.915243154Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:16:59.915245950Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:16:59.915252080Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:16:59.915254056Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:16:59.915258769Z [err]  }
+2026-01-07T15:16:59.915264467Z [err]  
+2026-01-07T15:16:59.915269763Z [err]  Node.js v22.21.1
+2026-01-07T15:16:59.929562183Z [err]  
+2026-01-07T15:16:59.929574007Z [err]  An error occurred while running the seed command:
+2026-01-07T15:16:59.929580112Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:17:01.809368143Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:02.920520802Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:02.920526600Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:02.920531551Z [err]  
+2026-01-07T15:17:03.310266496Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:17:03.315399756Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:17:04.460377227Z [inf]  
+2026-01-07T15:17:04.460382852Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:17:04.460388691Z [inf]  
+2026-01-07T15:17:04.460394517Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:17:04.671121804Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:17:04.892867133Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 216ms
+2026-01-07T15:17:04.892874330Z [inf]  
+2026-01-07T15:17:05.043985538Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:06.473023035Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:06.473029784Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:06.473036369Z [err]  
+2026-01-07T15:17:07.162315426Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:17:07.427761320Z [err]  
+2026-01-07T15:17:07.427768113Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:17:07.427776743Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:17:07.427782114Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:17:07.427787765Z [err]      triggerUncaughtException(
+2026-01-07T15:17:07.427793713Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:17:07.427797008Z [err]      ^
+2026-01-07T15:17:07.427804613Z [err]  }
+2026-01-07T15:17:07.427807606Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:17:07.427815065Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:17:07.427815930Z [err]  
+2026-01-07T15:17:07.427821203Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:17:07.427827488Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:17:07.427828088Z [err]  Node.js v22.21.1
+2026-01-07T15:17:07.427833010Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:17:07.427842790Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799027282:2:3744)
+2026-01-07T15:17:07.427851496Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799027282:2:4237)
+2026-01-07T15:17:07.427880577Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799027282:2:5355)
+2026-01-07T15:17:07.427886300Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:17:07.427891163Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:17:07.445981078Z [err]  
+2026-01-07T15:17:07.446088641Z [err]  An error occurred while running the seed command:
+2026-01-07T15:17:07.446101552Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:17:08.699540389Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:09.850154567Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:09.850161964Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:09.850168510Z [err]  
+2026-01-07T15:17:10.383382848Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:17:10.383387042Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:17:11.645937844Z [inf]  
+2026-01-07T15:17:11.645944429Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:17:11.646802693Z [inf]  
+2026-01-07T15:17:11.648073768Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:17:11.890254233Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:17:12.102880221Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 209ms
+2026-01-07T15:17:12.102888494Z [inf]  
+2026-01-07T15:17:12.651116159Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:13.794308470Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:13.794315125Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:13.794320685Z [err]  
+2026-01-07T15:17:14.408918630Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:17:14.548637106Z [err]  
+2026-01-07T15:17:14.548647665Z [err]  Node.js v22.21.1
+2026-01-07T15:17:14.548651011Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:17:14.548660438Z [err]  
+2026-01-07T15:17:14.548665597Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:17:14.548676026Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:17:14.548677203Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:17:14.548686840Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:17:14.548688082Z [err]      triggerUncaughtException(
+2026-01-07T15:17:14.548697676Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:17:14.548698820Z [err]      ^
+2026-01-07T15:17:14.548709091Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:17:14.548709479Z [err]  }
+2026-01-07T15:17:14.548718201Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:17:14.548726250Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:17:14.548734086Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:17:14.548741918Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:17:14.548747133Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799034424:2:3744)
+2026-01-07T15:17:14.548753552Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799034424:2:4237)
+2026-01-07T15:17:14.548758747Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799034424:2:5355)
+2026-01-07T15:17:14.562817414Z [err]  
+2026-01-07T15:17:14.562828561Z [err]  An error occurred while running the seed command:
+2026-01-07T15:17:14.562838561Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:17:16.413146304Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:17.624638617Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:17.624646543Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:17.624652884Z [err]  
+2026-01-07T15:17:18.005183049Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:17:18.010597876Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:17:19.182222053Z [inf]  
+2026-01-07T15:17:19.182234310Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:17:19.182245783Z [inf]  
+2026-01-07T15:17:19.182254119Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:17:19.410049983Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:17:19.675628326Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 277ms
+2026-01-07T15:17:19.675638563Z [inf]  
+2026-01-07T15:17:19.967593535Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:21.218374079Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:21.218381383Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:21.218389694Z [err]  
+2026-01-07T15:17:21.635195927Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:17:21.995766671Z [err]  
+2026-01-07T15:17:21.995780501Z [err]  Node.js v22.21.1
+2026-01-07T15:17:21.995805063Z [err]  
+2026-01-07T15:17:21.995813539Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:17:21.995819034Z [err]      triggerUncaughtException(
+2026-01-07T15:17:21.995824169Z [err]      ^
+2026-01-07T15:17:21.995831231Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:17:21.995836484Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:17:21.995841384Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:17:21.995845840Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:17:21.995850429Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:17:21.995854984Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799041846:2:3744)
+2026-01-07T15:17:21.995859346Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799041846:2:4237)
+2026-01-07T15:17:21.995863599Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799041846:2:5355)
+2026-01-07T15:17:21.995867981Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:17:21.995872524Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:17:21.995876899Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:17:21.995881069Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:17:21.995885219Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:17:21.995890530Z [err]  }
+2026-01-07T15:17:22.007294433Z [err]  
+2026-01-07T15:17:22.007304732Z [err]  An error occurred while running the seed command:
+2026-01-07T15:17:22.007312759Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:17:23.223224410Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:24.432424488Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:24.432431955Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:24.432436784Z [err]  
+2026-01-07T15:17:24.814086597Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:17:24.819111043Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:17:25.949034989Z [inf]  
+2026-01-07T15:17:25.949046546Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:17:25.949055174Z [inf]  
+2026-01-07T15:17:25.954122730Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:17:26.224256961Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:17:26.481393077Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 235ms
+2026-01-07T15:17:26.481404632Z [inf]  
+2026-01-07T15:17:26.603758274Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:27.740825586Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:27.740836152Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:27.740845119Z [err]  
+2026-01-07T15:17:28.183676351Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:17:28.494769639Z [err]  
+2026-01-07T15:17:28.494769781Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:17:28.494780102Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:17:28.494783184Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:17:28.494787531Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:17:28.494793390Z [err]  }
+2026-01-07T15:17:28.494798213Z [err]      triggerUncaughtException(
+2026-01-07T15:17:28.494801034Z [err]  
+2026-01-07T15:17:28.494808014Z [err]  Node.js v22.21.1
+2026-01-07T15:17:28.494809369Z [err]      ^
+2026-01-07T15:17:28.494818195Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:17:28.494827201Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:17:28.494834770Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:17:28.494841951Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:17:28.494849949Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:17:28.494855381Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799048370:2:3744)
+2026-01-07T15:17:28.494860104Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799048370:2:4237)
+2026-01-07T15:17:28.494864671Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799048370:2:5355)
+2026-01-07T15:17:28.494868781Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:17:28.494872921Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:17:28.510530236Z [err]  
+2026-01-07T15:17:28.510537449Z [err]  An error occurred while running the seed command:
+2026-01-07T15:17:28.510544271Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:17:29.729485661Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:30.870719922Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:30.870726176Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:30.870731854Z [err]  
+2026-01-07T15:17:31.284510803Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:17:31.284519663Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:17:32.527484149Z [inf]  
+2026-01-07T15:17:32.527491378Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:17:32.527498793Z [inf]  
+2026-01-07T15:17:32.527505588Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:17:32.686051834Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:17:32.939144632Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 248ms
+2026-01-07T15:17:32.939158847Z [inf]  
+2026-01-07T15:17:33.098303319Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:34.287500796Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:34.287506655Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:34.287511165Z [err]  
+2026-01-07T15:17:34.688801466Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:17:34.989235348Z [err]  
+2026-01-07T15:17:34.989237629Z [err]  
+2026-01-07T15:17:34.989244043Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:17:34.989250216Z [err]  Node.js v22.21.1
+2026-01-07T15:17:34.989251578Z [err]      triggerUncaughtException(
+2026-01-07T15:17:34.989257051Z [err]      ^
+2026-01-07T15:17:34.989261617Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:17:34.989265893Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:17:34.989270566Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:17:34.989275246Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:17:34.989279831Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:17:34.989285633Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799054863:2:3744)
+2026-01-07T15:17:34.989290130Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799054863:2:4237)
+2026-01-07T15:17:34.989294457Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799054863:2:5355)
+2026-01-07T15:17:34.989300128Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:17:34.989304798Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:17:34.989309611Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:17:34.989314008Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:17:34.989318588Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:17:34.989322931Z [err]  }
+2026-01-07T15:17:35.001298041Z [err]  
+2026-01-07T15:17:35.001305658Z [err]  An error occurred while running the seed command:
+2026-01-07T15:17:35.001311830Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:17:36.354978273Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:37.681774295Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:37.681783009Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:37.681793655Z [err]  
+2026-01-07T15:17:38.085656672Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:17:38.085667709Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:17:39.690149402Z [inf]  
+2026-01-07T15:17:39.690156469Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:17:39.690163461Z [inf]  
+2026-01-07T15:17:39.690170371Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:17:39.928225601Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:17:40.188812049Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 261ms
+2026-01-07T15:17:40.197352602Z [inf]  
+2026-01-07T15:17:40.371193503Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:17:41.660311455Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:17:41.660317749Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:17:41.660323416Z [err]  
+2026-01-07T15:17:42.040521593Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:17:42.328820272Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799062214:2:5355)
+2026-01-07T15:17:42.328831837Z [err]  
+2026-01-07T15:17:42.328833101Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:17:42.328841627Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:17:42.328843752Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:17:42.328848356Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:17:42.328855173Z [err]      triggerUncaughtException(
+2026-01-07T15:17:42.328855314Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:17:42.328863099Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:17:42.328866070Z [err]      ^
+2026-01-07T15:17:42.328870244Z [err]  }
+2026-01-07T15:17:42.328877109Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:17:42.328878297Z [err]  
+2026-01-07T15:17:42.328885538Z [err]  Node.js v22.21.1
+2026-01-07T15:17:42.328888557Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:17:42.328897106Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:17:42.328904751Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:17:42.328912434Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:17:42.328920781Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799062214:2:3744)
+2026-01-07T15:17:42.328928434Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799062214:2:4237)
+2026-01-07T15:17:42.343758726Z [err]  
+2026-01-07T15:17:42.343765213Z [err]  An error occurred while running the seed command:
+2026-01-07T15:17:42.343771624Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:02.395241310Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:02.395250460Z [err]  
+2026-01-07T15:19:02.395256342Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:02.395263116Z [err]      triggerUncaughtException(
+2026-01-07T15:19:02.395270779Z [err]      ^
+2026-01-07T15:19:02.395288534Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:02.395301447Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:02.395308200Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:02.395313541Z [err]  
+2026-01-07T15:19:02.395319171Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:02.395324712Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:02.395330210Z [inf]  
+2026-01-07T15:19:02.395335836Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:02.395340768Z [inf]  
+2026-01-07T15:19:02.395346027Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:02.395351366Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:02.395358483Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 265ms
+2026-01-07T15:19:02.395365864Z [inf]  
+2026-01-07T15:19:02.395372403Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:02.395379451Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:02.395386773Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:02.395393377Z [err]  
+2026-01-07T15:19:02.395833453Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:02.395841678Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:02.395847818Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:02.395853231Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:02.395858460Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:02.395863721Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799140801:2:3744)
+2026-01-07T15:19:02.395869241Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799140801:2:4237)
+2026-01-07T15:19:02.395875327Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799140801:2:5355)
+2026-01-07T15:19:02.395881337Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:02.395886762Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:02.395891887Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:02.395897376Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:02.395903943Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:02.395909556Z [err]  }
+2026-01-07T15:19:02.395915170Z [err]  
+2026-01-07T15:19:02.395920456Z [err]  Node.js v22.21.1
+2026-01-07T15:19:02.395925652Z [err]  
+2026-01-07T15:19:02.395931206Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:02.395937589Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:02.537340631Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:04.179091244Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:04.179098704Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:04.179106345Z [err]  
+2026-01-07T15:19:04.222406349Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:04.228001438Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:05.385179057Z [inf]  
+2026-01-07T15:19:05.385189493Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:05.385197852Z [inf]  
+2026-01-07T15:19:05.386452318Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:05.667259977Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:05.923946837Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 263ms
+2026-01-07T15:19:05.923955248Z [inf]  
+2026-01-07T15:19:06.111072464Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:07.325889965Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:07.325900852Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:07.325914365Z [err]  
+2026-01-07T15:19:07.898048807Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:08.067278975Z [err]  
+2026-01-07T15:19:08.067285515Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:08.067291073Z [err]      triggerUncaughtException(
+2026-01-07T15:19:08.067296431Z [err]      ^
+2026-01-07T15:19:08.067301472Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:08.067307341Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:08.067315740Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:08.067321476Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:08.067329163Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:08.067334595Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799147941:2:3744)
+2026-01-07T15:19:08.067340193Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799147941:2:4237)
+2026-01-07T15:19:08.067345045Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799147941:2:5355)
+2026-01-07T15:19:08.067349851Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:08.067355873Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:08.067361247Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:08.067366075Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:08.067370715Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:08.067375254Z [err]  }
+2026-01-07T15:19:08.067379845Z [err]  
+2026-01-07T15:19:08.067384293Z [err]  Node.js v22.21.1
+2026-01-07T15:19:08.084454254Z [err]  
+2026-01-07T15:19:08.084464514Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:08.084471788Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:09.372638644Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:10.909345217Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:10.909349837Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:10.909355632Z [err]  
+2026-01-07T15:19:11.192569826Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:11.197374333Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:12.923878591Z [inf]  
+2026-01-07T15:19:12.923891150Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:12.923901119Z [inf]  
+2026-01-07T15:19:12.923912316Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:13.096877309Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:13.351843517Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 252ms
+2026-01-07T15:19:13.351855970Z [inf]  
+2026-01-07T15:19:13.505026388Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:14.955559376Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:14.955564213Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:14.955568682Z [err]  
+2026-01-07T15:19:15.265241070Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:15.588381715Z [err]  
+2026-01-07T15:19:15.588385479Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:15.588385960Z [err]  Node.js v22.21.1
+2026-01-07T15:19:15.588389213Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:15.588397150Z [err]      triggerUncaughtException(
+2026-01-07T15:19:15.588397331Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:15.588403892Z [err]      ^
+2026-01-07T15:19:15.588409015Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:15.588410519Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:15.588417435Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799155473:2:3744)
+2026-01-07T15:19:15.588417785Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:15.588423612Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799155473:2:4237)
+2026-01-07T15:19:15.588428412Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799155473:2:5355)
+2026-01-07T15:19:15.588433346Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:15.588438440Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:15.588443360Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:15.588448096Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:15.588452805Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:15.588457583Z [err]  }
+2026-01-07T15:19:15.588463645Z [err]  
+2026-01-07T15:19:15.600118581Z [err]  
+2026-01-07T15:19:15.600123140Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:15.600128000Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:16.901654765Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:18.055814149Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:18.055824190Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:18.055832622Z [err]  
+2026-01-07T15:19:18.537993759Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:18.566020535Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:19.932090547Z [inf]  
+2026-01-07T15:19:19.932098475Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:19.932106275Z [inf]  
+2026-01-07T15:19:19.932114145Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:20.115911825Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:20.380874222Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 260ms
+2026-01-07T15:19:20.380882167Z [inf]  
+2026-01-07T15:19:20.571625335Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:22.185112832Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:22.185122633Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:22.185129344Z [err]  
+2026-01-07T15:19:22.642043401Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:22.966161259Z [err]  
+2026-01-07T15:19:22.966170101Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:22.966176168Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799162838:2:5355)
+2026-01-07T15:19:22.966178934Z [err]      triggerUncaughtException(
+2026-01-07T15:19:22.966187003Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:22.966189089Z [err]      ^
+2026-01-07T15:19:22.966194534Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:22.966197947Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:22.966204706Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:22.966206944Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:22.966215262Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:22.966215856Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:22.966223381Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:22.966229831Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:22.966236488Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799162838:2:3744)
+2026-01-07T15:19:22.966243644Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799162838:2:4237)
+2026-01-07T15:19:22.966249758Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:22.966257144Z [err]  }
+2026-01-07T15:19:22.967562323Z [err]  
+2026-01-07T15:19:22.967571169Z [err]  Node.js v22.21.1
+2026-01-07T15:19:22.977334178Z [err]  
+2026-01-07T15:19:22.977338415Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:22.977342653Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:25.382598579Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:27.010528590Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:27.010538397Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:27.010546062Z [err]  
+2026-01-07T15:19:27.435479425Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:27.435491921Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:28.633669872Z [inf]  
+2026-01-07T15:19:28.633675461Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:28.633680343Z [inf]  
+2026-01-07T15:19:28.633686148Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:28.987340004Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:29.060368923Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 184ms
+2026-01-07T15:19:29.060377427Z [inf]  
+2026-01-07T15:19:29.197135517Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:30.424191613Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:30.424202245Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:30.424209885Z [err]  
+2026-01-07T15:19:30.798065825Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:31.105676808Z [err]      ^
+2026-01-07T15:19:31.105678564Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:31.105682855Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:31.105689487Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:31.105699318Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:31.105704111Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:31.105713249Z [err]  }
+2026-01-07T15:19:31.105714757Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:31.105722643Z [err]  
+2026-01-07T15:19:31.105725031Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:31.105726250Z [err]  
+2026-01-07T15:19:31.105734305Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:31.105736031Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:31.105741124Z [err]  Node.js v22.21.1
+2026-01-07T15:19:31.105745296Z [err]      triggerUncaughtException(
+2026-01-07T15:19:31.105747211Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799170975:2:3744)
+2026-01-07T15:19:31.105753293Z [err]  
+2026-01-07T15:19:31.105757163Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799170975:2:4237)
+2026-01-07T15:19:31.105764481Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:31.105767580Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799170975:2:5355)
+2026-01-07T15:19:31.105774911Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:31.105781182Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:31.105787483Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:32.684671474Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:34.142602820Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:34.142610690Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:34.142617349Z [err]  
+2026-01-07T15:19:34.596728543Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:34.596735120Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:35.766377109Z [inf]  
+2026-01-07T15:19:35.766384162Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:35.766389708Z [inf]  
+2026-01-07T15:19:35.771283838Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:36.011506380Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:36.247231184Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 252ms
+2026-01-07T15:19:36.247240114Z [inf]  
+2026-01-07T15:19:36.422847312Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:37.623217606Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:37.623224786Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:37.623270692Z [err]  
+2026-01-07T15:19:38.076911762Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:38.357918634Z [err]  }
+2026-01-07T15:19:38.357931368Z [err]  
+2026-01-07T15:19:38.357940480Z [err]  Node.js v22.21.1
+2026-01-07T15:19:38.357987182Z [err]  
+2026-01-07T15:19:38.357992692Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:38.357998239Z [err]      triggerUncaughtException(
+2026-01-07T15:19:38.358003001Z [err]      ^
+2026-01-07T15:19:38.358007496Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:38.358012372Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:38.358016876Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:38.358022679Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:38.358027630Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:38.358033224Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799178241:2:3744)
+2026-01-07T15:19:38.358038452Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799178241:2:4237)
+2026-01-07T15:19:38.358043549Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799178241:2:5355)
+2026-01-07T15:19:38.358049006Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:38.358054187Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:38.358058950Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:38.358064536Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:38.358069359Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:38.368558321Z [err]  
+2026-01-07T15:19:38.368564982Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:38.368569660Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:39.442251233Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:40.613999755Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:40.614004549Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:40.614009355Z [err]  
+2026-01-07T15:19:41.031260629Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:41.036515010Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:42.306034174Z [inf]  
+2026-01-07T15:19:42.306047129Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:42.306055743Z [inf]  
+2026-01-07T15:19:42.306061447Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:42.540304160Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:42.763638004Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 222ms
+2026-01-07T15:19:42.763644962Z [inf]  
+2026-01-07T15:19:43.066943871Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:44.287023815Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:44.287033327Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:44.287040597Z [err]  
+2026-01-07T15:19:44.785752541Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:45.163210788Z [err]  
+2026-01-07T15:19:45.163237658Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:45.163245025Z [err]      triggerUncaughtException(
+2026-01-07T15:19:45.163250151Z [err]      ^
+2026-01-07T15:19:45.163254941Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:45.163260163Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:45.163265175Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:45.163270383Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:45.163275966Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:45.163280773Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799185035:2:3744)
+2026-01-07T15:19:45.163285310Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799185035:2:4237)
+2026-01-07T15:19:45.163290003Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799185035:2:5355)
+2026-01-07T15:19:45.163294518Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:45.163299214Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:45.163303830Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:45.163308423Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:45.163312975Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:45.163317779Z [err]  }
+2026-01-07T15:19:45.163323793Z [err]  
+2026-01-07T15:19:45.163328493Z [err]  Node.js v22.21.1
+2026-01-07T15:19:45.184840541Z [err]  
+2026-01-07T15:19:45.184852726Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:45.184861526Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:48.098747245Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:49.311763636Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:49.311768187Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:49.311772395Z [err]  
+2026-01-07T15:19:49.697095357Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-07T15:19:49.702747002Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-07T15:19:50.914139036Z [inf]  
+2026-01-07T15:19:50.914149156Z [inf]  The database is already in sync with the Prisma schema.
+2026-01-07T15:19:50.914158344Z [inf]  
+2026-01-07T15:19:50.914166388Z [inf]  Running generate... (Use --skip-generate to skip the generators)
+2026-01-07T15:19:51.176732638Z [inf]  [2K[1A[2K[GRunning generate... - Prisma Client
+2026-01-07T15:19:51.511086065Z [inf]  [2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 345ms
+2026-01-07T15:19:51.511675182Z [inf]  
+2026-01-07T15:19:51.800483501Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:53.163537539Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:53.163544976Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:53.163558551Z [err]  
+2026-01-07T15:19:53.414224211Z [inf]  Running seed command `tsx prisma/seed.ts` ...
+2026-01-07T15:19:53.842394527Z [err]  
+2026-01-07T15:19:53.842399531Z [err]  node:internal/modules/run_main:123
+2026-01-07T15:19:53.842405808Z [err]      triggerUncaughtException(
+2026-01-07T15:19:53.842410672Z [err]      ^
+2026-01-07T15:19:53.842417694Z [err]  Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/prisma/seed.ts' imported from /app/
+2026-01-07T15:19:53.842422299Z [err]      at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+2026-01-07T15:19:53.842427719Z [err]      at moduleResolve (node:internal/modules/esm/resolve:859:10)
+2026-01-07T15:19:53.842434123Z [err]      at defaultResolve (node:internal/modules/esm/resolve:983:11)
+2026-01-07T15:19:53.842439168Z [err]      at nextResolve (node:internal/modules/esm/hooks:748:28)
+2026-01-07T15:19:53.842446686Z [err]      at resolveBase (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799193642:2:3744)
+2026-01-07T15:19:53.842451056Z [err]      at async resolveDirectory (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799193642:2:4237)
+2026-01-07T15:19:53.842455531Z [err]      at async resolve (file:///app/node_modules/tsx/dist/esm/index.mjs?1767799193642:2:5355)
+2026-01-07T15:19:53.842461909Z [err]      at async nextResolve (node:internal/modules/esm/hooks:748:22)
+2026-01-07T15:19:53.842469799Z [err]      at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)
+2026-01-07T15:19:53.842474701Z [err]      at async handleMessage (node:internal/modules/esm/worker:199:18) {
+2026-01-07T15:19:53.842479533Z [err]    code: 'ERR_MODULE_NOT_FOUND',
+2026-01-07T15:19:53.842484034Z [err]    url: 'file:///app/prisma/seed.ts'
+2026-01-07T15:19:53.842488506Z [err]  }
+2026-01-07T15:19:53.842497386Z [err]  
+2026-01-07T15:19:53.842502029Z [err]  Node.js v22.21.1
+2026-01-07T15:19:53.842603555Z [err]  
+2026-01-07T15:19:53.842611114Z [err]  An error occurred while running the seed command:
+2026-01-07T15:19:53.842619846Z [err]  Error: Command failed with exit code 1: tsx prisma/seed.ts
+2026-01-07T15:19:56.182073667Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-07T15:19:57.406445818Z [err]  warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+2026-01-07T15:19:57.406456966Z [err]  For more information, see: https://pris.ly/prisma-config
+2026-01-07T15:19:57.406462140Z [err]  
