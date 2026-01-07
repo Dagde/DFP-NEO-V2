@@ -154,10 +154,10 @@ export default async function AdminDashboard() {
                   <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                   <div>
                     <p className="text-white text-sm">
-                      {log.actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {log.user ? `${log.user.firstName || ''} ${log.user.lastName || ''} (${log.user.userId})` : 'System'}
+                      {log.User ? `${log.User.firstName || ''} ${log.User.lastName || ''} (${log.User.userId})` : 'System'}
                     </p>
                   </div>
                 </div>
