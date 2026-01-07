@@ -13,7 +13,6 @@ declare module 'next-auth' {
       userId: string;
       firstName: string | null;
       lastName: string | null;
-      displayName: string;
       email: string | null;
       isActive: boolean;
       role: Role;
@@ -25,7 +24,6 @@ declare module 'next-auth' {
     userId: string;
     firstName: string | null;
     lastName: string | null;
-    displayName: string;
     email: string | null;
     isActive: boolean;
     role: Role;
@@ -62,14 +60,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userId;
-
         return {
           id: user.id,
           userId: user.userId,
           firstName: user.firstName,
           lastName: user.lastName,
-          displayName,
           email: user.email,
           isActive: user.isActive,
           role: user.role,
@@ -90,7 +85,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.userId = user.userId;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
-        token.displayName = user.displayName;
         token.email = user.email;
         token.isActive = user.isActive;
         token.role = user.role;
@@ -103,7 +97,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.userId = token.userId as string;
         session.user.firstName = token.firstName as string | null;
         session.user.lastName = token.lastName as string | null;
-        session.user.displayName = token.displayName as string;
         session.user.email = token.email as string;
         session.user.isActive = token.isActive as boolean;
         session.user.role = token.role as Role;
