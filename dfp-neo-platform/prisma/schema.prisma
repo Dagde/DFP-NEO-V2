@@ -34,7 +34,7 @@ model User {
   id                  String        @id @default(cuid())
   
   // Login credentials (NEW: userId is the login identifier, NOT email)
-  userId              String        @unique  // Login identifier (e.g., employee ID, service number)
+  userId              String?       @unique  // Login identifier (e.g., employee ID, service number)
   email               String?       @unique  // Optional, for recovery/notifications only
   passwordHash        String?                // bcrypt hash, null until set
   
@@ -45,8 +45,8 @@ model User {
   
   // Status and permissions
   status              UserStatus    @default(active)
-  permissionsRoleId   String
-  permissionsRole     PermissionsRole @relation(fields: [permissionsRoleId], references: [id])
+  permissionsRoleId   String?
+  permissionsRole     PermissionsRole? @relation(fields: [permissionsRoleId], references: [id])
   
   // Password management
   mustChangePassword  Boolean       @default(true)
