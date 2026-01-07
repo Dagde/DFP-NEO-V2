@@ -1,0 +1,1 @@
+/workspace/check-db-users.sh: line 3: psql: command not found
