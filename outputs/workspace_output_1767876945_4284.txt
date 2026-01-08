@@ -1,0 +1,3 @@
+                   setScores(data.scores);
+    const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
+                        setScores(updatedScores);

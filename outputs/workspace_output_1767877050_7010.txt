@@ -1,0 +1,40 @@
+} from './types';
+import { NewCourseData } from './components/AddCourseFlyout';
+
+// Import components
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import ScheduleView from './components/ScheduleView';
+import InstructorScheduleView from './components/InstructorScheduleView';
+import TraineeScheduleView from './components/TraineeScheduleView';
+import CourseRosterView from './components/CourseRosterView';
+import HateSheetView from './components/HateSheetView';
+import ScoreDetailView from './components/ScoreDetailView';
+import { EventDetailModal } from './components/FlightDetailModal';
+import ConflictModal from './components/ConflictModal';
+import AddGroundEventFlyout from './components/AddGroundEventFlyout';
+import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
+import MyDashboard from './components/MyDashboard';
+import SupervisorDashboard from './components/SupervisorDashboard';
+import NextDayBuildView from './components/NextDayBuildView';
+import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
+import ProgramDataView from './components/ProgramDataView';
+--
+                                });
+                            }}
+                        />;
+            case 'HateSheet':
+                if (selectedTraineeForHateSheet) {
+                    const traineeAssessments = Array.from(pt051Assessments.values()).filter(
+                        // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
+                        (a: Pt051Assessment) => a.traineeFullName === selectedTraineeForHateSheet.fullName
+                    );
+                    const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents];
+                    return <HateSheetView
+                                trainee={selectedTraineeForHateSheet}
+                                lmpScores={scores.get(selectedTraineeForHateSheet.fullName) || []}
+                                assessments={traineeAssessments}
+                                pt051Events={traineeAssessments}
+                                userProfile={currentUser}
+                                refreshEvents={() => {
+                                    // Refresh events by calling the existing refresh functions

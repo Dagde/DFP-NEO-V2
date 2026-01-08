@@ -1,0 +1,12 @@
+api.ts:133 🌐 API Request: /api/scores Object
+api.ts:133 🌐 API Request: /api/scores Object
+api.ts:153 ✅ API Response: /api/scores Object
+api.ts:153 ✅ API Response: /api/scores Object
+HateSheetView.tsx:56 LMP Scores: 0 Array(0)
+HateSheetView.tsx:56 LMP Scores: 0 Array(0)
+HateSheetView.tsx:56 LMP Scores: 0 []
+HateSheetView.tsx:56 LMP Scores: 0 []
+ LMP Scores: 0 []
+ LMP Scores: 0 []
+HateSheetView.tsx:56 LMP Scores: 0 []
+HateSheetView.tsx:56 LMP Scores: 0 []

@@ -1,0 +1,51 @@
+App.tsx:5866 🚀 [NEO-Build] handleBuildDfp called
+App.tsx:5867 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:5874 🚀 [NEO-Build] todayStr: 2026-01-08
+App.tsx:5875 🚀 [NEO-Build] Date comparison: 2026-01-09 <= 2026-01-08 = false
+App.tsx:5884 🚀 [NEO-Build] Starting build process
+App.tsx:5780 🚀 [NEO-Build] startBuildProcess called
+App.tsx:5782 🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====
+App.tsx:5783 🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...
+App.tsx:5292 📋 Starting sync of priority events with SCT and remedial requests...
+App.tsx:5298 🔍 SCT Sync - buildDfpDate: 2026-01-09
+App.tsx:5305 🔍 Found HIGH priority SCT flights: 0 | FTDs: 0
+App.tsx:5462 🔍 Checking 0 remedial requests for Force Schedule...
+App.tsx:5464 📌 Found 0 Force Scheduled remedial events
+App.tsx:5558 \u2705 No changes to priority events
+App.tsx:5787 Pre-Build Step 2: Checking Active DFP for 2026-01-09...
+App.tsx:5791 DEBUG Active DFP has 0 events for 2026-01-09
+App.tsx:5834 DEBUG Pre-Build Analysis: No existing events found in Active DFP for this date
+App.tsx:5837 DEBUG ===== PRE-BUILD ANALYSIS END =====
+App.tsx:5842 DEBUG Final preserved events count: 0
+App.tsx:549 📈 [Anderson, Benjamin – ADF305] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Anderson, Isabella – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Baker, Barbara – ADF303] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Brown, Charles – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Brown, James – ADF304] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Brown, John – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Brown, Mary – ADF303] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Brown, Steven – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Carter, Barbara – FIC211] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Carter, Chris – FIC211] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Carter, Daniel – ADF305] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Carter, Sarah – ADF303] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Clark, Mia – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Davies, Elijah – FIC 210] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Davies, Liam – ADF303] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Davies, Mark – FIC211] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Davies, Mary – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Edwards, Jennifer – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Edwards, Jessica – ADF305] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Edwards, Luna – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Edwards, Richard – ADF305] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Emma – ADF305] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Joseph – ADF303] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Linda – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Mia – ADF302] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Olivia – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Sarah – IFF 6] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Evans, Steven – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Green, Ava – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Green, Barbara – ADF301] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Green, Benjamin – ADF303] No completed events found - trainee at start of syllabus
+App.tsx:549 📈 [Green, Patricia – ADF303] No completed events found - trainee at start of syllabus

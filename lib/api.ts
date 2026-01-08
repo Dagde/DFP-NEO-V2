@@ -337,10 +337,11 @@ export async function fetchScores(traineeId?: string, traineeFullName?: string):
   }
   
   try {
-    const result = await fetchAPI<Record<string, Score[]>>(url);
-    if (result.success && result.data) {
-      // Convert Record<string, Score[]> to Map<string, Score[]>
-      return new Map(Object.entries(result.data));
+    // API returns { scores: [[traineeName, [scoreObjects]]], count: number }
+    const result = await fetchAPI<{ scores: [string, Score[]][], count: number }>(url);
+    if (result.success && result.data && result.data.scores) {
+      // Convert [[traineeName, [scoreObjects]]] to Map<string, Score[]>
+      return new Map(result.data.scores);
     }
     console.error('Failed to fetch scores:', result.error);
     return new Map();

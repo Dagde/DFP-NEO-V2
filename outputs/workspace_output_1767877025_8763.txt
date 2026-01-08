@@ -1,0 +1,16 @@
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const combinedHistory = React.useMemo(() => {
+        // FIX: Add 'as const' to create a discriminated union for type-safe property access.
+        const lmpItems = lmpScores.map(score => ({ ...score, type: 'LMP Score' as const }));
+        const pt051Items = assessments.map(assessment => ({ ...assessment, type: 'PT-051' as const }));
+        
+        console.log('=== Building combinedHistory ===');
+        console.log('LMP Scores:', lmpScores.length, lmpScores);
+        console.log('PT-051 Assessments:', assessments.length, assessments);
+        
+        // Combine and sort by date, newest first
+        const combined = [...lmpItems, ...pt051Items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        console.log('Combined History:', combined.length, combined);

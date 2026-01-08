@@ -1,0 +1,2 @@
+/workspace/components/HateSheetView.tsx
+/workspace/components/PT051HateSheetView.tsx

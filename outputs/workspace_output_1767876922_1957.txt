@@ -1,0 +1,40 @@
+import { initializeData, saveSchedule as saveScheduleService, saveCoursesData, saveScoresData, savePT051AssessmentsData, saveTraineeLMPsData } from './lib/dataService';
+import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
+import { initialCancellationCodes } from './data/cancellationCodes';
+
+// --- PT-051 STRUCTURE ---
+const PT051_STRUCTURE = [
+  { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
+  { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
+  { category: 'Takeoff', elements: ['Stationary'] },
+  { category: 'Departure', elements: ['Visual'] },
+  { category: 'Core Handling Skills', elements: ['Effects of Control', 'Trimming', 'Straight and Level'] },
+  { category: 'Turns', elements: ['Level medium Turn', 'Level Steep turn'] },
+  { category: 'Recovery', elements: ['Visual - Initial &amp; Pitch'] },
+  { category: 'Landing', elements: ['Landing', 'Crosswind'] },
+  { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] },
+];
+
+const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
+
+// --- UTILITY FUNCTIONS ---
+const isOverlapping = (f1: Omit<ScheduleEvent, 'date'>, f2: Omit<ScheduleEvent, 'date'>): boolean => {
+--
+                   const data = await initializeData();
+                   console.log('📦 Data received from initializeData:', {
+                       instructorsCount: data.instructors.length,
+                       traineesCount: data.trainees.length,
+                       eventsCount: data.events.length,
+                       scoresCount: data.scores.size,
+                       coursesCount: data.courses.length,
+                       courseColorsKeys: Object.keys(data.courseColors),
+                       traineeLMPsCount: data.traineeLMPs.size
+                   });
+                   
+                   setInstructorsData(data.instructors);
+                   setTraineesData(data.trainees);
+                   setEvents(data.events);
+                   setScores(data.scores);
+                   setPt051Assessments(data.pt051Assessments);
+                   setCourses(data.courses);
+                   setCourseColors(data.courseColors);

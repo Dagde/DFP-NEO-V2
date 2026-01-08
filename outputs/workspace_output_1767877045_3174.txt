@@ -1,0 +1,30 @@
+    onSelectPt051: (assessment: Pt051Assessment) => void;
+    onBackToRoster: () => void;
+    onInsertPt051: (insertIndex: number, targetDate: string) => void;
+}
+
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
+    // Drag and drop state - simplified to just highlight target row
+    const [isDragging, setIsDragging] = useState(false);
+    const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
+    const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
+
+    // Helper function to format date
+    const formatDate = (timestamp: number) => {
+        const date = new Date(timestamp * 3600000); // Convert hours to milliseconds
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+--
+        // Combine and sort by date, newest first
+        const combined = [...lmpItems, ...pt051Items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        console.log('Combined History:', combined.length, combined);
+        
+        return combined;
+    }, [lmpScores, assessments]);
+
+    const getScoreDisplay = (item: (typeof combinedHistory)[0]) => {
+        let score: number | string | null = null;
+        let isDoubleMarginal = false;
+
+        if (item.type === 'LMP Score') {
+            score = item.score;

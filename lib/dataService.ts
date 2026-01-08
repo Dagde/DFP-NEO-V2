@@ -116,6 +116,7 @@ export async function initializeData() {
         courses: courses.length,
         coursePriorities: coursePriorities.length,
         scores: scoresResult.size,
+        scoresSample: Array.from(scoresResult.entries()).slice(0, 1),
         pt051Assessments: pt051Assessments.size,
         coursePercentages: coursePercentages.size,
         traineeLMPs: traineeLMPs.size,
