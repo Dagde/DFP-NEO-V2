@@ -57,6 +57,29 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
 
 // Initialize data from API or fallback to localStorage or mock data
 export async function initializeData() {
+  // TEMPORARY FIX: Force use mock data to test NEO Build
+  console.log('⚠️ TEMPORARY: FORCING MOCK DATA TO TEST NEO BUILD');
+  const { ESL_DATA } = await import('../mockData');
+  console.log('📦 Returning mock data:', {
+    instructors: ESL_DATA.instructors.length,
+    trainees: ESL_DATA.trainees.length,
+    events: ESL_DATA.events.length,
+    scores: ESL_DATA.scores.size
+  });
+  return {
+    instructors: ESL_DATA.instructors,
+    trainees: ESL_DATA.trainees,
+    events: ESL_DATA.events,
+    scores: ESL_DATA.scores,
+    pt051Assessments: new Map(),
+    courses: [],
+    courseColors: ESL_DATA.courseColors,
+    archivedCourses: ESL_DATA.archivedCourses,
+    coursePriorities: ESL_DATA.coursePriorities,
+    coursePercentages: ESL_DATA.coursePercentages,
+    traineeLMPs: ESL_DATA.traineeLMPs,
+  };
+  
   // Load other data from localStorage first (these are always stored locally for now)
   const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
     STORAGE_KEYS.PT051_ASSESSMENTS, 
@@ -338,9 +361,15 @@ export async function initializeData() {
     }
     
     // TEMPORARY FIX: Use mock data to test NEO Build
-    console.log('⚠️ TEMPORARY: Reverting to mock data to test NEO Build');
+    console.log('⚠️ TEMPORARY: Reverting to mock data to test NEO Build - FORCING MOCK DATA');
     // Import mock data directly
     const { ESL_DATA } = await import('../mockData');
+    console.log('📦 Loaded ESL_DATA from mockData:', {
+      instructors: ESL_DATA.instructors.length,
+      trainees: ESL_DATA.trainees.length,
+      events: ESL_DATA.events.length,
+      scores: ESL_DATA.scores.size
+    });
     return {
       instructors: ESL_DATA.instructors,
       trainees: ESL_DATA.trainees,
