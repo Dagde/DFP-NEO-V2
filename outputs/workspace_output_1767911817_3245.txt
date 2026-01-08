@@ -1,0 +1,18 @@
+    setProgress: (progress: { message: string, percentage: number }) => void,
+    publishedSchedules: Record<string, ScheduleEvent[]>
+): Omit<ScheduleEvent, 'date'>[] {
+    // DEBUG: Check what we're getting from the API
+    console.log(`🎯 CONFIG DEBUG:`);
+    console.log(`  - originalInstructors: ${originalInstructors.length}`);
+    console.log(`  - trainees: ${trainees.length}`);
+    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);
+    console.log(`  - scores: ${scores.size} entries`);
+    console.log(`  - availableAircraftCount: ${availableAircraftCount}`);
+    console.log(`  - ftdCount: ${ftdCount}`);
+    console.log(`  - cptCount: ${cptCount}`);
+    
+    const { 
+        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
+        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
+        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
+        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,

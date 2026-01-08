@@ -1,0 +1,56 @@
+            standbyCount
+        },
+        insights
+    };
+}
+
+function generateDfpInternal(
+    config: DfpConfig, 
+    setProgress: (progress: { message: string, percentage: number }) => void,
+    publishedSchedules: Record<string, ScheduleEvent[]>
+): Omit<ScheduleEvent, 'date'>[] {
+    // DEBUG: Check what we're getting from the API
+    console.log(`🎯 CONFIG DEBUG:`);
+    console.log(`  - originalInstructors: ${originalInstructors.length}`);
+    console.log(`  - trainees: ${trainees.length}`);
+    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);
+    console.log(`  - scores: ${scores.size} entries`);
+    console.log(`  - availableAircraftCount: ${availableAircraftCount}`);
+    console.log(`  - ftdCount: ${ftdCount}`);
+    console.log(`  - cptCount: ${cptCount}`);
+    
+    const { 
+        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
+        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
+        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
+        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
+        allowNightFlying, commenceNightFlying, ceaseNightFlying, buildDate,
+        highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
+        ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
+        eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
+        getEventDayNightClassification
+    } = config;
+
+    // --- HELPER FUNCTIONS ---
+    
+    // Calculate total duty hours for an instructor including all assigned events (day and night)
+    const calculateInstructorDutyHours = (instructorName: string, includeProposedEvent?: any): number => {
+        const eventsToCheck = includeProposedEvent 
+            ? [...generatedEvents, includeProposedEvent]
+            : generatedEvents;
+        
+        const instructorEvents = eventsToCheck.filter(e => getPersonnel(e).includes(instructorName));
+        
+        if (instructorEvents.length === 0) return 0;
+        
+        const bookingWindows = instructorEvents
+            .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+            .sort((a, b) => a.start - b.start);
+        
+        // Calculate total duty hours by merging overlapping windows
+        // Include both day flying window AND night flying window for soft duty limit
+        let totalDutyHours = 0;
+        let currentWindow = null;
+        
+        for (const window of bookingWindows) {
+            // Include events from both day and night flying windows

@@ -1,0 +1,7 @@
+        
+        // CRITICAL: Log traineesData state
+              console.log({            total: traineesData.length,
+              });            sample: traineesData.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course }))
+        });
+        setIsBuildingDfp(true);
+        setNextDayBuildEvents([]); // Clear previous build

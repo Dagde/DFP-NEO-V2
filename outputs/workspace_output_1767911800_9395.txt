@@ -1,0 +1,100 @@
+ Seeded Logbook Template (PDF)
+ Seeded NEO Logo PDF
+ Seeded NEO Logo PDF
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:544 Local handleMouseUp called - ignoring when dragState exists: false
+ScheduleView.tsx:558 Clearing drag state in local handleMouseUp
+ScheduleView.tsx:204 Global mouse up called, draggingState exists: false
+ScheduleView.tsx:204 Global mouse up called, draggingState exists: false
+App.tsx:5958 🚀 [NEO-Build] handleBuildDfp called
+App.tsx:5959 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+App.tsx:5966 🚀 [NEO-Build] todayStr: 2026-01-09
+App.tsx:5967 🚀 [NEO-Build] Date comparison: 2026-01-10 <= 2026-01-09 = false
+App.tsx:5976 🚀 [NEO-Build] Starting build process
+App.tsx:5872 🚀 [NEO-Build] startBuildProcess called
+App.tsx:5874 🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====
+App.tsx:5875 🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...
+App.tsx:5384 📋 Starting sync of priority events with SCT and remedial requests...
+App.tsx:5390 🔍 SCT Sync - buildDfpDate: 2026-01-10
+App.tsx:5397 🔍 Found HIGH priority SCT flights: 0 | FTDs: 0
+App.tsx:5554 🔍 Checking 0 remedial requests for Force Schedule...
+App.tsx:5556 📌 Found 0 Force Scheduled remedial events
+App.tsx:5650 \u2705 No changes to priority events
+App.tsx:5879 Pre-Build Step 2: Checking Active DFP for 2026-01-10...
+App.tsx:5883 DEBUG Active DFP has 0 events for 2026-01-10
+App.tsx:5926 DEBUG Pre-Build Analysis: No existing events found in Active DFP for this date
+App.tsx:5929 DEBUG ===== PRE-BUILD ANALYSIS END =====
+App.tsx:5934 DEBUG Final preserved events count: 0
+App.tsx:5986 🚀 [NEO-Build] runBuildAlgorithm called
+App.tsx:5987 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+App.tsx:5988 🚀 [NEO-Build] preservedEvents: 0
+App.tsx:5989 🚀 [NEO-Build] highestPriorityEvents: 0
+App.tsx:5992 🚀 [NEO-Build] traineesData state: Object
+App.tsx:6002 🚀 [NEO-Build] DEBUG runBuildAlgorithm called with 0 highest priority events
+App.tsx:3424 buildResources - Current view: Program Schedule Current date: 2026-01-09
+App.tsx:3444 Deployments overlapping with 2026-01-09: Array(0)
+App.tsx:3452 deploymentCount: 0
+App.tsx:3510 Built all resources: Array(45) STBY lines: 4
+App.tsx:3424 buildResources - Current view: Program Schedule Current date: 2026-01-09
+App.tsx:3444 Deployments overlapping with 2026-01-09: Array(0)
+App.tsx:3452 deploymentCount: 0
+App.tsx:3510 Built all resources: Array(45) STBY lines: 4
+App.tsx:3714 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3715 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+App.tsx:3716 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3725 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3762 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:3714 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3715 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+App.tsx:3716 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3725 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3762 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:7167 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7168 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7172 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7173 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:6042 🚀 [NEO-Build] Starting DFP build process for 2026-01-10
+App.tsx:6043 🚀 [NEO-Build] Config: Object
+App.tsx:977 🎯 CONFIG DEBUG:
+App.tsx:3041 🚀 [NEO-Build] DFP Build Failed: ReferenceError: Cannot access 'r' before initialization
+    at aO (App.tsx:978:45)
+    at App.tsx:6051:35
+console.error @ App.tsx:3041
+App.tsx:3041 🚀 [NEO-Build] Error stack: ReferenceError: Cannot access 'r' before initialization
+    at aO (https://dfp-neo.com/flight-school-app/assets/index-BYSZDZoZ.js:756:182931)
+    at https://dfp-neo.com/flight-school-app/assets/index-BYSZDZoZ.js:760:19610
+console.error @ App.tsx:3041
+App.tsx:6116 🚀 [NEO-Build] Build process complete, navigating to NextDayBuild
+App.tsx:3424 buildResources - Current view: NextDayBuild Current date: 2026-01-09
+App.tsx:3449 Next day build deployment events: Array(0)
+App.tsx:3452 deploymentCount: 0
+App.tsx:3510 Built all resources: Array(45) STBY lines: 4
+App.tsx:3424 buildResources - Current view: NextDayBuild Current date: 2026-01-09
+App.tsx:3449 Next day build deployment events: Array(0)
+App.tsx:3452 deploymentCount: 0
+App.tsx:3510 Built all resources: Array(45) STBY lines: 4
+App.tsx:3588 🔄 useEffect triggered - activeView: NextDayBuild remedialRequests count: 0
+App.tsx:3593 ⏸️ Not syncing - activeView is: NextDayBuild
+App.tsx:7167 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7168 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7172 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7173 🟠 ========== NEO USEEFFECT END (CLOSED) ==========

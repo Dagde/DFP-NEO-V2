@@ -1,0 +1,11 @@
+): Omit<ScheduleEvent, 'date'>[] {
+    // DEBUG: Check what we're getting from the API
+    console.log(`🎯 CONFIG DEBUG:`);
+    console.log(`  - originalInstructors: ${originalInstructors.length}`);
+    console.log(`  - trainees: ${trainees.length}`);
+    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);
+    console.log(`  - scores: ${scores.size} entries`);
+    console.log(`  - availableAircraftCount: ${availableAircraftCount}`);
+    console.log(`  - ftdCount: ${ftdCount}`);
+    console.log(`  - cptCount: ${cptCount}`);
+    

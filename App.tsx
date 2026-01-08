@@ -974,14 +974,6 @@ function generateDfpInternal(
     publishedSchedules: Record<string, ScheduleEvent[]>
 ): Omit<ScheduleEvent, 'date'>[] {
     // DEBUG: Check what we're getting from the API
-    console.log(`🎯 CONFIG DEBUG:`);
-    console.log(`  - originalInstructors: ${originalInstructors.length}`);
-    console.log(`  - trainees: ${trainees.length}`);
-    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);
-    console.log(`  - scores: ${scores.size} entries`);
-    console.log(`  - availableAircraftCount: ${availableAircraftCount}`);
-    console.log(`  - ftdCount: ${ftdCount}`);
-    console.log(`  - cptCount: ${cptCount}`);
     
     const { 
         instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
@@ -1228,15 +1220,12 @@ function generateDfpInternal(
 
     setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
     
-    console.log(`📊 DEBUG: Total trainees passed to build: ${trainees.length}`);
-    console.log(`📊 DEBUG: Sample trainees:`, trainees.slice(0, 5).map(t => ({ fullName: t.fullName, course: t.course, isPaused: t.isPaused })));
     
     const activeTrainees = trainees.filter(t => 
         !t.isPaused && 
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
     
-    console.log(`📊 DEBUG: Active trainees (not paused, available): ${activeTrainees.length}`);
     
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 
@@ -1541,7 +1530,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const nightDutyEndTime = ceaseNightFlying;
         
         console.log('🌙 ===== NIGHT INSTRUCTOR SELECTION =====');
-        console.log(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
         
         // CRITICAL: Filter out instructors who already have day events (including from Active DFP)
         const nightEligiblePool = originalInstructors.filter(ip => {
@@ -2632,7 +2620,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         );
     });
     
-    console.log('Trainees needing STBY flights:', traineesNeedingStby.length);
     
     // TWO-PASS APPROACH: Maximize instructor-allocated STBY events
     const timeIncrement = 5 / 60; // 5 minutes
@@ -2719,7 +2706,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // This ensures we fill ALL available slots, starting from the beginning of the day
     console.log('PASS 2: Going back to beginning to schedule remaining STBY with TBA...');
     const remainingTrainees = traineesNeedingStby.filter(t => !scheduledTrainees.has(t.fullName));
-    console.log(`Remaining trainees needing STBY: ${remainingTrainees.length}`);
     
     // Restart from beginning of flying window for Pass 2
     for (const trainee of remainingTrainees) {
@@ -2780,14 +2766,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         );
     });
     
-    console.log('Trainees needing STBY FTD events:', traineesNeedingStbyFtd.length);
     
     if (traineesNeedingStbyFtd.length > 0) {
         let currentStbyLine = 1;
         let currentTime = ftdStartTime;
         const minSpacing = ftdTurnaround;
         
-        console.log(`FTD STBY: Scheduling ${traineesNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
         
         for (const trainee of traineesNeedingStbyFtd) {
             const { next } = traineeNextEventMap.get(trainee.fullName)!;
@@ -6004,11 +5988,11 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
         
-        // CRITICAL: Log traineesData state
-        console.log('🚀 [NEO-Build] traineesData state:', {
-            total: traineesData.length,
-            sample: traineesData.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course }))
-        });
+          // CRITICAL: Log traineesData state
+          console.log({
+              total: traineesData.length,
+              sample: traineesData.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course }))
+          });
         setIsBuildingDfp(true);
         setNextDayBuildEvents([]); // Clear previous build
         
@@ -6309,7 +6293,6 @@ updates.forEach(update => {
     }, [syllabusDetails]);
 
     const addTileSyllabusOptions = useMemo(() => {
-        console.log('addTileSyllabusOptions filtering syllabusDetails:', syllabusDetails);
         const filtered = syllabusDetails.filter(item => 
             item.type === 'Flight' || 
             item.type === 'FTD' ||
@@ -7749,14 +7732,12 @@ updates.forEach(update => {
                 console.log('🔍 handleDateChange:', typeof handleDateChange);
                 console.log('🔍 eventSegmentsForDate count:', eventSegmentsForDate?.length);
                 console.log('🔍 instructorsData count:', instructorsData?.length);
-                console.log('🔍 traineesData count:', traineesData?.length);
                 console.log('🔍 handleOpenModal:', typeof handleOpenModal);
                 console.log('🔍 handleScheduleUpdate:', typeof handleScheduleUpdate);
                 console.log('🔍 zoomLevel:', zoomLevel);
                 console.log('🔍 daylightTimes:', { firstLight: '06:30', lastLight: '18:30' });
                 console.log('🔍 personnelData size:', personnelData?.size);
                 console.log('🔍 seatConfigs size: N/A (removed direct access)');
-                console.log('🔍 syllabusDetails count:', syllabusDetails?.length);
                 console.log('🔍 personnelAndResourceConflictIds size:', personnelAndResourceConflictIds?.size);
                 console.log('🔍 showValidation:', showValidation);
                 console.log('🔍 unavailabilityConflicts size:', unavailabilityConflicts?.size);
