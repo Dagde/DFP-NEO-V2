@@ -1,0 +1,5 @@
+4a89b87 Complete Phase 4 - Frontend integration with scores API
+9cb52f8 Add Score model to database and import mock scores for NEO Build
+0db39e2 Fix NEO Build - handle trainees at start of syllabus with no completed events
+b34c9a4 Fix NEO Build - auto-populate traineeLMPs with master syllabus
+3091762 Fix trainee visibility - auto-generate courseColors from trainee data

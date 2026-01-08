@@ -322,7 +322,7 @@ export interface Score {
 }
 
 export async function fetchScores(traineeId?: string, traineeFullName?: string): Promise<Map<string, Score[]>> {
-  let url = '/api/scores';
+  let url = '/scores';  // Note: fetchAPI already adds /api/ prefix
   const params = new URLSearchParams();
   
   if (traineeId) {

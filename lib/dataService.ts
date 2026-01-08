@@ -132,11 +132,15 @@ export async function initializeData() {
       const traineesWithoutCourse = trainees.filter(t => !t.course || t.course.trim() === '');
       console.log('⚠️ Trainees without course:', traineesWithoutCourse.length, traineesWithoutCourse.slice(0, 5));
 
-      // Save to localStorage for faster next load
-      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
-      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
-      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
-      saveToStorage(STORAGE_KEYS.SCORES, Array.from(scoresResult.entries()));
+      // Save to localStorage for faster next load (non-critical if it fails)
+      try {
+        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+        saveToStorage(STORAGE_KEYS.SCORES, Array.from(scoresResult.entries()));
+      } catch (error) {
+        console.warn('Failed to save some data to localStorage (continuing anyway):', error);
+      }
     } catch (error) {
       console.warn('API fetch failed, falling back to localStorage or mock data:', error);
       console.error('Full error details:', error);
@@ -226,7 +230,11 @@ export async function initializeData() {
     });
     
     console.log('🎨 Auto-generated courseColors:', courseColors);
-    saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+    try {
+      saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+    } catch (error) {
+      console.warn('Failed to save courseColors to localStorage (continuing anyway):', error);
+    }
   }
 
   // Auto-populate traineeLMPs with master syllabus for each trainee
@@ -238,7 +246,7 @@ export async function initializeData() {
     });
     
     console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
-    saveToStorage(STORAGE_KEYS.TRAINEE_LMPS, Array.from(traineeLMPs.entries()));
+    // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
   }
 
   return {
