@@ -1,0 +1,2 @@
+138:const syllabusItems: SyllabusItemDetail[] = [
+305:export const INITIAL_SYLLABUS_DETAILS: SyllabusItemDetail[] = populatePrerequisites(syllabusItems);

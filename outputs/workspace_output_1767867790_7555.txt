@@ -1,0 +1,13 @@
+    const activeTrainees = trainees.filter(t => 
+        !t.isPaused && 
+        !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
+    );
+    
+    const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
+
+    activeTrainees.forEach(trainee => {
+        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+        traineeNextEventMap.set(trainee.fullName, nextEvents);
+    });
+
+    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };

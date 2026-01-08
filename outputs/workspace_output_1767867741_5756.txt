@@ -1,0 +1,344 @@
+ cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+ Starting app initialization...
+ React imported
+ ReactDOM imported
+ App imported
+ Root element: 
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-08
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-08
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ 🔄 Starting to load initial data...
+ Initializing data from API...
+ 🔍 Fetching instructors from /personnel?role=INSTRUCTOR
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🔍 Fetching trainees from /personnel?role=TRAINEE
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🔄 Starting to load initial data...
+ Initializing data from API...
+ 🔍 Fetching instructors from /personnel?role=INSTRUCTOR
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🔍 Fetching trainees from /personnel?role=TRAINEE
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ Seeded Logbook Template (XLSX)
+ Seeded Logbook Template (XLSX)
+ Seeded Logbook Template (PDF)
+ Seeded Logbook Template (PDF)
+ Seeded NEO Logo PDF
+ Seeded NEO Logo PDF
+ ✅ API Response: /api/schedule Object
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ 📥 Instructors API response: Object
+ ✅ Converted instructors: Object
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ 📥 Trainees API response: Object
+ ✅ Converted trainees: Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ Error saving dfp-neo-trainee-lmps to localStorage: 
+console.error @ index-D8pVjhFr.js:756
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ ✅ API Response: /api/schedule Object
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ 📥 Instructors API response: Object
+ ✅ Converted instructors: Object
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ 📥 Trainees API response: Object
+ ✅ Converted trainees: Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ Error saving dfp-neo-trainee-lmps to localStorage: 
+console.error @ index-D8pVjhFr.js:756
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ Global mouse up called, draggingState exists: false
+ Global mouse up called, draggingState exists: false
+ 🚀 [NEO-Build] handleBuildDfp called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] todayStr: 2026-01-08
+ 🚀 [NEO-Build] Date comparison: 2026-01-09 <= 2026-01-08 = false
+ 🚀 [NEO-Build] Starting build process
+ 🚀 [NEO-Build] startBuildProcess called
+ 🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====
+ 🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...
+ 📋 Starting sync of priority events with SCT and remedial requests...
+ 🔍 SCT Sync - buildDfpDate: 2026-01-09
+ 🔍 Found HIGH priority SCT flights: 0 | FTDs: 0
+ 🔍 Checking 0 remedial requests for Force Schedule...
+ 📌 Found 0 Force Scheduled remedial events
+ \u2705 No changes to priority events
+ Pre-Build Step 2: Checking Active DFP for 2026-01-09...
+ DEBUG Active DFP has 0 events for 2026-01-09
+ DEBUG Pre-Build Analysis: No existing events found in Active DFP for this date
+ DEBUG ===== PRE-BUILD ANALYSIS END =====
+ DEBUG Final preserved events count: 0
+ 🚀 [NEO-Build] runBuildAlgorithm called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] preservedEvents: 0
+ 🚀 [NEO-Build] highestPriorityEvents: 0
+ 🚀 [NEO-Build] DEBUG runBuildAlgorithm called with 0 highest priority events
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🚀 [NEO-Build] Starting DFP build process for 2026-01-09
+ 🚀 [NEO-Build] Config: Object
+ 🔵 Active DFP has 0 events for 2026-01-09
+ 🔵 Initializing event counts from Active DFP...
+ DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====
+ DEBUG Total Highest Priority Events to check: 0
+ DEBUG Build Date: 2026-01-09
+ DEBUG Summary: 0 events INCLUDED, 0 events SKIPPED
+ DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====
+ DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====
+ DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====
+ Duty Supervisor Allocation - Covering entire day window: 8 to 17
+ Duty Sup Check - Bloggs, Joe: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Stewart, Mark: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Oliver: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Liam: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, Ashley: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Steven: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hall, Daniel: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hill, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Williams, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thompson, Mia: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Wood, John: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Michael: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Martin, Joseph: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Jones, Richard: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Mary: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Walker, James: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Parker, Barbara: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Green, Charlotte: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thomas, Thomas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup assigned: Bloggs, Joe from 8 to 10
+ Duty Sup Check - Baker, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Stewart, Mark: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Oliver: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Liam: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, Ashley: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Steven: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hall, Daniel: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hill, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Williams, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thompson, Mia: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Wood, John: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Michael: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Martin, Joseph: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Jones, Richard: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Mary: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Walker, James: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Parker, Barbara: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Green, Charlotte: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thomas, Thomas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Bloggs, Joe: Total Duty = 2.00hrs, Soft Limit = 8hrs
+ Duty Sup assigned: Baker, Noah from 10 to 12
+ Duty Sup Check - Stewart, Mark: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Oliver: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Liam: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, Ashley: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Steven: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hall, Daniel: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hill, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Williams, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thompson, Mia: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Wood, John: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Michael: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Martin, Joseph: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Jones, Richard: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Mary: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Walker, James: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Parker, Barbara: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Green, Charlotte: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thomas, Thomas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Bloggs, Joe: Total Duty = 2.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Noah: Total Duty = 2.00hrs, Soft Limit = 8hrs
+ Duty Sup assigned: Stewart, Mark from 12 to 14
+ Duty Sup Check - Morris, Oliver: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Morris, Liam: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, Ashley: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Steven: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hall, Daniel: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hill, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Williams, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thompson, Mia: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Wood, John: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Michael: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Martin, Joseph: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Jones, Richard: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Mary: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Walker, James: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Parker, Barbara: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Green, Charlotte: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Thomas, Thomas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Bloggs, Joe: Total Duty = 2.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Baker, Noah: Total Duty = 2.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Stewart, Mark: Total Duty = 2.00hrs, Soft Limit = 8hrs
+ Duty Sup assigned: Morris, Oliver from 14 to 16
+ Duty Sup Check - Morris, Liam: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, Ashley: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Noah: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Brown, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Carter, Steven: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hall, Daniel: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Moore, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+ Duty Sup Check - Hill, William: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Williams, Lucas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Thompson, Mia: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Wood, John: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Baker, Michael: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Martin, Joseph: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Jones, Richard: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Moore, Mary: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Walker, James: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Parker, Barbara: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Green, Charlotte: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Thomas, Thomas: Total Duty = 0.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Bloggs, Joe: Total Duty = 2.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Baker, Noah: Total Duty = 2.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Stewart, Mark: Total Duty = 2.00hrs, Soft Limit = 8hrs
+App.tsx:2128 Duty Sup Check - Morris, Oliver: Total Duty = 2.00hrs, Soft Limit = 8hrs
+App.tsx:2205 Duty Sup assigned: Morris, Liam from 16 to 17
+App.tsx:2533 Trainees needing STBY flights: 0
+App.tsx:2540 PASS 1: Scheduling STBY with instructors available...
+App.tsx:2541 Flying window: 8.00 to 17.00
+App.tsx:2614 PASS 1 complete: 0 STBY flights with instructors
+App.tsx:2618 PASS 2: Going back to beginning to schedule remaining STBY with TBA...
+App.tsx:2620 Remaining trainees needing STBY: 0
+App.tsx:2663 PASS 2 complete: Total STBY flights: 0 (Pass 1: 0, Pass 2: 0)
+App.tsx:2681 Trainees needing STBY FTD events: 0
+App.tsx:2879 First 20 sorted events by resource:
+App.tsx:2882   Duty Sup: Bloggs, Joe at 8.00
+App.tsx:2882   Duty Sup: Baker, Noah at 10.00
+App.tsx:2882   Duty Sup: Stewart, Mark at 12.00
+App.tsx:2882   Duty Sup: Morris, Oliver at 14.00
+App.tsx:2882   Duty Sup: Morris, Liam at 16.00
+App.tsx:2885 DEBUG ===== FINAL BUILD RESULTS =====
+App.tsx:2886 DEBUG Total events in final build: 5
+App.tsx:2887 DEBUG Checking for originally locked events:
+App.tsx:2901 DEBUG ===== END FINAL BUILD RESULTS =====
+App.tsx:5945 🚀 [NEO-Build] DFP build completed, generated 5 events
+App.tsx:5946 🚀 [NEO-Build] Generated events sample: Array(3)
+App.tsx:5949 🚀 [NEO-Build] setNextDayBuildEvents called with 5 events
+App.tsx:5978 Build analysis: Object
+App.tsx:3322 buildResources - Current view: Program Schedule Current date: 2026-01-08
+App.tsx:3342 Deployments overlapping with 2026-01-08: Array(0)
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3322 buildResources - Current view: Program Schedule Current date: 2026-01-08
+App.tsx:3342 Deployments overlapping with 2026-01-08: Array(0)
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3612 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3613 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3614 🚀 [NEO-Build] nextDayBuildEvents.length: 5
+App.tsx:3623 🚀 [NEO-Build] buildEventsWithDate.length: 5
+App.tsx:3660 🚀 [NEO-Build] Final segments.length: 5
+App.tsx:3612 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3613 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3614 🚀 [NEO-Build] nextDayBuildEvents.length: 5
+App.tsx:3623 🚀 [NEO-Build] buildEventsWithDate.length: 5
+App.tsx:3660 🚀 [NEO-Build] Final segments.length: 5
+App.tsx:7060 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7061 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7065 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7066 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:6009 🚀 [NEO-Build] Build process complete, navigating to NextDayBuild
+App.tsx:3322 buildResources - Current view: NextDayBuild Current date: 2026-01-08
+App.tsx:3347 Next day build deployment events: Array(0)
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3322 buildResources - Current view: NextDayBuild Current date: 2026-01-08
+App.tsx:3347 Next day build deployment events: Array(0)
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3486 🔄 useEffect triggered - activeView: NextDayBuild remedialRequests count: 0
+App.tsx:3491 ⏸️ Not syncing - activeView is: NextDayBuild
+App.tsx:7060 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7061 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7065 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7066 🟠 ========== NEO USEEFFECT END (CLOSED) ==========

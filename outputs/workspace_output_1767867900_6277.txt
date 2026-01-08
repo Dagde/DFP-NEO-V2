@@ -1,0 +1,18 @@
+     1	    const traineeScores = scores.get(trainee.fullName) || [];
+     2	    const completedEventIds = new Set(traineeScores.map(s => s.event));
+     3	    
+     4	    // DEBUG: Log completion status
+     5	    const hasCompletedEvents = completedEventIds.size > 0;
+     6	    if (!hasCompletedEvents) {
+     7	        console.log(`\ud83d\udcc8 [${trainee.fullName}] No completed events found - trainee at start of syllabus`);
+     8	    }
+     9	    
+    10	    const completedEventIds = new Set(traineeScores.map(s => s.event));
+    11	    
+    12	    // NEW: Check for ELCE - events completed yesterday but not yet in PT-051
+    13	    if (publishedSchedules && buildDate) {
+    14	        const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
+    15	        if (elce) {
+    16	            completedEventIds.add(elce);
+    17	        }
+    18	    }

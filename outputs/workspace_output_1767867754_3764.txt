@@ -1,0 +1,2 @@
+2533:    console.log('Trainees needing STBY flights:', traineesNeedingStby.length);
+2681:    console.log('Trainees needing STBY FTD events:', traineesNeedingStbyFtd.length);

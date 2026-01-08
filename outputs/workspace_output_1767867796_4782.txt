@@ -1,0 +1,34 @@
+const computeNextEventsForTrainee = (
+    trainee: Trainee,
+    traineeLMPs: Map<string, SyllabusItemDetail[]>,
+    scores: Map<string, Score[]>,
+    masterSyllabus: SyllabusItemDetail[], // Added fallback
+    publishedSchedules?: Record<string, ScheduleEvent[]>, // NEW: Optional for ELCE
+    buildDate?: string // NEW: Optional for ELCE
+): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
+    // Check individual LMP first, then fallback to master syllabus
+    const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
+    const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+    
+    // Debug logging for remedial tracking
+    if (hasIndividualLMP) {
+        const remedialEvents = individualLMP.filter(item => item.isRemedial);
+        if (remedialEvents.length > 0) {
+            console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
+        }
+    } else {
+        console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
+    }
+
+    if (!individualLMP || individualLMP.length === 0) {
+        return { next: null, plusOne: null };
+    }
+    
+    const traineeScores = scores.get(trainee.fullName) || [];
+    const completedEventIds = new Set(traineeScores.map(s => s.event));
+    
+    // NEW: Check for ELCE - events completed yesterday but not yet in PT-051
+    if (publishedSchedules && buildDate) {
+        const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
+        if (elce) {
+            completedEventIds.add(elce);

@@ -1,0 +1,61 @@
+    // Helper: Find available STBY line for event
+    const findAvailableStbyLine = (
+        startTime: number,
+        duration: number,
+        stbyEvents: Omit<ScheduleEvent, 'date'>[],
+        prefix: string
+    ): number => {
+        const eventEnd = startTime + duration;
+        
+        // Group events by STBY line
+        const lineEvents = new Map<number, Array<{ start: number; end: number }>>();
+        
+        stbyEvents.forEach(e => {
+            if (!e.resourceId.startsWith(prefix)) return;
+            const match = e.resourceId.match(/(\d+)$/);
+            if (!match) return;
+            const lineNum = parseInt(match[1]);
+            
+            if (!lineEvents.has(lineNum)) {
+                lineEvents.set(lineNum, []);
+            }
+            lineEvents.get(lineNum)!.push({
+                start: e.startTime,
+                end: e.startTime + e.duration
+            });
+        });
+        
+        // Check existing lines for availability
+        for (let lineNum = 1; lineNum <= Math.max(4, lineEvents.size); lineNum++) {
+            const events = lineEvents.get(lineNum) || [];
+            const hasConflict = events.some(e => 
+                startTime < e.end && eventEnd > e.start
+            );
+            if (!hasConflict) return lineNum;
+        }
+        
+        // Need new line
+        return Math.max(4, lineEvents.size) + 1;
+    };
+    
+    // Build list of trainees who need STBY flights (unscheduled on aircraft)
+    const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
+        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        if (!next) return false;
+        // Check if this trainee's next flight was scheduled on an aircraft
+        return !generatedEvents.some(e => 
+            e.student === trainee.fullName && 
+            e.flightNumber === next.id &&
+            e.type === 'flight' &&
+            !e.resourceId.startsWith('STBY')
+        );
+    });
+    
+    console.log('Trainees needing STBY flights:', traineesNeedingStby.length);
+    
+    // TWO-PASS APPROACH: Maximize instructor-allocated STBY events
+    const timeIncrement = 5 / 60; // 5 minutes
+    const scheduledTrainees = new Set<string>();
+    
+    // PASS 1: Schedule STBY events ONLY where instructor is available
+    console.log('PASS 1: Scheduling STBY with instructors available...');

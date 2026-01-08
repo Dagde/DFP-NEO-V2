@@ -1,0 +1,42 @@
+const createSyllabusItem = (
+    code: string,
+    description: string,
+    courses: string[] = ['BPC+IPC'] // Default to the standard pilot course
+): SyllabusItemDetail => {
+    // Safety checks for undefined parameters with error tracking
+    if (!code) {
+        console.error('❌ ERROR: createSyllabusItem called with undefined/null code parameter');
+        console.trace();
+    }
+    if (!description) {
+        console.error('❌ ERROR: createSyllabusItem called with undefined/null description parameter');
+        console.trace();
+    }
+    code = code || '';
+    description = description || '';
+    
+    let phase = 'BGF';
+    if (code.startsWith('BIF')) phase = 'BIF';
+    else if (code.startsWith('BNF')) phase = 'BNF';
+    else if (code.startsWith('BNAV')) phase = 'BNAV';
+    else if (code.startsWith('FIC')) phase = 'FIC';
+    else if (code.startsWith('WSO')) phase = 'WSO';
+    else if (code.startsWith('OFI')) phase = 'OFI';
+
+    let module = 'Basic General Flying';
+    if (phase === 'BIF') module = 'Basic Instrument Flying';
+    else if (phase === 'BNF') module = 'Basic Night Flying';
+    else if (phase === 'BNAV') module = 'Basic Navigation';
+    else if (phase === 'FIC') module = 'Flight Instructor Course';
+    else if (phase === 'WSO') module = 'Weapons Systems Officer';
+    else if (phase === 'OFI') module = 'Operational Flying Instructor';
+    
+    let methodOfDelivery: string[] = [];
+    let flightOrSimHours = 0;
+    let totalEventHours = 0;
+    let type: 'Flight' | 'FTD' | 'Ground School' = 'Flight';
+    let sortieType: 'Dual' | 'Solo' = 'Dual';
+    let preFlightTime = 0;
+    let postFlightTime = 0;
+    let location = '';
+

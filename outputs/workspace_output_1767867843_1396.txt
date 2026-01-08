@@ -1,0 +1,23 @@
+const populatePrerequisites = (syllabus: SyllabusItemDetail[]): SyllabusItemDetail[] => {
+    return syllabus.map((item, index, arr) => {
+        const prerequisitesGround: string[] = [];
+        const prerequisitesFlying: string[] = [];
+        
+        // Find the immediate previous non-MB event within the same course(s)
+        // Simplified: looking for previous event in the array regardless of course for now to maintain dependency chain logic
+        for (let i = index - 1; i >= 0; i--) {
+            const prereqCandidate = arr[i];
+            if (!prereqCandidate.code.includes(' MB')) {
+                 if (prereqCandidate.type === 'Flight' || prereqCandidate.type === 'FTD') {
+                    prerequisitesFlying.push(prereqCandidate.code);
+                } else {
+                    prerequisitesGround.push(prereqCandidate.code);
+                }
+                break; 
+            }
+        }
+        return { ...item, prerequisitesGround, prerequisitesFlying, prerequisites: [...prerequisitesGround, ...prerequisitesFlying] };
+    });
+};
+
+export const INITIAL_SYLLABUS_DETAILS: SyllabusItemDetail[] = populatePrerequisites(syllabusItems);

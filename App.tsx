@@ -543,6 +543,13 @@ const computeNextEventsForTrainee = (
     const traineeScores = scores.get(trainee.fullName) || [];
     const completedEventIds = new Set(traineeScores.map(s => s.event));
     
+    // DEBUG: Log completion status
+    const hasCompletedEvents = completedEventIds.size > 0;
+    if (!hasCompletedEvents) {
+        console.log(`\ud83d\udcc8 [${trainee.fullName}] No completed events found - trainee at start of syllabus`);
+    }
+    
+    
     // NEW: Check for ELCE - events completed yesterday but not yet in PT-051
     if (publishedSchedules && buildDate) {
         const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
@@ -562,7 +569,10 @@ const computeNextEventsForTrainee = (
             continue;
         }
 
-        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+        // If no completed events, skip prerequisite check for first event (trainee at start of syllabus)
+        const prereqsMet = hasCompletedEvents
+            ? item.prerequisites.every(p => completedEventIds.has(p))
+            : item.prerequisites.length === 0 || item.prerequisites.every(p => p.includes(' MB'));
         if (prereqsMet) {
             nextEvt = item;
             nextEventIndex = i;

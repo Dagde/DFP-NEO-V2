@@ -1,0 +1,3 @@
+709:    const activeTrainees = traineesData.filter(t => !t.isPaused);
+1198:    const activeTrainees = trainees.filter(t => 
+5835:        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));

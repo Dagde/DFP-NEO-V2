@@ -167,7 +167,38 @@ Added automatic generation of `courseColors` based on trainee course data in `li
 - 3091762 - "Fix trainee visibility - auto-generate courseColors from trainee data"
 
 ### Status
-✅ Fixed and deployed - Trainees should now be visible in Course Roster
+✅ Fixed and deployed - Trainees visible in Course Roster
+
+---
+
+## ✅ RESOLVED: NEO Build Issue
+
+### Problem
+The NEO - Build feature was not working. The user suspected it was because there were no PT051 records or course progress data.
+
+### Root Cause
+The `traineeLMPs` Map was empty (0 entries). The NEO Build algorithm (`computeNextEventsForTrainee`) requires traineeLMPs to determine the next events for each trainee. Without LMP data, the algorithm cannot determine progress or next events.
+
+### Solution Implemented
+Added automatic initialization of `traineeLMPs` in `lib/dataService.ts`:
+- Populates `traineeLMPs` Map with `INITIAL_SYLLABUS_DETAILS` (master syllabus) for each trainee
+- Only runs if `trainees` exist AND `traineeLMPs` is empty
+- Saves to localStorage for persistence
+- Provides the syllabus data needed for NEO Build algorithm
+
+### Files Modified
+- `/workspace/lib/dataService.ts` - Added auto-initialization logic for traineeLMPs
+
+### Commit
+- b34c9a4 - "Fix NEO Build - auto-populate traineeLMPs with master syllabus"
+
+### Status
+✅ Fixed and deployed - NEO Build should now work
+
+### Notes
+- `scores` Map remains empty (no auto-generation) - this is correct as real trainees start with no progress
+- `pt051Assessments` Map remains empty - not required for NEO Build to function
+- Trainees will start at the beginning of the syllabus with no completed events
 
 ---
 

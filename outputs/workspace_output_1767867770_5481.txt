@@ -1,0 +1,20 @@
+1013:            if (nextEventLists.bnf.length >= 2) { // Night flying is scheduled
+1031:            if (nightStart < nightEnd && nextEventLists.bnf.length >= 2) {
+1071:        if (nextEventLists.bnf.length < 2) return false; // No night flying scheduled
+1210:    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
+1222:                    nextEventLists.flight.push(trainee);
+1224:                    nextEventLists.bnf.push(trainee);
+1227:                nextEventLists.flight.push(trainee);
+1229:                nextEventLists.ftd.push(trainee);
+1231:                nextEventLists.cpt.push(trainee);
+1233:                   nextEventLists.ground.push(trainee);
+1246:    const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+1286:    Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
+1338:    nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
+1490:    };    const bnfTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+1492:        nextEventLists.bnf.length >= 2 ? list.filter(t => !bnfTraineeNames.has(t.fullName)) : list;
+1498:    if (nextEventLists.bnf.length >= 2) {
+1499:        const bnfTraineeCount = nextEventLists.bnf.length;
+1527:        const bnfTrainees = nextEventLists.bnf;
+1782:                        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+1789:                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
