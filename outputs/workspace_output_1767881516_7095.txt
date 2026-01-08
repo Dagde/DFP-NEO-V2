@@ -1,0 +1,20 @@
+ 🔄 Starting to load initial data...
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🌐 API Request: /api/scores Object
+ 🔄 Starting to load initial data...
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🌐 API Request: /api/scores Object
+ ✅ API Response: /api/schedule Object
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ ✅ Converted trainees: Object
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ ✅ Converted instructors: Object
+ ✅ API Response: /api/schedule Object
+index-at8AE7HA.js:sourcemap:756 ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+index-at8AE7HA.js:sourcemap:756 ✅ Converted instructors: Object
+index-at8AE7HA.js:sourcemap:756 ✅ API Response: /api/personnel?role=TRAINEE {status: 200, dataKeys: Array(1), dataType: 'object'}
+index-at8AE7HA.js:sourcemap:756 ✅ Converted trainees: {originalCount: 117, convertedCount: 117, sample: Array(2)}

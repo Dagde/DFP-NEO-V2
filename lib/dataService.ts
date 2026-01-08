@@ -180,7 +180,8 @@ export async function initializeData() {
       }
       
       // Return data from API
-      return {
+      console.log('🎯 About to return data from initializeData');
+      const returnData = {
         instructors,
         trainees,
         events,
@@ -193,6 +194,12 @@ export async function initializeData() {
         coursePercentages,
         traineeLMPs,
       };
+      console.log('🎯 Return data prepared:', {
+        instructors: returnData.instructors.length,
+        trainees: returnData.trainees.length,
+        scores: returnData.scores.size
+      });
+      return returnData;
     } catch (error) {
       console.warn('API fetch failed, falling back to localStorage or mock data:', error);
       console.error('Full error details:', error);

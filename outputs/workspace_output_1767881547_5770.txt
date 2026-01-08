@@ -1,0 +1,16 @@
+      }
+      
+      // Return data from API
+      return {
+        instructors,
+        trainees,
+        events,
+        scores: scoresResult,
+        pt051Assessments,
+        courses,
+        courseColors,
+        archivedCourses,
+        coursePriorities,
+        coursePercentages,
+        traineeLMPs,
+      };

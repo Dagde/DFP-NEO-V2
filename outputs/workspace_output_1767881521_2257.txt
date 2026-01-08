@@ -1,0 +1,36 @@
+  if (USE_API) {
+    console.log('Initializing data from API...');
+    
+    try {
+      // Try to fetch from API
+      const [instructorsResult, traineesResult, scheduleResult, scoresResult] = await Promise.all([
+        fetchInstructors(),
+        fetchTrainees(),
+        fetchSchedule(),
+        fetchScores(),
+      ]);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];
+
+      console.log('Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+        courses: courses.length,
+        coursePriorities: coursePriorities.length,
+        scores: scoresResult.size,
+        scoresSample: Array.from(scoresResult.entries()).slice(0, 1),
+        pt051Assessments: pt051Assessments.size,
+        coursePercentages: coursePercentages.size,
+        traineeLMPs: traineeLMPs.size,
+        traineeSample: trainees.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course })),
+      });
+      
+      console.log('✅ Instructors sample:', instructors.slice(0, 3));
+      console.log('✅ Trainees sample:', trainees.slice(0, 3));
+      
+      // Log all unique course names from trainees
+      const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
