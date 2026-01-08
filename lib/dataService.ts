@@ -95,6 +95,7 @@ export async function initializeData() {
       saveToStorage(STORAGE_KEYS.SCHEDULE, events);
     } catch (error) {
       console.warn('⚠️ API fetch failed, falling back to localStorage or mock data:', error);
+      console.error('Full error details:', error);
       
       // Try localStorage first
       instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
@@ -105,6 +106,12 @@ export async function initializeData() {
       instructors = Array.isArray(instructors) ? instructors : [];
       trainees = Array.isArray(trainees) ? trainees : [];
       events = Array.isArray(events) ? events : [];
+      
+      console.log('📦 Loaded from localStorage:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
 
       // If localStorage is empty, use empty arrays
       if (instructors.length === 0) {

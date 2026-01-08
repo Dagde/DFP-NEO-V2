@@ -1,0 +1,5 @@
+127:async function fetchAPI<T>(
+157:  const result = await fetchAPI<{ personnel: InstructorResponse[] }>('/personnel?role=INSTRUCTOR');
+166:  const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
+175:  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
+185:  const result = await fetchAPI<AircraftResponse[]>('/aircraft');

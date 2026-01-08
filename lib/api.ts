@@ -193,9 +193,9 @@ export async function fetchAircraft(): Promise<Aircraft[]> {
 // Schedule API
 export async function fetchSchedule(date?: string): Promise<ScheduleEvent[]> {
   const endpoint = date ? `/schedule?date=${date}` : '/schedule';
-  const result = await fetchAPI<ScheduleEvent[]>(endpoint);
-  if (result.success && result.data) {
-    return result.data;
+  const result = await fetchAPI<{ schedules: ScheduleEvent[] }>(endpoint);
+  if (result.success && result.data?.schedules) {
+    return result.data.schedules;
   }
   console.error('Failed to fetch schedule:', result.error);
   return [];

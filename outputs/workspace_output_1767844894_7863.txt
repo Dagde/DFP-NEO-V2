@@ -1,0 +1,182 @@
+ cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+ Starting app initialization...
+ React imported
+ ReactDOM imported
+ App imported
+ Root element: 
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-08
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-08
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ 🔄 Initializing data from API...
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🔄 Initializing data from API...
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ Seeded Logbook Template (XLSX)
+ Seeded Logbook Template (XLSX)
+ Seeded Logbook Template (PDF)
+ Seeded Logbook Template (PDF)
+ Seeded NEO Logo PDF
+ Seeded NEO Logo PDF
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ Local handleMouseUp called - ignoring when dragState exists: false
+ Clearing drag state in local handleMouseUp
+ ⚠️ API fetch failed, falling back to localStorage or mock data: 
+rO @ index-DYCasrcB.js:756
+ ⚠️ API fetch failed, falling back to localStorage or mock data: 
+rO @ index-DYCasrcB.js:756
+ Global mouse up called, draggingState exists: false
+ buildResources - Current view: Instructors Current date: 2026-01-08
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Instructors Current date: 2026-01-08
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Instructors
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ buildResources - Current view: CourseRoster Current date: 2026-01-08
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: CourseRoster Current date: 2026-01-08
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: CourseRoster
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ buildResources - Current view: Instructors Current date: 2026-01-08
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Instructors Current date: 2026-01-08
+ deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3473 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: Instructors
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:3309 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3309 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3526 🟡 eventsForDate memo recalculating
+App.tsx:3527 🟡 date: 2026-01-08
+App.tsx:3528 🟡 publishedSchedules keys: Array(0)
+App.tsx:3530 🟡 eventsForDate count: 0
+App.tsx:3526 🟡 eventsForDate memo recalculating
+App.tsx:3527 🟡 date: 2026-01-08
+App.tsx:3528 🟡 publishedSchedules keys: Array(0)
+App.tsx:3530 🟡 eventsForDate count: 0
+App.tsx:3599 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3600 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3601 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3610 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3647 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:3599 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3600 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3601 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3610 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3647 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:3309 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3309 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3526 🟡 eventsForDate memo recalculating
+App.tsx:3527 🟡 date: 2026-01-08
+App.tsx:3528 🟡 publishedSchedules keys: Array(0)
+App.tsx:3530 🟡 eventsForDate count: 0
+App.tsx:3526 🟡 eventsForDate memo recalculating
+App.tsx:3527 🟡 date: 2026-01-08
+App.tsx:3528 🟡 publishedSchedules keys: Array(0)
+App.tsx:3530 🟡 eventsForDate count: 0
+App.tsx:3599 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3600 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3601 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3610 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3647 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:3599 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3600 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3601 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3610 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3647 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:3309 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3309 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3473 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: CourseRoster
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
