@@ -339,6 +339,8 @@ export async function initializeData() {
     
     // TEMPORARY FIX: Use mock data to test NEO Build
     console.log('⚠️ TEMPORARY: Reverting to mock data to test NEO Build');
+    // Import mock data directly
+    const { ESL_DATA } = await import('../mockData');
     return {
       instructors: ESL_DATA.instructors,
       trainees: ESL_DATA.trainees,
