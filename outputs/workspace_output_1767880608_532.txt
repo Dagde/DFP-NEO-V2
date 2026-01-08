@@ -1,0 +1,10 @@
+    console.log(`DEBUG Total Highest Priority Events to check: ${highestPriorityEvents.length}`);
+    console.log(`DEBUG Build Date: ${buildDate}`);
+    
+    let includedCount = 0;
+    let skippedCount = 0;
+    
+--
+        console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        
+        setIsBuildingDfp(true);

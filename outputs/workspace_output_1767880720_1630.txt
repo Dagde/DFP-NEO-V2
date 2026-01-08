@@ -1,0 +1,3 @@
+1132:    console.log(`DEBUG Total Highest Priority Events to check: ${highestPriorityEvents.length}`);
+5902:        console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+5955:                    highestPriorityEvents: config.highestPriorityEvents.length,

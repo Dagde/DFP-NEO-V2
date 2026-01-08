@@ -1,0 +1,16 @@
+        console.log('M-pM-^_M-^ZM-^@ [NEO-Build] buildDfpDate:', buildDfpDate);$
+        console.log('M-pM-^_M-^ZM-^@ [NEO-Build] preservedEvents:', preservedEvents?.length || 0);$
+        console.log('M-pM-^_M-^ZM-^@ [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);$
+        $
+        setIsBuildingDfp(true);$
+        setNextDayBuildEvents([]); // Clear previous build$
+        $
+        // Use preserved events if provided, otherwise use state$
+        const eventsToUse = preservedEvents || highestPriorityEvents;$
+        $
+        console.log(`M-pM-^_M-^ZM-^@ [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);$
+        $
+        const config: DfpConfig = {$
+            instructors: instructorsData,$
+            trainees: traineesData,$
+            syllabus: syllabusDetails,$

@@ -1,0 +1,121 @@
+        }
+        
+        console.log('DEBUG ===== PRE-BUILD ANALYSIS END =====');
+        
+        // Use the updated list (which includes any newly added events from Active DFP)
+        const finalPreservedEvents = newHighestPriorityEvents;
+        
+        console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
+        
+        // Now proceed with normal build process
+        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        let bnfTraineeCount = 0;
+
+        activeTrainees.forEach(trainee => {
+            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+            if (next && next.code.startsWith('BNF') && next.type === 'Flight') {
+                bnfTraineeCount++;
+            }
+        });
+
+        setNightFlyingTraineeCount(bnfTraineeCount);
+        setShowNightFlyingInfo(true);
+
+        setTimeout(() => {
+            setShowNightFlyingInfo(false);
+            // CRITICAL: Pass the preserved events directly to avoid state timing issues
+            runBuildAlgorithm(finalPreservedEvents);
+        }, 3000);
+    };
+
+    const handleBuildDfp = () => {
+        console.log('🚀 [NEO-Build] handleBuildDfp called');
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        
+        // Note: Priority analysis is now integrated in the Build Analysis sidebar item
+        // No need to open external tab
+        
+        // Use robust string comparison to avoid timezone issues between Local and UTC dates
+        const todayStr = getLocalDateString();
+        console.log('🚀 [NEO-Build] todayStr:', todayStr);
+        console.log('🚀 [NEO-Build] Date comparison:', buildDfpDate, '<=', todayStr, '=', buildDfpDate <= todayStr);
+        
+        // If the build date is today or in the past, show the warning
+        if (buildDfpDate <= todayStr) {
+            console.log('🚀 [NEO-Build] Build date is today or in the past, showing warning');
+            setShowDateWarning(true);
+            return;
+        }
+        
+        console.log('🚀 [NEO-Build] Starting build process');
+        startBuildProcess();
+    };
+
+    const handleConfirmDateAndBuild = () => {
+        setShowDateWarning(false);
+        startBuildProcess();
+    };
+
+    const runBuildAlgorithm = (preservedEvents?: ScheduleEvent[]) => {
+        console.log('🚀 [NEO-Build] runBuildAlgorithm called');
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
+        console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        
+        setIsBuildingDfp(true);
+        setNextDayBuildEvents([]); // Clear previous build
+        
+        // Use preserved events if provided, otherwise use state
+        const eventsToUse = preservedEvents || highestPriorityEvents;
+        
+        console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
+        
+        const config: DfpConfig = {
+            instructors: instructorsData,
+            trainees: traineesData,
+            syllabus: syllabusDetails,
+            scores,
+            coursePriorities,
+            coursePercentages,
+            availableAircraftCount,
+            ftdCount: availableFtdCount,
+            cptCount: availableCptCount,
+            courseColors,
+            school,
+            dayStart: flyingStartTime,
+            dayEnd: flyingEndTime,
+            ftdStart: ftdStartTime,
+            ftdEnd: ftdEndTime,
+            allowNightFlying,
+            commenceNightFlying,
+            ceaseNightFlying,
+            buildDate: buildDfpDate,
+            highestPriorityEvents: eventsToUse,
+            programWithPrimaries,
+            traineeLMPs,
+            flightTurnaround,
+            ftdTurnaround,
+            cptTurnaround,
+            preferredDutyPeriod,
+            maxCrewDutyPeriod,
+            eventLimits,
+            sctFtds: sctFtds,
+            sctFlights: sctFlights,
+            remedialRequests: remedialRequests,
+            sctEvents: sctEvents,
+            getEventDayNightClassification: getEventDayNightClassification,
+        };
+
+        setTimeout(() => {
+            try {
+                console.log('🚀 [NEO-Build] Starting DFP build process for', buildDfpDate);
+                console.log('🚀 [NEO-Build] Config:', {
+                    instructors: config.instructors.length,
+                    trainees: config.trainees.length,
+                    syllabus: config.syllabus.length,
+                    highestPriorityEvents: config.highestPriorityEvents.length,
+                    buildDate: config.buildDate
+                });
+                
+                const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+                console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');

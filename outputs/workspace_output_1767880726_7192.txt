@@ -1,0 +1,4 @@
+        console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        
+        setIsBuildingDfp(true);
+        setNextDayBuildEvents([]); // Clear previous build

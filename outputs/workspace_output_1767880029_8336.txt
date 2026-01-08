@@ -1,0 +1,31 @@
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
+        console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        
+        setIsBuildingDfp(true);
+        setNextDayBuildEvents([]); // Clear previous build
+        
+        // Use preserved events if provided, otherwise use state
+        const eventsToUse = preservedEvents || highestPriorityEvents;
+        
+        console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
+        
+        const config: DfpConfig = {
+            instructors: instructorsData,
+            trainees: traineesData,
+            syllabus: syllabusDetails,
+            scores,
+            coursePriorities,
+            coursePercentages,
+            availableAircraftCount,
+            ftdCount: availableFtdCount,
+            cptCount: availableCptCount,
+            courseColors,
+            school,
+            dayStart: flyingStartTime,
+            dayEnd: flyingEndTime,
+            ftdStart: ftdStartTime,
+            ftdEnd: ftdEndTime,
+            allowNightFlying,
+            commenceNightFlying,
+            ceaseNightFlying,

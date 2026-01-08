@@ -1,0 +1,33 @@
+[feature/comprehensive-build-algorithm 0b1bdcb] Add trainee count logging to diagnose why NEO Build generates 0 events
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 20 files changed, 1331 insertions(+), 1 deletion(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-DMpdmYCq.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-DMpdmYCq.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-hr_RoPQ4.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-hr_RoPQ4.js.map
+ create mode 100644 outputs/workspace_output_1767879504_4110.txt
+ create mode 100644 outputs/workspace_output_1767879511_7604.txt
+ create mode 100644 outputs/workspace_output_1767879520_5550.txt
+ create mode 100644 outputs/workspace_output_1767879527_6717.txt
+ create mode 100644 outputs/workspace_output_1767879534_255.txt
+ create mode 100644 outputs/workspace_output_1767879549_5829.txt
+ create mode 100644 outputs/workspace_output_1767879558_5723.txt
+ create mode 100644 outputs/workspace_output_1767879564_258.txt
+ create mode 100644 outputs/workspace_output_1767879576_7580.txt
+ create mode 100644 outputs/workspace_output_1767879582_7310.txt
+ create mode 100644 outputs/workspace_output_1767879616_8198.txt
+ create mode 100644 outputs/workspace_output_1767879632_7298.txt
+ create mode 100644 outputs/workspace_output_1767879639_3733.txt
+To https://github.com/Dagde/DFP---NEO.git
+   1b8498e..0b1bdcb  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

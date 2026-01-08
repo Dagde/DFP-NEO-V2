@@ -1,0 +1,21 @@
+        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        let bnfTraineeCount = 0;
+
+        activeTrainees.forEach(trainee => {
+            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+            if (next && next.code.startsWith('BNF') && next.type === 'Flight') {
+                bnfTraineeCount++;
+            }
+        });
+
+        setNightFlyingTraineeCount(bnfTraineeCount);
+        setShowNightFlyingInfo(true);
+
+        setTimeout(() => {
+            setShowNightFlyingInfo(false);
+            // CRITICAL: Pass the preserved events directly to avoid state timing issues
+            runBuildAlgorithm(finalPreservedEvents);
+        }, 3000);
+    };
+
+    const handleBuildDfp = () => {

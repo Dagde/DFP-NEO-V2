@@ -1,0 +1,4 @@
+5866:            runBuildAlgorithm(finalPreservedEvents);
+5898:    const runBuildAlgorithm = (preservedEvents?: ScheduleEvent[]) => {
+5899:        console.log('🚀 [NEO-Build] runBuildAlgorithm called');
+5910:        console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);

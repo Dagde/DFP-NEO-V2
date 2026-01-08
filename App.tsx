@@ -5901,6 +5901,11 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
         
+        // CRITICAL: Log traineesData state
+        console.log('🚀 [NEO-Build] traineesData state:', {
+            total: traineesData.length,
+            sample: traineesData.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course }))
+        });
         setIsBuildingDfp(true);
         setNextDayBuildEvents([]); // Clear previous build
         

@@ -1,20 +1,22 @@
-# NEO Build Investigation - STBY Events Only
+# NEO Build Investigation - 0 Events Generated
 
 ## Problem
-- NEO Build is only scheduling STBY (standby) events
-- No flight events, FTD events, CPT events, or Ground events are being scheduled
-- All trainees are being placed on STBY lines
+- NEO Build is generating 0 events total
+- Previously was generating STBY events, now generates nothing
+- "Trainees needing STBY flights: 0"
+- "Trainees needing STBY FTD events: 0"
+- "DFP build completed, generated 0 events"
 
 ## Investigation Tasks
 - [x] Analyze screenshot and logs
-- [ ] Analyze the computeNextEventsForTrainee function logic
-- [ ] Check prerequisite validation logic
-- [ ] Verify event types being generated
-- [ ] Check if aircraft and instructor availability is blocking events
-- [ ] Review the generateDfpInternal function for scheduling logic
-- [ ] Examine why only Duty Supervisor events are being created
+- [x] Analyze the computeNextEventsForTrainee function logic
+- [x] Added logging to show trainee counts
+- [ ] Verify trainees are being passed to build algorithm
+- [ ] Check if trainees are being filtered out
+- [ ] Verify trainees have LMP and scores data
+- [ ] Check why computeNextEventsForTrainee is not being called
 
 ## Next Steps
-- Review App.tsx NEO Build algorithm
-- Check event type definitions and filtering
-- Verify resource availability constraints
+- Wait for Railway deployment
+- Test NEO Build and check new logs
+- Verify trainee data is loaded correctly
