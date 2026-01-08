@@ -1,0 +1,30 @@
+function loadFromStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+  }
+  return defaultValue;
+}
+
+// Initialize data from API or fallback to localStorage or mock data
+export async function initializeData() {
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {
+    console.log('🔄 Initializing data from API...');
+    
+--
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // If localStorage is empty, use empty arrays
+      if (instructors.length === 0) {
+        console.log('📦 Using empty data as fallback');
+        instructors = [];

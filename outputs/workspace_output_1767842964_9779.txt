@@ -1,0 +1,51 @@
+export async function initializeData() {
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {
+    console.log('🔄 Initializing data from API...');
+    
+    try {
+      // Try to fetch from API
+      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+        fetchInstructors(),
+        fetchTrainees(),
+        fetchSchedule(),
+      ]);
+
+      instructors = instructorsResult;
+      trainees = traineesResult;
+      events = scheduleResult;
+
+      console.log('✅ Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
+
+      // Save to localStorage for faster next load
+      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    } catch (error) {
+      console.warn('⚠️ API fetch failed, falling back to localStorage or mock data:', error);
+      
+      // Try localStorage first
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // If localStorage is empty, use empty arrays
+      if (instructors.length === 0) {
+        console.log('📦 Using empty data as fallback');
+        instructors = [];
+        trainees = [];
+        events = [];
+        
+        // Save empty data to localStorage
+        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      }
+    }

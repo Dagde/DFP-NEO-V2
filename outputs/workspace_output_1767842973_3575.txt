@@ -1,0 +1,21 @@
+  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+    STORAGE_KEYS.TRAINEE_LMPS, 
+    new Map()
+  );
+
+  return {
+    instructors,
+    trainees,
+    events,
+    scores,
+    pt051Assessments,
+    courses,
+    courseColors,
+    archivedCourses,
+    coursePriorities,
+    coursePercentages,
+    traineeLMPs,
+  };
+}
+
+// Save schedule

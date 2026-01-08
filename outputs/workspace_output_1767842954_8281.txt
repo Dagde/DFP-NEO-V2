@@ -1,0 +1,31 @@
+export async function fetchInstructors(): Promise<Instructor[]> {
+  const result = await fetchAPI<{ personnel: InstructorResponse[] }>('/personnel?role=INSTRUCTOR');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel.map(convertPersonnelToInstructor);
+  }
+  console.error('Failed to fetch instructors:', result.error);
+  return [];
+}
+
+export async function fetchTrainees(): Promise<Trainee[]> {
+  const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel.map(convertPersonnelToTrainee);
+  }
+  console.error('Failed to fetch trainees:', result.error);
+  return [];
+}
+
+export async function fetchAllPersonnel(): Promise<any[]> {
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel;
+  }
+  console.error('Failed to fetch personnel:', result.error);
+  return [];
+}
+
+// Aircraft API
+export async function fetchAircraft(): Promise<Aircraft[]> {
+  const result = await fetchAPI<AircraftResponse[]>('/aircraft');
+  if (result.success && result.data) {

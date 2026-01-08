@@ -1,0 +1,93 @@
+const USE_API = true; // Toggle this to switch between API and localStorage
+
+// Helper: Save to localStorage
+function saveToStorage<T>(key: string, data: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+}
+
+// Helper: Load from localStorage
+function loadFromStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+  }
+  return defaultValue;
+}
+
+// Initialize data from API or fallback to localStorage or mock data
+export async function initializeData() {
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {
+    console.log('🔄 Initializing data from API...');
+    
+    try {
+      // Try to fetch from API
+      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+        fetchInstructors(),
+        fetchTrainees(),
+        fetchSchedule(),
+      ]);
+
+      instructors = instructorsResult;
+      trainees = traineesResult;
+      events = scheduleResult;
+
+      console.log('✅ Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
+
+      // Save to localStorage for faster next load
+      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    } catch (error) {
+      console.warn('⚠️ API fetch failed, falling back to localStorage or mock data:', error);
+      
+      // Try localStorage first
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+--
+  if (USE_API) {
+    const success = await saveScheduleAPI(events);
+    if (success) {
+      // Also save to localStorage for backup
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    }
+    return success;
+  } else {
+    saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    return true;
+  }
+}
+
+// Save courses data (to localStorage)
+export function saveCoursesData(data: {
+  courses: Course[];
+  courseColors: { [key: string]: string };
+  archivedCourses: { [key: string]: string };
+  coursePriorities: string[];
+  coursePercentages: Map<string, number>;
+}): void {
+  saveToStorage(STORAGE_KEYS.COURSES, data.courses);
+  saveToStorage(STORAGE_KEYS.COURSE_COLORS, data.courseColors);
+  saveToStorage(STORAGE_KEYS.ARCHIVED_COURSES, data.archivedCourses);
+  saveToStorage(STORAGE_KEYS.COURSE_PRIORITIES, data.coursePriorities);
+  saveToStorage(STORAGE_KEYS.COURSE_PERCENTAGES, data.coursePercentages);
+}
+
+// Save scores data (to localStorage)
+export function saveScoresData(scores: Map<string, Score[]>): void {
+  saveToStorage(STORAGE_KEYS.SCORES, scores);

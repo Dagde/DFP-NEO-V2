@@ -34,7 +34,14 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
   try {
     const stored = localStorage.getItem(key);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      
+      // Handle Map deserialization
+      if (defaultValue instanceof Map) {
+        return new Map(parsed) as T;
+      }
+      
+      return parsed;
     }
   } catch (error) {
     console.error(`Error loading ${key} from localStorage:`, error);

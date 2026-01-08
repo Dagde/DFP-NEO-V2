@@ -1,0 +1,80 @@
+Database counts:
+Personnel: 82
+Trainees: 127
+
+Sample Personnel record:
+{
+  "id": "cmk4usw9y0000i9wes7ga14n4",
+  "userId": null,
+  "name": "Carter, Steven",
+  "rank": "WGCDR",
+  "role": "QFI",
+  "qualifications": null,
+  "availability": null,
+  "preferences": null,
+  "isActive": true,
+  "createdAt": "2026-01-08T02:54:18.215Z",
+  "updatedAt": "2026-01-08T02:54:18.215Z",
+  "callsignNumber": 10,
+  "category": "A",
+  "email": "steven.carter@flightschool.mil",
+  "flight": "EXEC",
+  "idNumber": 6354343,
+  "isAdminStaff": false,
+  "isCFI": false,
+  "isCommandingOfficer": true,
+  "isContractor": false,
+  "isDeputyFlightCommander": false,
+  "isExecutive": true,
+  "isFlyingSupervisor": true,
+  "isIRE": false,
+  "isOFI": false,
+  "isQFI": true,
+  "isTestingOfficer": true,
+  "location": "East Sale",
+  "permissions": [
+    "Staff",
+    "Course Supervisor",
+    "Admin"
+  ],
+  "phoneNumber": null,
+  "priorExperience": null,
+  "seatConfig": "Normal",
+  "service": "RAAF",
+  "unavailability": [],
+  "unit": "1FTS"
+}
+
+Sample Trainee record:
+{
+  "id": "cmk4usxvi002ai9weztk927i2",
+  "userId": null,
+  "idNumber": 2875495,
+  "name": "Robinson, Lucas",
+  "fullName": "Robinson, Lucas – ADF301",
+  "rank": "PLTOFF",
+  "service": "RAAF",
+  "course": "ADF301",
+  "lmpType": "BPC+IPC",
+  "traineeCallsign": "CHLE308",
+  "seatConfig": "Normal",
+  "isPaused": true,
+  "unavailability": [],
+  "unit": "1FTS",
+  "flight": "D",
+  "location": "East Sale",
+  "phoneNumber": "0452593010",
+  "email": "lucas.robinson@flightschool.mil",
+  "primaryInstructor": "Robinson, Chris",
+  "secondaryInstructor": "Baker, Harper",
+  "lastEventDate": "2026-01-04T00:00:00.000Z",
+  "lastFlightDate": "2026-01-04T00:00:00.000Z",
+  "currencyStatus": null,
+  "permissions": [
+    "Trainee"
+  ],
+  "priorExperience": null,
+  "isActive": true,
+  "createdAt": "2026-01-08T02:54:20.287Z",
+  "updatedAt": "2026-01-08T02:54:20.287Z"
+}

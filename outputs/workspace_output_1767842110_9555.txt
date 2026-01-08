@@ -1,0 +1,2 @@
+4:const API_BASE = '/api';
+132:    const response = await fetch(`${API_BASE}${endpoint}`, {

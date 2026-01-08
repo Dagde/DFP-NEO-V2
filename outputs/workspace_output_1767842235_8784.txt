@@ -1,0 +1,1 @@
+-rw-r--r-- 1 root root 7671 Jan  8 03:16 /workspace/dfp-neo-platform/public/flight-school-app/index.html

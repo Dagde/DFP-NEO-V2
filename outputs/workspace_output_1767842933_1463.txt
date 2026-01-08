@@ -1,0 +1,30 @@
+221:    const instructorEvents = events.filter(e => 
+239:        .filter(window => window.start < window.end)
+306:    const instructorEvents = [...events.filter(e => getPersonnel(e).includes(instructorName)), newEvent];
+489:    const traineeEvents = yesterdayDfp.filter(e => 
+498:    const completedEvents = traineeEvents.filter(e => {
+531:        const remedialEvents = individualLMP.filter(item => item.isRemedial);
+709:    const activeTrainees = traineesData.filter(t => !t.isPaused);
+753:    const scheduledEvents = events.filter(e => 
+867:    const flightEvents = scheduledEvents.filter(e => e.type === 'flight').length;
+868:    const ftdEvents = scheduledEvents.filter(e => e.type === 'ftd').length;
+869:    const standbyCount = events.filter(e => 
+986:        const instructorEvents = eventsToCheck.filter(e => getPersonnel(e).includes(instructorName));
+1198:    const activeTrainees = trainees.filter(t => 
+1250:        const courseTrainees = activeTrainees.filter(t => t.course === courseName);
+1252:        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length).sort((a,b) => a-b);
+1277:        const progressA = (scores.get(a.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+1278:        const progressB = (scores.get(b.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+1492:        nextEventLists.bnf.length >= 2 ? list.filter(t => !bnfTraineeNames.has(t.fullName)) : list;
+1509:        const nightEligiblePool = originalInstructors.filter(ip => {
+1736:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+1780:                    .filter(i => 
+1787:                const availableQfis = instructors.filter(i => 
+1794:                    const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
+1795:                    const primaries = availableQfis.filter(i => pNames.includes(i.name));
+1796:                    const others = availableQfis.filter(i => !pNames.includes(i.name));
+1808:                const qualified = instructors.filter(ip => {
+1818:                     const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
+1819:                     const primaries = qualified.filter(i => pNames.includes(i.name));
+1820:                     const others = qualified.filter(i => !pNames.includes(i.name));
+1887:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))

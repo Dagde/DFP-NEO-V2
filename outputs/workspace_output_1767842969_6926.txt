@@ -1,0 +1,30 @@
+  courses: Course[];
+  courseColors: { [key: string]: string };
+  archivedCourses: { [key: string]: string };
+  coursePriorities: string[];
+  coursePercentages: Map<string, number>;
+}): void {
+  saveToStorage(STORAGE_KEYS.COURSES, data.courses);
+  saveToStorage(STORAGE_KEYS.COURSE_COLORS, data.courseColors);
+  saveToStorage(STORAGE_KEYS.ARCHIVED_COURSES, data.archivedCourses);
+  saveToStorage(STORAGE_KEYS.COURSE_PRIORITIES, data.coursePriorities);
+  saveToStorage(STORAGE_KEYS.COURSE_PERCENTAGES, data.coursePercentages);
+}
+
+// Save scores data (to localStorage)
+export function saveScoresData(scores: Map<string, Score[]>): void {
+  saveToStorage(STORAGE_KEYS.SCORES, scores);
+}
+
+// Save PT051 assessments (to localStorage)
+export function savePT051AssessmentsData(assessments: Map<string, Pt051Assessment>): void {
+  saveToStorage(STORAGE_KEYS.PT051_ASSESSMENTS, assessments);
+}
+
+// Save trainee LMPs (to localStorage)
+export function saveTraineeLMPsData(traineeLMPs: Map<string, SyllabusItemDetail[]>): void {
+  saveToStorage(STORAGE_KEYS.TRAINEE_LMPS, traineeLMPs);
+}
+
+// Export mock data constants for reference
+export { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK };

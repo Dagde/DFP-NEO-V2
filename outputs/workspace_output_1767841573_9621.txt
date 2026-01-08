@@ -1,0 +1,10 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+
+const prisma = new PrismaClient();
+
+// GET /api/personnel - Get all personnel with optional filtering
+// Public endpoint - no authentication required for flight school app
+export async function GET(request: NextRequest) {
+  try {

@@ -1,0 +1,12 @@
+total 232K
+-rw-r--r-- 1 root root  11K Jan  8 03:31 LMP_Syllabus_Template.xlsx
+-rw-r--r-- 1 root root  11K Jan  8 03:31 Staff_Bulk_Update_Template.xlsx
+-rw-r--r-- 1 root root  12K Jan  8 03:31 Trainee_Bulk_Update_Template.xlsx
+-rw-r--r-- 1 root root  37K Jan  8 03:31 aircraft-icon.png
+drwxr-xr-x 2 root root 4.0K Jan  8 03:31 assets
+drwxr-xr-x 2 root root 4.0K Jan  8 03:31 icons
+-rw-r--r-- 1 root root 7.5K Jan  8 03:31 index.html
+-rw-r--r-- 1 root root  13K Jan  8 03:31 multi-select-icon.png
+-rw-r--r-- 1 root root  51K Jan  8 03:31 priority-analysis.html
+-rw-r--r-- 1 root root 4.4K Jan  8 03:31 test-formation.html
+-rw-r--r-- 1 root root  63K Jan  8 03:31 warning-icon.png
