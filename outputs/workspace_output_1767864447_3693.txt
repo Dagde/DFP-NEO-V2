@@ -1,0 +1,21 @@
+    selectedPersonForProfile,
+    onProfileOpened,
+    traineeLMPs,
+    onViewLogbook
+       , onDeleteTrainee
+}) => {
+    console.log('🎯 CourseRosterView - Props received:', {
+        traineesDataCount: traineesData.length,
+        courseColorsKeys: Object.keys(courseColors).length,
+        activeCourseNumbers: Object.keys(courseColors).length,
+        eventsCount: events.length
+    });
+
+    const [view, setView] = useState<'active' | 'archived'>('active');
+    const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+    const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
+    const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
+    const [hoveredTrainee, setHoveredTrainee] = useState<{ name: string; events: ScheduleEvent[] } | null>(null);
+    const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
+    

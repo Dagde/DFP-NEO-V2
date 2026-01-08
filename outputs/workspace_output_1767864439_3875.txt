@@ -1,0 +1,6 @@
+12:interface CourseRosterViewProps {
+61:const CourseRosterView: React.FC<CourseRosterViewProps> = ({ 
+86:    console.log('🎯 CourseRosterView - Props received:', {
+131:        console.log('📊 CourseRoster - Grouped trainees:', {
+162:    console.log('📋 CourseRoster - Course config:', {
+407:export default CourseRosterView;

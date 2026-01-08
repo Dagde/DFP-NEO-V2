@@ -1,0 +1,1 @@
+93:    console.log("\ud83d\udccb Full courseColors object:", courseColors);

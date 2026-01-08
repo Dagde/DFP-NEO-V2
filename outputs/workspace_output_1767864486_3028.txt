@@ -1,0 +1,11 @@
+    console.log('\ud83c\udfaf CourseRosterView - Props received:', {
+        traineesDataCount: traineesData.length,
+        courseColorsKeys: Object.keys(courseColors).length,
+        activeCourseNumbers: Object.keys(courseColors).length,
+        eventsCount: events.length
+    });
+    
+    // Log the actual values for debugging
+    console.log('📋 Full courseColors object:', courseColors);
+    console.log('📋 courseColors keys:', Object.keys(courseColors));
+    console.log('📋 traineesData sample:', traineesData.slice(0, 3));

@@ -1,0 +1,19 @@
+106:    useEffect(() => {
+107-        if (selectedPersonForProfile) {
+108-            setSelectedTrainee(selectedPersonForProfile);
+109-            setIsCreatingNew(false);
+110-            if (onProfileOpened) {
+111-                onProfileOpened();
+112-            }
+113-        }
+114-    }, [selectedPersonForProfile, onProfileOpened]);
+--
+145:    useEffect(() => {
+146-        if (selectedTrainee && !isCreatingNew) {
+147-            const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
+148-
+149-            // Update the state only if the data has actually changed to avoid an infinite loop.
+150-            if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
+151-                setSelectedTrainee(updatedTrainee);
+152-            }
+153-        }

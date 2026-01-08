@@ -1,0 +1,21 @@
+
+    const activeCourseNumbers = Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
+    const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
+    
+    const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
+    const courseColorMap = view === 'active' ? courseColors : archivedCourses;
+
+    console.log('📋 CourseRoster - Course config:', {
+        view,
+        activeCourseNumbers,
+        archivedCourseNumbers,
+        coursesToDisplay,
+        activeCourseCount: activeCourseNumbers.length,
+        archivedCourseCount: archivedCourseNumbers.length
+    });
+
+    const handleConfirmRestore = (courseNumber: string) => {
+        onRestoreCourse(courseNumber);
+        setCourseToRestore(null);
+    };
+

@@ -1,0 +1,6 @@
+    console.log('🎯 CourseRosterView - Props received:', {
+        traineesDataCount: traineesData.length,
+        courseColorsKeys: Object.keys(courseColors).length,
+        activeCourseNumbers: Object.keys(courseColors).length,
+        eventsCount: events.length
+    });

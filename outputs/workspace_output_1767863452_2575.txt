@@ -1,0 +1,28 @@
+[feature/comprehensive-build-algorithm fe2fe82] Add CourseRosterView prop logging - check what data is received
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 15 files changed, 1144 insertions(+), 1 deletion(-)
+ create mode 100644 COURSEROSTER_DEBUGGING.md
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cb3tJQU0.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cb3tJQU0.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-DszTLcee.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-DszTLcee.js.map
+ create mode 100644 outputs/workspace_output_1767863304_3320.txt
+ create mode 100644 outputs/workspace_output_1767863317_9543.txt
+ create mode 100644 outputs/workspace_output_1767863335_6032.txt
+ create mode 100644 outputs/workspace_output_1767863352_2235.txt
+ create mode 100644 outputs/workspace_output_1767863397_601.txt
+ create mode 100644 outputs/workspace_output_1767863428_5454.txt
+ create mode 100644 outputs/workspace_output_1767863452_2575.txt
+To https://github.com/Dagde/DFP---NEO.git
+   0255717..fe2fe82  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

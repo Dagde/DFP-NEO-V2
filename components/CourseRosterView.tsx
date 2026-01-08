@@ -89,6 +89,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         activeCourseNumbers: Object.keys(courseColors).length,
         eventsCount: events.length
     });
+    // Log the actual values for debugging
+    console.log("\ud83d\udccb Full courseColors object:", courseColors);
+    console.log("\ud83d\udccb courseColors keys:", Object.keys(courseColors));
+    console.log("\ud83d\udccb traineesData sample:", traineesData.slice(0, 3));
 
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);

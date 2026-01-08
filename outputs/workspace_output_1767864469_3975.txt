@@ -1,0 +1,19 @@
+0000000                   c   o   n   s   o   l   e   .   l   o   g   (
+0000020   ' 360 237 216 257       C   o   u   r   s   e   R   o   s   t
+0000040   e   r   V   i   e   w       -       P   r   o   p   s       r
+0000060   e   c   e   i   v   e   d   :   '   ,       {  \n            
+0000100                       t   r   a   i   n   e   e   s   D   a   t
+0000120   a   C   o   u   n   t   :       t   r   a   i   n   e   e   s
+0000140   D   a   t   a   .   l   e   n   g   t   h   ,  \n            
+0000160                       c   o   u   r   s   e   C   o   l   o   r
+0000200   s   K   e   y   s   :       O   b   j   e   c   t   .   k   e
+0000220   y   s   (   c   o   u   r   s   e   C   o   l   o   r   s   )
+0000240   .   l   e   n   g   t   h   ,  \n                            
+0000260       a   c   t   i   v   e   C   o   u   r   s   e   N   u   m
+0000300   b   e   r   s   :       O   b   j   e   c   t   .   k   e   y
+0000320   s   (   c   o   u   r   s   e   C   o   l   o   r   s   )   .
+0000340   l   e   n   g   t   h   ,  \n                                
+0000360   e   v   e   n   t   s   C   o   u   n   t   :       e   v   e
+0000400   n   t   s   .   l   e   n   g   t   h  \n                   }
+0000420   )   ;  \n
+0000423
