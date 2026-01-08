@@ -1,0 +1,4 @@
+  const coursePriorities = loadFromStorage<string[]>(
+    STORAGE_KEYS.COURSE_PRIORITIES, 
+    []
+  );

@@ -1,0 +1,31 @@
+  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+  const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
+    STORAGE_KEYS.PT051_ASSESSMENTS, 
+    new Map()
+  );
+  const courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+  const courseColors = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.COURSE_COLORS, 
+    {}
+  );
+  const archivedCourses = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.ARCHIVED_COURSES, 
+    {}
+  );
+  const coursePriorities = loadFromStorage<string[]>(
+    STORAGE_KEYS.COURSE_PRIORITIES, 
+    []
+  );
+  const coursePercentages = loadFromStorage<Map<string, number>>(
+    STORAGE_KEYS.COURSE_PERCENTAGES, 
+    new Map()
+  );
+  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+    STORAGE_KEYS.TRAINEE_LMPS, 
+    new Map()
+  );
+
+  return {
+    instructors,
+    trainees,
+    events,

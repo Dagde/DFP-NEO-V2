@@ -1,0 +1,11 @@
+        possibleEventCounts.set(course, 0);
+    });
+    
+    // Count trainees with next events per course
+    const activeTrainees = traineesData.filter(t => !t.isPaused);
+    
+    activeTrainees.forEach(trainee => {
+        if (!coursePriorities.includes(trainee.course)) return;
+        
+        const { next, plusOne } = computeNextEventsForTrainee(
+            trainee,

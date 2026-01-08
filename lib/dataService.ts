@@ -41,6 +41,12 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
         return new Map(parsed) as T;
       }
       
+      // Handle Array deserialization - ensure we return an array if defaultValue is an array
+      if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
+        console.warn(`Storage key "${key}" expected array but got ${typeof parsed}, returning empty array`);
+        return defaultValue;
+      }
+      
       return parsed;
     }
   } catch (error) {
@@ -66,9 +72,10 @@ export async function initializeData() {
         fetchSchedule(),
       ]);
 
-      instructors = instructorsResult;
-      trainees = traineesResult;
-      events = scheduleResult;
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];
 
       console.log('✅ Data loaded from API:', {
         instructors: instructors.length,
@@ -87,6 +94,11 @@ export async function initializeData() {
       instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
       trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
       events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructors) ? instructors : [];
+      trainees = Array.isArray(trainees) ? trainees : [];
+      events = Array.isArray(events) ? events : [];
 
       // If localStorage is empty, use empty arrays
       if (instructors.length === 0) {
@@ -136,6 +148,10 @@ export async function initializeData() {
     STORAGE_KEYS.TRAINEE_LMPS, 
     new Map()
   );
+
+  // Ensure arrays are actually arrays
+  courses = Array.isArray(courses) ? courses : [];
+  coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
 
   return {
     instructors,
