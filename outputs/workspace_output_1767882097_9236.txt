@@ -1,0 +1,50 @@
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🚀 [NEO-Build] Starting DFP build process for 2026-01-10
+ 🚀 [NEO-Build] Config: Object
+ 🔵 Active DFP has 0 events for 2026-01-10
+ 🔵 Initializing event counts from Active DFP...
+ DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====
+ DEBUG Total Highest Priority Events to check: 0
+ DEBUG Build Date: 2026-01-10
+ DEBUG Summary: 0 events INCLUDED, 0 events SKIPPED
+ DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====
+ DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====
+ DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====
+ 📊 DEBUG: Total trainees passed to build: 0
+ 📊 DEBUG: Sample trainees: Array(0)
+index-DD3eu-El.js:sourcemap:756 📊 DEBUG: Active trainees (not paused, available): 0
+index-DD3eu-El.js:sourcemap:756 Duty Supervisor Allocation - Covering entire day window: 8 to 17
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 8 to 8.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 8.5 to 9 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 9 to 9.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 9.5 to 10 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 10 to 10.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 10.5 to 11 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 11 to 11.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 11.5 to 12 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 12 to 12.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 12.5 to 13 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 13 to 13.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 13.5 to 14 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 14 to 14.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 14.5 to 15 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 15 to 15.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 15.5 to 16 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 16 to 16.5 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 WARNING: No Duty Supervisor available for 16.5 to 17 - GAP in coverage!
+index-DD3eu-El.js:sourcemap:756 Trainees needing STBY flights: 0
+index-DD3eu-El.js:sourcemap:756 PASS 1: Scheduling STBY with instructors available...
+index-DD3eu-El.js:sourcemap:756 Flying window: 8.00 to 17.00
+index-DD3eu-El.js:sourcemap:756 PASS 1 complete: 0 STBY flights with instructors
+index-DD3eu-El.js:sourcemap:756 PASS 2: Going back to beginning to schedule remaining STBY with TBA...
+index-DD3eu-El.js:sourcemap:756 Remaining trainees needing STBY: 0

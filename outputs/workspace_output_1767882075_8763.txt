@@ -1,0 +1,11 @@
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🌐 API Request: /api/scores Object
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🌐 API Request: /api/scores Object
+ ✅ API Response: /api/schedule Object
+index-DD3eu-El.js:sourcemap:756 ✅ API Response: /api/personnel?role=INSTRUCTOR {status: 200, dataKeys: Array(1), dataType: 'object'}
+index-DD3eu-El.js:sourcemap:756 ✅ API Response: /api/schedule {status: 200, dataKeys: Array(1), dataType: 'object'}

@@ -1,22 +1,26 @@
-# NEO Build Investigation - 0 Events Generated
+# NEO Build Investigation - initializeData Promise Not Resolving
 
 ## Problem
-- NEO Build is generating 0 events total
-- Previously was generating STBY events, now generates nothing
-- "Trainees needing STBY flights: 0"
-- "Trainees needing STBY FTD events: 0"
-- "DFP build completed, generated 0 events"
+- NEO Build generates 0 events because traineesData state is empty
+- API calls succeed and return 117 trainees
+- initializeData() is called but never returns data
+- "Starting to load initial data..." appears but "Data received from initializeData" never appears
+
+## Root Cause
+- initializeData() Promise is not resolving
+- API responses come back successfully
+- Code execution stops somewhere between API success and return statement
 
 ## Investigation Tasks
-- [x] Analyze screenshot and logs
-- [x] Analyze the computeNextEventsForTrainee function logic
-- [x] Added logging to show trainee counts
-- [ ] Verify trainees are being passed to build algorithm
-- [ ] Check if trainees are being filtered out
-- [ ] Verify trainees have LMP and scores data
-- [ ] Check why computeNextEventsForTrainee is not being called
+- [x] Confirmed API returns 117 trainees successfully
+- [x] Confirmed traineesData state is empty (0 trainees)
+- [x] Confirmed initializeData() is called
+- [x] Added logging to track Promise resolution
+- [ ] Find where code execution stops in initializeData()
+- [ ] Verify return statement is reached
 
 ## Next Steps
 - Wait for Railway deployment
-- Test NEO Build and check new logs
-- Verify trainee data is loaded correctly
+- Check for "🎯 About to return data" log
+- Check for "🎯 Return data prepared" log
+- Identify blocking code between API success and return

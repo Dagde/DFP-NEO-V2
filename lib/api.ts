@@ -136,19 +136,27 @@ async function fetchAPI<T>(
   });
   
   try {
+    // Add 30 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
       },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
+    console.log(`📥 Parsing response from ${url}...`);
     const data = await response.json();
     console.log(`✅ API Response: ${url}`, {
       status: response.status,
@@ -157,6 +165,13 @@ async function fetchAPI<T>(
     });
     return { success: true, data };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`⏱️ API Timeout for ${url} (30 seconds)`);
+      return {
+        success: false,
+        error: 'Request timeout after 30 seconds',
+      };
+    }
     console.error(`❌ API fetch error for ${endpoint}:`, error);
     return {
       success: false,
