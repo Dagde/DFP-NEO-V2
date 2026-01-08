@@ -1,0 +1,16 @@
+    new Map()
+  );
+  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+    STORAGE_KEYS.TRAINEE_LMPS, 
+    new Map()
+  );
+
+  // Ensure arrays are actually arrays
+  courses = Array.isArray(courses) ? courses : [];
+  coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
+
+  return {
+    instructors,
+    trainees,
+    events,
+    scores,

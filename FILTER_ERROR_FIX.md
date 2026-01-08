@@ -67,6 +67,21 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
 3. Committed and pushed to GitHub (commit: `1e0186e`)
 4. Railway deployment automatically triggered
 
+## Additional Fix
+After further investigation, I added additional safety checks to ensure arrays are always arrays. This prevents the error if localStorage contains corrupted or malformed data.
+
+### Changes made:
+1. Added Map deserialization check in `loadFromStorage`
+2. Added array type validation in `loadFromStorage` 
+3. Added explicit `Array.isArray()` checks in `initializeData()` for:
+   - Instructors
+   - Trainees
+   - Events
+   - Courses
+   - Course priorities
+
+This ensures that even if localStorage has bad data, the app will fall back to empty arrays rather than crashing.
+
 ## Expected Result
 After Railway deployment completes (2-5 minutes), the app should:
 - Load without errors

@@ -127,7 +127,7 @@ export async function initializeData() {
     STORAGE_KEYS.PT051_ASSESSMENTS, 
     new Map()
   );
-  const courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+  let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
   const courseColors = loadFromStorage<{ [key: string]: string }>(
     STORAGE_KEYS.COURSE_COLORS, 
     {}
@@ -136,7 +136,7 @@ export async function initializeData() {
     STORAGE_KEYS.ARCHIVED_COURSES, 
     {}
   );
-  const coursePriorities = loadFromStorage<string[]>(
+  let coursePriorities = loadFromStorage<string[]>(
     STORAGE_KEYS.COURSE_PRIORITIES, 
     []
   );
