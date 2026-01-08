@@ -1,26 +1,24 @@
-# NEO Build Investigation - initializeData Promise Not Resolving
+# NEO Build Investigation - Browser Hanging on Large JSON Parsing
 
 ## Problem
 - NEO Build generates 0 events because traineesData state is empty
-- API calls succeed and return 117 trainees
-- initializeData() is called but never returns data
-- "Starting to load initial data..." appears but "Data received from initializeData" never appears
+- API responses are received but JSON parsing hangs the browser
+- Trainees endpoint (85KB) and Scores endpoint (371KB) never complete parsing
 
-## Root Cause
-- initializeData() Promise is not resolving
-- API responses come back successfully
-- Code execution stops somewhere between API success and return statement
+## Root Cause IDENTIFIED
+- Promise.all() fetches all 4 endpoints simultaneously
+- Browser receives responses but hangs during JSON.parse() for large responses
+- Trainees: 117 records = 85KB JSON
+- Scores: 1,612 records with nested details = 371KB JSON
+- Browser cannot handle parsing both large responses simultaneously
 
-## Investigation Tasks
-- [x] Confirmed API returns 117 trainees successfully
-- [x] Confirmed traineesData state is empty (0 trainees)
-- [x] Confirmed initializeData() is called
-- [x] Added logging to track Promise resolution
-- [ ] Find where code execution stops in initializeData()
-- [ ] Verify return statement is reached
+## Solution Implemented
+- Changed from Promise.all() to sequential loading
+- Load instructors → trainees → schedule → scores (one at a time)
+- Added progress logging for each step
 
 ## Next Steps
 - Wait for Railway deployment
-- Check for "🎯 About to return data" log
-- Check for "🎯 Return data prepared" log
-- Identify blocking code between API success and return
+- Test if sequential loading resolves the issue
+- Look for "✅ Instructors loaded", "✅ Trainees loaded", "✅ Scores loaded" messages
+- If still fails, may need to reduce response size or add pagination

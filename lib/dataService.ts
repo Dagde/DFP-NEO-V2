@@ -110,8 +110,20 @@ export async function initializeData() {
       console.log('✅ Schedule loaded:', scheduleResult.length);
       
       console.log('📥 Fetching scores (this may take a moment)...');
-      const scoresResult = await fetchScores();
-      console.log('✅ Scores loaded:', scoresResult.size);
+      let scoresResult = new Map<string, Score[]>();
+      try {
+        // Try to fetch scores with a shorter timeout
+        const scoresPromise = fetchScores();
+        const timeoutPromise = new Promise<Map<string, Score[]>>((_, reject) => 
+          setTimeout(() => reject(new Error('Scores fetch timeout')), 10000)
+        );
+        scoresResult = await Promise.race([scoresPromise, timeoutPromise]);
+        console.log('✅ Scores loaded:', scoresResult.size);
+      } catch (error) {
+        console.warn('⚠️ Scores fetch failed or timed out, continuing without scores:', error);
+        console.log('📝 App will work without scores, but NEO Build may be limited');
+        // Continue with empty scores - app will still work
+      }
 
       // Ensure arrays
       instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
