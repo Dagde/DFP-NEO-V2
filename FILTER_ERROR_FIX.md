@@ -79,6 +79,7 @@ After further investigation, I added additional safety checks to ensure arrays a
    - Events
    - Courses
    - Course priorities
+4. Fixed "Assignment to constant variable" error by changing `courses` and `coursePriorities` from `const` to `let`
 
 This ensures that even if localStorage has bad data, the app will fall back to empty arrays rather than crashing.
 

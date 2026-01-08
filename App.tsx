@@ -4448,36 +4448,23 @@ const App: React.FC = () => {
         setIsLocalityChangeVisible(true);
         setTimeout(() => setIsLocalityChangeVisible(false), 2000);
 
-        // Filter personnel by unit based on school
-        const eslUnits = ['1FTS', 'CFS'];
-        const peaUnits = ['2FTS'];
-        const targetUnits = newSchool === 'ESL' ? eslUnits : peaUnits;
-
-        // Filter instructors by unit
-        const filteredInstructors = instructorsData.filter(i => targetUnits.includes(i.unit));
-        setInstructorsData(filteredInstructors);
-
-        // Filter trainees by unit
-        const filteredTrainees = traineesData.filter(t => targetUnits.includes(t.unit));
-        setTraineesData(filteredTrainees);
-
-        // Note: courses, scores, assessments, and LMPs are school-specific and should remain
-        // Events should be filtered by personnel unit
-        const filteredEvents = events.filter(e => {
-            const instructor = filteredInstructors.find(i => i.id === e.instructorId);
-            const trainee = filteredTrainees.find(t => t.id === e.traineeId);
-            return instructor || trainee;
-        });
-        setEvents(filteredEvents);
+        // Note: We DON'T filter the state here anymore
+        // The filtering happens in buildResources and other display functions
+        // This prevents data loss when switching between schools
         
-        // Keep courses, scores, pt051Assessments, courseColors, archivedCourses, 
-        // coursePriorities, coursePercentages, and traineeLMPs as-is since they're not unit-specific
-        // These would need proper school filtering if the database supported it
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
         
         // Reset baseline on school change to avoid stale comparisons
         const todayStr = getLocalDateString();
+        const eslUnits = ['1FTS', 'CFS'];
+        const peaUnits = ['2FTS'];
+        const targetUnits = newSchool === 'ESL' ? eslUnits : peaUnits;
+        const filteredEvents = events.filter(e => {
+            const instructor = instructorsData.find(i => i.id === e.instructorId && targetUnits.includes(i.unit));
+            const trainee = traineesData.find(t => t.id === e.traineeId && targetUnits.includes(t.unit));
+            return instructor || trainee;
+        });
         setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(filteredEvents.filter(e => e.date === todayStr))) });
     };
 

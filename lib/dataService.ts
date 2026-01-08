@@ -81,6 +81,12 @@ export async function initializeData() {
         instructors: instructors.length,
         trainees: trainees.length,
         events: events.length,
+        courses: courses.length,
+        coursePriorities: coursePriorities.length,
+        scores: scores.size,
+        pt051Assessments: pt051Assessments.size,
+        coursePercentages: coursePercentages.size,
+        traineeLMPs: traineeLMPs.size,
       });
 
       // Save to localStorage for faster next load

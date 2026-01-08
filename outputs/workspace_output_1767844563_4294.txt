@@ -1,0 +1,1 @@
+3309:        console.log('buildResources - Current view:', activeView, 'Current date:', date);

@@ -1,0 +1,21 @@
+        const eslUnits = ['1FTS', 'CFS'];
+        const peaUnits = ['2FTS'];
+        const targetUnits = newSchool === 'ESL' ? eslUnits : peaUnits;
+
+        // Filter instructors by unit
+        const filteredInstructors = instructorsData.filter(i => targetUnits.includes(i.unit));
+        setInstructorsData(filteredInstructors);
+
+        // Filter trainees by unit
+        const filteredTrainees = traineesData.filter(t => targetUnits.includes(t.unit));
+        setTraineesData(filteredTrainees);
+
+        // Note: courses, scores, assessments, and LMPs are school-specific and should remain
+        // Events should be filtered by personnel unit
+        const filteredEvents = events.filter(e => {
+            const instructor = filteredInstructors.find(i => i.id === e.instructorId);
+            const trainee = filteredTrainees.find(t => t.id === e.traineeId);
+            return instructor || trainee;
+        });
+        setEvents(filteredEvents);
+        

@@ -1,0 +1,31 @@
+        const filteredEvents = events.filter(e => {
+            const instructor = filteredInstructors.find(i => i.id === e.instructorId);
+            const trainee = filteredTrainees.find(t => t.id === e.traineeId);
+            return instructor || trainee;
+        });
+        setEvents(filteredEvents);
+        
+        // Keep courses, scores, pt051Assessments, courseColors, archivedCourses, 
+        // coursePriorities, coursePercentages, and traineeLMPs as-is since they're not unit-specific
+        // These would need proper school filtering if the database supported it
+        setNextDayBuildEvents([]); // Clear the build when changing schools
+        setPublishedSchedules({}); // Clear published schedules on school change
+        
+        // Reset baseline on school change to avoid stale comparisons
+        const todayStr = getLocalDateString();
+        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(filteredEvents.filter(e => e.date === todayStr))) });
+    };
+
+    // Training Records Handlers
+    const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
+        // Add to courseColors
+        setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
+        
+        // Add to courses array
+        const newCourse: Course = {
+            name: data.number,
+            color: data.color,
+            startDate: data.startDate,
+            gradDate: data.gradDate,
+            raafStart: data.raafStart,
+            navyStart: data.navyStart,

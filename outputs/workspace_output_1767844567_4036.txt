@@ -1,0 +1,31 @@
+        { name: 'Vampire', code: 'VAMP', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
+        { name: 'Voodoo', code: 'VODO', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
+        { name: 'Vulcan', code: 'VULC', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' }
+    ]);
+
+    // Baseline schedule state
+    const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+
+    const isDirtyRef = useRef<() => boolean>(() => false);
+    const onSaveRef = useRef<() => void>(() => {});
+    const onDiscardRef = useRef<() => void>(() => {});
+    
+    const buildResources = useMemo(() => {
+        // PC-21 count is fixed at 24
+        const pc21Count = 24;
+        
+        // Check for deployment events that overlap with the current date
+        let deploymentCount = 0;
+        
+        console.log('buildResources - Current view:', activeView, 'Current date:', date);
+        
+        if (activeView === 'Program Schedule' || activeView === 'DailyFlyingProgram' || activeView === 'InstructorSchedule' || activeView === 'TraineeSchedule') {
+            // Check all events across all dates for deployments that overlap with current date
+            const todayStart = new Date(`${date}T00:00:00Z`).getTime();
+            const todayEnd = new Date(todayStart);
+            todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+            const todayEndTime = todayEnd.getTime();
+            
+            const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
+            const overlappingDeployments = allEvents.filter(event => {
+                if (event.type !== 'deployment') return false;

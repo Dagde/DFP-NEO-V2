@@ -1,0 +1,71 @@
+        // Calculate dynamic STBY line count based on actual STBY events
+        let stbyLineCount = 4; // Minimum 4 STBY lines
+        
+        // For next day build views, check how many STBY lines are actually used
+        if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'BuildAnalysis'].includes(activeView)) {
+            const stbyEvents = nextDayBuildEvents.filter(e => 
+                e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')
+            );
+            
+            if (stbyEvents.length > 0) {
+                // Find the highest STBY line number used
+                const maxStbyLine = Math.max(...stbyEvents.map(e => {
+                    const match = e.resourceId.match(/STBY (\d+)/);
+                    return match ? parseInt(match[1]) : 0;
+                }));
+                
+                stbyLineCount = Math.max(4, maxStbyLine); // At least 4, or more if needed
+            }
+        } else {
+            // For published schedules, check the events for that date
+            const eventsForDate = publishedSchedules[date] || [];
+            const stbyEvents = eventsForDate.filter(e => 
+                e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')
+            );
+            
+            if (stbyEvents.length > 0) {
+                const maxStbyLine = Math.max(...stbyEvents.map(e => {
+                    const match = e.resourceId.match(/STBY (\d+)/);
+                    return match ? parseInt(match[1]) : 0;
+                }));
+                
+                stbyLineCount = Math.max(4, maxStbyLine);
+            }
+        }
+        
+        const allResources = [
+            ...pc21Resources,
+            'Duty Sup',
+            'TWR DI',
+            ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
+            ...Array.from({ length: 5 }, (_, i) => `FTD ${i + 1}`), // Always 5 FTD lines for display
+            ...Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`), // Always 4 CPT lines for display
+            ...Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`),
+        ];
+        
+        console.log('Built all resources:', allResources, 'STBY lines:', stbyLineCount);
+        return allResources;
+    }, [availableFtdCount, availableCptCount, availableAircraftCount, date, activeView, publishedSchedules, nextDayBuildEvents]);
+    
+    // Filter resources to only show those with events (for schedule views)
+    const getFilteredResources = useCallback((events: ScheduleEvent[], allResources: string[]) => {
+        // Safety check: if no events, return empty array
+        if (!events || events.length === 0) {
+            console.log('No events, returning empty resources');
+            return [];
+        }
+        
+        // Map each event to its resource category label
+        const resourceLabels: string[] = [];
+        
+        for (const event of events) {
+            // Safety check for event and resourceId
+            if (!event || !event.resourceId) {
+                console.warn('Skipping invalid event:', event);
+                continue;
+            }
+            
+            const resourceId = event.resourceId;
+            
+            // Determine the category for this event
+            let category = 'Unknown';

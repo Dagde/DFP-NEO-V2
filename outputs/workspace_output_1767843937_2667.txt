@@ -1,0 +1,25 @@
+[feature/comprehensive-build-algorithm 5546608] Fix 'Assignment to constant variable' error - change courses and coursePriorities to let
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 13 files changed, 186 insertions(+), 10 deletions(-)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index-COun_Fmc.js => index-CoadU3OJ.js} (97%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index-COun_Fmc.js.map => index-CoadU3OJ.js.map} (57%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index.es-BXpHtdYc.js => index.es-FQm-MfNM.js} (99%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index.es-BXpHtdYc.js.map => index.es-FQm-MfNM.js.map} (99%)
+ create mode 100644 outputs/workspace_output_1767843886_5719.txt
+ create mode 100644 outputs/workspace_output_1767843892_1778.txt
+ create mode 100644 outputs/workspace_output_1767843911_1718.txt
+ create mode 100644 outputs/workspace_output_1767843924_1719.txt
+ create mode 100644 outputs/workspace_output_1767843937_2667.txt
+To https://github.com/Dagde/DFP---NEO.git
+   fe444f8..5546608  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

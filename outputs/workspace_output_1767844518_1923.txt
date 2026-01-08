@@ -1,0 +1,9 @@
+7182:        const instructorsAnalysis: OracleInstructorAnalysis[] = instructorsData.map(instructor => {
+7496:                           instructors={instructorsData.map(i => i.name)}
+7569:                            instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank }))}
+7647:                      instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+7670:                    instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+7918:                            instructors={instructorsData.map(i => i.name)}
+8711:                instructorsList={instructorsData.map(inst => ({
+8760:                    instructors={instructorsData.map(i => i.name)}
+8959:                    instructors={instructorsData.map(i => i.name)}
