@@ -105,7 +105,8 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { initializeData, saveSchedule as saveScheduleService, saveCoursesData, saveScoresData, savePT051AssessmentsData, saveTraineeLMPsData } from './lib/dataService';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
@@ -3028,7 +3029,7 @@ const App: React.FC = () => {
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => getLocalDateString());
-    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+    const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
     const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
@@ -3057,9 +3058,10 @@ const App: React.FC = () => {
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
-    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+    // Initialize with empty arrays - data will be loaded from API via useEffect
+    const [instructorsData, setInstructorsData] = useState<Instructor[]>([]);
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+    const [traineesData, setTraineesData] = useState<Trainee[]>([]);
        const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
     
     // Current User State (for permission checking)
@@ -3075,6 +3077,29 @@ const App: React.FC = () => {
             setCurrentUser(userString);
         }
     }, [currentUser]);
+
+       // Load data from API on mount
+       useEffect(() => {
+           const loadInitialData = async () => {
+               try {
+                   const data = await initializeData();
+                   setInstructorsData(data.instructors);
+                   setTraineesData(data.trainees);
+                   setEvents(data.events);
+                   setScores(data.scores);
+                   setPt051Assessments(data.pt051Assessments);
+                   setCourses(data.courses);
+                   setCourseColors(data.courseColors);
+                   setArchivedCourses(data.archivedCourses);
+                   setCoursePriorities(data.coursePriorities);
+                   setCoursePercentages(data.coursePercentages);
+                   setTraineeLMPs(data.traineeLMPs);
+               } catch (error) {
+                   console.error('Failed to load initial data:', error);
+               }
+           };
+           loadInitialData();
+       }, []);
     
     // User change handler
     const handleUserChange = (userName: string) => {
@@ -3096,15 +3121,15 @@ const App: React.FC = () => {
         return 'Trainee';
     };
     const currentUserPermission = getHighestPermission(currentUser?.permissions);
-    const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
-    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
-    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
-    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
-    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
-    const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
-    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(ESL_DATA.coursePercentages);
+    const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
+    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>({});
+    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
+    const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
+    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
-    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(ESL_DATA.traineeLMPs);
+    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
     
     // Event Limits State (Lifted from SettingsView)
     const [eventLimits, setEventLimits] = useState<EventLimits>({
@@ -4423,33 +4448,38 @@ const App: React.FC = () => {
         setIsLocalityChangeVisible(true);
         setTimeout(() => setIsLocalityChangeVisible(false), 2000);
 
-        const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
-        setInstructorsData(data.instructors);
-        setTraineesData(data.trainees);
-        setEvents(data.events);
-        setCourses(data.courses);
-        setScores(data.scores);
-        setPt051Assessments(data.pt051Assessments);
-        setCourseColors(data.courseColors);
-        setArchivedCourses(data.archivedCourses);
-        setCoursePriorities(data.coursePriorities);
-        setCoursePercentages(data.coursePercentages);
-        setTraineeLMPs(data.traineeLMPs); // Load the correct LMPs for the new school
+        // Filter personnel by unit based on school
+        const eslUnits = ['1FTS', 'CFS'];
+        const peaUnits = ['2FTS'];
+        const targetUnits = newSchool === 'ESL' ? eslUnits : peaUnits;
+
+        // Filter instructors by unit
+        const filteredInstructors = instructorsData.filter(i => targetUnits.includes(i.unit));
+        setInstructorsData(filteredInstructors);
+
+        // Filter trainees by unit
+        const filteredTrainees = traineesData.filter(t => targetUnits.includes(t.unit));
+        setTraineesData(filteredTrainees);
+
+        // Note: courses, scores, assessments, and LMPs are school-specific and should remain
+        // Events should be filtered by personnel unit
+        const filteredEvents = events.filter(e => {
+            const instructor = filteredInstructors.find(i => i.id === e.instructorId);
+            const trainee = filteredTrainees.find(t => t.id === e.traineeId);
+            return instructor || trainee;
+        });
+        setEvents(filteredEvents);
+        
+        // Keep courses, scores, pt051Assessments, courseColors, archivedCourses, 
+        // coursePriorities, coursePercentages, and traineeLMPs as-is since they're not unit-specific
+        // These would need proper school filtering if the database supported it
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
         
         // Reset baseline on school change to avoid stale comparisons
         const todayStr = getLocalDateString();
-        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(data.events.filter(e => e.date === todayStr))) });
+        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(filteredEvents.filter(e => e.date === todayStr))) });
     };
-    
-    useEffect(() => {
-        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;
-        setEvents(initialData.events);
-        setCourses(initialData.courses);
-        const todayStr = getLocalDateString();
-        setPublishedSchedules({ [todayStr]: initialData.events.filter(e => e.date === todayStr) });
-    }, [school]);
 
     // Training Records Handlers
     const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
@@ -4521,11 +4551,14 @@ const App: React.FC = () => {
         // Add back to active courses
         setCourseColors(prev => ({ ...prev, [courseName]: color }));
 
-        // Add back to courses array (recreate from mock data)
-        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
-        if (courseFromMockData) {
-            setCourses(prev => [...prev, courseFromMockData]);
-        }
+        // Note: Courses are not in the database yet, so we can't restore the full course object
+        // This is a known limitation - course data needs to be added to the database
+        // For now, we'll just restore the course with minimal data
+        const restoredCourse: Course = {
+            name: courseName,
+            color: color,
+        };
+        setCourses(prev => [...prev, restoredCourse]);
 
         setSuccessMessage(`Course ${courseName} unarchived successfully!`);
     };

@@ -34,29 +34,29 @@ Create API endpoints so the app can fetch data from the database instead of usin
 ### Tasks
 
 #### 3.1 Personnel API
-- [ ] Create `/api/personnel` - Get all personnel
-- [ ] Create `/api/personnel/:id` - Get specific personnel
-- [ ] Add filtering by role (instructor/trainee)
-- [ ] Add filtering by availability
-- [ ] Add search functionality
+- [x] Create `/api/personnel` - Get all personnel
+- [x] Create `/api/personnel/:id` - Get specific personnel
+- [x] Add filtering by role (instructor/trainee)
+- [x] Add filtering by availability
+- [x] Add search functionality
 
 #### 3.2 Aircraft API
-- [ ] Create `/api/aircraft` - Get all aircraft
-- [ ] Create `/api/aircraft/:id` - Get specific aircraft
-- [ ] Add filtering by type (ESL/PEA)
-- [ ] Add filtering by status (available/unavailable)
+- [x] Create `/api/aircraft` - Get all aircraft
+- [x] Create `/api/aircraft/:id` - Get specific aircraft
+- [x] Add filtering by type (ESL/PEA)
+- [x] Add filtering by status (available/unavailable)
 
 #### 3.3 Schedule API
-- [ ] Create `/api/schedule` - Get schedules
-- [ ] Create `/api/schedule` (POST) - Save schedules
-- [ ] Add filtering by date range
-- [ ] Add filtering by user ID
+- [x] Create `/api/schedule` - Get schedules
+- [x] Create `/api/schedule` (POST) - Save schedules
+- [x] Add filtering by date range
+- [x] Add filtering by user ID
 
 #### 3.4 Unavailability API
-- [ ] Create `/api/unavailability` - Get unavailability records
-- [ ] Create `/api/unavailability` (POST) - Create unavailability
-- [ ] Create `/api/unavailability/:id` (PATCH) - Update unavailability
-- [ ] Create `/api/unavailability/:id` (DELETE) - Delete unavailability
+- [x] Create `/api/unavailability` - Get unavailability records
+- [x] Create `/api/unavailability` (POST) - Update personnel availability
+- [x] Create `/api/unavailability/:id` (PATCH) - Update availability
+- [ ] Create `/api/unavailability/:id` (DELETE) - Delete availability
 
 #### 3.5 LMP Upload API
 - [ ] Create `/api/lmp/upload` - Upload LMP file
@@ -65,15 +65,15 @@ Create API endpoints so the app can fetch data from the database instead of usin
 - [ ] Return structured data
 
 #### 3.6 Testing & Verification
-- [ ] Test all API endpoints locally
-- [ ] Verify data retrieval works correctly
-- [ ] Verify data saving works correctly
-- [ ] Check error handling
+- [x] Test all API endpoints locally
+- [x] Verify data retrieval works correctly
+- [x] Verify data saving works correctly
+- [x] Check error handling
 
 #### 3.7 Deployment
-- [ ] Commit API routes to git
-- [ ] Push to GitHub
-- [ ] Verify Railway deployment succeeds
+- [x] Commit API routes to git
+- [x] Push to GitHub
+- [x] Verify Railway deployment succeeds
 - [ ] Test APIs in production
 
 ---
@@ -142,11 +142,11 @@ Update the frontend to use the database instead of mock data.
 
 ## 📊 Progress Summary
 
-**Overall Progress:** 40% Complete
+**Overall Progress:** 65% Complete
 
 - ✅ Phase 1: Database Connection - 100%
 - ✅ Phase 2: Data Migration - 100%
 - ✅ Phase 2.5: Auth & Admin - 100%
-- 🔄 Phase 3: API Routes - 0% (IN PROGRESS)
+- ✅ Phase 3: API Routes - 90% (ALMOST COMPLETE)
 - ⏳ Phase 4: Frontend Integration - 0% (PENDING)
 - ⏳ Future Enhancements - 0% (PENDING)
