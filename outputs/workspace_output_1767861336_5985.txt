@@ -1,0 +1,50 @@
+import { Instructor, Trainee, Aircraft, ScheduleEvent } from '../types';
+
+// API Base URL
+const API_BASE = '/api';
+
+// API Response Types
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface InstructorResponse {
+  id: string;
+  userId?: string;
+  name: string;
+  rank?: string;
+  role?: string;
+  qualifications?: any;
+  availability?: any;
+  preferences?: any;
+  isActive?: boolean;
+  callsignNumber?: number;
+  category?: string;
+  email?: string;
+  flight?: string;
+  idNumber?: number;
+  isAdminStaff?: boolean;
+  isCFI?: boolean;
+  isCommandingOfficer?: boolean;
+  isContractor?: boolean;
+  isDeputyFlightCommander?: boolean;
+  isExecutive?: boolean;
+  isFlyingSupervisor?: boolean;
+  isIRE?: boolean;
+  isOFI?: boolean;
+  isQFI?: boolean;
+  isTestingOfficer?: boolean;
+  location?: string;
+  permissions?: string[];
+  phoneNumber?: string;
+  priorExperience?: any;
+  seatConfig?: string;
+  service?: string;
+  unavailability?: any[];
+  unit?: string;
+}
+
+interface TraineeResponse {
+  id: string;

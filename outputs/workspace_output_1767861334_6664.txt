@@ -1,0 +1,11 @@
+102-const convertPersonnelToTrainee = (p: TraineeResponse): Trainee => ({
+103-  id: p.id,
+104-  idNumber: p.idNumber,
+105-  fullName: p.fullName,
+106-  name: p.name,
+107:  rank: (p.rank as TraineeRank) || 'OCDT',
+108-  service: p.service,
+109-  course: p.course || '',
+110-  lmpType: (p.lmpType as any) || 'BPC+IPC',
+111-  traineeCallsign: p.traineeCallsign || '',
+112-  seatConfig: (p.seatConfig as SeatConfig) || 'Normal',

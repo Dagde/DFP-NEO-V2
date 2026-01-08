@@ -1,0 +1,43 @@
+102:const convertPersonnelToTrainee = (p: TraineeResponse): Trainee => ({
+103-  id: p.id,
+104-  idNumber: p.idNumber,
+105-  fullName: p.fullName,
+106-  name: p.name,
+107-  rank: (p.rank as TraineeRank) || 'OCDT',
+108-  service: p.service,
+109-  course: p.course || '',
+110-  lmpType: (p.lmpType as any) || 'BPC+IPC',
+111-  traineeCallsign: p.traineeCallsign || '',
+112-  seatConfig: (p.seatConfig as SeatConfig) || 'Normal',
+113-  isPaused: p.isPaused || false,
+114-  unit: p.unit || '',
+115-  flight: p.flight || '',
+116-  isAvailable: true, // Default to available if no unavailability
+117-});
+118-
+119-const convertAircraft = (a: AircraftResponse): Aircraft => ({
+120-  id: a.id,
+121-  aircraftNumber: a.aircraftNumber,
+122-  type: a.type,
+--
+168:    return result.data.personnel.map(convertPersonnelToTrainee);
+169-  }
+170-  console.error('Failed to fetch trainees:', result.error);
+171-  return [];
+172-}
+173-
+174-export async function fetchAllPersonnel(): Promise<any[]> {
+175-  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
+176-  if (result.success && result.data?.personnel) {
+177-    return result.data.personnel;
+178-  }
+179-  console.error('Failed to fetch personnel:', result.error);
+180-  return [];
+181-}
+182-
+183-// Aircraft API
+184-export async function fetchAircraft(): Promise<Aircraft[]> {
+185-  const result = await fetchAPI<AircraftResponse[]>('/aircraft');
+186-  if (result.success && result.data) {
+187-    return result.data.map(convertAircraft);
+188-  }

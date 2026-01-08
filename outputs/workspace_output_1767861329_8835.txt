@@ -1,0 +1,31 @@
+165:export async function fetchTrainees(): Promise<Trainee[]> {
+166-  const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
+167-  if (result.success && result.data?.personnel) {
+168-    return result.data.personnel.map(convertPersonnelToTrainee);
+169-  }
+170-  console.error('Failed to fetch trainees:', result.error);
+171-  return [];
+172-}
+173-
+174-export async function fetchAllPersonnel(): Promise<any[]> {
+175-  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
+176-  if (result.success && result.data?.personnel) {
+177-    return result.data.personnel;
+178-  }
+179-  console.error('Failed to fetch personnel:', result.error);
+180-  return [];
+181-}
+182-
+183-// Aircraft API
+184-export async function fetchAircraft(): Promise<Aircraft[]> {
+185-  const result = await fetchAPI<AircraftResponse[]>('/aircraft');
+186-  if (result.success && result.data) {
+187-    return result.data.map(convertAircraft);
+188-  }
+189-  console.error('Failed to fetch aircraft:', result.error);
+190-  return [];
+191-}
+192-
+193-// Schedule API
+194-export async function fetchSchedule(date?: string): Promise<ScheduleEvent[]> {
+195-  const endpoint = date ? `/schedule?date=${date}` : '/schedule';

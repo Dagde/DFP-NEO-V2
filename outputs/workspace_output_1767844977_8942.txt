@@ -1,0 +1,31 @@
+[feature/comprehensive-build-algorithm 9bcaf06] Fix fetchSchedule to handle API response structure { schedules: [] }
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 19 files changed, 301 insertions(+), 11 deletions(-)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index-DYCasrcB.js => index-Brn2Fl6Y.js} (96%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index-DYCasrcB.js.map => index-Brn2Fl6Y.js.map} (58%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index.es-CG1izfB1.js => index.es-OGUPuR_L.js} (99%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index.es-CG1izfB1.js.map => index.es-OGUPuR_L.js.map} (99%)
+ create mode 100644 outputs/workspace_output_1767844891_8244.txt
+ create mode 100644 outputs/workspace_output_1767844894_7863.txt
+ create mode 100644 outputs/workspace_output_1767844910_2351.txt
+ create mode 100644 outputs/workspace_output_1767844926_5441.txt
+ create mode 100644 outputs/workspace_output_1767844932_8186.txt
+ create mode 100644 outputs/workspace_output_1767844937_9993.txt
+ create mode 100644 outputs/workspace_output_1767844940_8446.txt
+ create mode 100644 outputs/workspace_output_1767844942_2313.txt
+ create mode 100644 outputs/workspace_output_1767844953_6679.txt
+ create mode 100644 outputs/workspace_output_1767844968_212.txt
+ create mode 100644 outputs/workspace_output_1767844977_8942.txt
+To https://github.com/Dagde/DFP---NEO.git
+   ff379d5..9bcaf06  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

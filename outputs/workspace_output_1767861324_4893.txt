@@ -1,0 +1,20 @@
+    
+    try {
+      // Try to fetch from API
+      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+        fetchInstructors(),
+        fetchTrainees(),
+        fetchSchedule(),
+      ]);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];
+
+      console.log('✅ Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+        courses: courses.length,
+        coursePriorities: coursePriorities.length,

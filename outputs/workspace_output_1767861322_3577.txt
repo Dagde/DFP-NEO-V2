@@ -1,0 +1,50 @@
+        fetchTrainees(),
+        fetchSchedule(),
+      ]);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];
+
+      console.log('✅ Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+        courses: courses.length,
+        coursePriorities: coursePriorities.length,
+        scores: scores.size,
+        pt051Assessments: pt051Assessments.size,
+        coursePercentages: coursePercentages.size,
+        traineeLMPs: traineeLMPs.size,
+      });
+
+      // Save to localStorage for faster next load
+      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    } catch (error) {
+      console.warn('⚠️ API fetch failed, falling back to localStorage or mock data:', error);
+      console.error('Full error details:', error);
+      
+      // Try localStorage first
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructors) ? instructors : [];
+      trainees = Array.isArray(trainees) ? trainees : [];
+      events = Array.isArray(events) ? events : [];
+      
+      console.log('📦 Loaded from localStorage:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
+
+      // If localStorage is empty, use empty arrays
+      if (instructors.length === 0) {
+        console.log('📦 Using empty data as fallback');
+        instructors = [];
+        trainees = [];

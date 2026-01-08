@@ -1,0 +1,1 @@
+49:export type TraineeRank = 'OCDT' | 'MIDN' | 'PLTOFF' | 'FLGOFF' | 'SBLT' | '2LT' | 'FLTLT';

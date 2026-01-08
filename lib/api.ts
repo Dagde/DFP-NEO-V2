@@ -1,4 +1,4 @@
-import { Instructor, Trainee, Aircraft, ScheduleEvent } from '../types';
+import { Instructor, Trainee, Aircraft, ScheduleEvent, TraineeRank, SeatConfig } from '../types';
 
 // API Base URL
 const API_BASE = '/api';
