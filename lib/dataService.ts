@@ -132,6 +132,41 @@ export async function initializeData() {
       const traineesWithoutCourse = trainees.filter(t => !t.course || t.course.trim() === '');
       console.log('⚠️ Trainees without course:', traineesWithoutCourse.length, traineesWithoutCourse.slice(0, 5));
 
+      // Auto-generate courseColors based on trainee courses
+      if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+        const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+        const predefinedColors = [
+          '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+          '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+          '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+          '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+        ];
+        
+        courseColors = {};
+        uniqueCourses.forEach((course, index) => {
+          courseColors[course] = predefinedColors[index % predefinedColors.length];
+        });
+        
+        console.log('🎨 Auto-generated courseColors:', courseColors);
+        try {
+          saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+        } catch (error) {
+          console.warn('Failed to save courseColors to localStorage (continuing anyway):', error);
+        }
+      }
+
+      // Auto-populate traineeLMPs with master syllabus for each trainee
+      if (trainees.length > 0 && traineeLMPs.size === 0) {
+        console.log('📚 Initializing traineeLMPs with master syllabus for', trainees.length, 'trainees');
+        
+        trainees.forEach(trainee => {
+          traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+        });
+        
+        console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+        // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
+      }
+
       // Save to localStorage for faster next load (non-critical if it fails)
       try {
         saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
@@ -141,6 +176,21 @@ export async function initializeData() {
       } catch (error) {
         console.warn('Failed to save some data to localStorage (continuing anyway):', error);
       }
+      
+      // Return data from API
+      return {
+        instructors,
+        trainees,
+        events,
+        scores: scoresResult,
+        pt051Assessments,
+        courses,
+        courseColors,
+        archivedCourses,
+        coursePriorities,
+        coursePercentages,
+        traineeLMPs,
+      };
     } catch (error) {
       console.warn('API fetch failed, falling back to localStorage or mock data:', error);
       console.error('Full error details:', error);
@@ -176,6 +226,41 @@ export async function initializeData() {
         saveToStorage(STORAGE_KEYS.SCHEDULE, events);
         saveToStorage(STORAGE_KEYS.SCORES, []);
       }
+
+      // Auto-generate courseColors based on trainee courses
+      if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+        const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+        const predefinedColors = [
+          '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+          '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+          '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+          '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+        ];
+        
+        courseColors = {};
+        uniqueCourses.forEach((course, index) => {
+          courseColors[course] = predefinedColors[index % predefinedColors.length];
+        });
+        
+        console.log('🎨 Auto-generated courseColors:', courseColors);
+        try {
+          saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+        } catch (error) {
+          console.warn('Failed to save courseColors to localStorage (continuing anyway):', error);
+        }
+      }
+
+      // Auto-populate traineeLMPs with master syllabus for each trainee
+      if (trainees.length > 0 && traineeLMPs.size === 0) {
+        console.log('📚 Initializing traineeLMPs with master syllabus for', trainees.length, 'trainees');
+        
+        trainees.forEach(trainee => {
+          traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+        });
+        
+        console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+        // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
+      }
       
       return {
         instructors,
@@ -198,6 +283,41 @@ export async function initializeData() {
     trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
     events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
     const localScores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+
+    // Auto-generate courseColors based on trainee courses
+    if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+      const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+      const predefinedColors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+        '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+        '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+        '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+      ];
+      
+      courseColors = {};
+      uniqueCourses.forEach((course, index) => {
+        courseColors[course] = predefinedColors[index % predefinedColors.length];
+      });
+      
+      console.log('🎨 Auto-generated courseColors:', courseColors);
+      try {
+        saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+      } catch (error) {
+        console.warn('Failed to save courseColors to localStorage (continuing anyway):', error);
+      }
+    }
+
+    // Auto-populate traineeLMPs with master syllabus for each trainee
+    if (trainees.length > 0 && traineeLMPs.size === 0) {
+      console.log('📚 Initializing traineeLMPs with master syllabus for', trainees.length, 'trainees');
+      
+      trainees.forEach(trainee => {
+        traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+      });
+      
+      console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+      // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
+    }
     
     return {
       instructors,
@@ -237,30 +357,23 @@ export async function initializeData() {
     }
   }
 
-  // Auto-populate traineeLMPs with master syllabus for each trainee
-  if (trainees.length > 0 && traineeLMPs.size === 0) {
-    console.log('📚 Initializing traineeLMPs with master syllabus for', trainees.length, 'trainees');
-    
-    trainees.forEach(trainee => {
-      traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
-    });
-    
-    console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
-    // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
-  }
-
+  // Note: The auto-generation of courseColors and traineeLMPs is now handled
+  // in each return path separately to ensure they're properly initialized
+  
+  // This code should never be reached, but return empty data as safety fallback
+  console.warn('⚠️ initializeData reached end without returning data, returning empty data');
   return {
-    instructors,
-    trainees,
-    events,
-    scores: scoresResult || new Map(),
+    instructors: [],
+    trainees: [],
+    events: [],
+    scores: new Map(),
     pt051Assessments,
-    courses,
-    courseColors,
-    archivedCourses,
-    coursePriorities,
-    coursePercentages,
-    traineeLMPs,
+    courses: [],
+    courseColors: {},
+    archivedCourses: {},
+    coursePriorities: [],
+    coursePercentages: new Map(),
+    traineeLMPs: new Map(),
   };
 }
 

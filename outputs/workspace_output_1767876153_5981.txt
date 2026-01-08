@@ -1,0 +1,36 @@
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+        saveToStorage(STORAGE_KEYS.SCORES, []);
+      }
+      
+      return {
+        instructors,
+        trainees,
+        events,
+        scores: fallbackScores || new Map(),
+        pt051Assessments,
+        courses,
+        courseColors,
+        archivedCourses,
+        coursePriorities,
+        coursePercentages,
+        traineeLMPs,
+      };
+    }
+  } else {
+    // Load from localStorage or use empty arrays
+    console.log('Loading data from localStorage (API disabled)');
+    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+    const localScores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+    
+    return {
+      instructors,
+      trainees,
+      events,
+      scores: localScores,
+      pt051Assessments,
+      courses,
+      courseColors,
+      archivedCourses,

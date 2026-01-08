@@ -1,0 +1,30 @@
+[feature/comprehensive-build-algorithm 347539c] Fix critical bugs - API URL and localStorage errors
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 20 files changed, 580 insertions(+), 53 deletions(-)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index-1ackV9Cb.js => index-Vin3-GcE.js} (95%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index-1ackV9Cb.js.map => index-Vin3-GcE.js.map} (58%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index.es-B6LV_YC0.js => index.es-C15SGY0N.js} (99%)
+ rename dfp-neo-platform/public/flight-school-app/assets/{index.es-B6LV_YC0.js.map => index.es-C15SGY0N.js.map} (99%)
+ create mode 100644 outputs/workspace_output_1767874863_7387.txt
+ create mode 100644 outputs/workspace_output_1767875279_7943.txt
+ create mode 100644 outputs/workspace_output_1767875282_5216.txt
+ create mode 100644 outputs/workspace_output_1767875289_1502.txt
+ create mode 100644 outputs/workspace_output_1767875297_3081.txt
+ create mode 100644 outputs/workspace_output_1767875651_1713.txt
+ create mode 100644 outputs/workspace_output_1767875677_2147.txt
+ create mode 100644 outputs/workspace_output_1767875697_6562.txt
+ create mode 100644 outputs/workspace_output_1767875702_228.txt
+ create mode 100644 outputs/workspace_output_1767875730_1817.txt
+ create mode 100644 outputs/workspace_output_1767875746_4728.txt
+ create mode 100644 outputs/workspace_output_1767875754_3101.txt

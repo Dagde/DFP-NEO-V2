@@ -1,0 +1,16 @@
+      traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+    });
+    
+    console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+    // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
+  }
+
+  return {
+    instructors,
+    trainees,
+    events,
+    scores: scoresResult || new Map(),
+    pt051Assessments,
+    courses,
+    courseColors,
+    archivedCourses,
