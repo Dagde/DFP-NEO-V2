@@ -120,6 +120,9 @@ export async function initializeData() {
         coursePercentages: coursePercentages.size,
         traineeLMPs: traineeLMPs.size,
       });
+      
+      console.log('✅ Instructors sample:', instructors.slice(0, 3));
+      console.log('✅ Trainees sample:', trainees.slice(0, 3));
 
       // Save to localStorage for faster next load
       saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);

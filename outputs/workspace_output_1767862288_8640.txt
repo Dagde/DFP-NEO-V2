@@ -1,0 +1,21 @@
+127:async function fetchAPI<T>(
+128-  endpoint: string,
+129-  options?: RequestInit
+130-): Promise<ApiResponse<T>> {
+131-  try {
+132-    const response = await fetch(`${API_BASE}${endpoint}`, {
+133-      ...options,
+134-      headers: {
+135-        'Content-Type': 'application/json',
+136-        ...options?.headers,
+137-      },
+138-    });
+139-
+140-    if (!response.ok) {
+141-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+142-    }
+143-
+144-    const data = await response.json();
+145-    return { success: true, data };
+146-  } catch (error) {
+147-    console.error(`API fetch error for ${endpoint}:`, error);

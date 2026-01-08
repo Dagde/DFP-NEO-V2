@@ -3081,8 +3081,18 @@ const App: React.FC = () => {
        // Load data from API on mount
        useEffect(() => {
            const loadInitialData = async () => {
+               console.log('🔄 Starting to load initial data...');
                try {
                    const data = await initializeData();
+                   console.log('📦 Data received from initializeData:', {
+                       instructorsCount: data.instructors.length,
+                       traineesCount: data.trainees.length,
+                       eventsCount: data.events.length,
+                       scoresCount: data.scores.size,
+                       coursesCount: data.courses.length,
+                       traineeLMPsCount: data.traineeLMPs.size
+                   });
+                   
                    setInstructorsData(data.instructors);
                    setTraineesData(data.trainees);
                    setEvents(data.events);
@@ -3094,8 +3104,10 @@ const App: React.FC = () => {
                    setCoursePriorities(data.coursePriorities);
                    setCoursePercentages(data.coursePercentages);
                    setTraineeLMPs(data.traineeLMPs);
+                   
+                   console.log('✅ State updated successfully');
                } catch (error) {
-                   console.error('Failed to load initial data:', error);
+                   console.error('❌ Failed to load initial data:', error);
                }
            };
            loadInitialData();

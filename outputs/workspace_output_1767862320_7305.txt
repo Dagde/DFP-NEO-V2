@@ -1,0 +1,2 @@
+3083:           const loadInitialData = async () => {
+3101:           loadInitialData();

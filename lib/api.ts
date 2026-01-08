@@ -128,8 +128,15 @@ async function fetchAPI<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
+  const url = `${API_BASE}${endpoint}`;
+  
+  console.log(`🌐 API Request: ${url}`, {
+    method: options?.method || 'GET',
+    headers: options?.headers
+  });
+  
   try {
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -138,13 +145,19 @@ async function fetchAPI<T>(
     });
 
     if (!response.ok) {
+      console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log(`✅ API Response: ${url}`, {
+      status: response.status,
+      dataKeys: Object.keys(data),
+      dataType: typeof data
+    });
     return { success: true, data };
   } catch (error) {
-    console.error(`API fetch error for ${endpoint}:`, error);
+    console.error(`❌ API fetch error for ${endpoint}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -154,20 +167,52 @@ async function fetchAPI<T>(
 
 // Personnel API
 export async function fetchInstructors(): Promise<Instructor[]> {
+  console.log('🔍 Fetching instructors from /personnel?role=INSTRUCTOR');
   const result = await fetchAPI<{ personnel: InstructorResponse[] }>('/personnel?role=INSTRUCTOR');
+  
+  console.log('📥 Instructors API response:', {
+    success: result.success,
+    hasData: !!result.data,
+    dataKeys: result.data ? Object.keys(result.data) : [],
+    personnelCount: result.data?.personnel?.length || 0,
+    error: result.error
+  });
+  
   if (result.success && result.data?.personnel) {
-    return result.data.personnel.map(convertPersonnelToInstructor);
+    const converted = result.data.personnel.map(convertPersonnelToInstructor);
+    console.log('✅ Converted instructors:', {
+      originalCount: result.data.personnel.length,
+      convertedCount: converted.length,
+      sample: converted.slice(0, 2)
+    });
+    return converted;
   }
-  console.error('Failed to fetch instructors:', result.error);
+  console.error('❌ Failed to fetch instructors:', result.error);
   return [];
 }
 
 export async function fetchTrainees(): Promise<Trainee[]> {
+  console.log('🔍 Fetching trainees from /personnel?role=TRAINEE');
   const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
+  
+  console.log('📥 Trainees API response:', {
+    success: result.success,
+    hasData: !!result.data,
+    dataKeys: result.data ? Object.keys(result.data) : [],
+    personnelCount: result.data?.personnel?.length || 0,
+    error: result.error
+  });
+  
   if (result.success && result.data?.personnel) {
-    return result.data.personnel.map(convertPersonnelToTrainee);
+    const converted = result.data.personnel.map(convertPersonnelToTrainee);
+    console.log('✅ Converted trainees:', {
+      originalCount: result.data.personnel.length,
+      convertedCount: converted.length,
+      sample: converted.slice(0, 2)
+    });
+    return converted;
   }
-  console.error('Failed to fetch trainees:', result.error);
+  console.error('❌ Failed to fetch trainees:', result.error);
   return [];
 }
 
