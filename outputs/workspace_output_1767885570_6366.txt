@@ -1,0 +1,40 @@
+915:            type: 'success',
+921:            type: 'warning',
+930:            type: 'success',
+936:            type: 'info',
+945:            type: 'warning',
+1572:        type: 'flight' | 'ftd' | 'cpt' | 'ground',
+1673:        type: 'flight' | 'ftd' | 'ground' | 'cpt',
+1724:                    type: syllabusItemForCheck.type
+1866:                    type: syllabusItemForCheck.type
+2015:               console.log('  - type:', syllabusItem.type);
+2024:            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+2138:                type: 'ground' as const
+2174:                    type: 'ground' as const
+2215:                id: uuidv4(), type: 'ground', instructor: bestSupervisor.name,
+2237:            id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
+2457:        type: 'flight' | 'ftd',
+2602:                type: 'flight',
+2656:                type: 'flight',
+2729:                            type: 'ftd',
+3011:                type: 'alert',
+3026:                type: 'confirm',
+3060:        type: 'alert' | 'confirm';
+4374:        newEvents: { type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
+4390:                let type: SyllabusItemDetail['type'] = 'Flight';
+4719:                type: options.type || 'flight',
+5362:                    type: 'flight',
+5439:                    type: 'ftd',
+5526:                            type: syllabusItem.type === 'FTD' ? 'ftd' : 
+5633:                    type: event?.type,
+5655:                    type: event.type,
+6362:            type: 'ground',
+6423:                type: 'trainee',
+6480:                type: 'instructor',
+6545:                type: 'instructor', // Reusing the same type for display purposes
+6664:                    return { type: 'timeshift', newStartTime: laterCandidate, instructor: { name: problemEvent.instructor || '' } as any };
+6668:                    return { type: 'timeshift', newStartTime: laterCandidate, instructor: { name: problemEvent.instructor || '' } as any };
+6671:                    return { type: 'timeshift', newStartTime: earlierCandidate, instructor: { name: problemEvent.instructor || '' } as any };
+6781:        console.log('🔧 Remedy type:', remedy.type);
+6934:        console.log('📝 Remedy type:', remedy.type);
+6967:        console.log('🟣 NEO: Remedy type:', remedy.type);

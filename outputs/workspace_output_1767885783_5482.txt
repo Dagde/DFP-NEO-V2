@@ -1,0 +1,61 @@
+    else if (phase === 'OFI') module = 'Operational Flying Instructor';
+    
+    let methodOfDelivery: string[] = [];
+    let flightOrSimHours = 0;
+    let totalEventHours = 0;
+    let type: 'Flight' | 'FTD' | 'Ground School' = 'Flight';
+    let sortieType: 'Dual' | 'Solo' = 'Dual';
+    let preFlightTime = 0;
+    let postFlightTime = 0;
+    let location = '';
+
+    if (code.includes('FTD')) {
+        methodOfDelivery = ['FTD', 'Brief', 'Debrief'];
+        flightOrSimHours = 1.5;
+        totalEventHours = 2.5;
+        type = 'FTD';
+        preFlightTime = 40 / 60; // 40 minutes
+        postFlightTime = 30 / 60; // 30 minutes
+        location = 'FTD Complex';
+    } else if (code.includes('CPT')) {
+        methodOfDelivery = ['CPT', 'Brief'];
+        flightOrSimHours = 1.0;
+        totalEventHours = 1.5;
+        type = 'Ground School';
+        preFlightTime = 15 / 60; // 15 minutes
+        postFlightTime = 15 / 60; // 15 minutes
+        location = 'CPT Rooms';
+    } else if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('Lec')) {
+        methodOfDelivery = ['Classroom', 'Brief'];
+        flightOrSimHours = 0;
+        totalEventHours = 1.0;
+        type = 'Ground School';
+        preFlightTime = 0.0; 
+        postFlightTime = 0;
+        location = 'Classrooms';
+    } else { // It's a flight
+        methodOfDelivery = ['Aircraft', 'Brief', 'Debrief'];
+        if (code.startsWith('BNF')) {
+            flightOrSimHours = 1.0;
+            totalEventHours = 2.5; 
+        } else {
+            flightOrSimHours = 1.5;
+            totalEventHours = 3.0;
+        }
+        type = 'Flight';
+        
+        if (['BGF11', 'BGF18'].includes(code)) {
+             sortieType = 'Solo';
+        } else {
+             sortieType = 'Dual';
+        }
+
+        preFlightTime = 75 / 60; // 75 minutes (1.25 hours)
+        postFlightTime = 30 / 60; // 30 minutes (0.5 hours)
+        location = 'Airfield';
+    }
+
+    const cleanedDescription = (description || "").replace(/\n/g, ' ').replace(/;/g, '; ').replace(/\s\s+/g, ' ').trim();
+    const eventDetails = cleanedDescription.split(';').map(s => s.trim()).filter(Boolean);
+    const itemCode = (code || "").replace('*', '');
+    

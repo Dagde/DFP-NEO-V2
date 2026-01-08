@@ -1,0 +1,31 @@
+                    turnaround = cptTurnaround;
+                }
+                
+                const existingEventEnd = e.startTime + e.duration + turnaround;
+                const newEventStart = startTime;
+                return newEventStart < existingEventEnd && (startTime + syllabusItem.duration) > e.startTime;
+            });
+            if (!resourceIsOccupied) { resourceId = id; break; }
+        }
+        
+        // If no resource available, return null (STBY will be handled in separate pass)
+        if (!resourceId) return null;
+        
+        let area: string | undefined = undefined;
+        if (type === 'flight') {
+            const isBnf = syllabusItem.code.startsWith('BNF');
+            const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
+            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) return null;
+            
+            area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
+            if (!area) return null;
+
+            const nonStbyFlights = generatedEvents.filter(e => 
+                !e.resourceId.startsWith('STBY') && 
+                !e.resourceId.startsWith('BNF-STBY')
+            );
+            
+            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
+            if (takeoffsInLastHour >= 8) return null;
+            
+            const takeoffConflict = nonStbyFlights.some(e => {

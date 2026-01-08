@@ -1,0 +1,41 @@
+                    if (ipCounts.ground >= maxGroundEvents) continue;
+                }
+                
+                if (ip.isExecutive) {
+                    if (isNightPass && (eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd')) {
+                        if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.exec.maxTotal) continue;
+                    } else {
+                        if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) continue;
+                    }
+                    if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) continue;
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) continue;
+                } else if (ip.role === 'SIM IP') {
+                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) continue;
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) continue;
+                } else {
+                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) continue;
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) continue;
+                    // Check duty supervisor limit for Flying Supervisors (included in total events)
+                    if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) continue;
+                }
+
+                const hasOverlap = generatedEvents
+                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+                     .some(e => {
+                         if (!getPersonnel(e).includes(ip.name)) return false;
+                         const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                     });
+                if (hasOverlap) continue;
+
+                const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.id, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
+                const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
+                if (ipEvents.length > 0) {
+                    const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
+                    const firstEvent = sortedIpEvents[0];
+                    const lastEvent = sortedIpEvents[sortedIpEvents.length - 1];
+                    const firstEventSyllabus = syllabusDetails.find(s => s.id === firstEvent.flightNumber);
+                    const lastEventSyllabus = syllabusDetails.find(s => s.id === lastEvent.flightNumber);
+                    const dutyStartTime = firstEvent.startTime - (firstEventSyllabus?.preFlightTime || 0);
+                    const dutyEndTime = lastEvent.startTime + lastEvent.duration + (lastEventSyllabus?.postFlightTime || 0);
+                    if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) continue;

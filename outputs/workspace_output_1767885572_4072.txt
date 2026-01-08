@@ -1,0 +1,21 @@
+        
+           // Debug: Log syllabusItem for BGF11 and BGF18
+           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
+               console.log('🔍 SOLO FLIGHT DEBUG:', syllabusItem.id);
+               console.log('  - sortieType:', syllabusItem.sortieType);
+               console.log('  - type:', syllabusItem.type);
+               console.log('  - code:', syllabusItem.code);
+               console.log('  - Full syllabusItem:', JSON.stringify(syllabusItem, null, 2));
+           }
+           // Debug solo flight logic
+           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
+               console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
+           }
+        return {
+            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+            flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
+            color: courseColors[trainee.course] || 'bg-gray-500',
+            flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
+            area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
+        };
+    };

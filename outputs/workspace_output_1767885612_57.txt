@@ -1,0 +1,41 @@
+        // CRITICAL FIX: For night flying BNF events, allow 2 flights per night
+        const isBnfEvent = syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight';
+        const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
+        
+        if (type === 'flight' || type === 'ftd') {
+             if (traineeCounts.flightFtd >= bnfFlightLimit) return null;
+        } else {
+             if (traineeCounts.ground >= 2) return null;
+        }
+        
+        // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
+        // For BNF events, allow higher total limit to accommodate 2 night flights
+        const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
+        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) return null;
+        
+        const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.id, duration: syllabusItem.duration }, syllabusDetails);
+        if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) return null;
+
+        const findAvailableInstructor = (
+            traineeForCheck: Trainee, 
+            syllabusItemForCheck: SyllabusItemDetail,
+            isPlusOneCheck: boolean
+        ): Instructor | null => {
+            const isBnfEvent = syllabusItemForCheck.code.startsWith('BNF');
+            
+            if (isBnfEvent) {
+                const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
+                if (!pairedInstructorName) return null;
+                
+                const instructor = instructors.find(i => i.name === pairedInstructorName);
+                if (!instructor) return null;
+
+                if (isPersonStaticallyUnavailable(instructor, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'flight')) return null;
+
+                const ipCounts = eventCounts.get(instructor.name)!;
+                const execLimit = eventLimits.exec.maxFlightFtd;
+                const flightFtdLimit = eventLimits.instructor.maxFlightFtd;
+                const totalEventLimit = eventLimits.instructor.maxTotal;
+
+                // CRITICAL FIX: Check soft duty limit BEFORE any other checks
+                const proposedEvent = {

@@ -1,0 +1,41 @@
+                const hasOverlap = generatedEvents
+                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+                     .some(e => {
+                         if (!getPersonnel(e).includes(instructor.name)) return false;
+                         const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                     });
+                if (hasOverlap) return null;
+
+                // Special check for second night flight turnaround for the same crew
+                if (isNightPass && isPlusOneCheck) {
+                    const { next } = traineeNextEventMap.get(traineeForCheck.fullName)!;
+                    const firstNightEvent = generatedEvents.find(e => 
+                        e.flightNumber === next?.id && 
+                        getPersonnel(e).includes(traineeForCheck.fullName) && 
+                        getPersonnel(e).includes(instructor.name)
+                    );
+
+                    if (firstNightEvent) {
+                        const firstSyllabus = syllabusDetails.find(s => s.id === firstNightEvent.flightNumber);
+                        const secondSyllabus = syllabusItemForCheck;
+                        
+                        // This is the special crew turnaround time
+                        const crewTurnaround = (firstSyllabus?.postFlightTime || 0) + (secondSyllabus.preFlightTime || 0);
+                        
+                        // The earliest the INSTRUCTOR is available is after their first debrief
+                        const earliestBriefStartTimeForInstructor = firstNightEvent.startTime + firstNightEvent.duration + (firstSyllabus?.postFlightTime || 0);
+                        
+                        // The proposed start time is for the flight itself. We need to check the brief starts after the required debrief ends.
+                        const proposedBriefStartTime = startTime - (syllabusItemForCheck.preFlightTime || 0);
+
+                        if (proposedBriefStartTime < earliestBriefStartTimeForInstructor) {
+                            return null; // Instructor is not available yet due to crew turnaround
+                        }
+                    }
+                }
+
+                return instructor;
+            }
+
+            let candidates: Instructor[] = [];

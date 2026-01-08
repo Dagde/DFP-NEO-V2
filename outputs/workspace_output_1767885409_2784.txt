@@ -1,0 +1,21 @@
+1965-                } else if (e.type === 'ftd') {
+1966-                    turnaround = ftdTurnaround;
+1967-                } else if (e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))) {
+1968-                    turnaround = cptTurnaround;
+1969-                }
+1970-                
+1971-                const existingEventEnd = e.startTime + e.duration + turnaround;
+1972-                const newEventStart = startTime;
+1973-                return newEventStart < existingEventEnd && (startTime + syllabusItem.duration) > e.startTime;
+1974-            });
+1975:            if (!resourceIsOccupied) { resourceId = id; break; }
+1976-        }
+1977-        
+1978-        // If no resource available, return null (STBY will be handled in separate pass)
+1979-        if (!resourceId) return null;
+1980-        
+1981-        let area: string | undefined = undefined;
+1982-        if (type === 'flight') {
+1983-            const isBnf = syllabusItem.code.startsWith('BNF');
+1984-            const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
+1985-            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) return null;

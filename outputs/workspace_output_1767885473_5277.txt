@@ -1,0 +1,41 @@
+        
+        // Debug logging removed to reduce console noise
+        
+        for (let i = 1; i <= resourceCount; i++) {
+            const id = `${resourcePrefix}${i}`;
+            const resourceIsOccupied = generatedEvents.some(e => {
+                if (e.resourceId !== id) return false;
+                
+                let turnaround = 0;
+                if (e.type === 'flight') {
+                    const isExistingEventNight = e.flightNumber.startsWith('BNF');
+                    if (isNightPass && isExistingEventNight) {
+                        const currentCrew = [instructor?.name, trainee.fullName].filter(Boolean);
+                        const existingCrew = getPersonnel(e);
+                        const hasCommonCrew = currentCrew.some(p => p && existingCrew.includes(p));
+                        
+                        if (hasCommonCrew) {
+                            const existingSyllabus = syllabusDetails.find(s => s.id === e.flightNumber);
+                            turnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
+                        } else {
+                            turnaround = flightTurnaround;
+                        }
+                    } else {
+                        turnaround = flightTurnaround;
+                    }
+                } else if (e.type === 'ftd') {
+                    turnaround = ftdTurnaround;
+                } else if (e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))) {
+                    turnaround = cptTurnaround;
+                }
+                
+                const existingEventEnd = e.startTime + e.duration + turnaround;
+                const newEventStart = startTime;
+                return newEventStart < existingEventEnd && (startTime + syllabusItem.duration) > e.startTime;
+            });
+            if (!resourceIsOccupied) { resourceId = id; break; }
+        }
+        
+        // If no resource available, return null (STBY will be handled in separate pass)
+        if (!resourceId) return null;
+        

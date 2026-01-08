@@ -1,0 +1,41 @@
+                const proposedEvent = {
+                    ...proposedBookingWindow,
+                    instructor: instructor.name,
+                    flightNumber: syllabusItemForCheck.id,
+                    type: syllabusItemForCheck.type
+                };
+                const currentDutyHours = calculateInstructorDutyHours(instructor.name, proposedEvent);
+                
+                if (currentDutyHours > preferredDutyPeriod) {
+                    console.log(`SOFT LIMIT VIOLATION: ${instructor.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
+                    return null;
+                }
+
+                if (instructor.isExecutive) {
+                    if (isNightPass) {
+                        // For night pass, execs can fly up to the total event limit
+                        if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= totalEventLimit) return null;
+                    } else {
+                        // For day pass, execs have a stricter flight/FTD limit
+                        if (ipCounts.flightFtd >= execLimit) return null;
+                    }
+                } else {
+                     // NEW ALGORITHM: Duty Supervisor counts toward total event limits
+                     if (ipCounts.flightFtd >= flightFtdLimit) return null;
+                     // Check total event limit including Duty Supervisor (Flight + FTD + CPT + Ground + Duty Sup = max 3)
+                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= totalEventLimit) return null;
+                     // Check Flying Supervisor duty limit (included in total events)
+                     if (instructor.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
+                }
+                
+                const hasOverlap = generatedEvents
+                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+                     .some(e => {
+                         if (!getPersonnel(e).includes(instructor.name)) return false;
+                         const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                     });
+                if (hasOverlap) return null;
+
+                // Special check for second night flight turnaround for the same crew
+                if (isNightPass && isPlusOneCheck) {

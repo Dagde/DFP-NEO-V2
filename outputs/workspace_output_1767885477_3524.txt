@@ -1,0 +1,20 @@
+800:            if (event.type === 'flight') typeCount.flight++;
+801:            else if (event.type === 'ftd') typeCount.ftd++;
+802:            else if (event.type === 'cpt') typeCount.cpt++;
+803:            else if (event.type === 'ground') typeCount.ground++;
+1119:                if (event.type === 'flight' || event.type === 'ftd') { 
+1122:                } else if (event.type === 'ground') { 
+1124:                } else if (event.type === 'cpt') { 
+1155:                if (counts && (event.type === 'flight' || event.type === 'ftd')) { counts.flightFtd++; } 
+1156:                else if (counts && event.type === 'ground') { counts.ground++; }
+1157:                else if (counts && event.type === 'cpt') { counts.cpt++; }
+1172:            // Determine resource type based on event type
+1173:            const resourcePrefix = event.type === 'flight' ? 'PC-21 ' : 
+1174:                                 event.type === 'ftd' ? 'FTD ' : 
+1175:                                 event.type === 'cpt' ? 'CPT ' : 'Ground ';
+1176:            const resourceCount = event.type === 'flight' ? availableAircraftCount : 
+1177:                                event.type === 'ftd' ? ftdCount : 
+1178:                                event.type === 'cpt' ? cptCount : 6;
+1826:                    // This applies to ALL event types including CPT and ground
+3348:                if (event.type !== 'deployment') return false;
+3360:            const deploymentEvents = nextDayBuildEvents.filter(event => event.type === 'deployment');

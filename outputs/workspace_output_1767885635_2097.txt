@@ -1,0 +1,10 @@
+2252:    scheduleList(
+2270:         scheduleList(bnfWaveOneList, 'flight', false, commenceNightFlying, ceaseNightFlying, null, true);
+2278:    scheduleList(
+2293:    scheduleList(
+2307:    scheduleList(
+2319:    scheduleList(
+2338:         scheduleList(bnfWaveTwoList, 'flight', true, commenceNightFlying, ceaseNightFlying, null, true);
+2343:    scheduleList(
+2355:    scheduleList(
+2366:    scheduleList(

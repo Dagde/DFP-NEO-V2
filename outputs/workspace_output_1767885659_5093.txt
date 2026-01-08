@@ -1,0 +1,61 @@
+    createSyllabusItem('BNF1', 'Night Circuits'),
+    createSyllabusItem('BNF2', 'Night Circuits'),
+    createSyllabusItem('BNF3', 'Night Solo Check'),
+    createSyllabusItem('BNF4', 'Night Solo'),
+    createSyllabusItem('BIF MB3', 'Instrument Approaches'),
+    createSyllabusItem('BIF MB4', 'Holding'),
+    createSyllabusItem('BIF MB5', 'RNP Approach'),
+    createSyllabusItem('BIF TUT2', 'RNP Approach; Missed & Circling Approach'),
+    createSyllabusItem('BIF CPT3', 'RNP Approach'),
+    createSyllabusItem('BIF FTD4', 'RNP Approach; Circling Approach'),
+    createSyllabusItem('BIF FTD5', 'RNP Approach; Missed Approach'),
+    createSyllabusItem('BIF FTD6', 'RNP Approach HUD Off'),
+    createSyllabusItem('BIF3', 'RNP Approach; Circling Approach; Missed Approach'),
+    createSyllabusItem('BIF4', 'IF Consol; RNP Approach - HUD Off'),
+    createSyllabusItem('BIF5', 'Instrument Flying Proficiency Test'),
+    createSyllabusItem('BGF MB17', 'Advanced GF'),
+    createSyllabusItem('BGF FTD10', 'GF Consol; Intermediate Emergency Handling; Unfamiliar Airfield'),
+    createSyllabusItem('BGF21', 'GF Consolidation; Barrel Roll; L MFD Fail'),
+    createSyllabusItem('BGF22', 'GF Consolidation; Stall Turn'),
+    createSyllabusItem('BGF23', 'GF Consolidation'),
+    createSyllabusItem('BGF24', 'General Flying Test'),
+    createSyllabusItem('BNAV MB1', 'Medium Level Nav'),
+    createSyllabusItem('BNAV TUT1', 'Nav Planning Tutorial'),
+    createSyllabusItem('BNAV FTD1', 'Medium Level Navigation'),
+    createSyllabusItem('BNAV1', 'Medium Level Navigation (Land Away)'),
+    createSyllabusItem('BNAV2', 'Medium Level Navigation (RTB)'),
+    createSyllabusItem('BNAV3 NAVPT', 'Navigation Proficiency Test'),
+    createSyllabusItem('SCT GF', 'Sector General Flying'),
+    createSyllabusItem('SCT IF', 'Sector Instrument Flying'),
+    createSyllabusItem('SCT NAV', 'Sector Navigation'),
+    createSyllabusItem('SCT FORM', 'Sector Formation'),
+    createSyllabusItem('Night SCT', 'Night Sector Training'),
+
+    // FIC Items
+    createSyllabusItem('FIC MB1', 'Instructional Technique Overview', ['FIC', 'FIC(I)']),
+    createSyllabusItem('FIC Lec1', 'Principles of Flight Instruction', ['FIC', 'FIC(I)']),
+    createSyllabusItem('FIC FTD1', 'Patter Development - Circuits', ['FIC']),
+    createSyllabusItem('FIC1', 'Right Hand Seat Familiarisation', ['FIC']),
+    createSyllabusItem('FIC2', 'Instructional Sortie - Turning', ['FIC']),
+    
+    // WSO Items
+    createSyllabusItem('WSO MB1', 'Role of the WSO', ['WSO']),
+    createSyllabusItem('WSO FTD1', 'Sensor Operations Basics', ['WSO']),
+    createSyllabusItem('WSO1', 'Navigational Systems Management', ['WSO']),
+    
+    // OFI Items
+    createSyllabusItem('OFI MB1', 'Advanced Operational Concepts', ['OFI']),
+    createSyllabusItem('OFI1', 'Tactical Formation Lead', ['OFI']),
+    
+    // PLT Refresh Items
+    createSyllabusItem('PLT REF MB1', 'Refresher Admin Brief', ['PLT Refresh', 'PLT CONV']),
+    createSyllabusItem('PLT REF FTD1', 'Emergency Procedures Refresh', ['PLT Refresh']),
+    createSyllabusItem('PLT REF1', 'General Handling Recency', ['PLT Refresh']),
+    
+    // QFI CONV
+    createSyllabusItem('QFI CONV MB1', 'QFI Conversion Requirements', ['QFI CONV']),
+    createSyllabusItem('QFI CONV1', 'Instructional Technique - Advanced', ['QFI CONV']),
+
+    // Staff CAT (Staff Continuous Training Categorisation)
+    createSyllabusItem('QIP 1', 'QFI Induction Program 1', ['Staff CAT']),
+    createSyllabusItem('QIP 2', 'QFI Induction Program 2', ['Staff CAT']),

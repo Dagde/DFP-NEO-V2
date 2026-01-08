@@ -1,0 +1,17 @@
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight)), 
+        'flight', 
+        false, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+    
+    // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
+    // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
+    setProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
+    if(nextEventLists.bnf.length >= 2) {
+         // Highest Priority Night Flight Events are already added at the start
+         
+         // Schedule Night Flight Next Events (Wave One)

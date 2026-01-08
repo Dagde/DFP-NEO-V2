@@ -1938,7 +1938,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
-        // Debug logging removed to reduce console noise
+        // DEBUG: Log resource assignment
+        console.log(`🔧 RESOURCE DEBUG: type=${type}, prefix=${resourcePrefix}, count=${resourceCount}`);
         
         for (let i = 1; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
@@ -1976,7 +1977,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
         
         // If no resource available, return null (STBY will be handled in separate pass)
-        if (!resourceId) return null;
+        if (!resourceId) {
+            console.log(`⚠️ NO RESOURCE AVAILABLE: type=${type}, prefix=${resourcePrefix}, count=${resourceCount}`);
+            return null;
+        }
         
         let area: string | undefined = undefined;
         if (type === 'flight') {

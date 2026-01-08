@@ -1,0 +1,40 @@
+ PASS 1: Scheduling STBY with instructors available...
+ PASS 1: STBY at 8.00 for Anderson, Isabella – ADF302, instructor: Green, Charlotte
+ PASS 1: STBY at 8.08 for Edwards, Jennifer – ADF301, instructor: Jackson, Amelia
+ PASS 1: STBY at 8.17 for Edwards, Luna – ADF302, instructor: Clark, Benjamin
+ PASS 1: STBY at 8.25 for Edwards, Richard – ADF305, instructor: Bloggs, Joe
+ PASS 1: STBY at 8.33 for Brown, Mary – ADF303, instructor: Wood, John
+ PASS 1: STBY at 8.42 for Brown, Steven – ADF302, instructor: Jones, Liam
+ PASS 1: STBY at 8.50 for Davies, Mary – ADF301, instructor: Edwards, Barbara
+ PASS 1: STBY at 8.58 for King, Steven – ADF302, instructor: Baker, Charles
+ PASS 1: STBY at 9.00 for Martin, David – ADF302, instructor: Hill, William
+ PASS 1: STBY at 9.08 for Parker, Jessica – ADF301, instructor: Walker, Joseph
+ PASS 1: STBY at 9.17 for Robinson, Jennifer – ADF303, instructor: Robinson, Linda
+ PASS 1: STBY at 9.25 for Robinson, Sarah – ADF301, instructor: Jackson, Mia
+ PASS 1: STBY at 9.33 for Smith, Michael – ADF301, instructor: Moore, Mary
+ PASS 1: STBY at 9.42 for Stewart, Michael – ADF303, instructor: Martin, Emily
+ PASS 1: STBY at 9.50 for Turner, Robert – ADF302, instructor: Edwards, Noah
+ PASS 1: STBY at 9.58 for Green, Ava – ADF301, instructor: Jones, Elijah
+ PASS 1: STBY at 10.00 for Green, Patricia – ADF303, instructor: Moore, Joseph
+ PASS 1: STBY at 10.08 for Jackson, Emma – ADF302, instructor: Baker, Harper
+ PASS 1: STBY at 10.17 for Lewis, Paul – ADF303, instructor: King, Sophia
+ PASS 1: STBY at 10.25 for Williams, Linda – ADF302, instructor: Jones, Richard
+ PASS 1: STBY at 10.33 for Wood, Robert – ADF303, instructor: Moore, Paul
+ PASS 1: STBY at 10.42 for Carter, Chris – FIC211, instructor: Jackson, Emily
+ PASS 1: STBY at 10.50 for Davies, Mark – FIC211, instructor: Wright, Mary
+ PASS 1: STBY at 10.58 for Harris, William – FIC211, instructor: Walker, James
+ PASS 1: STBY at 11.00 for Lewis, Charlotte – FIC211, instructor: White, Jessica
+ PASS 1: STBY at 11.08 for Hall, Patricia – ADF304, instructor: White, Thomas
+ PASS 1: STBY at 11.17 for Lewis, Elijah – ADF303, instructor: Wright, Noah
+ PASS 1: STBY at 11.25 for Robinson, Luna – ADF304, instructor: Lee, Patricia
+ PASS 1: STBY at 11.33 for Stewart, Emily – ADF304, instructor: Stewart, Sarah
+ PASS 1: STBY at 11.42 for Carter, Barbara – FIC211, instructor: Hall, Daniel
+ PASS 1: STBY at 11.50 for Hill, James – FIC211, instructor: King, Chris
+ PASS 1: STBY at 11.58 for Mitchell, Jennifer – FIC211, instructor: Williams, Lucas
+ PASS 1: STBY at 12.00 for Roberts, Jessica – ADF303, instructor: Thompson, Patricia
+ PASS 1: STBY at 12.08 for Robinson, Oliver – ADF303, instructor: Morris, Liam
+ PASS 1: STBY at 12.17 for Stewart, Robert – FIC211, instructor: Wood, Emily
+ PASS 1: STBY at 12.25 for Thompson, Paul – ADF303, instructor: Johnson, James
+ PASS 1 complete: 36 STBY flights with instructors
+ PASS 2: Going back to beginning to schedule remaining STBY with TBA...
+ PASS 2 complete: Total STBY flights: 36 (Pass 1: 36, Pass 2: 0)

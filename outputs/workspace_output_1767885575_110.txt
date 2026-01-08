@@ -1,0 +1,41 @@
+                
+                candidates = [...simIps, ...orderedQfis];
+            } else {
+                const qualified = instructors.filter(ip => {
+                    const isQFI = ip.role === 'QFI';
+                    if (type === 'flight' && !isQFI) return false;
+                    // This applies to ALL event types including CPT and ground
+                    // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+                    if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
+                    return true;
+                });
+
+                if (programWithPrimaries) {
+                     const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
+                     const primaries = qualified.filter(i => pNames.includes(i.name));
+                     const others = qualified.filter(i => !pNames.includes(i.name));
+                     
+                     others.sort((a, b) => {
+                        const countA = eventCounts.get(a.name)?.flightFtd || 0;
+                        const countB = eventCounts.get(b.name)?.flightFtd || 0;
+                        if (countA !== countB) return countA - countB;
+                        return a.name.localeCompare(b.name);
+                     });
+                     
+                     candidates = [...primaries, ...others];
+                } else {
+                    candidates = qualified.sort((a, b) => {
+                        const countA = eventCounts.get(a.name)?.flightFtd || 0;
+                        const countB = eventCounts.get(b.name)?.flightFtd || 0;
+                        if (countA !== countB) return countA - countB;
+                        return a.name.localeCompare(b.name);
+                    });
+                }
+            }
+
+            for (const ip of candidates) {
+                const eventTypeForCheck = type === 'cpt' ? 'ground' : type;
+                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) continue;
+                
+                const ipCounts = eventCounts.get(ip.name)!;
+                

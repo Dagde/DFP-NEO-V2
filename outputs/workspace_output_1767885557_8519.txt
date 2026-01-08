@@ -1,0 +1,10 @@
+1312:                nextEvent.sortieType === 'Solo' && 
+1388:                nextEvent.sortieType === 'Solo' && 
+1929:        const isSoloFlight = syllabusItem.sortieType === 'Solo';
+2014:               console.log('  - sortieType:', syllabusItem.sortieType);
+2021:               console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
+2024:            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+2027:            flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
+4771:        if (syllabusItem && syllabusItem.sortieType) {
+4772:            return syllabusItem.sortieType;
+5536:                            flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',

@@ -1,0 +1,20 @@
+762:    // Filter out non-scheduled events (Duty Sup, STBY)
+765:        !e.resourceId.startsWith('STBY') && 
+766:        !e.resourceId.startsWith('BNF-STBY')
+880:        e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')
+1664:        // OLD STBY LOGIC REMOVED - Will be replaced with separate STBY pass after main build
+1751:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+1902:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+1978:        // If no resource available, return null (STBY will be handled in separate pass)
+1991:                !e.resourceId.startsWith('STBY') && 
+1992:                !e.resourceId.startsWith('BNF-STBY')
+2036:    const dayFlights = generatedEvents.filter(e => e.type === 'flight' && !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
+2151:                .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+2196:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+2325:        'STBY', 
+2349:        'STBY', 
+2376:    // NEW STBY SCHEDULING PASS - "8 Flights Per Hour" Rule
+2377:    // STBY flights are extra flights added on top of the main DFP when aircraft run out
+2378:    setProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
+2380:    // Helper: Check if a flight start time already exists (aircraft or STBY flights only)
+2388:    // Helper: Count FLIGHT start times in a 60-minute window (aircraft + STBY, excluding FTD/CPT/Ground)

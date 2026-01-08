@@ -1,0 +1,51 @@
+
+                const hasOverlap = generatedEvents
+                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+                     .some(e => {
+                         if (!getPersonnel(e).includes(ip.name)) return false;
+                         const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                     });
+                if (hasOverlap) continue;
+
+                const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.id, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
+                const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
+                if (ipEvents.length > 0) {
+                    const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
+                    const firstEvent = sortedIpEvents[0];
+                    const lastEvent = sortedIpEvents[sortedIpEvents.length - 1];
+                    const firstEventSyllabus = syllabusDetails.find(s => s.id === firstEvent.flightNumber);
+                    const lastEventSyllabus = syllabusDetails.find(s => s.id === lastEvent.flightNumber);
+                    const dutyStartTime = firstEvent.startTime - (firstEventSyllabus?.preFlightTime || 0);
+                    const dutyEndTime = lastEvent.startTime + lastEvent.duration + (lastEventSyllabus?.postFlightTime || 0);
+                    if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) continue;
+                }
+
+                return ip;
+            }
+            return null;
+        };
+        
+        // CRITICAL FIX: Skip instructor assignment for solo flights
+        const isSoloFlight = syllabusItem.sortieType === 'Solo';
+        
+        let instructor: Instructor | null = null;
+        if (!isSoloFlight) {
+            instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne);
+            if (!instructor) return null;
+        }
+        
+        let resourceId: string | null = null;
+        const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
+        const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
+        
+        // Debug logging removed to reduce console noise
+        
+        for (let i = 1; i <= resourceCount; i++) {
+            const id = `${resourcePrefix}${i}`;
+            const resourceIsOccupied = generatedEvents.some(e => {
+                if (e.resourceId !== id) return false;
+                
+                let turnaround = 0;
+                if (e.type === 'flight') {
+                    const isExistingEventNight = e.flightNumber.startsWith('BNF');

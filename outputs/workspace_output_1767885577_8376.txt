@@ -1,0 +1,41 @@
+            let candidates: Instructor[] = [];
+
+            if (type === 'ftd') {
+                // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+                const simIps = instructors
+                    .filter(i => 
+                        i.role === 'SIM IP' && 
+                        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                    )
+                    .sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
+                
+                // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+                const availableQfis = instructors.filter(i => 
+                    i.role === 'QFI' && 
+                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                );
+                let orderedQfis: Instructor[] = [];
+                
+                if (programWithPrimaries) {
+                    const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
+                    const primaries = availableQfis.filter(i => pNames.includes(i.name));
+                    const others = availableQfis.filter(i => !pNames.includes(i.name));
+                    
+                    primaries.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
+                    others.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
+                    
+                    orderedQfis = [...primaries, ...others];
+                } else {
+                    orderedQfis = availableQfis.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
+                }
+                
+                candidates = [...simIps, ...orderedQfis];
+            } else {
+                const qualified = instructors.filter(ip => {
+                    const isQFI = ip.role === 'QFI';
+                    if (type === 'flight' && !isQFI) return false;
+                    // This applies to ALL event types including CPT and ground
+                    // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+                    if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
+                    return true;
+                });

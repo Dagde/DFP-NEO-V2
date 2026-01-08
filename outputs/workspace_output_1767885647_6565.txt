@@ -1,0 +1,21 @@
+        resourcesHuman: ['Qualified Flying Instructor', 'Trainee'],
+        courses,
+    };
+};
+
+const syllabusItems: SyllabusItemDetail[] = [
+    // BPC + IPC Items
+    createSyllabusItem('BGF MB1', 'Preparation and Pre / Post Flight Admin'),
+    createSyllabusItem('BGF MB2', 'Ground Operations and Checklist'),
+    createSyllabusItem('BGF CPT1', 'Checklist Procedures - Ground'),
+    createSyllabusItem('BGF TUT1A', 'Ejection Seat Strap-in'),
+    createSyllabusItem('BGF TUT1B', 'FTD Safety Brief'),
+    createSyllabusItem('BGF TUT2', 'Flight Preparation, Checklist and Walkaround'),
+    createSyllabusItem('BGF MB3', 'Effects of Controls; Attitude Flying; Straight and Level; Turning'),
+    createSyllabusItem('BGF MB4', 'Climbing and Descending and Climbing and Descending Turns'),
+    createSyllabusItem('BGF MB5', 'Re-join; Landing; Local Circuit Procedures'),
+    createSyllabusItem('BGF MB6', 'Emergency Handling and Procedures'),
+    createSyllabusItem('BGF CPT2', 'Airborne Procedures'),
+    createSyllabusItem('BGF FTD1', 'Strap in and Ground Procedures'),
+    createSyllabusItem('BGF MB7', 'Normal Circuits'),
+    createSyllabusItem('BGF1', 'Effects of Controls; Attitude Flying; Straight and Level; Turning; Steep Turn'),

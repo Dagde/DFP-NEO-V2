@@ -1,0 +1,21 @@
+                                tCounts.ground++; 
+                                if (ipCounts) ipCounts.ground++; // Count ground events for instructors
+                            } else if (type === 'cpt') {
+                                tCounts.cpt++; 
+                                if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                            }
+                            
+                            if (type === 'cpt' || type === 'ground') {
+                                const segment = segments.find(s => time >= s.start && time < s.end);
+                                if (segment) segment.count++;
+                            }
+
+                            placed = true;
+                            placedThisPass = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!placed) { remainingForNextPass.push(trainee); }
+            }
