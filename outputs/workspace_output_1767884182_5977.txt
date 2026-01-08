@@ -1,0 +1,24 @@
+[feature/comprehensive-build-algorithm 8342f01] Optimize scores API: remove unnecessary fields to reduce response from 371KB to ~50KB
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 12 files changed, 542 insertions(+), 30 deletions(-)
+ create mode 100644 CRITICAL_FIX_SUMMARY.md
+ create mode 100644 NEO_BUILD_STATUS.md
+ create mode 100644 outputs/workspace_output_1767883920_7659.txt
+ create mode 100644 outputs/workspace_output_1767883926_9041.txt
+ create mode 100644 outputs/workspace_output_1767883934_7773.txt
+ create mode 100644 outputs/workspace_output_1767883944_8274.txt
+ create mode 100644 outputs/workspace_output_1767884162_6891.txt
+ create mode 100644 outputs/workspace_output_1767884182_5977.txt
+To https://github.com/Dagde/DFP---NEO.git
+   95a31e8..8342f01  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
