@@ -1,0 +1,150 @@
+
+
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience } from '../types';
+import TraineeProfileFlyout from './TraineeProfileFlyout';
+import RestoreCourseConfirmation from './RestoreCourseConfirmation';
+import FlightInfoFlyout from './FlightInfoFlyout';
+import AuditButton from './AuditButton';
+import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
+
+interface CourseRosterViewProps {
+    events: ScheduleEvent[];
+    traineesData: Trainee[];
+    courseColors: { [key: string]: string };
+    archivedCourses: { [key: string]: string };
+    personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+    onNavigateToHateSheet: (trainee: Trainee) => void;
+    onRestoreCourse: (courseNumber: string) => void;
+    onUpdateTrainee: (data: Trainee) => void;
+    onAddTrainee: (data: Trainee) => void;
+    school: 'ESL' | 'PEA';
+    scores: Map<string, Score[]>;
+    syllabusDetails: SyllabusItemDetail[];
+    onNavigateToSyllabus: (syllabusId: string) => void;
+    onNavigateToCurrency: (person: Instructor | Trainee) => void;
+    onViewIndividualLMP: (trainee: Trainee) => void;
+    onAddRemedialPackage: (trainee: Trainee) => void;
+    locations: string[];
+    units: string[];
+    selectedPersonForProfile?: Trainee | null;
+    onProfileOpened?: () => void;
+    traineeLMPs: Map<string, SyllabusItemDetail[]>;
+    onViewLogbook?: (person: Trainee) => void;
+       onDeleteTrainee: (trainee: Trainee) => void;
+}
+
+const generateNewTraineeTemplate = (): Trainee => ({
+    idNumber: Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000,
+    fullName: '', // Will be constructed on save
+    name: '',
+    rank: 'PLTOFF',
+    course: '',
+    seatConfig: 'Normal',
+    isPaused: false,
+    unit: '1FTS',
+    service: 'RAAF',
+    unavailability: [],
+    permissions: ['Trainee'],
+    priorExperience: {
+        day: { p1: 0, p2: 0, dual: 0 },
+        night: { p1: 0, p2: 0, dual: 0 },
+        total: 0,
+        captain: 0,
+        instructor: 0,
+        instrument: { sim: 0, actual: 0 },
+        simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
+    }
+});
+
+const CourseRosterView: React.FC<CourseRosterViewProps> = ({ 
+    events,
+    traineesData,
+    courseColors, 
+    archivedCourses, 
+    personnelData, 
+    onNavigateToHateSheet, 
+    onRestoreCourse, 
+    onUpdateTrainee,
+    onAddTrainee,
+    school,
+    scores,
+    syllabusDetails,
+    onNavigateToSyllabus,
+    onNavigateToCurrency,
+    onViewIndividualLMP,
+    onAddRemedialPackage,
+    locations,
+    units,
+    selectedPersonForProfile,
+    onProfileOpened,
+    traineeLMPs,
+    onViewLogbook
+       , onDeleteTrainee
+}) => {
+    const [view, setView] = useState<'active' | 'archived'>('active');
+    const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+    const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
+    const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
+    const [hoveredTrainee, setHoveredTrainee] = useState<{ name: string; events: ScheduleEvent[] } | null>(null);
+    const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
+    
+    // Delete Trainee state
+    const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
+    const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+    useEffect(() => {
+        if (selectedPersonForProfile) {
+            setSelectedTrainee(selectedPersonForProfile);
+            setIsCreatingNew(false);
+            if (onProfileOpened) {
+                onProfileOpened();
+            }
+        }
+    }, [selectedPersonForProfile, onProfileOpened]);
+
+    const groupedTrainees = useMemo(() => {
+        const groups: { [course: string]: Trainee[] } = {};
+
+        traineesData.forEach(trainee => {
+            if (!groups[trainee.course]) {
+                groups[trainee.course] = [];
+            }
+            groups[trainee.course].push(trainee);
+        });
+
+        // Sort trainees within each group alphabetically by name
+        for (const course in groups) {
+            groups[course].sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        return groups;
+    }, [traineesData]);
+
+    // This effect ensures that if the underlying trainee data (like pause status or unavailabilities) changes
+    // while the profile flyout is open, the flyout will re-render with the latest data.
+    useEffect(() => {
+        if (selectedTrainee && !isCreatingNew) {
+            const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
+
+            // Update the state only if the data has actually changed to avoid an infinite loop.
+            if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
+                setSelectedTrainee(updatedTrainee);
+            }
+        }
+    }, [traineesData, selectedTrainee, isCreatingNew]);
+
+    const activeCourseNumbers = Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
+    const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
+    
+    const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
+    const courseColorMap = view === 'active' ? courseColors : archivedCourses;
+
+    const handleConfirmRestore = (courseNumber: string) => {
+        onRestoreCourse(courseNumber);
+        setCourseToRestore(null);
+    };
+

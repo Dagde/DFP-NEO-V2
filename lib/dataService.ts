@@ -123,6 +123,14 @@ export async function initializeData() {
       
       console.log('✅ Instructors sample:', instructors.slice(0, 3));
       console.log('✅ Trainees sample:', trainees.slice(0, 3));
+      
+      // Log all unique course names from trainees
+      const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+      console.log('📋 Unique trainee courses:', uniqueCourses);
+      
+      // Log trainees with empty/missing courses
+      const traineesWithoutCourse = trainees.filter(t => !t.course || t.course.trim() === '');
+      console.log('⚠️ Trainees without course:', traineesWithoutCourse.length, traineesWithoutCourse.slice(0, 5));
 
       // Save to localStorage for faster next load
       saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);

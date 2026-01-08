@@ -1,0 +1,9 @@
+14:    traineesData: Trainee[];
+63:    traineesData,
+112:        traineesData.forEach(trainee => {
+119:        // Sort trainees within each group alphabetically by name
+125:    }, [traineesData]);
+131:            const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
+138:    }, [traineesData, selectedTrainee, isCreatingNew]);
+316:                                                <p className="text-gray-500 text-sm italic text-center py-4">No trainees assigned.</p>
+338:                    traineesData={traineesData}

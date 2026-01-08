@@ -1,0 +1,29 @@
+[feature/comprehensive-build-algorithm 2e3ce58] Add detailed error tracking for trainee visibility debug
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 18 files changed, 1246 insertions(+), 8 deletions(-)
+ create mode 100644 TEMPORAL_DEAD_ZONE_FIX.md
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-BiamAmkl.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-BiamAmkl.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-DsnVwxHi.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-DsnVwxHi.js.map
+ create mode 100644 outputs/workspace_output_1767861937_574.txt
+ create mode 100644 outputs/workspace_output_1767862234_2417.txt
+ create mode 100644 outputs/workspace_output_1767862288_8640.txt
+ create mode 100644 outputs/workspace_output_1767862302_3784.txt
+ create mode 100644 outputs/workspace_output_1767862320_7305.txt
+ create mode 100644 outputs/workspace_output_1767862323_2453.txt
+ create mode 100644 outputs/workspace_output_1767862340_6025.txt
+ create mode 100644 outputs/workspace_output_1767862354_2551.txt
+To https://github.com/Dagde/DFP---NEO.git
+   35dbb00..2e3ce58  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

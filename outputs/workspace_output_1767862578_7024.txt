@@ -1,0 +1,10 @@
+55:import CourseRosterView from './components/CourseRosterView';
+4531:    const handleNavigateToCourseRosterFromTrainingRecords = (courseName: string) => {
+4533:        handleNavigation('CourseRoster');
+5764:            handleNavigation('CourseRoster');
+7703:            case 'CourseRoster':
+7704:                return <CourseRosterView 
+7847:                                    handleNavigation('CourseRoster');
+8105:                    onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
+8436:                                handleNavigation('CourseRoster');
+8671:                                handleNavigation('CourseRoster');

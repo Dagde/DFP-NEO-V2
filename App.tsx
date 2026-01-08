@@ -3090,6 +3090,7 @@ const App: React.FC = () => {
                        eventsCount: data.events.length,
                        scoresCount: data.scores.size,
                        coursesCount: data.courses.length,
+                       courseColorsKeys: Object.keys(data.courseColors),
                        traineeLMPsCount: data.traineeLMPs.size
                    });
                    
