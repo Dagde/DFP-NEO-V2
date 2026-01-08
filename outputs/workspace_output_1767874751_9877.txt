@@ -1,0 +1,36 @@
+      console.log('✅ Trainees sample:', trainees.slice(0, 3));
+      
+      // Log all unique course names from trainees
+      const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+      console.log('📋 Unique trainee courses:', uniqueCourses);
+      
+      // Log trainees with empty/missing courses
+      const traineesWithoutCourse = trainees.filter(t => !t.course || t.course.trim() === '');
+      console.log('⚠️ Trainees without course:', traineesWithoutCourse.length, traineesWithoutCourse.slice(0, 5));
+
+      // Save to localStorage for faster next load
+      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      saveToStorage(STORAGE_KEYS.SCORES, Array.from(scoresResult.entries()));
+    } catch (error) {
+      console.warn('API fetch failed, falling back to localStorage or mock data:', error);
+      console.error('Full error details:', error);
+      
+      // Try localStorage first
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructors) ? instructors : [];
+      trainees = Array.isArray(trainees) ? trainees : [];
+      events = Array.isArray(events) ? events : [];
+      
+      console.log('Loaded from localStorage:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
+
+      // If localStorage is empty, use empty arrays

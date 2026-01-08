@@ -1,0 +1,50 @@
+}
+
+// Unavailability API
+export interface UnavailabilityRecord {
+  id: string;
+  personnelId: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  notes?: string;
+}
+
+export async function fetchUnavailability(personnelId?: string): Promise<UnavailabilityRecord[]> {
+  const endpoint = personnelId 
+    ? `/unavailability?personnelId=${personnelId}`
+    : '/unavailability';
+  const result = await fetchAPI<UnavailabilityRecord[]>(endpoint);
+  if (result.success && result.data) {
+    return result.data;
+  }
+  console.error('Failed to fetch unavailability:', result.error);
+  return [];
+}
+
+export async function createUnavailability(record: Omit<UnavailabilityRecord, 'id'>): Promise<boolean> {
+  const result = await fetchAPI<UnavailabilityRecord>('/unavailability', {
+    method: 'POST',
+    body: JSON.stringify(record),
+  });
+  if (result.success) {
+    return true;
+  }
+  console.error('Failed to create unavailability:', result.error);
+  return false;
+}
+
+export async function updateUnavailability(
+  id: string, 
+  updates: Partial<UnavailabilityRecord>
+): Promise<boolean> {
+  const result = await fetchAPI<UnavailabilityRecord>(`/unavailability/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  if (result.success) {
+    return true;
+  }
+  console.error('Failed to update unavailability:', result.error);
+  return false;
+}

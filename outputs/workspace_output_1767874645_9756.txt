@@ -1,0 +1,51 @@
+export async function initializeData() {
+  // Load other data from localStorage first (these are always stored locally for now)
+  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+  const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
+    STORAGE_KEYS.PT051_ASSESSMENTS, 
+    new Map()
+  );
+  let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+  let courseColors = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.COURSE_COLORS, 
+    {}
+  );
+  const archivedCourses = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.ARCHIVED_COURSES, 
+    {}
+  );
+  let coursePriorities = loadFromStorage<string[]>(
+    STORAGE_KEYS.COURSE_PRIORITIES, 
+    []
+  );
+  const coursePercentages = loadFromStorage<Map<string, number>>(
+    STORAGE_KEYS.COURSE_PERCENTAGES, 
+    new Map()
+  );
+  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+    STORAGE_KEYS.TRAINEE_LMPS, 
+    new Map()
+  );
+
+  // Ensure arrays are actually arrays
+  courses = Array.isArray(courses) ? courses : [];
+  coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
+
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {
+    console.log('Initializing data from API...');
+    
+    try {
+      // Try to fetch from API
+      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+        fetchInstructors(),
+        fetchTrainees(),
+        fetchSchedule(),
+      ]);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];

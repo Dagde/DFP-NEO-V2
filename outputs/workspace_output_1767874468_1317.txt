@@ -1,0 +1,52 @@
+[feature/comprehensive-build-algorithm 9cb52f8] Add Score model to database and import mock scores for NEO Build
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 41 files changed, 29104 insertions(+), 20 deletions(-)
+ create mode 100644 NEO_BUILD_PREREQUISITE_FIX.md
+ create mode 100644 SCORE_IMPORT_SOLUTION.md
+ create mode 100644 db_trainee_names.txt
+ create mode 100644 dfp-neo-platform/app/api/scores/route.ts
+ create mode 100644 dfp-neo-platform/import_scores_to_db.js
+ create mode 100644 generated_scores.json
+ create mode 100644 import_mock_scores.js
+ create mode 100644 outputs/workspace_output_1767873486_5731.txt
+ create mode 100644 outputs/workspace_output_1767873490_5720.txt
+ create mode 100644 outputs/workspace_output_1767873494_6816.txt
+ create mode 100644 outputs/workspace_output_1767873499_6652.txt
+ create mode 100644 outputs/workspace_output_1767873503_2507.txt
+ create mode 100644 outputs/workspace_output_1767873519_6061.txt
+ create mode 100644 outputs/workspace_output_1767873523_2604.txt
+ create mode 100644 outputs/workspace_output_1767873529_3715.txt
+ create mode 100644 outputs/workspace_output_1767873578_7115.txt
+ create mode 100644 outputs/workspace_output_1767873589_3657.txt
+ create mode 100644 outputs/workspace_output_1767873594_3177.txt
+ create mode 100644 outputs/workspace_output_1767873602_4653.txt
+ create mode 100644 outputs/workspace_output_1767873611_5505.txt
+ create mode 100644 outputs/workspace_output_1767873618_8359.txt
+ create mode 100644 outputs/workspace_output_1767873625_4289.txt
+ create mode 100644 outputs/workspace_output_1767873629_8812.txt
+ create mode 100644 outputs/workspace_output_1767873633_6660.txt
+ create mode 100644 outputs/workspace_output_1767873638_6157.txt
+ create mode 100644 outputs/workspace_output_1767873644_4910.txt
+ create mode 100644 outputs/workspace_output_1767873647_4838.txt
+ create mode 100644 outputs/workspace_output_1767873661_9555.txt
+ create mode 100644 outputs/workspace_output_1767873665_1008.txt
+ create mode 100644 outputs/workspace_output_1767873676_7646.txt
+ create mode 100644 outputs/workspace_output_1767873717_8614.txt
+ create mode 100644 outputs/workspace_output_1767873722_9069.txt
+ create mode 100644 outputs/workspace_output_1767873768_7290.txt
+ create mode 100644 outputs/workspace_output_1767873781_7707.txt
+ create mode 100644 outputs/workspace_output_1767873796_3756.txt
+ create mode 100644 outputs/workspace_output_1767874446_4814.txt
+ create mode 100644 outputs/workspace_output_1767874468_1317.txt
+ create mode 100644 summarized_conversations/original_conversation_1767874441_5791.txt

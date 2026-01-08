@@ -306,3 +306,46 @@ export async function updateUnavailability(
   console.error('Failed to update unavailability:', result.error);
   return false;
 }
+// Scores API
+export interface Score {
+  id: string;
+  traineeId: string;
+  trainee?: string;
+  event: string;
+  score: number;
+  date: string;
+  instructor: string;
+  notes?: string;
+  details?: any;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export async function fetchScores(traineeId?: string, traineeFullName?: string): Promise<Map<string, Score[]>> {
+  let url = '/api/scores';
+  const params = new URLSearchParams();
+  
+  if (traineeId) {
+    params.append('traineeId', traineeId);
+  }
+  if (traineeFullName) {
+    params.append('traineeFullName', traineeFullName);
+  }
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  try {
+    const result = await fetchAPI<Record<string, Score[]>>(url);
+    if (result.success && result.data) {
+      // Convert Record<string, Score[]> to Map<string, Score[]>
+      return new Map(Object.entries(result.data));
+    }
+    console.error('Failed to fetch scores:', result.error);
+    return new Map();
+  } catch (error) {
+    console.error('Error fetching scores:', error);
+    return new Map();
+  }
+}

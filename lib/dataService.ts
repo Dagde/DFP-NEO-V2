@@ -1,5 +1,5 @@
 import { Instructor, Trainee, ScheduleEvent, Course, SyllabusItemDetail, Score, Pt051Assessment } from '../types';
-import { fetchInstructors, fetchTrainees, fetchSchedule, saveSchedule as saveScheduleAPI } from './api';
+import { fetchInstructors, fetchTrainees, fetchSchedule, fetchScores, saveSchedule as saveScheduleAPI } from './api';
 import { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from '../mockData';
 
 // LocalStorage keys
@@ -58,7 +58,6 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
 // Initialize data from API or fallback to localStorage or mock data
 export async function initializeData() {
   // Load other data from localStorage first (these are always stored locally for now)
-  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
   const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
     STORAGE_KEYS.PT051_ASSESSMENTS, 
     new Map()
@@ -98,10 +97,11 @@ export async function initializeData() {
     
     try {
       // Try to fetch from API
-      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+      const [instructorsResult, traineesResult, scheduleResult, scoresResult] = await Promise.all([
         fetchInstructors(),
         fetchTrainees(),
         fetchSchedule(),
+        fetchScores(),
       ]);
 
       // Ensure arrays
@@ -115,7 +115,7 @@ export async function initializeData() {
         events: events.length,
         courses: courses.length,
         coursePriorities: coursePriorities.length,
-        scores: scores.size,
+        scores: scoresResult.size,
         pt051Assessments: pt051Assessments.size,
         coursePercentages: coursePercentages.size,
         traineeLMPs: traineeLMPs.size,
@@ -136,6 +136,7 @@ export async function initializeData() {
       saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
       saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
       saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      saveToStorage(STORAGE_KEYS.SCORES, Array.from(scoresResult.entries()));
     } catch (error) {
       console.warn('API fetch failed, falling back to localStorage or mock data:', error);
       console.error('Full error details:', error);
@@ -144,6 +145,7 @@ export async function initializeData() {
       instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
       trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
       events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+      const fallbackScores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
 
       // Ensure arrays
       instructors = Array.isArray(instructors) ? instructors : [];
@@ -154,6 +156,7 @@ export async function initializeData() {
         instructors: instructors.length,
         trainees: trainees.length,
         events: events.length,
+        scores: fallbackScores.size,
       });
 
       // If localStorage is empty, use empty arrays
@@ -167,7 +170,22 @@ export async function initializeData() {
         saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
         saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
         saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+        saveToStorage(STORAGE_KEYS.SCORES, []);
       }
+      
+      return {
+        instructors,
+        trainees,
+        events,
+        scores: fallbackScores || new Map(),
+        pt051Assessments,
+        courses,
+        courseColors,
+        archivedCourses,
+        coursePriorities,
+        coursePercentages,
+        traineeLMPs,
+      };
     }
   } else {
     // Load from localStorage or use empty arrays
@@ -175,6 +193,21 @@ export async function initializeData() {
     instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
     trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
     events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+    const localScores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+    
+    return {
+      instructors,
+      trainees,
+      events,
+      scores: localScores,
+      pt051Assessments,
+      courses,
+      courseColors,
+      archivedCourses,
+      coursePriorities,
+      coursePercentages,
+      traineeLMPs,
+    };
   }
 
   // Auto-generate courseColors based on trainee courses
@@ -212,7 +245,7 @@ export async function initializeData() {
     instructors,
     trainees,
     events,
-    scores,
+    scores: scoresResult || new Map(),
     pt051Assessments,
     courses,
     courseColors,
