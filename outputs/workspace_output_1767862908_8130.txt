@@ -1,0 +1,134 @@
+ cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+ Starting app initialization...
+ React imported
+ ReactDOM imported
+ App imported
+ Root element: 
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-08
+ Deployments overlapping with 2026-01-08: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-08
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-08
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ 🔄 Starting to load initial data...
+ Initializing data from API...
+ 🔍 Fetching instructors from /personnel?role=INSTRUCTOR
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🔍 Fetching trainees from /personnel?role=TRAINEE
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🔄 Starting to load initial data...
+ Initializing data from API...
+ 🔍 Fetching instructors from /personnel?role=INSTRUCTOR
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🔍 Fetching trainees from /personnel?role=TRAINEE
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+api.ts:133 🌐 API Request: /api/schedule Object
+App.tsx:3486 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+App.tsx:3491 ⏸️ Not syncing - activeView is: Program Schedule
+App.tsx:7060 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7061 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7065 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7066 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+db.ts:190 Seeded Logbook Template (XLSX)
+db.ts:190 Seeded Logbook Template (XLSX)
+db.ts:251 Seeded Logbook Template (PDF)
+db.ts:251 Seeded Logbook Template (PDF)
+db.ts:305 Seeded NEO Logo PDF
+db.ts:305 Seeded NEO Logo PDF
+api.ts:153 ✅ API Response: /api/schedule Object
+api.ts:153 ✅ API Response: /api/personnel?role=TRAINEE Object
+api.ts:198 📥 Trainees API response: Object
+api.ts:208 ✅ Converted trainees: Object
+api.ts:153 ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+api.ts:173 📥 Instructors API response: Object
+api.ts:183 ✅ Converted instructors: Object
+dataService.ts:112 Data loaded from API: Object
+dataService.ts:124 ✅ Instructors sample: Array(3)
+dataService.ts:125 ✅ Trainees sample: Array(3)
+dataService.ts:129 📋 Unique trainee courses: Array(8)
+dataService.ts:133 ⚠️ Trainees without course: 0 Array(0)
+App.tsx:3087 📦 Data received from initializeData: Object
+App.tsx:3109 ✅ State updated successfully
+api.ts:153 ✅ API Response: /api/schedule Object
+api.ts:153 ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+api.ts:173 📥 Instructors API response: Object
+api.ts:183 ✅ Converted instructors: Object
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+api.ts:153 ✅ API Response: /api/personnel?role=TRAINEE Object
+api.ts:198 📥 Trainees API response: Object
+api.ts:208 ✅ Converted trainees: Object
+dataService.ts:112 Data loaded from API: Object
+dataService.ts:124 ✅ Instructors sample: Array(3)
+dataService.ts:125 ✅ Trainees sample: Array(3)
+dataService.ts:129 📋 Unique trainee courses: Array(8)
+dataService.ts:133 ⚠️ Trainees without course: 0 Array(0)
+App.tsx:3087 📦 Data received from initializeData: Object
+App.tsx:3109 ✅ State updated successfully
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:544 Local handleMouseUp called - ignoring when dragState exists: false
+ScheduleView.tsx:558 Clearing drag state in local handleMouseUp
+ScheduleView.tsx:204 Global mouse up called, draggingState exists: false
+App.tsx:3322 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3322 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3486 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+App.tsx:3491 ⏸️ Not syncing - activeView is: Instructors
+App.tsx:7060 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7061 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7065 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7066 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:3322 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3322 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3486 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+App.tsx:3491 ⏸️ Not syncing - activeView is: CourseRoster
+App.tsx:7060 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7061 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7065 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7066 🟠 ========== NEO USEEFFECT END (CLOSED) ==========

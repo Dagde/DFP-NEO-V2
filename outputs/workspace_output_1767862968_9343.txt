@@ -1,0 +1,17 @@
+20-    onUpdateTrainee: (data: Trainee) => void;
+21-    onAddTrainee: (data: Trainee) => void;
+22:    school: 'ESL' | 'PEA';
+23-    scores: Map<string, Score[]>;
+24-    syllabusDetails: SyllabusItemDetail[];
+--
+69-    onUpdateTrainee,
+70-    onAddTrainee,
+71:    school,
+72-    scores,
+73-    syllabusDetails,
+--
+350-                    onUpdateTrainee={isCreatingNew ? onAddTrainee : onUpdateTrainee}
+351-                    events={events}
+352:                    school={school}
+353-                    onNavigateToHateSheet={onNavigateToHateSheet}
+354-                    onViewIndividualLMP={onViewIndividualLMP}

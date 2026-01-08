@@ -121,6 +121,15 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             groups[course].sort((a, b) => a.name.localeCompare(b.name));
         }
 
+        console.log('📊 CourseRoster - Grouped trainees:', {
+            totalTrainees: traineesData.length,
+            totalGroups: Object.keys(groups).length,
+            groups: Object.keys(groups).map(course => ({
+                course,
+                count: groups[course].length
+            }))
+        });
+
         return groups;
     }, [traineesData]);
 
@@ -142,6 +151,15 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
     const courseColorMap = view === 'active' ? courseColors : archivedCourses;
+
+    console.log('📋 CourseRoster - Course config:', {
+        view,
+        activeCourseNumbers,
+        archivedCourseNumbers,
+        coursesToDisplay,
+        activeCourseCount: activeCourseNumbers.length,
+        archivedCourseCount: archivedCourseNumbers.length
+    });
 
     const handleConfirmRestore = (courseNumber: string) => {
         onRestoreCourse(courseNumber);

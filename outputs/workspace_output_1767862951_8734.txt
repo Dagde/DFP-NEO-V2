@@ -1,0 +1,23 @@
+55:import CourseRosterView from './components/CourseRosterView';
+56-import HateSheetView from './components/HateSheetView';
+57-import ScoreDetailView from './components/ScoreDetailView';
+58-import { EventDetailModal } from './components/FlightDetailModal';
+59-import ConflictModal from './components/ConflictModal';
+60-import AddGroundEventFlyout from './components/AddGroundEventFlyout';
+61-import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
+62-import MyDashboard from './components/MyDashboard';
+63-import SupervisorDashboard from './components/SupervisorDashboard';
+64-import NextDayBuildView from './components/NextDayBuildView';
+65-import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
+--
+7705:                return <CourseRosterView 
+7706-                            events={events}
+7707-                            traineesData={traineesData}
+7708-                            courseColors={courseColors}
+7709-                            archivedCourses={archivedCourses}
+7710-                            personnelData={personnelData}
+7711-                            onNavigateToHateSheet={(trainee) => {
+7712-                                setSelectedTraineeForHateSheet(trainee);
+7713-                                handleNavigation('HateSheet');
+7714-                            }}
+7715-                            onRestoreCourse={() => {}}

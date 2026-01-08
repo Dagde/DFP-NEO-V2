@@ -1,0 +1,15 @@
+109:    const groupedTrainees = useMemo(() => {
+110-        const groups: { [course: string]: Trainee[] } = {};
+111-
+112-        traineesData.forEach(trainee => {
+--
+143:    const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
+144-    const courseColorMap = view === 'active' ? courseColors : archivedCourses;
+145-
+146-    const handleConfirmRestore = (courseNumber: string) => {
+--
+268:                            {coursesToDisplay.map(courseName => {
+269:                                const courseTrainees = groupedTrainees[courseName] || [];
+270-                                const color = courseColorMap[courseName] || 'bg-gray-500';
+271-
+272-                                return (

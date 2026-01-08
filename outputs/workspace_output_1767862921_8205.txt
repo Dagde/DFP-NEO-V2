@@ -1,0 +1,21 @@
+        const groups: { [course: string]: Trainee[] } = {};
+
+        traineesData.forEach(trainee => {
+            if (!groups[trainee.course]) {
+                groups[trainee.course] = [];
+            }
+            groups[trainee.course].push(trainee);
+        });
+
+        // Sort trainees within each group alphabetically by name
+        for (const course in groups) {
+            groups[course].sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        return groups;
+    }, [traineesData]);
+
+    // This effect ensures that if the underlying trainee data (like pause status or unavailabilities) changes
+    // while the profile flyout is open, the flyout will re-render with the latest data.
+    useEffect(() => {
+        if (selectedTrainee && !isCreatingNew) {
