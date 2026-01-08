@@ -1,0 +1,5 @@
+[feature/comprehensive-build-algorithm 0adacc2] Add pinned solutions document - record critical fixes for future reference
+ 1 file changed, 247 insertions(+)
+ create mode 100644 PINNED_SOLUTIONS.md
+To https://github.com/Dagde/DFP---NEO.git
+   d16bc5c..0adacc2  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

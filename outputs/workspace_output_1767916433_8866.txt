@@ -1,0 +1,9 @@
+/workspace/PURPLE_BUTTON_FIX_FINAL.md
+/workspace/PURPLE_BUTTON_FIX.md
+/workspace/FINAL_STATUS_SUMMARY.md
+/workspace/dfp-neo-platform/ISSUES_AND_FIXES.md
+/workspace/DEPLOYMENT_STATUS.md
+/workspace/NUCLEAR_PURPLE_FIX_EXPLANATION.md
+/workspace/PURPLE_BUTTONS_FIX.md
+/workspace/COMPREHENSIVE_PURPLE_BUTTON_FIX.md
+/workspace/PURPLE_BUTTON_FINAL_FIX.md
