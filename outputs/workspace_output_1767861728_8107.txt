@@ -1,0 +1,118 @@
+(index):64 cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+index.tsx:1 Starting app initialization...
+index.tsx:4 React imported
+index.tsx:7 ReactDOM imported
+index.tsx:11 App imported
+index.tsx:14 Root element: <div id=​"root">​…​</div>​
+App.tsx:3309 buildResources - Current view: Program Schedule Current date: 2026-01-08
+App.tsx:3329 Deployments overlapping with 2026-01-08: Array(0)
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3309 buildResources - Current view: Program Schedule Current date: 2026-01-08
+App.tsx:3329 Deployments overlapping with 2026-01-08: Array(0)
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3526 🟡 eventsForDate memo recalculating
+App.tsx:3527 🟡 date: 2026-01-08
+App.tsx:3528 🟡 publishedSchedules keys: Array(0)
+App.tsx:3530 🟡 eventsForDate count: 0
+App.tsx:3526 🟡 eventsForDate memo recalculating
+App.tsx:3527 🟡 date: 2026-01-08
+App.tsx:3528 🟡 publishedSchedules keys: Array(0)
+App.tsx:3530 🟡 eventsForDate count: 0
+App.tsx:3599 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3600 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3601 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3610 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3647 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:3599 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3600 🚀 [NEO-Build] buildDfpDate: 2026-01-09
+App.tsx:3601 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3610 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3647 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:6168 addTileSyllabusOptions filtering syllabusDetails: Array(129)
+App.tsx:6174 Filtered items: Array(89)
+App.tsx:6168 addTileSyllabusOptions filtering syllabusDetails: Array(129)
+App.tsx:6174 Filtered items: Array(89)
+dataService.ts:65 🔄 Initializing data from API...
+App.tsx:3473 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: Program Schedule
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+dataService.ts:65 🔄 Initializing data from API...
+App.tsx:3473 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: Program Schedule
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+db.ts:190 Seeded Logbook Template (XLSX)
+db.ts:190 Seeded Logbook Template (XLSX)
+db.ts:251 Seeded Logbook Template (PDF)
+db.ts:251 Seeded Logbook Template (PDF)
+db.ts:305 Seeded NEO Logo PDF
+db.ts:305 Seeded NEO Logo PDF
+dataService.ts:97 ⚠️ API fetch failed, falling back to localStorage or mock data: ReferenceError: Cannot access 'u' before initialization
+    at rO (dataService.ts:84:18)
+    at async App.tsx:3085:33
+rO @ dataService.ts:97
+App.tsx:2939 Full error details: ReferenceError: Cannot access 'u' before initialization
+    at rO (dataService.ts:84:18)
+    at async App.tsx:3085:33
+console.error @ App.tsx:2939
+dataService.ts:110 📦 Loaded from localStorage: Object
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:371 handleMouseMove called, draggingState exists: false
+ScheduleView.tsx:429 Early return: no draggingState
+ScheduleView.tsx:544 Local handleMouseUp called - ignoring when dragState exists: false
+ScheduleView.tsx:558 Clearing drag state in local handleMouseUp
+dataService.ts:97 ⚠️ API fetch failed, falling back to localStorage or mock data: ReferenceError: Cannot access 'u' before initialization
+    at rO (dataService.ts:84:18)
+    at async App.tsx:3085:33
+rO @ dataService.ts:97
+App.tsx:2939 Full error details: ReferenceError: Cannot access 'u' before initialization
+    at rO (dataService.ts:84:18)
+    at async App.tsx:3085:33
+console.error @ App.tsx:2939
+dataService.ts:110 📦 Loaded from localStorage: Object
+ScheduleView.tsx:204 Global mouse up called, draggingState exists: false
+App.tsx:3309 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3309 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3473 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: Instructors
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:3309 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3309 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3337 deploymentCount: 0
+App.tsx:3395 Built all resources: Array(45) STBY lines: 4
+App.tsx:3473 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: CourseRoster
+App.tsx:7047 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7048 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7052 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7053 🟠 ========== NEO USEEFFECT END (CLOSED) ==========

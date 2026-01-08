@@ -1,0 +1,20 @@
+total 32928
+drwxr-xr-x  21 user user   24576 Jan  8 08:41 .
+drwxr-xr-x  20 root root    4096 Jan  6 22:38 ..
+drwxr-xr-x   4 user user    4096 Jan  8 02:31 .agent_hooks
+-rw-r--r--   1 root root     184 Jan  7 06:30 .env
+drwxr-xr-x   8 root root    4096 Jan  8 08:36 .git
+-rw-r--r--   1 root root     253 Jan  2 03:56 .gitignore
+-rw-r--r--   1 root root      24 Jan  2 03:56 .last-sync
+-rw-r--r--   1 root root  239547 Jan  2 14:44 3000-266375c4-e167-4965-8379-f82e010676b1.app.super.myninja.ai-1
+-rw-r--r--   1 root root    6448 Jan  2 14:44 AC_HISTORY_IMPLEMENTATION_SUMMARY.md
+-rw-r--r--   1 root root    3648 Jan  2 14:44 AC_HISTORY_SETUP.md
+-rw-r--r--   1 root root    5031 Jan  8 03:07 API_AUTHENTICATION_FIX.md
+-rw-r--r--   1 root root    9229 Jan  2 03:56 AUDIT_BUTTONS_COMPLETE.md
+-rw-r--r--   1 root root    3949 Jan  2 03:56 AUDIT_BUTTONS_SIDEBAR_FIX.md
+-rw-r--r--   1 root root    4664 Jan  2 03:56 AUDIT_BUTTON_IMPLEMENTATION_PLAN.md
+-rw-r--r--   1 root root    4390 Jan  2 03:56 AUDIT_DEBOUNCE_IMPLEMENTATION.md
+-rw-r--r--   1 root root    4295 Jan  2 03:56 AUDIT_DEBOUNCING.md
+-rw-r--r--   1 root root    5782 Jan  2 03:56 AUDIT_DETAILED_FIELD_TRACKING.md
+-rw-r--r--   1 root root    6472 Jan  2 03:56 AUDIT_FIXES_SUMMARY.md
+-rw-r--r--   1 root root    4414 Jan  2 03:56 AUDIT_IMPLEMENTATION_COMPLETE.md

@@ -1,0 +1,142 @@
+    59	export async function initializeData() {
+    60	  let instructors: Instructor[] = [];
+    61	  let trainees: Trainee[] = [];
+    62	  let events: ScheduleEvent[] = [];
+    63	
+    64	  if (USE_API) {
+    65	    console.log('🔄 Initializing data from API...');
+    66	    
+    67	    try {
+    68	      // Try to fetch from API
+    69	      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+    70	        fetchInstructors(),
+    71	        fetchTrainees(),
+    72	        fetchSchedule(),
+    73	      ]);
+    74	
+    75	      // Ensure arrays
+    76	      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+    77	      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+    78	      events = Array.isArray(scheduleResult) ? scheduleResult : [];
+    79	
+    80	      console.log('✅ Data loaded from API:', {
+    81	        instructors: instructors.length,
+    82	        trainees: trainees.length,
+    83	        events: events.length,
+    84	        courses: courses.length,
+    85	        coursePriorities: coursePriorities.length,
+    86	        scores: scores.size,
+    87	        pt051Assessments: pt051Assessments.size,
+    88	        coursePercentages: coursePercentages.size,
+    89	        traineeLMPs: traineeLMPs.size,
+    90	      });
+    91	
+    92	      // Save to localStorage for faster next load
+    93	      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+    94	      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+    95	      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    96	    } catch (error) {
+    97	      console.warn('⚠️ API fetch failed, falling back to localStorage or mock data:', error);
+    98	      console.error('Full error details:', error);
+    99	      
+   100	      // Try localStorage first
+   101	      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+   102	      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+   103	      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+   104	
+   105	      // Ensure arrays
+   106	      instructors = Array.isArray(instructors) ? instructors : [];
+   107	      trainees = Array.isArray(trainees) ? trainees : [];
+   108	      events = Array.isArray(events) ? events : [];
+   109	      
+   110	      console.log('📦 Loaded from localStorage:', {
+   111	        instructors: instructors.length,
+   112	        trainees: trainees.length,
+   113	        events: events.length,
+   114	      });
+   115	
+   116	      // If localStorage is empty, use empty arrays
+   117	      if (instructors.length === 0) {
+   118	        console.log('📦 Using empty data as fallback');
+   119	        instructors = [];
+   120	        trainees = [];
+   121	        events = [];
+   122	        
+   123	        // Save empty data to localStorage
+   124	        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+   125	        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+   126	        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+   127	      }
+   128	    }
+   129	  } else {
+   130	    // Load from localStorage or use empty arrays
+   131	    console.log('📦 Loading data from localStorage (API disabled)');
+   132	    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+   133	    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+   134	    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+   135	  }
+   136	
+   137	  // Load other data from localStorage (these are always stored locally for now)
+   138	  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+   139	  const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
+   140	    STORAGE_KEYS.PT051_ASSESSMENTS, 
+   141	    new Map()
+   142	  );
+   143	  let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+   144	  const courseColors = loadFromStorage<{ [key: string]: string }>(
+   145	    STORAGE_KEYS.COURSE_COLORS, 
+   146	    {}
+   147	  );
+   148	  const archivedCourses = loadFromStorage<{ [key: string]: string }>(
+   149	    STORAGE_KEYS.ARCHIVED_COURSES, 
+   150	    {}
+   151	  );
+   152	  let coursePriorities = loadFromStorage<string[]>(
+   153	    STORAGE_KEYS.COURSE_PRIORITIES, 
+   154	    []
+   155	  );
+   156	  const coursePercentages = loadFromStorage<Map<string, number>>(
+   157	    STORAGE_KEYS.COURSE_PERCENTAGES, 
+   158	    new Map()
+   159	  );
+   160	  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+   161	    STORAGE_KEYS.TRAINEE_LMPS, 
+   162	    new Map()
+   163	  );
+   164	
+   165	  // Ensure arrays are actually arrays
+   166	  courses = Array.isArray(courses) ? courses : [];
+   167	  coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
+   168	
+   169	  return {
+   170	    instructors,
+   171	    trainees,
+   172	    events,
+   173	    scores,
+   174	    pt051Assessments,
+   175	    courses,
+   176	    courseColors,
+   177	    archivedCourses,
+   178	    coursePriorities,
+   179	    coursePercentages,
+   180	    traineeLMPs,
+   181	  };
+   182	}
+   183	
+   184	// Save schedule
+   185	export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+   186	  if (USE_API) {
+   187	    const success = await saveScheduleAPI(events);
+   188	    if (success) {
+   189	      // Also save to localStorage for backup
+   190	      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+   191	    }
+   192	    return success;
+   193	  } else {
+   194	    saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+   195	    return true;
+   196	  }
+   197	}
+   198	
+   199	// Save courses data (to localStorage)
+   200	export function saveCoursesData(data: {

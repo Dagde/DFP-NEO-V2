@@ -57,84 +57,7 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
 
 // Initialize data from API or fallback to localStorage or mock data
 export async function initializeData() {
-  let instructors: Instructor[] = [];
-  let trainees: Trainee[] = [];
-  let events: ScheduleEvent[] = [];
-
-  if (USE_API) {
-    console.log('🔄 Initializing data from API...');
-    
-    try {
-      // Try to fetch from API
-      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
-        fetchInstructors(),
-        fetchTrainees(),
-        fetchSchedule(),
-      ]);
-
-      // Ensure arrays
-      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
-      trainees = Array.isArray(traineesResult) ? traineesResult : [];
-      events = Array.isArray(scheduleResult) ? scheduleResult : [];
-
-      console.log('✅ Data loaded from API:', {
-        instructors: instructors.length,
-        trainees: trainees.length,
-        events: events.length,
-        courses: courses.length,
-        coursePriorities: coursePriorities.length,
-        scores: scores.size,
-        pt051Assessments: pt051Assessments.size,
-        coursePercentages: coursePercentages.size,
-        traineeLMPs: traineeLMPs.size,
-      });
-
-      // Save to localStorage for faster next load
-      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
-      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
-      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
-    } catch (error) {
-      console.warn('⚠️ API fetch failed, falling back to localStorage or mock data:', error);
-      console.error('Full error details:', error);
-      
-      // Try localStorage first
-      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
-      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
-      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
-
-      // Ensure arrays
-      instructors = Array.isArray(instructors) ? instructors : [];
-      trainees = Array.isArray(trainees) ? trainees : [];
-      events = Array.isArray(events) ? events : [];
-      
-      console.log('📦 Loaded from localStorage:', {
-        instructors: instructors.length,
-        trainees: trainees.length,
-        events: events.length,
-      });
-
-      // If localStorage is empty, use empty arrays
-      if (instructors.length === 0) {
-        console.log('📦 Using empty data as fallback');
-        instructors = [];
-        trainees = [];
-        events = [];
-        
-        // Save empty data to localStorage
-        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
-        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
-        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
-      }
-    }
-  } else {
-    // Load from localStorage or use empty arrays
-    console.log('📦 Loading data from localStorage (API disabled)');
-    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
-    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
-    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
-  }
-
-  // Load other data from localStorage (these are always stored locally for now)
+  // Load other data from localStorage first (these are always stored locally for now)
   const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
   const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
     STORAGE_KEYS.PT051_ASSESSMENTS, 
@@ -165,6 +88,83 @@ export async function initializeData() {
   // Ensure arrays are actually arrays
   courses = Array.isArray(courses) ? courses : [];
   coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
+
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {
+    console.log('Initializing data from API...');
+    
+    try {
+      // Try to fetch from API
+      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+        fetchInstructors(),
+        fetchTrainees(),
+        fetchSchedule(),
+      ]);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];
+
+      console.log('Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+        courses: courses.length,
+        coursePriorities: coursePriorities.length,
+        scores: scores.size,
+        pt051Assessments: pt051Assessments.size,
+        coursePercentages: coursePercentages.size,
+        traineeLMPs: traineeLMPs.size,
+      });
+
+      // Save to localStorage for faster next load
+      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    } catch (error) {
+      console.warn('API fetch failed, falling back to localStorage or mock data:', error);
+      console.error('Full error details:', error);
+      
+      // Try localStorage first
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructors) ? instructors : [];
+      trainees = Array.isArray(trainees) ? trainees : [];
+      events = Array.isArray(events) ? events : [];
+      
+      console.log('Loaded from localStorage:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
+
+      // If localStorage is empty, use empty arrays
+      if (instructors.length === 0) {
+        console.log('Using empty data as fallback');
+        instructors = [];
+        trainees = [];
+        events = [];
+        
+        // Save empty data to localStorage
+        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      }
+    }
+  } else {
+    // Load from localStorage or use empty arrays
+    console.log('Loading data from localStorage (API disabled)');
+    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+  }
 
   return {
     instructors,
@@ -203,28 +203,28 @@ export function saveCoursesData(data: {
   archivedCourses: { [key: string]: string };
   coursePriorities: string[];
   coursePercentages: Map<string, number>;
-}): void {
+}) {
   saveToStorage(STORAGE_KEYS.COURSES, data.courses);
   saveToStorage(STORAGE_KEYS.COURSE_COLORS, data.courseColors);
   saveToStorage(STORAGE_KEYS.ARCHIVED_COURSES, data.archivedCourses);
   saveToStorage(STORAGE_KEYS.COURSE_PRIORITIES, data.coursePriorities);
-  saveToStorage(STORAGE_KEYS.COURSE_PERCENTAGES, data.coursePercentages);
+  saveToStorage(STORAGE_KEYS.COURSE_PERCENTAGES, Array.from(data.coursePercentages.entries()));
 }
 
 // Save scores data (to localStorage)
-export function saveScoresData(scores: Map<string, Score[]>): void {
-  saveToStorage(STORAGE_KEYS.SCORES, scores);
+export function saveScoresData(scores: Map<string, Score[]>) {
+  saveToStorage(STORAGE_KEYS.SCORES, Array.from(scores.entries()));
 }
 
 // Save PT051 assessments (to localStorage)
-export function savePT051AssessmentsData(assessments: Map<string, Pt051Assessment>): void {
-  saveToStorage(STORAGE_KEYS.PT051_ASSESSMENTS, assessments);
+export function savePT051AssessmentsData(assessments: Map<string, Pt051Assessment>) {
+  saveToStorage(STORAGE_KEYS.PT051_ASSESSMENTS, Array.from(assessments.entries()));
 }
 
 // Save trainee LMPs (to localStorage)
-export function saveTraineeLMPsData(traineeLMPs: Map<string, SyllabusItemDetail[]>): void {
-  saveToStorage(STORAGE_KEYS.TRAINEE_LMPS, traineeLMPs);
+export function saveTraineeLMPsData(lmps: Map<string, SyllabusItemDetail[]>) {
+  saveToStorage(STORAGE_KEYS.TRAINEE_LMPS, Array.from(lmps.entries()));
 }
 
-// Export mock data constants for reference
+// Export mock data for use in other parts of the app
 export { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK };

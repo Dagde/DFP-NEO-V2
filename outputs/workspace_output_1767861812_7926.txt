@@ -1,0 +1,26 @@
+    50	      return parsed;
+    51	    }
+    52	  } catch (error) {
+    53	    console.error(`Error loading ${key} from localStorage:`, error);
+    54	  }
+    55	  return defaultValue;
+    56	}
+    57	
+    58	// Initialize data from API or fallback to localStorage or mock data
+    59	export async function initializeData() {
+    60	  let instructors: Instructor[] = [];
+    61	  let trainees: Trainee[] = [];
+    62	  let events: ScheduleEvent[] = [];
+    63	
+    64	  if (USE_API) {
+    65	    console.log('🔄 Initializing data from API...');
+    66	    
+    67	    try {
+    68	      // Try to fetch from API
+    69	      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([
+    70	        fetchInstructors(),
+    71	        fetchTrainees(),
+    72	        fetchSchedule(),
+    73	      ]);
+    74	
+    75	      // Ensure arrays

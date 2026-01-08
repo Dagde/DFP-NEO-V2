@@ -1,0 +1,38 @@
+export async function initializeData() {$
+  let instructors: Instructor[] = [];$
+  let trainees: Trainee[] = [];$
+  let events: ScheduleEvent[] = [];$
+$
+  if (USE_API) {$
+    console.log('M-pM-^_M-^TM-^D Initializing data from API...');$
+    $
+    try {$
+      // Try to fetch from API$
+      const [instructorsResult, traineesResult, scheduleResult] = await Promise.all([$
+        fetchInstructors(),$
+        fetchTrainees(),$
+        fetchSchedule(),$
+      ]);$
+$
+      // Ensure arrays$
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];$
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];$
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];$
+$
+      console.log('M-bM-^\M-^E Data loaded from API:', {$
+        instructors: instructors.length,$
+        trainees: trainees.length,$
+        events: events.length,$
+        courses: courses.length,$
+        coursePriorities: coursePriorities.length,$
+        scores: scores.size,$
+        pt051Assessments: pt051Assessments.size,$
+        coursePercentages: coursePercentages.size,$
+        traineeLMPs: traineeLMPs.size,$
+      });$
+$
+      // Save to localStorage for faster next load$
+      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);$
+      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);$
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);$
+    } catch (error) {$
