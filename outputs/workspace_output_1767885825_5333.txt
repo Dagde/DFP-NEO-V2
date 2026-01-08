@@ -1,0 +1,76 @@
+[feature/comprehensive-build-algorithm 706a192] Add debug logging for NEO Build resource assignment
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 64 files changed, 2388 insertions(+), 7 deletions(-)
+ create mode 100644 Screen Shot 2026-01-09 at 2.04.18 am.jpg
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-nYoF3WZ8.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-nYoF3WZ8.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-t1oBVV8C.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-t1oBVV8C.js.map
+ create mode 100644 outputs/workspace_output_1767884749_6110.txt
+ create mode 100644 outputs/workspace_output_1767884755_4345.txt
+ create mode 100644 outputs/workspace_output_1767884760_9705.txt
+ create mode 100644 outputs/workspace_output_1767884766_700.txt
+ create mode 100644 outputs/workspace_output_1767884776_4442.txt
+ create mode 100644 outputs/workspace_output_1767884783_3832.txt
+ create mode 100644 outputs/workspace_output_1767884788_3818.txt
+ create mode 100644 outputs/workspace_output_1767884827_8593.txt
+ create mode 100644 outputs/workspace_output_1767884835_8636.txt
+ create mode 100644 outputs/workspace_output_1767885389_6296.txt
+ create mode 100644 outputs/workspace_output_1767885392_9368.txt
+ create mode 100644 outputs/workspace_output_1767885395_5677.txt
+ create mode 100644 outputs/workspace_output_1767885401_9315.txt
+ create mode 100644 outputs/workspace_output_1767885404_5442.txt
+ create mode 100644 outputs/workspace_output_1767885406_8173.txt
+ create mode 100644 outputs/workspace_output_1767885409_2784.txt
+ create mode 100644 outputs/workspace_output_1767885473_5277.txt
+ create mode 100644 outputs/workspace_output_1767885475_4574.txt
+ create mode 100644 outputs/workspace_output_1767885477_3524.txt
+ create mode 100644 outputs/workspace_output_1767885483_8180.txt
+ create mode 100644 outputs/workspace_output_1767885489_8427.txt
+ create mode 100644 outputs/workspace_output_1767885493_3150.txt
+ create mode 100644 outputs/workspace_output_1767885557_8519.txt
+ create mode 100644 outputs/workspace_output_1767885559_6001.txt
+ create mode 100644 outputs/workspace_output_1767885563_2632.txt
+ create mode 100644 outputs/workspace_output_1767885566_3746.txt
+ create mode 100644 outputs/workspace_output_1767885567_3497.txt
+ create mode 100644 outputs/workspace_output_1767885570_6366.txt
+ create mode 100644 outputs/workspace_output_1767885572_4072.txt
+ create mode 100644 outputs/workspace_output_1767885575_110.txt
+ create mode 100644 outputs/workspace_output_1767885577_8376.txt
+ create mode 100644 outputs/workspace_output_1767885580_2901.txt
+ create mode 100644 outputs/workspace_output_1767885582_2709.txt
+ create mode 100644 outputs/workspace_output_1767885585_9550.txt
+ create mode 100644 outputs/workspace_output_1767885612_57.txt
+ create mode 100644 outputs/workspace_output_1767885624_2334.txt
+ create mode 100644 outputs/workspace_output_1767885627_5543.txt
+ create mode 100644 outputs/workspace_output_1767885633_836.txt
+ create mode 100644 outputs/workspace_output_1767885635_2097.txt
+ create mode 100644 outputs/workspace_output_1767885637_4702.txt
+ create mode 100644 outputs/workspace_output_1767885642_3158.txt
+ create mode 100644 outputs/workspace_output_1767885645_7736.txt
+ create mode 100644 outputs/workspace_output_1767885647_6565.txt
+ create mode 100644 outputs/workspace_output_1767885651_610.txt
+ create mode 100644 outputs/workspace_output_1767885657_9947.txt
+ create mode 100644 outputs/workspace_output_1767885659_5093.txt
+ create mode 100644 outputs/workspace_output_1767885721_9704.txt
+ create mode 100644 outputs/workspace_output_1767885783_5482.txt
+ create mode 100644 outputs/workspace_output_1767885786_5623.txt
+ create mode 100644 outputs/workspace_output_1767885788_5885.txt
+ create mode 100644 outputs/workspace_output_1767885790_939.txt
+ create mode 100644 outputs/workspace_output_1767885800_3692.txt
+ create mode 100644 outputs/workspace_output_1767885813_9250.txt
+ create mode 100644 outputs/workspace_output_1767885825_5333.txt
+ create mode 100644 summarized_conversations/original_conversation_1767885386_2411.txt
+To https://github.com/Dagde/DFP---NEO.git
+   797c4e6..706a192  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

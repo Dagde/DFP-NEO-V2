@@ -1,0 +1,19 @@
+                    }
+                    // Start search after primary event ends
+                    searchStartTime = Math.max(startTimeBoundary, nextEvent.startTime + nextEvent.duration);
+                }
+
+                const segmentSearchOrder = [...segments].sort((a, b) => a.count - b.count || a.start - b.start);
+                let placed = false;
+                const searchSpaces = (type === 'cpt' || type === 'ground') && !isNightPass && segments.length > 0 
+                    ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
+                    : [{ start: searchStartTime, end: endTimeBoundary }];
+
+                for (const space of searchSpaces) {
+                    if (placed) break;
+                    for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
+                        const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne);
+                        if (result && typeof result === 'object' && 'id' in result) {
+                            generatedEvents.push(result);
+                            // Only get instructor counts if not a solo flight
+                               const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;

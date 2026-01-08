@@ -1,0 +1,161 @@
+        
+        let unplacedTrainees = [...list];
+        let placedThisPass = true;
+
+        const segments: { start: number, end: number, count: number }[] = [];
+        if ((type === 'cpt' || type === 'ground') && !isNightPass) {
+            const segmentDuration = 2;
+            for (let t = startTimeBoundary; t < endTimeBoundary; t += segmentDuration) {
+                segments.push({ start: t, end: t + segmentDuration, count: 0 });
+            }
+        }
+
+        while(placedThisPass && unplacedTrainees.length > 0) {
+            placedThisPass = false;
+            const remainingForNextPass: Trainee[] = [];
+
+            for (const trainee of unplacedTrainees) {
+                const { next, plusOne } = traineeNextEventMap.get(trainee.fullName)!;
+                const syllabusItem = isPlusOne ? plusOne : next;
+                if (!syllabusItem) { continue; }
+
+                let searchStartTime = startTimeBoundary;
+                
+                // Plus-One Rule: Plus-one events are scheduled "after their primary"
+                // This means after the trainee's first scheduled event (their Next Event)
+                if (isPlusOne) { 
+--
+                            } else if (type === 'cpt') {
+                                tCounts.cpt++; 
+                                if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                            }
+                            
+                            if (type === 'cpt' || type === 'ground') {
+                                const segment = segments.find(s => time >= s.start && time < s.end);
+                                if (segment) segment.count++;
+                            }
+
+                            placed = true;
+                            placedThisPass = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!placed) { remainingForNextPass.push(trainee); }
+            }
+            unplacedTrainees = remainingForNextPass;
+        }
+
+        // OLD STBY LOGIC REMOVED - Will be replaced with separate STBY pass after main build
+    };
+    
+    type ScheduleEventResult = Omit<ScheduleEvent, 'date'> | null;
+--
+                    } else {
+                        turnaround = flightTurnaround;
+                    }
+                } else if (e.type === 'ftd') {
+                    turnaround = ftdTurnaround;
+                } else if (e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))) {
+                    turnaround = cptTurnaround;
+                }
+                
+                const existingEventEnd = e.startTime + e.duration + turnaround;
+                const newEventStart = startTime;
+                return newEventStart < existingEventEnd && (startTime + syllabusItem.duration) > e.startTime;
+            });
+            if (!resourceIsOccupied) { resourceId = id; break; }
+        }
+        
+        // If no resource available, return null (STBY will be handled in separate pass)
+        if (!resourceId) {
+            console.log(`⚠️ NO RESOURCE AVAILABLE: type=${type}, prefix=${resourcePrefix}, count=${resourceCount}`);
+            return null;
+        }
+        
+        let area: string | undefined = undefined;
+        if (type === 'flight') {
+            const isBnf = syllabusItem.code.startsWith('BNF');
+            const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
+--
+
+        // Get turnaround time for target event
+        let requiredTurnaround = 0;
+        if (targetEvent.type === 'flight') requiredTurnaround = flightTurnaround;
+        else if (targetEvent.type === 'ftd') requiredTurnaround = ftdTurnaround;
+        else if (targetEvent.type === 'cpt' || (targetEvent.type === 'ground' && targetEvent.flightNumber.includes('CPT'))) requiredTurnaround = cptTurnaround;
+
+        // Check turnaround conflicts - only with events on same resource
+        const sameResourceEvents = validEvents.filter(e => e.resourceId === targetEvent.resourceId);
+        sameResourceEvents.sort((a, b) => a.startTime - b.startTime);
+
+        for (let i = 0; i < sameResourceEvents.length; i++) {
+            const event = sameResourceEvents[i];
+            
+            // Check if targetEvent comes after this event
+            if (targetEvent.startTime > event.startTime) {
+                const gap = targetEvent.startTime - (event.startTime + event.duration);
+                if (gap < requiredTurnaround) {
+                    return { 
+                        hasConflict: true, 
+                        conflictingEventId: event.id, 
+                        conflictType: 'turnaround',
+                        conflictedPersonnel: null 
+                    };
+                }
+            }
+--
+            // Check if targetEvent comes before this event
+            if (targetEvent.startTime < event.startTime) {
+                let eventTurnaround = 0;
+                if (event.type === 'flight') eventTurnaround = flightTurnaround;
+                else if (event.type === 'ftd') eventTurnaround = ftdTurnaround;
+                else if (event.type === 'cpt' || (event.type === 'ground' && event.flightNumber.includes('CPT'))) eventTurnaround = cptTurnaround;
+                
+                const gap = event.startTime - (targetEvent.startTime + targetEvent.duration);
+                if (gap < eventTurnaround) {
+                    return { 
+                        hasConflict: true, 
+                        conflictingEventId: event.id, 
+                        conflictType: 'turnaround',
+                        conflictedPersonnel: null 
+                    };
+                }
+            }
+        }
+
+        // Check resource conflicts - overlapping time on same resource
+        for (const event of validEvents) {
+            if (event.resourceId === targetEvent.resourceId && checkTimeOverlap(targetEvent, event)) {
+                return { 
+                    hasConflict: true, 
+                    conflictingEventId: event.id, 
+                    conflictType: 'resource',
+--
+                case 'turnaround':
+                    if (conflictingEvent) {
+                        let turnaround = 0;
+                        if (event.type === 'flight') turnaround = flightTurnaround;
+                        else if (event.type === 'ftd') turnaround = ftdTurnaround;
+                        else if (event.type === 'cpt' || (event.type === 'ground' && event.flightNumber.includes('CPT'))) turnaround = cptTurnaround;
+                        
+                        if (event.startTime > conflictingEvent.startTime) {
+                            const gap = event.startTime - (conflictingEvent.startTime + conflictingEvent.duration);
+                            errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and previous event ${conflictingEvent.flightNumber} (minimum required: ${turnaround}hrs)`);
+                        } else {
+                            const gap = conflictingEvent.startTime - (event.startTime + event.duration);
+                            errors.push(`❌ Turnaround violation - Only ${gap.toFixed(2)}hrs between ${event.flightNumber} and next event ${conflictingEvent.flightNumber} (minimum required: ${turnaround}hrs)`);
+                        }
+                    }
+                    break;
+                    
+                case 'resource':
+                    if (conflictingEvent) {
+                        errors.push(`❌ Resource conflict - Aircraft ${event.resourceId} is double-booked with ${conflictingEvent.flightNumber} at ${conflictingEvent.startTime.toFixed(2)}hrs`);
+                    }
+                    break;
+                    
+                case 'personnel':
+                    if (conflictingEvent && conflictResult.conflictedPersonnel) {
+                        errors.push(`❌ ${conflictResult.conflictedPersonnel.split(',')[0]} is double-booked - Scheduled for both ${event.flightNumber} and ${conflictingEvent.flightNumber} at overlapping times`);

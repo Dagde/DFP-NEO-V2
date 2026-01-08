@@ -1620,6 +1620,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
                 const segmentSearchOrder = [...segments].sort((a, b) => a.count - b.count || a.start - b.start);
                 let placed = false;
+                
+                // DEBUG: Log segments for ground/cpt events
+                if (type === 'ground' || type === 'cpt') {
+                    console.log(`  📊 SEGMENT DEBUG: ${segments.length} segments available`);
+                    segmentSearchOrder.forEach((s, i) => {
+                        console.log(`    Segment ${i + 1}: ${s.start.toFixed(2)}-${s.end.toFixed(2)}hrs (${s.count} events)`);
+                    });
+                }
+                
                 const searchSpaces = (type === 'cpt' || type === 'ground') && !isNightPass && segments.length > 0 
                     ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
                     : [{ start: searchStartTime, end: endTimeBoundary }];
@@ -1941,6 +1950,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // DEBUG: Log resource assignment
         console.log(`🔧 RESOURCE DEBUG: type=${type}, prefix=${resourcePrefix}, count=${resourceCount}`);
         
+        // EXTRA DEBUG for Ground events
+        if (type === 'ground' || type === 'cpt') {
+            console.log(`  🏢 GROUND/CPT DEBUG: Checking Ground ${type} resources...`);
+            console.log(`  📅 Attempting to schedule at time: ${startTime.toFixed(2)}hrs`);
+            console.log(`  📋 Generated events so far: ${generatedEvents.length}`);
+        }
+        
         for (let i = 1; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
             const resourceIsOccupied = generatedEvents.some(e => {
@@ -1979,6 +1995,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // If no resource available, return null (STBY will be handled in separate pass)
         if (!resourceId) {
             console.log(`⚠️ NO RESOURCE AVAILABLE: type=${type}, prefix=${resourcePrefix}, count=${resourceCount}`);
+            
+            // EXTRA DEBUG for Ground events
+            if (type === 'ground' || type === 'cpt') {
+                console.log(`  ❌ GROUND/CPT FAILURE: Could not schedule ${type} event`);
+                console.log(`  🔍 Checking existing ${type} events:`);
+                const existingGroundEvents = generatedEvents.filter(e => e.type === type);
+                existingGroundEvents.forEach(e => {
+                    console.log(`    - ${e.flightNumber} at ${e.startTime.toFixed(2)}-${(e.startTime + e.duration).toFixed(2)}hrs on ${e.resourceId}`);
+                });
+            }
             return null;
         }
         
