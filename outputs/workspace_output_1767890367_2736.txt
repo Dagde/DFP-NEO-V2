@@ -1,0 +1,13 @@
+        pt051Assessments: new Map<string, Pt051Assessment>(),
+        courses,
+        courseColors,
+        archivedCourses,
+        coursePriorities,
+        coursePercentages,
+        traineeLMPs,
+        events
+    };
+};
+
+export const ESL_DATA = generateDataSet('ESL');
+export const PEA_DATA = generateDataSet('PEA');

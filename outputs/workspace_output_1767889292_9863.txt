@@ -1,0 +1,10 @@
+64:import NextDayBuildView from './components/NextDayBuildView';
+3264:    const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
+3445:        } else if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)) {
+3469:        if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'BuildAnalysis'].includes(activeView)) {
+4570:        setNextDayBuildEvents([]); // Clear the build when changing schools
+4805:                date: oracleContext === 'nextDayBuild' || activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData' ? buildDfpDate : date,
+4826:            const isNextDayContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+4966:        const isEditingInNextDayView = !isNewEvent && ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+4982:            let saveToNextDayBuild = false;
+4986:                saveToNextDayBuild = oracleContext === 'nextDayBuild';

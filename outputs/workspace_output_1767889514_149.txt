@@ -1,0 +1,11 @@
+                
+                const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+                console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
+                console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
+                
+                setNextDayBuildEvents(generated);
+                console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+
+                // Analyze build results
+                const analysis = analyzeBuildResults(
+                    generated,

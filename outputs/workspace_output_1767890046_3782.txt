@@ -1,0 +1,1 @@
+4390:    const handleNavigation = (view: string) => {

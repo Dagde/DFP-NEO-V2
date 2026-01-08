@@ -1,0 +1,28 @@
+    const nextDayEventSegments = useMemo(() => {
+        console.log('🚀 [NEO-Build] nextDayEventSegments useMemo recalculating');
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
+        
+        const segments: EventSegment[] = [];
+        const todayStart = new Date(`${buildDfpDate}T00:00:00Z`).getTime();
+        const todayEnd = new Date(todayStart);
+        todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+        const todayEndTime = todayEnd.getTime();
+
+        const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));
+        console.log('🚀 [NEO-Build] buildEventsWithDate.length:', buildEventsWithDate.length);
+        
+        const dayBeforeBuild = new Date(todayStart);
+        dayBeforeBuild.setUTCDate(dayBeforeBuild.getUTCDate() - 1);
+        const dayBeforeBuildStr = dayBeforeBuild.toISOString().split('T')[0];
+
+        const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
+
+        for (const event of allEvents) {
+            const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+            const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
+
+            if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
+                const segmentStartMs = Math.max(eventStartMs, todayStart);
+                const segmentEndMs = Math.min(eventEndMs, todayEndTime);
+

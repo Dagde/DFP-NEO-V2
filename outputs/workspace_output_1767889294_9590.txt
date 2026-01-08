@@ -1,0 +1,242 @@
+        simIp: { maxFtd: 2, maxTotal: 2 }
+    });
+
+    // Phrase Bank State
+    const [phraseBank, setPhraseBank] = useState<PhraseBank>(DEFAULT_PHRASE_BANK);
+
+    // Published Schedules State (must be declared before buildResources)
+    const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    
+    // NDB state
+    const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
+    const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return getLocalDateString(tomorrow);
+    });
+    const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
+    const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
+    const [availableFtdCount, setAvailableFtdCount] = useState(school === 'ESL' ? 5 : 4);
+    const [availableCptCount, setAvailableCptCount] = useState(4);
+    const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
+--
+
+    const changeSchool = (newSchool: 'ESL' | 'PEA') => {
+        setSchool(newSchool);
+        setIsLocalityChangeVisible(true);
+        setTimeout(() => setIsLocalityChangeVisible(false), 2000);
+
+        // Note: We DON'T filter the state here anymore
+        // The filtering happens in buildResources and other display functions
+        // This prevents data loss when switching between schools
+        
+        setNextDayBuildEvents([]); // Clear the build when changing schools
+        setPublishedSchedules({}); // Clear published schedules on school change
+        
+        // Reset baseline on school change to avoid stale comparisons
+        const todayStr = getLocalDateString();
+        const eslUnits = ['1FTS', 'CFS'];
+        const peaUnits = ['2FTS'];
+        const targetUnits = newSchool === 'ESL' ? eslUnits : peaUnits;
+        const filteredEvents = events.filter(e => {
+            const instructor = instructorsData.find(i => i.id === e.instructorId && targetUnits.includes(i.unit));
+            const trainee = traineesData.find(t => t.id === e.traineeId && targetUnits.includes(t.unit));
+--
+                    if (e.eventCategory === 'sct') {
+                        console.log('🔄 Updating SCT event in nextDayBuildEvents:', {
+                            id: e.id,
+                            student: e.student,
+                            pilot: e.pilot,
+                            flightType: e.flightType
+                        });
+                    }
+                });
+                
+                setNextDayBuildEvents([...otherEvents, ...eventsForBuild]);
+            } else {
+                if (isNewEvent) {
+                    // Track already assigned events in this batch
+                    const alreadyAssigned: ScheduleEvent[] = [];
+                    
+                    eventsToSave.forEach(e => {
+                        // Assign resourceId based on event type
+                        // For deployments, always reassign to get correct numbered resource
+                        if (!e.resourceId || e.type === 'deployment') {
+                            const allEventsForDate = publishedSchedules[mainEvent.date] || [];
+--
+            cancellationCode: cancellationCode,
+            cancellationManualEntry: manualCodeEntry,
+            cancelledBy: `${currentUser}`,
+            cancelledAt: new Date().toISOString(),
+            // Keep original resourceId - don't move to STBY
+        };
+        
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+        
+        if (isNextDay) {
+            setNextDayBuildEvents(prev => 
+                prev.map(e => e.id === selectedEvent.id ? cancelledEvent : e)
+            );
+        } else {
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const scheduleForDate = prev[eventDate] || [];
+                const updatedSchedule = scheduleForDate.map(e => e.id === selectedEvent.id ? cancelledEvent : e);
+                return { ...prev, [eventDate]: updatedSchedule };
+            });
+        }
+        
+--
+    
+    const handleDeleteEvent = () => {
+        if (!selectedEvent) return;
+        const eventDate = selectedEvent.date;
+
+        setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+
+        if (isNextDay) {
+            setNextDayBuildEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+        } else {
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const newScheduleForDate = (prev[eventDate] || []).filter(e => e.id !== selectedEvent.id);
+                return { ...prev, [eventDate]: newScheduleForDate };
+            });
+        }
+        
+        // NEW APPROACH: Trigger PT-051 sync after deletion (only for Active DFP)
+        if (!isNextDay) {
+            console.log('📋 Triggering PT-051 sync after event deletion...');
+--
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
+        console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        
+        // CRITICAL: Log traineesData state
+        console.log('🚀 [NEO-Build] traineesData state:', {
+            total: traineesData.length,
+            sample: traineesData.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course }))
+        });
+        setIsBuildingDfp(true);
+        setNextDayBuildEvents([]); // Clear previous build
+        
+        // Use preserved events if provided, otherwise use state
+        const eventsToUse = preservedEvents || highestPriorityEvents;
+        
+        console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
+        
+        const config: DfpConfig = {
+            instructors: instructorsData,
+            trainees: traineesData,
+            syllabus: syllabusDetails,
+--
+                    trainees: config.trainees.length,
+                    syllabus: config.syllabus.length,
+                    highestPriorityEvents: config.highestPriorityEvents.length,
+                    buildDate: config.buildDate
+                });
+                
+                const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+                console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
+                console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
+                
+                setNextDayBuildEvents(generated);
+                console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+
+                // Analyze build results
+                const analysis = analyzeBuildResults(
+                    generated,
+                    coursePercentages,
+                    coursePriorities,
+                    availableAircraftCount,
+                    buildDfpDate,
+                    traineesData,
+                    traineeLMPs,
+--
+           
+           // Log the publish action to audit trail
+           logAudit(
+               "Next Day Build",
+               "Edit",
+               `Published schedule for ${buildDfpDate}`,
+               `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, FTD: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
+           );
+
+        setDate(buildDfpDate);
+        setNextDayBuildEvents([]);
+        setActiveView('Program Schedule');
+        setSuccessMessage('DFP Successfully Published!');
+    };
+
+
+    const handleScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
+        if (!updates || updates.length === 0) return;
+    
+        // Simple event update - no formation linking
+        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+--
+                          },
+                          logAudit
+                      );
+               }
+           });
+       };    
+    const handleNextDayScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
+        if (!updates || updates.length === 0) return;
+    
+        // Simple event update - no formation linking
+        setNextDayBuildEvents(prev => {
+            const updatesMap = new Map(updates.map(u => [u.eventId, u]));
+            return prev.map(event => {
+                if (updatesMap.has(event.id)) {
+                    const update = updatesMap.get(event.id)!;
+                    return {
+                        ...event,
+                        startTime: update.newStartTime ?? event.startTime,
+                        resourceId: update.newResourceId ?? event.resourceId,
+                    };
+                }
+--
+            attendees: data.attendees,
+            resourceId: data.resourceId,
+            color: 'bg-teal-400/50',
+            flightType: 'Dual',
+            locationType: 'Local',
+            origin: school,
+            destination: school,
+            authNotes: data.location // Using notes field as location for CPTs
+        };
+
+        setNextDayBuildEvents(prev => [...prev, newEvent]);
+        setShowAddGroundEvent(false);
+        setSuccessMessage('Ground event added to the build.');
+    };
+
+
+    // --- NEO ALGORITHM IMPLEMENTATION ---
+    const generateTraineeRemedies = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[]): NeoTraineeRemedy[] => {
+        const suggestions: NeoTraineeRemedy[] = [];
+        const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
+        const conflictedSyllabusId = conflictedEvent.flightNumber;
+--
+                                if (visualAdjustEvent) {
+                                    const newDuration = endTime - startTime;
+                                    const updatedEvent = {
+                                        ...visualAdjustEvent,
+                                        startTime,
+                                        duration: newDuration
+                                    };
+                                    setVisualAdjustEvent(updatedEvent);
+                                    
+                                    // Update the actual event in the next day events array
+                                    setNextDayBuildEvents(prevEvents => 
+                                        prevEvents.map(e => 
+                                            e.id === visualAdjustEvent.id 
+                                                ? { ...e, startTime, duration: newDuration }
+                                                : e
+                                        )
+                                    );
+                                }
+                            }}
+                       />;
+            case 'Priorities':

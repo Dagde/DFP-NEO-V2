@@ -1,0 +1,11 @@
+    const navigateToView = (view: string) => {
+        const today = getLocalDateString();
+        const isDashboard = view === 'MyDashboard' || view === 'SupervisorDashboard';
+        if (isDashboard && date !== today) {
+            setDate(today);
+        }
+        setPreviousView(activeView);
+        setActiveView(view);
+    };
+
+    const handleNavigation = (view: string) => {

@@ -1,0 +1,2 @@
+6118:                    handleNavigation('NextDayBuild');
+8811:                    handleNavigation('NextDayBuild');

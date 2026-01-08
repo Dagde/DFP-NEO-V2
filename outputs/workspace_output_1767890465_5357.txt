@@ -1,0 +1,11 @@
+                    ...event,
+                    segmentStartTime: segmentStartTimeInHours,
+                    segmentDuration: segmentDurationInHours,
+                    segmentType
+                });
+            }
+        }
+        console.log('🚀 [NEO-Build] Final segments.length:', segments.length);
+        return segments;
+    }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
+

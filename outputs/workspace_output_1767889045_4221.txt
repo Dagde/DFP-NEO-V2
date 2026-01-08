@@ -1,0 +1,3 @@
+1979:        console.log(`  📋 Generated events so far: ${generatedEvents.length}`);
+6053:                console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
+6100:                       `Generated ${generated.length} events, Flight: ${generated.filter(e => e.type === 'flight').length}, FTD: ${generated.filter(e => e.type === 'ftd').length}, Ground: ${generated.filter(e => e.type === 'ground').length}`

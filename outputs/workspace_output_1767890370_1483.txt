@@ -1,0 +1,30 @@
+    return newEvents;
+};
+
+// --- Historical Logbook Data Generation ---
+const generateHistoricalEvents = (instructors: Instructor[], trainees: Trainee[], syllabus: SyllabusItemDetail[]) => {
+    const events: ScheduleEvent[] = [];
+    const today = new Date();
+    const startHistoryDate = new Date(today.getFullYear(), today.getMonth() - 24, 1);
+
+    const flightSyllabus = syllabus.filter(s => s.type === 'Flight' && !s.code.includes('MB'));
+    const ftdSyllabus = syllabus.filter(s => s.type === 'FTD');
+
+    trainees.forEach(trainee => {
+        if (trainee.isPaused) return;
+        
+        for (let i = 0; i < 24; i++) { 
+            const monthDate = new Date(startHistoryDate.getFullYear(), startHistoryDate.getMonth() + i, 1);
+            const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+            
+            for (let j = 0; j < 5; j++) { 
+                const isFlight = Math.random() > 0.4;
+                const item = isFlight 
+                    ? flightSyllabus[Math.floor(Math.random() * flightSyllabus.length)]
+                    : ftdSyllabus[Math.floor(Math.random() * ftdSyllabus.length)];
+                
+                if (!item) continue;
+--
+        const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };

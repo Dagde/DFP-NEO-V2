@@ -1,0 +1,11 @@
+                
+                if (segmentDurationInHours <= 0) continue;
+
+                let segmentType: 'full' | 'start' | 'end' | 'middle' = 'full';
+                const startsBeforeToday = eventStartMs < todayStart;
+                const endsAfterToday = eventEndMs > todayEndTime;
+
+                if (startsBeforeToday && endsAfterToday) segmentType = 'middle';
+                else if (startsBeforeToday) segmentType = 'end';
+                else if (endsAfterToday) segmentType = 'start';
+                

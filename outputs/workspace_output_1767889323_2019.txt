@@ -1,0 +1,47 @@
+
+    // Published Schedules State (must be declared before buildResources)
+    const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    
+    // NDB state
+    const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
+    const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return getLocalDateString(tomorrow);
+    });
+--
+
+        // Note: We DON'T filter the state here anymore
+        // The filtering happens in buildResources and other display functions
+        // This prevents data loss when switching between schools
+        
+        setNextDayBuildEvents([]); // Clear the build when changing schools
+        setPublishedSchedules({}); // Clear published schedules on school change
+        
+        // Reset baseline on school change to avoid stale comparisons
+        const todayStr = getLocalDateString();
+        const eslUnits = ['1FTS', 'CFS'];
+--
+        console.log('🚀 [NEO-Build] traineesData state:', {
+            total: traineesData.length,
+            sample: traineesData.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course }))
+        });
+        setIsBuildingDfp(true);
+        setNextDayBuildEvents([]); // Clear previous build
+        
+        // Use preserved events if provided, otherwise use state
+        const eventsToUse = preservedEvents || highestPriorityEvents;
+        
+        console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
+--
+               `Published schedule for ${buildDfpDate}`,
+               `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, FTD: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
+           );
+
+        setDate(buildDfpDate);
+        setNextDayBuildEvents([]);
+        setActiveView('Program Schedule');
+        setSuccessMessage('DFP Successfully Published!');
+    };
+
+

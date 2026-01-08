@@ -1,0 +1,31 @@
+    const handleNavigation = (view: string) => {
+        if (view === 'Syllabus') {
+            setInitialSyllabusId(null);
+            setSyllabusBackTarget('Program Schedule');
+        }
+        if (isDirtyRef.current()) {
+            setPendingNavigation(view);
+            setShowUnsavedWarning(true);
+        } else {
+            navigateToView(view);
+        }
+    };
+    
+    const onNavigateToSyllabus = (id: string) => {
+        setInitialSyllabusId(id);
+        setSyllabusBackTarget(activeView);
+        handleNavigation('Syllabus');
+    };
+
+    const handleViewTraineeLMP = (trainee: Trainee) => {
+        setSelectedTraineeForLMP(trainee);
+        handleNavigation('TraineeLMP');
+    };
+    
+    const handleViewLogbook = (person: Instructor | Trainee) => {
+        setSelectedPersonForLogbook(person);
+        handleNavigation('Logbook');
+    };
+
+    const handleOpenAddRemedialPackage = (trainee: Trainee) => {
+        setSelectedTraineeForRemedial(trainee);

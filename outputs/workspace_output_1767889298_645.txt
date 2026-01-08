@@ -1,0 +1,23 @@
+import NextDayBuildView from './components/NextDayBuildView';
+import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
+import ProgramDataView from './components/ProgramDataView';
+import BuildAnalysisView from './components/BuildAnalysisView';
+import BuildDfpLoadingFlyout from './components/BuildDfpLoadingFlyout';
+import BuildDateWarningFlyout from './components/BuildDateWarningFlyout';
+import UnavailabilityConflictFlyout from './components/UnavailabilityConflictFlyout';
+import Magnifier from './components/Magnifier';
+import SuccessNotification from './components/SuccessNotification';
+import InstructorListView from './components/InstructorListView';
+import TraineeListView from './components/TraineeListView';
+--
+                return <NextDayBuildView
+                            events={nextDayEventSegments}
+                            resources={buildResources}
+                            instructors={instructorsData.map(i => i.name)}
+                            traineesData={traineesData}
+                            airframeCount={24}
+                            standbyCount={4}
+                            ftdCount={availableFtdCount}
+                            cptCount={availableCptCount}
+                            onUpdateEvent={handleNextDayScheduleUpdate}
+                            onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}

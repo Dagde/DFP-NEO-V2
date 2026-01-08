@@ -1,0 +1,21 @@
+                       `Generated ${generated.length} events, Flight: ${generated.filter(e => e.type === 'flight').length}, FTD: ${generated.filter(e => e.type === 'ftd').length}, Ground: ${generated.filter(e => e.type === 'ground').length}`
+                   );
+                        }
+                    });
+                });
+                
+                if (notifications.length > 0) {
+                    setUnavailabilityNotifications(notifications);
+                }
+
+            } catch (error) {
+                console.error("🚀 [NEO-Build] DFP Build Failed:", error);
+                console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+                setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
+            } finally {
+                setTimeout(() => {
+                    console.log('🚀 [NEO-Build] Build process complete, navigating to NextDayBuild');
+                    setIsBuildingDfp(false);
+                    handleNavigation('NextDayBuild');
+                }, 1000);
+            }

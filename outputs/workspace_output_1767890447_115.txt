@@ -1,0 +1,3 @@
+1149:const generateDataSet = (location: 'ESL' | 'PEA') => {
+1221:export const ESL_DATA = generateDataSet('ESL');
+1222:export const PEA_DATA = generateDataSet('PEA');

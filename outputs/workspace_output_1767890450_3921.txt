@@ -1,0 +1,42 @@
+const generateDataSet = (location: 'ESL' | 'PEA') => {
+    const isESL = location === 'ESL';
+    const courses = isESL ? eslCourses : peaCourses;
+    const aircraftCount = isESL ? 15 : 12;
+    
+    // Generate Instructors specifically for this location to ensure correct counts
+    const instructors = generateInstructors(location);
+
+    // Generate Trainees
+    let trainees: Trainee[] = [];
+    courses.forEach(c => {
+        const total = c.raafStart + c.navyStart + c.armyStart;
+        const distribution = [{ rank: 'PLTOFF' as TraineeRank, count: total }];
+        trainees = [...trainees, ...generateTraineesForCourse(c.name, distribution, isESL ? '1FTS' : '2FTS')];
+    });
+
+    // Allocate Instructors
+    const allocatedTrainees = allocateInstructors(trainees, instructors);
+
+    // Simulate Scores/Progress
+    const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
+
+    // Generate Events for today (timezone-aware to match App.tsx logic)
+    const getLocalDateString = (date: Date = new Date()): string => {
+        // Apply timezone offset (same as App.tsx - default UTC+11)
+        const timezoneOffset = 11; // Default to UTC+11 (AEDT)
+        const offsetMs = timezoneOffset * 60 * 60 * 1000;
+        const adjustedDate = new Date(date.getTime() + offsetMs);
+        
+        const year = adjustedDate.getUTCFullYear();
+        const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    const todayStr = getLocalDateString();
+    let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
+    
+    // Add Historical Events
+    const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
+    events = [...events, ...historicalEvents];
+
