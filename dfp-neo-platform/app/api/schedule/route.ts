@@ -5,17 +5,9 @@ import { auth } from '@/lib/auth';
 const prisma = new PrismaClient();
 
 // GET /api/schedule - Get schedules with optional filtering
+// Public endpoint - no authentication required for flight school app
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const startDate = searchParams.get('startDate');
@@ -64,17 +56,9 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/schedule - Create or update a schedule
+// Public endpoint - no authentication required for flight school app
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const body = await request.json();
     const { userId, date, data } = body;
 

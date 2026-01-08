@@ -5,17 +5,9 @@ import { auth } from '@/lib/auth';
 const prisma = new PrismaClient();
 
 // GET /api/aircraft - Get all aircraft with optional filtering
+// Public endpoint - no authentication required for flight school app
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // ESL or PEA
     const status = searchParams.get('status'); // available or unavailable
