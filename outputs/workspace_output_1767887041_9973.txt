@@ -1,0 +1,5 @@
+341:  instructors: Instructor[];
+977:        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
+1523:    let instructors = [...originalInstructors.map(i => ({...i, unavailability: [...(i.unavailability || [])]}))]; 
+1554:        console.log(`🌙 Selected instructors: ${nightFlyingInstructors.map(i => i.name).join(', ')}`);
+3180:                       instructorsCount: data.instructors.length,

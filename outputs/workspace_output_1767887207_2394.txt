@@ -1,0 +1,21 @@
+    console.log('🎨 Auto-generated courseColors:', courseColors);
+    try {
+      saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+    } catch (error) {
+      console.warn('Failed to save courseColors to localStorage (continuing anyway):', error);
+    }
+  }
+
+  // Note: The auto-generation of courseColors and traineeLMPs is now handled
+  // in each return path separately to ensure they're properly initialized
+  
+  // This code should never be reached, but return empty data as safety fallback
+  console.warn('⚠️ initializeData reached end without returning data, returning empty data');
+  return {
+    instructors: [],
+    trainees: [],
+    events: [],
+    scores: new Map(),
+    pt051Assessments,
+    courses: [],
+    courseColors: {},

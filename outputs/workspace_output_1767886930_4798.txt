@@ -1,0 +1,10 @@
+1067:        const hasDayEvents = generatedEvents.some(e => {
+1084:        const hasScheduledNightEvents = generatedEvents.some(e => {
+1108:    let generatedEvents: Omit<ScheduleEvent, 'date'>[] = [...activeDfpEventsWithoutDate];
+1170:    generatedEvents.forEach((event) => {
+1184:                const isOccupied = generatedEvents.some(e => 
+1611:                    const nextEvent = generatedEvents.find(e => getPersonnel(e).includes(trainee.fullName) && e.flightNumber === next!.id);
+1771:                    const firstNightEvent = generatedEvents.find(e => 
+1961:            generatedEvents.forEach((e, i) => {
+1970:            const resourceIsOccupied = generatedEvents.some(e => {
+2037:                const existingGroundEvents = generatedEvents.filter(e => e.type === type);

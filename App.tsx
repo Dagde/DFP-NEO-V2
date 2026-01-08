@@ -973,6 +973,16 @@ function generateDfpInternal(
     setProgress: (progress: { message: string, percentage: number }) => void,
     publishedSchedules: Record<string, ScheduleEvent[]>
 ): Omit<ScheduleEvent, 'date'>[] {
+    // DEBUG: Check what we're getting from the API
+    console.log(`🎯 CONFIG DEBUG:`);
+    console.log(`  - originalInstructors: ${originalInstructors.length}`);
+    console.log(`  - trainees: ${trainees.length}`);
+    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);
+    console.log(`  - scores: ${scores.size} entries`);
+    console.log(`  - availableAircraftCount: ${availableAircraftCount}`);
+    console.log(`  - ftdCount: ${ftdCount}`);
+    console.log(`  - cptCount: ${cptCount}`);
+    
     const { 
         instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
         coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
@@ -1106,6 +1116,19 @@ function generateDfpInternal(
     });
 
     let generatedEvents: Omit<ScheduleEvent, 'date'>[] = [...activeDfpEventsWithoutDate];
+    
+    // DEBUG: Check initial state
+    console.log(`🎯 INITIAL STATE DEBUG: generatedEvents has ${generatedEvents.length} events at start`);
+    console.log(`📋 activeDfpEventsWithoutDate has ${activeDfpEventsWithoutDate.length} events`);
+    if (generatedEvents.length > 0) {
+        console.log(`📋 Initial events in generatedEvents:`);
+        generatedEvents.slice(0, 5).forEach((e, i) => {
+            console.log(`  ${i + 1}. ${e.flightNumber} on ${e.resourceId} (${e.type})`);
+        });
+        if (generatedEvents.length > 5) {
+            console.log(`  ... and ${generatedEvents.length - 5} more events`);
+        }
+    }
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
     trainees.forEach(t => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));

@@ -1,0 +1,21 @@
+    }
+
+
+    const scheduleList = (
+        list: Trainee[],
+        type: 'flight' | 'ftd' | 'cpt' | 'ground',
+        isPlusOne: boolean,
+        startTimeBoundary: number,
+        endTimeBoundary: number,
+        standbyPrefix: string | null,
+        isNightPass: boolean
+    ) => {
+        // Time increments for slot hunting:
+        // - Flight: 5 minutes (staggered departures to avoid all aircraft taxiing at once)
+        // - Ground/CPT: 15 minutes (represents minimum gap between end of one ground school and start of next)
+        const timeIncrement = type === 'flight' ? 5 / 60 : 15 / 60;
+        const listName = `${isNightPass ? 'BNF' : type.toUpperCase()} ${isPlusOne ? 'Next+1' : 'Next'}`;
+        setProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
+        
+        let unplacedTrainees = [...list];
+        let placedThisPass = true;

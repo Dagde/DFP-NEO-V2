@@ -1,0 +1,21 @@
+                nightPairings.set(trainee.fullName, nfi.name);
+                // Track this instructor for night assignments
+                intendedNightStaff.add(nfi.name);
+
+                const instructorToUpdate = instructors.find(i => i.idNumber === nfi.idNumber);
+                if (instructorToUpdate) {
+                    const reservationPeriod: UnavailabilityPeriod = {
+                        id: `night-res-${nfi.idNumber}`,
+                        startDate: buildDate,
+                        endDate: buildDate,
+                        allDay: false,
+                        startTime: formatDecimalHourToString(flyingStartTime),
+                        endTime: formatDecimalHourToString(flyingEndTime),
+                        reason: 'Other',
+                        notes: 'Reserved for Night Flying'
+                    };
+                    instructorToUpdate.unavailability.push(reservationPeriod);
+                }
+            }
+        });
+    }

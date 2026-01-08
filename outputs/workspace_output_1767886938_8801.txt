@@ -1,0 +1,21 @@
+    console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
+    
+    // Convert Active DFP events to the format needed (remove date field)
+    const activeDfpEventsWithoutDate: Omit<ScheduleEvent, 'date'>[] = activeDfpEvents.map(e => {
+        const { date, ...eventWithoutDate } = e;
+        return eventWithoutDate;
+    });
+
+    let generatedEvents: Omit<ScheduleEvent, 'date'>[] = [...activeDfpEventsWithoutDate];
+    
+    // DEBUG: Check initial state
+    console.log(`🎯 INITIAL STATE DEBUG: generatedEvents has ${generatedEvents.length} events at start`);
+    console.log(`📋 activeDfpEventsWithoutDate has ${activeDfpEventsWithoutDate.length} events`);
+    if (generatedEvents.length > 0) {
+        console.log(`📋 Initial events in generatedEvents:`);
+        generatedEvents.slice(0, 5).forEach((e, i) => {
+            console.log(`  ${i + 1}. ${e.flightNumber} on ${e.resourceId} (${e.type})`);
+        });
+        if (generatedEvents.length > 5) {
+            console.log(`  ... and ${generatedEvents.length - 5} more events`);
+        }

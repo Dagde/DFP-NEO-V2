@@ -1,0 +1,10 @@
+543:    const traineeScores = scores.get(trainee.fullName) || [];
+1234:        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+1280:        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length).sort((a,b) => a-b);
+1305:        const progressA = (scores.get(a.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+1306:        const progressB = (scores.get(b.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+3229:    const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
+5931:            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+6470:            const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+7293:            const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
+8499:                    const traineeScores = scores.get(selectedTraineeForLMP.fullName) || [];

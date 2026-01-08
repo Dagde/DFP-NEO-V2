@@ -1,0 +1,21 @@
+            const isDay = classification === 'Day' || classification === 'Day/Night';
+            return isDay;
+        });
+        
+        return hasDayEvents;
+    };
+    
+    // Check if a person (staff or trainee) is scheduled for ANY night events (flights, FTD, CPT, ground, Duty Sup)
+    // OR is intended for night assignments
+    // NOTE: This now includes Active DFP events since generatedEvents is initialized with them
+    const isPersonScheduledForNightEvents = (personName: string): boolean => {
+        if (nextEventLists.bnf.length < 2) return false; // No night flying scheduled
+        
+        // Check both already scheduled night events AND intended night assignments using Master LMP Day/Night field
+        const hasScheduledNightEvents = generatedEvents.some(e => {
+            if (!getPersonnel(e).includes(personName)) return false;
+            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+            const isNight = classification === 'Night' || classification === 'Day/Night';
+            return isNight;
+        });
+        

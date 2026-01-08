@@ -1,0 +1,41 @@
+  
+  // This code should never be reached, but return empty data as safety fallback
+  console.warn('⚠️ initializeData reached end without returning data, returning empty data');
+  return {
+    instructors: [],
+    trainees: [],
+    events: [],
+    scores: new Map(),
+    pt051Assessments,
+    courses: [],
+    courseColors: {},
+    archivedCourses: {},
+    coursePriorities: [],
+    coursePercentages: new Map(),
+    traineeLMPs: new Map(),
+  };
+}
+
+// Save schedule
+export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+  if (USE_API) {
+    const success = await saveScheduleAPI(events);
+    if (success) {
+      // Also save to localStorage for backup
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    }
+    return success;
+  } else {
+    saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    return true;
+  }
+}
+
+// Save courses data (to localStorage)
+export function saveCoursesData(data: {
+  courses: Course[];
+  courseColors: { [key: string]: string };
+  archivedCourses: { [key: string]: string };
+  coursePriorities: string[];
+  coursePercentages: Map<string, number>;
+}) {

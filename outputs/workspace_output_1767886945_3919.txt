@@ -1,0 +1,21 @@
+                        allDay: false,
+                        startTime: formatDecimalHourToString(flyingStartTime),
+                        endTime: formatDecimalHourToString(flyingEndTime),
+                        reason: 'Other',
+                        notes: 'Reserved for Night Flying'
+                    };
+                    instructorToUpdate.unavailability.push(reservationPeriod);
+                }
+            }
+        });
+    }
+
+
+    const scheduleList = (
+        list: Trainee[],
+        type: 'flight' | 'ftd' | 'cpt' | 'ground',
+        isPlusOne: boolean,
+        startTimeBoundary: number,
+        endTimeBoundary: number,
+        standbyPrefix: string | null,
+        isNightPass: boolean

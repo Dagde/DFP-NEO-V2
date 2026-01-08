@@ -1,0 +1,20 @@
+import { Instructor, Trainee, ScheduleEvent, Course, SyllabusItemDetail, Score, Pt051Assessment } from '../types';
+import { fetchInstructors, fetchTrainees, fetchSchedule, fetchScores, saveSchedule as saveScheduleAPI } from './api';
+import { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from '../mockData';
+
+// LocalStorage keys
+const STORAGE_KEYS = {
+  INSTRUCTORS: 'dfp-neo-instructors',
+  TRAINEES: 'dfp-neo-trainees',
+  SCHEDULE: 'dfp-neo-schedule',
+  COURSES: 'dfp-neo-courses',
+  COURSE_COLORS: 'dfp-neo-course-colors',
+  ARCHIVED_COURSES: 'dfp-neo-archived-courses',
+  COURSE_PRIORITIES: 'dfp-neo-course-priorities',
+  COURSE_PERCENTAGES: 'dfp-neo-course-percentages',
+  TRAINEE_LMPS: 'dfp-neo-trainee-lmps',
+  SCORES: 'dfp-neo-scores',
+  PT051_ASSESSMENTS: 'dfp-neo-pt051-assessments',
+};
+
+// Configuration

@@ -1,0 +1,21 @@
+            
+            // NEW: Check if instructor has day events (including Active DFP)
+            if (isPersonScheduledForDayEvents(ip.name)) {
+                console.log(`🌙 ❌ ${ip.name} excluded - has day events (Active DFP or NEO-Build)`);
+                return false;
+            }
+            
+            console.log(`🌙 ✅ ${ip.name} eligible for night flying`);
+            return true;
+        });
+        
+        console.log(`🌙 Eligible pool: ${nightEligiblePool.length} instructors`);
+        
+        const nightFlyingInstructors = [...nightEligiblePool].sort(() => 0.5 - Math.random()).slice(0, instructorsNeeded);
+        console.log(`🌙 Selected instructors: ${nightFlyingInstructors.map(i => i.name).join(', ')}`);
+        const bnfTrainees = nextEventLists.bnf;
+        
+        nightFlyingInstructors.forEach((nfi, index) => {
+            const trainee = bnfTrainees[index];
+            if (trainee) {
+                nightPairings.set(trainee.fullName, nfi.name);

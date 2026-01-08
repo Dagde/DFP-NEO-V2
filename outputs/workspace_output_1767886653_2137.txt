@@ -1,0 +1,23 @@
+[feature/comprehensive-build-algorithm 6220ea6] Add comprehensive debugging for all resource types
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 10 files changed, 826 insertions(+), 6 deletions(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Dhd_iFkB.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Dhd_iFkB.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-yzE40CH1.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-yzE40CH1.js.map
+ create mode 100644 outputs/workspace_output_1767886627_174.txt
+ create mode 100644 outputs/workspace_output_1767886647_4787.txt
+ create mode 100644 outputs/workspace_output_1767886653_2137.txt
+To https://github.com/Dagde/DFP---NEO.git
+   5aaad90..6220ea6  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

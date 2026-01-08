@@ -1,0 +1,11 @@
+): Omit<ScheduleEvent, 'date'>[] {
+    const { 
+        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
+        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
+        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
+        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
+        allowNightFlying, commenceNightFlying, ceaseNightFlying, buildDate,
+        highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
+        ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
+        eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
+        getEventDayNightClassification

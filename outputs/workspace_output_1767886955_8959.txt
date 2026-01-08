@@ -1,0 +1,41 @@
+                if (i === nonSoloCountBeforeBlock && !soloBlockInserted) {
+                    // Insert the Solo-with-TWR-DI block here
+                    finalTrainees.push(...soloWithTwrDiBlock);
+                    soloBlockInserted = true;
+                }
+                finalTrainees.push(mixedTrainees[i]);
+            }
+            
+            // If block wasn't inserted yet (it was at the end), add it now
+            if (!soloBlockInserted) {
+                finalTrainees.push(...soloWithTwrDiBlock);
+            }
+            
+            return finalTrainees;
+        } else {
+            // No Solo-with-TWR-DI block, return mixed trainees as-is
+            return mixedTrainees;
+        }
+    };    const bnfTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+    const filterOutBnfTrainees = (list: Trainee[]) => 
+        nextEventLists.bnf.length >= 2 ? list.filter(t => !bnfTraineeNames.has(t.fullName)) : list;
+    
+    const nightPairings = new Map<string, string>();
+    let instructors = [...originalInstructors.map(i => ({...i, unavailability: [...(i.unavailability || [])]}))]; 
+
+    // NEW LOGIC: If there are 2+ trainees waiting for night flying, then night flying is programmed
+    if (nextEventLists.bnf.length >= 2) {
+        const bnfTraineeCount = nextEventLists.bnf.length;
+        const instructorsNeeded = bnfTraineeCount;
+
+        const nightDutyStartTime = commenceNightFlying;
+        const nightDutyEndTime = ceaseNightFlying;
+        
+        console.log('🌙 ===== NIGHT INSTRUCTOR SELECTION =====');
+        console.log(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
+        
+        // CRITICAL: Filter out instructors who already have day events (including from Active DFP)
+        const nightEligiblePool = originalInstructors.filter(ip => {
+            if (ip.role !== 'QFI') return false;
+            if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, 'flight')) return false;
+            

@@ -1,0 +1,41 @@
+      console.log('📚 Initializing traineeLMPs with master syllabus for', trainees.length, 'trainees');
+      
+      trainees.forEach(trainee => {
+        traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+      });
+      
+      console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+      // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
+    }
+    
+    return {
+      instructors,
+      trainees,
+      events,
+      scores: localScores,
+      pt051Assessments,
+      courses,
+      courseColors,
+      archivedCourses,
+      coursePriorities,
+      coursePercentages,
+      traineeLMPs,
+    };
+  }
+
+  // Auto-generate courseColors based on trainee courses
+  if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+    const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+    const predefinedColors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+      '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+      '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+    ];
+    
+    courseColors = {};
+    uniqueCourses.forEach((course, index) => {
+      courseColors[course] = predefinedColors[index % predefinedColors.length];
+    });
+    
+    console.log('🎨 Auto-generated courseColors:', courseColors);

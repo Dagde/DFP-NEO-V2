@@ -1,6 +1,6 @@
 import { Instructor, Trainee, ScheduleEvent, Course, SyllabusItemDetail, Score, Pt051Assessment } from '../types';
 import { fetchInstructors, fetchTrainees, fetchSchedule, fetchScores, saveSchedule as saveScheduleAPI } from './api';
-import { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from '../mockData';
+import { INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK, ESL_DATA } from '../mockData';
 
 // LocalStorage keys
 const STORAGE_KEYS = {
@@ -337,18 +337,20 @@ export async function initializeData() {
       // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
     }
     
+    // TEMPORARY FIX: Use mock data to test NEO Build
+    console.log('⚠️ TEMPORARY: Reverting to mock data to test NEO Build');
     return {
-      instructors,
-      trainees,
-      events,
-      scores: localScores,
-      pt051Assessments,
-      courses,
-      courseColors,
-      archivedCourses,
-      coursePriorities,
-      coursePercentages,
-      traineeLMPs,
+      instructors: ESL_DATA.instructors,
+      trainees: ESL_DATA.trainees,
+      events: ESL_DATA.events,
+      scores: ESL_DATA.scores,
+      pt051Assessments: ESL_DATA.pt051Assessments,
+      courses: ESL_DATA.courses,
+      courseColors: ESL_DATA.courseColors,
+      archivedCourses: ESL_DATA.archivedCourses,
+      coursePriorities: ESL_DATA.coursePriorities,
+      coursePercentages: ESL_DATA.coursePercentages,
+      traineeLMPs: ESL_DATA.traineeLMPs,
     };
   }
 
