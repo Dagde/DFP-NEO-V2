@@ -198,6 +198,115 @@ This error was found in `/workspace/lib/dataService.ts` during Phase 4 integrati
 
 ---
 
+## 🔴 CRITICAL: Purple Buttons (Edit/Save) Appearing
+
+### Symptoms
+- Purple buttons with "✏️ Edit" and "💾 Save" icons appear in the UI
+- Buttons have inline styles that cannot be overridden with CSS
+- Buttons reappear after attempts to remove them
+
+### Root Cause
+The buttons are created with inline styles that CSS cannot override:
+```html
+<button style="padding: 10px 16px; background: rgb(118, 75, 162); color: rgb(255, 255, 255); ...">✏️ Edit</button>
+```
+
+### Solution: Nuclear Style Fix
+
+**File Created:** `dfp-neo-platform/public/purple-button-fix.js`
+
+This JavaScript file:
+1. **Runs every 100ms** - Directly overwrites inline styles on purple buttons
+2. **Uses MutationObserver** - Catches dynamically added buttons immediately
+3. **Targeted by emoji** - Only affects buttons with ✏️ or 💾 emojis
+
+**Key Code:**
+```javascript
+function nukeInlineStyles() {
+    const buttons = document.querySelectorAll('button');
+    
+    buttons.forEach(btn => {
+        const text = btn.textContent || '';
+        const hasEditEmoji = text.includes('✏️');
+        const hasSaveEmoji = text.includes('💾');
+        
+        if (hasEditEmoji || hasSaveEmoji) {
+            btn.style.background = '#3b82f6';
+            btn.style.backgroundColor = '#3b82f6';
+            btn.style.setProperty('background', '#3b82f6', 'important');
+            btn.style.setProperty('background-color', '#3b82f6', 'important');
+            
+            console.log('DFP-NEO: Nuked purple button:', text.trim());
+        }
+    });
+}
+
+// Run every 100ms forever
+setInterval(nukeInlineStyles, 100);
+```
+
+### Implementation Steps
+
+1. **Create the fix file:**
+   ```bash
+   # File: dfp-neo-platform/public/purple-button-fix.js
+   # (Full code above)
+   ```
+
+2. **Add script to HTML:**
+   ```html
+   <!-- Add before </body> in index.html -->
+   <script src="/purple-button-fix.js"></script>
+   ```
+
+3. **Deploy to production:**
+   ```bash
+   # Copy fix file to flight-school-app directory
+   cp dfp-neo-platform/public/purple-button-fix.js \
+      dfp-neo-platform/public/flight-school-app/purple-button-fix.js
+   
+   # Commit and push
+   git add -A
+   git commit -m "Restore purple button fix"
+   git push origin feature/comprehensive-build-algorithm
+   ```
+
+### Why This Works
+
+1. **Direct Inline Style Manipulation** - Not trying to override with CSS, directly changing the inline style itself
+2. **High Frequency** - Running every 100ms means buttons are fixed almost instantly
+3. **Continuous Monitoring** - Even if buttons are recreated, they get fixed within 100ms
+4. **MutationObserver** - Watches for DOM changes and triggers immediate fix
+
+### Verification
+
+After deployment, open browser console to see:
+```
+DFP-NEO: Purple button fix script loaded
+DFP-NEO: Running initial fixes...
+DFP-NEO: Nuked purple button: ✏️ Edit
+DFP-NEO: Nuked purple button: 💾 Save
+DFP-NEO: Nuclear style fix active - running every 100ms
+DFP-NEO: MutationObserver watching for new buttons
+```
+
+### Historical Context
+This issue has occurred multiple times. The nuclear fix was first implemented on 2025-01-04 and has been reapplied on 2025-01-08 after the buttons reappeared due to missing fix file during rebuild.
+
+**Commits:** 
+- `edc9fba` - Initial nuclear fix
+- `d900efa` - Restored fix after buttons reappeared
+
+### Prevention
+
+To prevent this from happening again:
+1. **Always include purple-button-fix.js in production builds**
+2. **Verify script reference in index.html after every build**
+3. **Add purple-button-fix.js to gitignore-exclusions list** (if needed)
+4. **Test for purple buttons after every deployment**
+
+---
+
 ## 📋 General Debugging Approach
 
 When encountering errors:
