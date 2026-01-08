@@ -1950,16 +1950,31 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // DEBUG: Log resource assignment
         console.log(`🔧 RESOURCE DEBUG: type=${type}, prefix=${resourcePrefix}, count=${resourceCount}`);
         
-        // EXTRA DEBUG for Ground events
-        if (type === 'ground' || type === 'cpt') {
-            console.log(`  🏢 GROUND/CPT DEBUG: Checking Ground ${type} resources...`);
-            console.log(`  📅 Attempting to schedule at time: ${startTime.toFixed(2)}hrs`);
-            console.log(`  📋 Generated events so far: ${generatedEvents.length}`);
+        // EXTRA DEBUG for ALL events
+        console.log(`  🏢 RESOURCE DEBUG: Checking ${type} resources...`);
+        console.log(`  📅 Attempting to schedule at time: ${startTime.toFixed(2)}hrs`);
+        console.log(`  📋 Generated events so far: ${generatedEvents.length}`);
+        
+        // List all existing events for debugging
+        if (generatedEvents.length > 0 && generatedEvents.length < 20) {
+            console.log(`  📋 Existing events:`);
+            generatedEvents.forEach((e, i) => {
+                console.log(`    ${i + 1}. ${e.flightNumber} (${e.type}) on ${e.resourceId} from ${e.startTime.toFixed(2)}hrs`);
+            });
         }
         
+        console.log(`  🔍 CHECKING RESOURCES: prefix="${resourcePrefix}", count=${resourceCount}`);
         for (let i = 1; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
+            console.log(`    Checking resource ${i}: "${id}"`);
             const resourceIsOccupied = generatedEvents.some(e => {
+                // DEBUG: Check resourceId values
+                if (!id || id === '') {
+                    console.log(`  ❌ ERROR: resourceId is empty! id="${id}"`);
+                }
+                if (!e.resourceId || e.resourceId === '') {
+                    console.log(`  ❌ ERROR: Event ${e.flightNumber} has empty resourceId!`);
+                }
                 if (e.resourceId !== id) return false;
                 
                 // DEBUG: Show why resource is occupied
