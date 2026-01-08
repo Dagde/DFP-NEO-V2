@@ -1,0 +1,6 @@
+  const courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+  const courseColors = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.COURSE_COLORS, 
+    {}
+  );
+  const archivedCourses = loadFromStorage<{ [key: string]: string }>(

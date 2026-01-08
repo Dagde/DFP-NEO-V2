@@ -1,0 +1,21 @@
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface InstructorResponse {
+  id: string;
+  userId?: string;
+  name: string;
+  rank?: string;
+  role?: string;
+  qualifications?: any;
+  availability?: any;
+  preferences?: any;
+  isActive?: boolean;
+  callsignNumber?: number;
+  category?: string;
+  email?: string;
+  flight?: string;
+  idNumber?: number;
+  isAdminStaff?: boolean;

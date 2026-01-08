@@ -1,0 +1,20 @@
+709:    const activeTrainees = traineesData.filter(t => !t.isPaused);
+784:        const trainee = traineesData.find(t => t.fullName === event.student || t.fullName === event.pilot);
+3070:    const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
+3107:        const newUser = instructorsData.find(inst => inst.name === userName);
+4457:        const filteredInstructors = instructorsData.filter(i => targetUnits.includes(i.unit));
+4461:        const filteredTrainees = traineesData.filter(t => targetUnits.includes(t.unit));
+5040:                        const trainee = traineesData.find(t => t.idNumber === traineeId);
+5334:                const trainee = traineesData.find(t => t.fullName === sctReq.name);
+5411:                const trainee = traineesData.find(t => t.fullName === sctReq.name);
+5469:                    const trainee = traineesData.find(t => t.idNumber === remedialReq.traineeId);
+5754:        const instructor = instructorsData.find(i => i.name === instructorName);
+5762:        const trainee = traineesData.find(t => t.fullName === traineeFullName);
+5835:        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+6369:        const otherTrainees = traineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
+6492:        const qualifiedPilots = instructorsData.filter(i => i.role === 'QFI');
+6614:                const person = [...instructorsData, ...traineesData].find(p => ('fullName' in p ? p.fullName : p.name) === personName);
+7182:        const instructorsAnalysis: OracleInstructorAnalysis[] = instructorsData.map(instructor => {
+7188:        const traineesAnalysis: OracleTraineeAnalysis[] = traineesData.map(trainee => {
+7456:        const user = instructorsData.find(i => i.name === currentUserName);
+7469:        const user = instructorsData.find(i => i.name === currentUserName);

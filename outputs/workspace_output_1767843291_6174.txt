@@ -1,0 +1,43 @@
+const convertPersonnelToInstructor = (p: InstructorResponse): Instructor => ({
+  id: p.id,
+  idNumber: p.idNumber || 0,
+  name: p.name,
+  rank: (p.rank as InstructorRank) || 'FLTLT',
+  role: (p.role as 'QFI' | 'SIM IP') || 'QFI',
+  callsignNumber: p.callsignNumber || 0,
+  service: p.service as 'RAAF' | 'RAN' | 'ARA' || 'RAAF',
+  category: (p.category as InstructorCategory) || 'UnCat',
+  isTestingOfficer: p.isTestingOfficer || false,
+  seatConfig: (p.seatConfig as SeatConfig) || 'Normal',
+  isExecutive: p.isExecutive || false,
+  isFlyingSupervisor: p.isFlyingSupervisor || false,
+  isIRE: p.isIRE || false,
+  isCommandingOfficer: p.isCommandingOfficer || false,
+  isCFI: p.isCFI || false,
+  isDeputyFlightCommander: p.isDeputyFlightCommander || false,
+  isOFI: p.isOFI || false,
+  isQFI: p.isQFI || false,
+  isContractor: p.isContractor || false,
+  isAdminStaff: p.isAdminStaff || false,
+--
+    return result.data.personnel.map(convertPersonnelToInstructor);
+  }
+  console.error('Failed to fetch instructors:', result.error);
+  return [];
+}
+
+export async function fetchTrainees(): Promise<Trainee[]> {
+  const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel.map(convertPersonnelToTrainee);
+  }
+  console.error('Failed to fetch trainees:', result.error);
+  return [];
+}
+
+export async function fetchAllPersonnel(): Promise<any[]> {
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel;
+  }
+  console.error('Failed to fetch personnel:', result.error);

@@ -1,0 +1,6 @@
+      // Handle Map deserialization
+      if (defaultValue instanceof Map) {
+        return new Map(parsed) as T;
+      }
+      
+      return parsed;
