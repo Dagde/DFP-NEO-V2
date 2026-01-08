@@ -1,0 +1,21 @@
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ ✅ API Response: /api/scores Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ 🚀 [NEO-Build] runBuildAlgorithm called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10

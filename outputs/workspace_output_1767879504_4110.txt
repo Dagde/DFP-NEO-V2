@@ -1,0 +1,200 @@
+ cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+ Starting app initialization...
+ React imported
+ ReactDOM imported
+ App imported
+ Root element: 
+ buildResources - Current view: Program Schedule Current date: 2026-01-09
+ Deployments overlapping with 2026-01-09: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-09
+ Deployments overlapping with 2026-01-09: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-09
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-09
+ 🟡 publishedSchedules keys: Array(0)
+ 🟡 eventsForDate count: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ addTileSyllabusOptions filtering syllabusDetails: Array(129)
+ Filtered items: Array(89)
+ 🔄 Starting to load initial data...
+ Initializing data from API...
+ 🔍 Fetching instructors from /personnel?role=INSTRUCTOR
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🔍 Fetching trainees from /personnel?role=TRAINEE
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🌐 API Request: /api/scores Object
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🔄 Starting to load initial data...
+ Initializing data from API...
+ 🔍 Fetching instructors from /personnel?role=INSTRUCTOR
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR Object
+ 🔍 Fetching trainees from /personnel?role=TRAINEE
+ 🌐 API Request: /api/personnel?role=TRAINEE Object
+ 🌐 API Request: /api/schedule Object
+ 🌐 API Request: /api/scores Object
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ Seeded Logbook Template (XLSX)
+ Seeded Logbook Template (XLSX)
+ Seeded Logbook Template (PDF)
+ Seeded Logbook Template (PDF)
+ Seeded NEO Logo PDF
+ Seeded NEO Logo PDF
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ Local handleMouseUp called - ignoring when dragState exists: false
+ Clearing drag state in local handleMouseUp
+ ✅ API Response: /api/schedule Object
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ 📥 Trainees API response: Object
+ ✅ Converted trainees: Object
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ 📥 Instructors API response: Object
+ ✅ Converted instructors: Object
+ ✅ API Response: /api/schedule Object
+ Global mouse up called, draggingState exists: false
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ 📥 Trainees API response: Object
+ ✅ Converted trainees: Object
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ 📥 Instructors API response: Object
+ ✅ Converted instructors: Object
+ Global mouse up called, draggingState exists: false
+ 🚀 [NEO-Build] handleBuildDfp called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] todayStr: 2026-01-09
+ 🚀 [NEO-Build] Date comparison: 2026-01-10 <= 2026-01-09 = false
+ 🚀 [NEO-Build] Starting build process
+ 🚀 [NEO-Build] startBuildProcess called
+ 🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====
+ 🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...
+ 📋 Starting sync of priority events with SCT and remedial requests...
+ 🔍 SCT Sync - buildDfpDate: 2026-01-10
+ 🔍 Found HIGH priority SCT flights: 0 | FTDs: 0
+ 🔍 Checking 0 remedial requests for Force Schedule...
+ 📌 Found 0 Force Scheduled remedial events
+ \u2705 No changes to priority events
+ Pre-Build Step 2: Checking Active DFP for 2026-01-10...
+ DEBUG Active DFP has 0 events for 2026-01-10
+ DEBUG Pre-Build Analysis: No existing events found in Active DFP for this date
+ DEBUG ===== PRE-BUILD ANALYSIS END =====
+ DEBUG Final preserved events count: 0
+ ✅ API Response: /api/scores Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ ✅ API Response: /api/scores Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ 🚀 [NEO-Build] runBuildAlgorithm called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] preservedEvents: 0
+ 🚀 [NEO-Build] highestPriorityEvents: 0
+ 🚀 [NEO-Build] DEBUG runBuildAlgorithm called with 0 highest priority events
+ buildResources - Current view: Program Schedule Current date: 2026-01-09
+ Deployments overlapping with 2026-01-09: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-09
+ Deployments overlapping with 2026-01-09: Array(0)
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🚀 [NEO-Build] Starting DFP build process for 2026-01-10
+ 🚀 [NEO-Build] Config: Object
+ 🔵 Active DFP has 0 events for 2026-01-10
+ 🔵 Initializing event counts from Active DFP...
+ DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====
+ DEBUG Total Highest Priority Events to check: 0
+ DEBUG Build Date: 2026-01-10
+ DEBUG Summary: 0 events INCLUDED, 0 events SKIPPED
+ DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====
+App.tsx:1169 DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====
+App.tsx:1204 DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====
+App.tsx:2099 Duty Supervisor Allocation - Covering entire day window: 8 to 17
+App.tsx:2220 WARNING: No Duty Supervisor available for 8 to 8.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 8.5 to 9 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 9 to 9.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 9.5 to 10 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 10 to 10.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 10.5 to 11 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 11 to 11.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 11.5 to 12 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 12 to 12.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 12.5 to 13 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 13 to 13.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 13.5 to 14 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 14 to 14.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 14.5 to 15 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 15 to 15.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 15.5 to 16 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 16 to 16.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 16.5 to 17 - GAP in coverage!
+App.tsx:2543 Trainees needing STBY flights: 0

@@ -1,0 +1,51 @@
+                console.warn(`DEBUG Could not find available resource for: ${event.flightNumber}`);
+            }
+        }
+    });
+    console.log('DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====');
+
+    setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
+    
+    const activeTrainees = trainees.filter(t => 
+        !t.isPaused && 
+        !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
+    );
+    
+    const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
+
+    activeTrainees.forEach(trainee => {
+        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+        traineeNextEventMap.set(trainee.fullName, nextEvents);
+    });
+
+    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
+    const nextPlusOneLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[] };
+    
+    activeTrainees.forEach(trainee => {
+        const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+        if (next) {
+
+            if (next.code.startsWith('BNF') && next.type === 'Flight') {
+                // CRITICAL: Check if trainee already has day events (including Active DFP)
+                if (isPersonScheduledForDayEvents(trainee.fullName)) {
+                    console.log(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
+                    // Add to regular flight list instead
+                    nextEventLists.flight.push(trainee);
+                } else {
+                    nextEventLists.bnf.push(trainee);
+                }
+            } else if (next.type === 'Flight') {
+                nextEventLists.flight.push(trainee);
+            } else if (next.type === 'FTD') {
+                nextEventLists.ftd.push(trainee);
+            } else if (next.type === 'Ground School' && next.methodOfDelivery.includes('CPT')) {
+                nextEventLists.cpt.push(trainee);
+            } else if (next.type === 'Ground School') {
+                   nextEventLists.ground.push(trainee);
+               }
+               
+               // Handle plusOne separately
+               if (plusOne) {
+                   if (plusOne.type === 'Flight') nextPlusOneLists.flight.push(trainee);
+                   else if (plusOne.type === 'FTD') nextPlusOneLists.ftd.push(trainee);
+                   else if (plusOne.type === 'Ground School' && plusOne.methodOfDelivery.includes('CPT')) nextPlusOneLists.cpt.push(trainee);

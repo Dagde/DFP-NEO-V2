@@ -1,0 +1,1 @@
+123:        traineeSample: trainees.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course })),

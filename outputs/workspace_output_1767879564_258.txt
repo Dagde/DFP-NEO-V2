@@ -1,0 +1,100 @@
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🚀 [NEO-Build] Starting DFP build process for 2026-01-10
+ 🚀 [NEO-Build] Config: Object
+ 🔵 Active DFP has 0 events for 2026-01-10
+ 🔵 Initializing event counts from Active DFP...
+ DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====
+ DEBUG Total Highest Priority Events to check: 0
+ DEBUG Build Date: 2026-01-10
+ DEBUG Summary: 0 events INCLUDED, 0 events SKIPPED
+ DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====
+App.tsx:1169 DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====
+App.tsx:1204 DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====
+App.tsx:2099 Duty Supervisor Allocation - Covering entire day window: 8 to 17
+App.tsx:2220 WARNING: No Duty Supervisor available for 8 to 8.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 8.5 to 9 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 9 to 9.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 9.5 to 10 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 10 to 10.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 10.5 to 11 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 11 to 11.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 11.5 to 12 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 12 to 12.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 12.5 to 13 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 13 to 13.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 13.5 to 14 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 14 to 14.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 14.5 to 15 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 15 to 15.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 15.5 to 16 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 16 to 16.5 - GAP in coverage!
+App.tsx:2220 WARNING: No Duty Supervisor available for 16.5 to 17 - GAP in coverage!
+App.tsx:2543 Trainees needing STBY flights: 0
+App.tsx:2550 PASS 1: Scheduling STBY with instructors available...
+App.tsx:2551 Flying window: 8.00 to 17.00
+App.tsx:2624 PASS 1 complete: 0 STBY flights with instructors
+App.tsx:2628 PASS 2: Going back to beginning to schedule remaining STBY with TBA...
+App.tsx:2630 Remaining trainees needing STBY: 0
+App.tsx:2673 PASS 2 complete: Total STBY flights: 0 (Pass 1: 0, Pass 2: 0)
+App.tsx:2691 Trainees needing STBY FTD events: 0
+App.tsx:2889 First 20 sorted events by resource:
+App.tsx:2895 DEBUG ===== FINAL BUILD RESULTS =====
+App.tsx:2896 DEBUG Total events in final build: 0
+App.tsx:2897 DEBUG Checking for originally locked events:
+App.tsx:2911 DEBUG ===== END FINAL BUILD RESULTS =====
+App.tsx:5955 🚀 [NEO-Build] DFP build completed, generated 0 events
+App.tsx:5956 🚀 [NEO-Build] Generated events sample: Array(0)
+App.tsx:5959 🚀 [NEO-Build] setNextDayBuildEvents called with 0 events
+App.tsx:5988 Build analysis: Object
+App.tsx:3332 buildResources - Current view: Program Schedule Current date: 2026-01-09
+App.tsx:3352 Deployments overlapping with 2026-01-09: Array(0)
+App.tsx:3360 deploymentCount: 0
+App.tsx:3418 Built all resources: Array(45) STBY lines: 4
+App.tsx:3332 buildResources - Current view: Program Schedule Current date: 2026-01-09
+App.tsx:3352 Deployments overlapping with 2026-01-09: Array(0)
+App.tsx:3360 deploymentCount: 0
+App.tsx:3418 Built all resources: Array(45) STBY lines: 4
+App.tsx:3622 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3623 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+App.tsx:3624 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3633 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3670 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:3622 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+App.tsx:3623 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+App.tsx:3624 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+App.tsx:3633 🚀 [NEO-Build] buildEventsWithDate.length: 0
+App.tsx:3670 🚀 [NEO-Build] Final segments.length: 0
+App.tsx:7070 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7071 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7075 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7076 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:6019 🚀 [NEO-Build] Build process complete, navigating to NextDayBuild
+App.tsx:3332 buildResources - Current view: NextDayBuild Current date: 2026-01-09
+App.tsx:3357 Next day build deployment events: Array(0)
+App.tsx:3360 deploymentCount: 0
+App.tsx:3418 Built all resources: Array(45) STBY lines: 4
+App.tsx:3332 buildResources - Current view: NextDayBuild Current date: 2026-01-09
+App.tsx:3357 Next day build deployment events: Array(0)
+App.tsx:3360 deploymentCount: 0
+App.tsx:3418 Built all resources: Array(45) STBY lines: 4
+App.tsx:3496 🔄 useEffect triggered - activeView: NextDayBuild remedialRequests count: 0
+App.tsx:3501 ⏸️ Not syncing - activeView is: NextDayBuild
+App.tsx:7070 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7071 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7075 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7076 🟠 ========== NEO USEEFFECT END (CLOSED) ==========

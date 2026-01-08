@@ -1205,10 +1205,15 @@ function generateDfpInternal(
 
     setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
     
+    console.log(`📊 DEBUG: Total trainees passed to build: ${trainees.length}`);
+    console.log(`📊 DEBUG: Sample trainees:`, trainees.slice(0, 5).map(t => ({ fullName: t.fullName, course: t.course, isPaused: t.isPaused })));
+    
     const activeTrainees = trainees.filter(t => 
         !t.isPaused && 
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
+    
+    console.log(`📊 DEBUG: Active trainees (not paused, available): ${activeTrainees.length}`);
     
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 

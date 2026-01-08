@@ -1,0 +1,65 @@
+[feature/comprehensive-build-algorithm 1b8498e] Add trainee sample logging to diagnose NEO Build STBY issue
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 53 files changed, 3460 insertions(+), 87 deletions(-)
+ create mode 100644 Screen Shot 2026-01-09 at 12.06.21 am.jpg
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CbcozcFT.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CbcozcFT.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-NSt_PxPR.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-NSt_PxPR.js.map
+ create mode 100644 outputs/workspace_output_1767877213_7124.txt
+ create mode 100644 outputs/workspace_output_1767877972_8121.txt
+ create mode 100644 outputs/workspace_output_1767877980_179.txt
+ create mode 100644 outputs/workspace_output_1767877995_8096.txt
+ create mode 100644 outputs/workspace_output_1767877998_2335.txt
+ create mode 100644 outputs/workspace_output_1767878003_314.txt
+ create mode 100644 outputs/workspace_output_1767878007_9430.txt
+ create mode 100644 outputs/workspace_output_1767878010_2817.txt
+ create mode 100644 outputs/workspace_output_1767878015_3002.txt
+ create mode 100644 outputs/workspace_output_1767878019_7869.txt
+ create mode 100644 outputs/workspace_output_1767878031_3959.txt
+ create mode 100644 outputs/workspace_output_1767878046_1548.txt
+ create mode 100644 outputs/workspace_output_1767878052_3004.txt
+ create mode 100644 outputs/workspace_output_1767878089_1350.txt
+ create mode 100644 outputs/workspace_output_1767878095_569.txt
+ create mode 100644 outputs/workspace_output_1767878102_5681.txt
+ create mode 100644 outputs/workspace_output_1767878107_3214.txt
+ create mode 100644 outputs/workspace_output_1767878113_9765.txt
+ create mode 100644 outputs/workspace_output_1767878120_4485.txt
+ create mode 100644 outputs/workspace_output_1767878124_941.txt
+ create mode 100644 outputs/workspace_output_1767878128_71.txt
+ create mode 100644 outputs/workspace_output_1767878137_3759.txt
+ create mode 100644 outputs/workspace_output_1767878142_5118.txt
+ create mode 100644 outputs/workspace_output_1767878146_7069.txt
+ create mode 100644 outputs/workspace_output_1767878152_5826.txt
+ create mode 100644 outputs/workspace_output_1767878172_2225.txt
+ create mode 100644 outputs/workspace_output_1767878177_8611.txt
+ create mode 100644 outputs/workspace_output_1767878184_9177.txt
+ create mode 100644 outputs/workspace_output_1767878189_8636.txt
+ create mode 100644 outputs/workspace_output_1767878194_3674.txt
+ create mode 100644 outputs/workspace_output_1767878208_9248.txt
+ create mode 100644 outputs/workspace_output_1767878867_9209.txt
+ create mode 100644 outputs/workspace_output_1767878873_1274.txt
+ create mode 100644 outputs/workspace_output_1767878878_8317.txt
+ create mode 100644 outputs/workspace_output_1767878885_1727.txt
+ create mode 100644 outputs/workspace_output_1767878895_4615.txt
+ create mode 100644 outputs/workspace_output_1767878901_3847.txt
+ create mode 100644 outputs/workspace_output_1767878913_6548.txt
+ create mode 100644 outputs/workspace_output_1767878942_3500.txt
+ create mode 100644 outputs/workspace_output_1767878948_4736.txt
+ create mode 100644 outputs/workspace_output_1767878980_5100.txt
+ create mode 100644 outputs/workspace_output_1767878995_1917.txt
+ create mode 100644 outputs/workspace_output_1767879002_9087.txt
+ create mode 100644 summarized_conversations/original_conversation_1767877772_7890.txt
+To https://github.com/Dagde/DFP---NEO.git
+   c38ad5e..1b8498e  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

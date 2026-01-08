@@ -1,0 +1,101 @@
+                   else if (plusOne.type === 'Ground School' && plusOne.methodOfDelivery.includes('CPT')) nextPlusOneLists.cpt.push(trainee);
+                   else if (plusOne.type === 'Ground School') nextPlusOneLists.ground.push(trainee);
+                  }
+        }
+    });
+    
+    const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+
+    setProgress({ message: 'Ranking trainees...', percentage: 20 });
+    const getMedianProgress = (courseName: string): number => {
+        const courseTrainees = activeTrainees.filter(t => t.course === courseName);
+        if (courseTrainees.length === 0) return 0;
+        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length).sort((a,b) => a-b);
+        const mid = Math.floor(progressCounts.length / 2);
+        return progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
+    };
+    const courseMedians = new Map<string, number>();
+    coursePriorities.forEach(c => courseMedians.set(c, getMedianProgress(c)));
+
+    const today = new Date(buildDate + 'T00:00:00Z');
+    const daysSince = (dateStr?: string): number => {
+        if (!dateStr) return 999;
+        const eventDate = new Date(dateStr + 'T00:00:00Z');
+        return Math.floor((today.getTime() - eventDate.getTime()) / (1000 * 3600 * 24));
+    };
+
+    const sortTrainees = (a: Trainee, b: Trainee): number => {
+        const daysSinceA = daysSince(a.lastEventDate);
+        const daysSinceB = daysSince(b.lastEventDate);
+        if (daysSinceA !== daysSinceB) return daysSinceB - daysSinceA;
+
+        const daysSinceFlightA = daysSince(a.lastFlightDate);
+        const daysSinceFlightB = daysSince(b.lastFlightDate);
+        if (daysSinceFlightA !== daysSinceFlightB) return daysSinceFlightB - daysSinceFlightA;
+
+        const medianA = courseMedians.get(a.course) || 0;
+        const medianB = courseMedians.get(b.course) || 0;
+        const progressA = (scores.get(a.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+        const progressB = (scores.get(b.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+        const behindA = medianA - progressA;
+        const behindB = medianB - progressB;
+        if (behindA !== behindB) return behindB - behindA;
+
+        return a.name.localeCompare(b.name);
+    };
+
+    Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
+    Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
+// REORDER SOLO FLIGHTS WITH TWR DI REQUIREMENT
+    // After sorting, reorder Day Next Event List to group Solo-with-TWR-DI events
+    const reorderSoloWithTwrDi = (list: Trainee[]) => {
+        // Find all Solo flights that require TWR DI
+        const soloWithTwrDiIndices: number[] = [];
+        
+        list.forEach((trainee, index) => {
+            const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+            if (nextEvent && 
+                nextEvent.sortieType === 'Solo' && 
+                nextEvent.twrDiReqd === 'YES') {
+                soloWithTwrDiIndices.push(index);
+            }
+        });
+        
+        // If there are 0 or 1 Solo-with-TWR-DI events, do nothing
+        if (soloWithTwrDiIndices.length <= 1) {
+            return list;
+        }
+        
+        // Find the first Solo-with-TWR-DI event
+        const firstIndex = soloWithTwrDiIndices[0];
+        const otherIndices = soloWithTwrDiIndices.slice(1);
+        
+        // Create new list with reordered events
+        const reorderedList: Trainee[] = [];
+        const soloWithTwrDiToMove: Trainee[] = [];
+        
+        // Collect all Solo-with-TWR-DI events that need to be moved
+        otherIndices.forEach(idx => {
+            soloWithTwrDiToMove.push(list[idx]);
+        });
+        
+        // Build the reordered list
+        list.forEach((trainee, index) => {
+            // Add the trainee if it's not one of the Solo-with-TWR-DI events to be moved
+            if (!otherIndices.includes(index)) {
+                reorderedList.push(trainee);
+                
+                // If this is the first Solo-with-TWR-DI event, insert all others after it
+                if (index === firstIndex) {
+                    reorderedList.push(...soloWithTwrDiToMove);
+                }
+            }
+        });
+        
+        return reorderedList;
+    };
+    
+    // Apply reordering only to the flight list (Day Next Event List)
+    nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
+    setProgress({ message: 'Allocating course slots...', percentage: 30 });
+    
