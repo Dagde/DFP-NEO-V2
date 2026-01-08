@@ -1,0 +1,2 @@
+201:      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+284:    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);

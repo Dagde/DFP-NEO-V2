@@ -1,0 +1,1 @@
+324:export async function fetchScores(traineeId?: string, traineeFullName?: string): Promise<Map<string, Score[]>> {

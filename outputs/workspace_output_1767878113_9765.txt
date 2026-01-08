@@ -1,0 +1,2 @@
+ ✅ API Response: /api/scores Object
+ ✅ API Response: /api/scores Object

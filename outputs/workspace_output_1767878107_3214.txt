@@ -1,0 +1,4 @@
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries

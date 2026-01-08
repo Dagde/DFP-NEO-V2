@@ -1,0 +1,1 @@
+194:export async function fetchTrainees(): Promise<Trainee[]> {

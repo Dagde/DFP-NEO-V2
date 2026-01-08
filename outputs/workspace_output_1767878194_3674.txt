@@ -1,0 +1,10 @@
+3074:    const [traineesData, setTraineesData] = useState<Trainee[]>([]);
+3108:                   setTraineesData(data.trainees);
+4343:        setTraineesData(prev => [...prev, newTrainee]);
+6281:        setTraineesData(prevTrainees => {
+6290:        setTraineesData(newTrainees);
+7749:                                setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
+7766:                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
+8375:                                    setTraineesData(prev => {
+8389:                                        setTraineesData(prev => prev.filter(t => t.idNumber !== id));
+8467:                                        setTraineesData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));

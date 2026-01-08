@@ -1,0 +1,200 @@
+ ✅ Converted trainees: Object
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ Local handleMouseUp called - ignoring when dragState exists: false
+ Clearing drag state in local handleMouseUp
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ 📥 Instructors API response: Object
+ ✅ Converted instructors: Object
+ ✅ API Response: /api/schedule Object
+ ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+ 📥 Instructors API response: Object
+ ✅ Converted instructors: Object
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ 📥 Trainees API response: Object
+ ✅ Converted trainees: Object
+ Global mouse up called, draggingState exists: false
+ buildResources - Current view: Instructors Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Instructors Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Instructors
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ ✅ API Response: /api/scores Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ ✅ API Response: /api/scores Object
+ Data loaded from API: Object
+ ✅ Instructors sample: Array(3)
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+ ✅ State updated successfully
+ buildResources - Current view: CourseRoster Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: CourseRoster Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📊 CourseRoster - Grouped trainees: Object
+ 📊 CourseRoster - Grouped trainees: Object
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: CourseRoster
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ buildResources - Current view: HateSheet Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: HateSheet Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ === Building combinedHistory ===
+ LMP Scores: 5 Array(5)
+ PT-051 Assessments: 0 Array(0)
+ Combined History: 5 Array(5)
+ === Building combinedHistory ===
+ LMP Scores: 5 Array(5)
+ PT-051 Assessments: 0 Array(0)
+ Combined History: 5 Array(5)
+ 🔍 DEBUG STATE - isDragging: false highlightedIndex: null
+ 🔄 useEffect triggered - activeView: HateSheet remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: HateSheet
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🔍 DEBUG STATE - isDragging: false highlightedIndex: null
+ buildResources - Current view: CourseRoster Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: CourseRoster Current date: 2026-01-09
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📊 CourseRoster - Grouped trainees: Object
+ 📊 CourseRoster - Grouped trainees: Object
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: CourseRoster
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object
+ 📋 Full courseColors object: Object
+ 📋 courseColors keys: Array(8)
+ 📋 traineesData sample: Array(3)
+ 📋 CourseRoster - Course config: Object
+ 🎯 CourseRosterView - Props received: Object

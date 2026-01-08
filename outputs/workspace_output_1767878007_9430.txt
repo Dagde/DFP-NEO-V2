@@ -1,0 +1,530 @@
+function generateDfpInternal(
+    config: DfpConfig, 
+    setProgress: (progress: { message: string, percentage: number }) => void,
+    publishedSchedules: Record<string, ScheduleEvent[]>
+): Omit<ScheduleEvent, 'date'>[] {
+    const { 
+        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
+        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
+        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
+        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
+        allowNightFlying, commenceNightFlying, ceaseNightFlying, buildDate,
+        highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
+        ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
+        eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
+        getEventDayNightClassification
+    } = config;
+
+    // --- HELPER FUNCTIONS ---
+    
+    // Calculate total duty hours for an instructor including all assigned events (day and night)
+    const calculateInstructorDutyHours = (instructorName: string, includeProposedEvent?: any): number => {
+        const eventsToCheck = includeProposedEvent 
+            ? [...generatedEvents, includeProposedEvent]
+            : generatedEvents;
+        
+        const instructorEvents = eventsToCheck.filter(e => getPersonnel(e).includes(instructorName));
+        
+        if (instructorEvents.length === 0) return 0;
+        
+        const bookingWindows = instructorEvents
+            .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+            .sort((a, b) => a.start - b.start);
+        
+        // Calculate total duty hours by merging overlapping windows
+        // Include both day flying window AND night flying window for soft duty limit
+        let totalDutyHours = 0;
+        let currentWindow = null;
+        
+        for (const window of bookingWindows) {
+            // Include events from both day and night flying windows
+            // Day window: flyingStartTime to flyingEndTime
+            // Night window: commenceNightFlying to ceaseNightFlying (if night flying is scheduled)
+            let windowStart = window.start;
+            let windowEnd = window.end;
+            
+            // Include day flying window
+            const dayStart = Math.max(windowStart, flyingStartTime);
+            const dayEnd = Math.min(windowEnd, flyingEndTime);
+            
+            // Include night flying window (if applicable)
+            let nightStart = 0;
+            let nightEnd = 0;
+            if (nextEventLists.bnf.length >= 2) { // Night flying is scheduled
+                nightStart = Math.max(windowStart, commenceNightFlying);
+                nightEnd = Math.min(windowEnd, ceaseNightFlying);
+            }
+            
+            // Process day window portion
+            if (dayStart < dayEnd) {
+                if (!currentWindow) {
+                    currentWindow = { start: dayStart, end: dayEnd };
+                } else if (dayStart <= currentWindow.end) {
+                    currentWindow.end = Math.max(currentWindow.end, dayEnd);
+                } else {
+                    totalDutyHours += currentWindow.end - currentWindow.start;
+                    currentWindow = { start: dayStart, end: dayEnd };
+                }
+            }
+            
+            // Process night window portion (if night flying is scheduled)
+            if (nightStart < nightEnd && nextEventLists.bnf.length >= 2) {
+                if (!currentWindow) {
+                    currentWindow = { start: nightStart, end: nightEnd };
+                } else if (nightStart <= currentWindow.end) {
+                    currentWindow.end = Math.max(currentWindow.end, nightEnd);
+                } else {
+                    totalDutyHours += currentWindow.end - currentWindow.start;
+                    currentWindow = { start: nightStart, end: nightEnd };
+                }
+            }
+        }
+        
+        // Add the last window
+        if (currentWindow) {
+            totalDutyHours += currentWindow.end - currentWindow.start;
+        }
+        
+        return totalDutyHours;
+    };
+
+    // Track staff who are intended for night assignments
+    const intendedNightStaff = new Set<string>();
+    
+    // Check if a person has day events using Master LMP Day/Night field
+    // NOTE: This includes Active DFP events since generatedEvents is initialized with them
+    const isPersonScheduledForDayEvents = (personName: string): boolean => {
+        const hasDayEvents = generatedEvents.some(e => {
+            if (!getPersonnel(e).includes(personName)) return false;
+            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+            const isDay = classification === 'Day' || classification === 'Day/Night';
+            return isDay;
+        });
+        
+        return hasDayEvents;
+    };
+    
+    // Check if a person (staff or trainee) is scheduled for ANY night events (flights, FTD, CPT, ground, Duty Sup)
+    // OR is intended for night assignments
+    // NOTE: This now includes Active DFP events since generatedEvents is initialized with them
+    const isPersonScheduledForNightEvents = (personName: string): boolean => {
+        if (nextEventLists.bnf.length < 2) return false; // No night flying scheduled
+        
+        // Check both already scheduled night events AND intended night assignments using Master LMP Day/Night field
+        const hasScheduledNightEvents = generatedEvents.some(e => {
+            if (!getPersonnel(e).includes(personName)) return false;
+            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+            const isNight = classification === 'Night' || classification === 'Day/Night';
+            return isNight;
+        });
+        
+        return hasScheduledNightEvents || intendedNightStaff.has(personName);
+    };
+
+    // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
+
+    setProgress({ message: 'Initializing DFP build...', percentage: 0 });
+
+    // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
+    const activeDfpEvents = publishedSchedules[buildDate] || [];
+    console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
+    
+    // Convert Active DFP events to the format needed (remove date field)
+    const activeDfpEventsWithoutDate: Omit<ScheduleEvent, 'date'>[] = activeDfpEvents.map(e => {
+        const { date, ...eventWithoutDate } = e;
+        return eventWithoutDate;
+    });
+
+    let generatedEvents: Omit<ScheduleEvent, 'date'>[] = [...activeDfpEventsWithoutDate];
+    const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
+    originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
+    trainees.forEach(t => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
+    
+    // Initialize event counts with Active DFP events
+    console.log('🔵 Initializing event counts from Active DFP...');
+    activeDfpEventsWithoutDate.forEach(event => {
+        getPersonnel(event).forEach(personName => {
+            const counts = eventCounts.get(personName);
+            if (counts) {
+                if (event.type === 'flight' || event.type === 'ftd') { 
+                    counts.flightFtd++; 
+                    console.log(`  🔵 ${personName}: flight/ftd count = ${counts.flightFtd}`);
+                } else if (event.type === 'ground') { 
+                    counts.ground++; 
+                } else if (event.type === 'cpt') { 
+                    counts.cpt++; 
+                }
+            }
+        });
+    });
+    
+    console.log('DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====');
+    console.log(`DEBUG Total Highest Priority Events to check: ${highestPriorityEvents.length}`);
+    console.log(`DEBUG Build Date: ${buildDate}`);
+    
+    let includedCount = 0;
+    let skippedCount = 0;
+    
+    highestPriorityEvents.forEach(event => {
+        console.log(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'} (ID: ${event.id})`);
+        console.log(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
+        console.log(`  - event.isTimeFixed: ${event.isTimeFixed}`);
+        
+        if(event.date === buildDate && event.isTimeFixed) {
+            const { date, ...eventWithoutDate } = event;
+               // Ensure pilot field is set for existing events
+               if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
+                   eventWithoutDate.pilot = eventWithoutDate.instructor;
+               }
+            generatedEvents.push(eventWithoutDate);
+            includedCount++;
+            console.log(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
+            console.log(`  - pilot: ${eventWithoutDate.pilot}, instructor: ${eventWithoutDate.instructor}, student: ${eventWithoutDate.student}`);
+            getPersonnel(event).forEach(personName => {
+                const counts = eventCounts.get(personName);
+                if (counts && (event.type === 'flight' || event.type === 'ftd')) { counts.flightFtd++; } 
+                else if (counts && event.type === 'ground') { counts.ground++; }
+                else if (counts && event.type === 'cpt') { counts.cpt++; }
+            });
+        } else {
+            skippedCount++;
+            console.log(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? 'date mismatch' : 'isTimeFixed is false'}`);
+        }
+    });
+    
+    console.log(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
+    console.log('DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====');
+    
+    // CRITICAL FIX: Assign resources to highest priority events that don't have resourceId
+    console.log('DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====');
+    generatedEvents.forEach((event) => {
+        if (!event.resourceId || event.resourceId === '') {
+            // Determine resource type based on event type
+            const resourcePrefix = event.type === 'flight' ? 'PC-21 ' : 
+                                 event.type === 'ftd' ? 'FTD ' : 
+                                 event.type === 'cpt' ? 'CPT ' : 'Ground ';
+            const resourceCount = event.type === 'flight' ? availableAircraftCount : 
+                                event.type === 'ftd' ? ftdCount : 
+                                event.type === 'cpt' ? cptCount : 6;
+            
+            // Find first available resource
+            let assignedResource: string | null = null;
+            for (let i = 1; i <= resourceCount; i++) {
+                const resourceId = `${resourcePrefix}${i}`;
+                const isOccupied = generatedEvents.some(e => 
+                    e.resourceId === resourceId && 
+                    e.id !== event.id &&
+                    e.startTime < (event.startTime + event.duration) && 
+                    (e.startTime + e.duration) > event.startTime
+                );
+                if (!isOccupied) {
+                    assignedResource = resourceId;
+                    break;
+                }
+            }
+            
+            if (assignedResource) {
+                event.resourceId = assignedResource;
+                console.log(`DEBUG Assigned ${assignedResource} to highest priority event: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'}`);
+            } else {
+                console.warn(`DEBUG Could not find available resource for: ${event.flightNumber}`);
+            }
+        }
+    });
+    console.log('DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====');
+
+    setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
+    
+    const activeTrainees = trainees.filter(t => 
+        !t.isPaused && 
+        !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
+    );
+    
+    const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
+
+    activeTrainees.forEach(trainee => {
+        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+        traineeNextEventMap.set(trainee.fullName, nextEvents);
+    });
+
+    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
+    const nextPlusOneLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[] };
+    
+    activeTrainees.forEach(trainee => {
+        const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+        if (next) {
+
+            if (next.code.startsWith('BNF') && next.type === 'Flight') {
+                // CRITICAL: Check if trainee already has day events (including Active DFP)
+                if (isPersonScheduledForDayEvents(trainee.fullName)) {
+                    console.log(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
+                    // Add to regular flight list instead
+                    nextEventLists.flight.push(trainee);
+                } else {
+                    nextEventLists.bnf.push(trainee);
+                }
+            } else if (next.type === 'Flight') {
+                nextEventLists.flight.push(trainee);
+            } else if (next.type === 'FTD') {
+                nextEventLists.ftd.push(trainee);
+            } else if (next.type === 'Ground School' && next.methodOfDelivery.includes('CPT')) {
+                nextEventLists.cpt.push(trainee);
+            } else if (next.type === 'Ground School') {
+                   nextEventLists.ground.push(trainee);
+               }
+               
+               // Handle plusOne separately
+               if (plusOne) {
+                   if (plusOne.type === 'Flight') nextPlusOneLists.flight.push(trainee);
+                   else if (plusOne.type === 'FTD') nextPlusOneLists.ftd.push(trainee);
+                   else if (plusOne.type === 'Ground School' && plusOne.methodOfDelivery.includes('CPT')) nextPlusOneLists.cpt.push(trainee);
+                   else if (plusOne.type === 'Ground School') nextPlusOneLists.ground.push(trainee);
+                  }
+        }
+    });
+    
+    const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+
+    setProgress({ message: 'Ranking trainees...', percentage: 20 });
+    const getMedianProgress = (courseName: string): number => {
+        const courseTrainees = activeTrainees.filter(t => t.course === courseName);
+        if (courseTrainees.length === 0) return 0;
+        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length).sort((a,b) => a-b);
+        const mid = Math.floor(progressCounts.length / 2);
+        return progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
+    };
+    const courseMedians = new Map<string, number>();
+    coursePriorities.forEach(c => courseMedians.set(c, getMedianProgress(c)));
+
+    const today = new Date(buildDate + 'T00:00:00Z');
+    const daysSince = (dateStr?: string): number => {
+        if (!dateStr) return 999;
+        const eventDate = new Date(dateStr + 'T00:00:00Z');
+        return Math.floor((today.getTime() - eventDate.getTime()) / (1000 * 3600 * 24));
+    };
+
+    const sortTrainees = (a: Trainee, b: Trainee): number => {
+        const daysSinceA = daysSince(a.lastEventDate);
+        const daysSinceB = daysSince(b.lastEventDate);
+        if (daysSinceA !== daysSinceB) return daysSinceB - daysSinceA;
+
+        const daysSinceFlightA = daysSince(a.lastFlightDate);
+        const daysSinceFlightB = daysSince(b.lastFlightDate);
+        if (daysSinceFlightA !== daysSinceFlightB) return daysSinceFlightB - daysSinceFlightA;
+
+        const medianA = courseMedians.get(a.course) || 0;
+        const medianB = courseMedians.get(b.course) || 0;
+        const progressA = (scores.get(a.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+        const progressB = (scores.get(b.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+        const behindA = medianA - progressA;
+        const behindB = medianB - progressB;
+        if (behindA !== behindB) return behindB - behindA;
+
+        return a.name.localeCompare(b.name);
+    };
+
+    Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
+    Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
+// REORDER SOLO FLIGHTS WITH TWR DI REQUIREMENT
+    // After sorting, reorder Day Next Event List to group Solo-with-TWR-DI events
+    const reorderSoloWithTwrDi = (list: Trainee[]) => {
+        // Find all Solo flights that require TWR DI
+        const soloWithTwrDiIndices: number[] = [];
+        
+        list.forEach((trainee, index) => {
+            const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+            if (nextEvent && 
+                nextEvent.sortieType === 'Solo' && 
+                nextEvent.twrDiReqd === 'YES') {
+                soloWithTwrDiIndices.push(index);
+            }
+        });
+        
+        // If there are 0 or 1 Solo-with-TWR-DI events, do nothing
+        if (soloWithTwrDiIndices.length <= 1) {
+            return list;
+        }
+        
+        // Find the first Solo-with-TWR-DI event
+        const firstIndex = soloWithTwrDiIndices[0];
+        const otherIndices = soloWithTwrDiIndices.slice(1);
+        
+        // Create new list with reordered events
+        const reorderedList: Trainee[] = [];
+        const soloWithTwrDiToMove: Trainee[] = [];
+        
+        // Collect all Solo-with-TWR-DI events that need to be moved
+        otherIndices.forEach(idx => {
+            soloWithTwrDiToMove.push(list[idx]);
+        });
+        
+        // Build the reordered list
+        list.forEach((trainee, index) => {
+            // Add the trainee if it's not one of the Solo-with-TWR-DI events to be moved
+            if (!otherIndices.includes(index)) {
+                reorderedList.push(trainee);
+                
+                // If this is the first Solo-with-TWR-DI event, insert all others after it
+                if (index === firstIndex) {
+                    reorderedList.push(...soloWithTwrDiToMove);
+                }
+            }
+        });
+        
+        return reorderedList;
+    };
+    
+    // Apply reordering only to the flight list (Day Next Event List)
+    nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
+    setProgress({ message: 'Allocating course slots...', percentage: 30 });
+    
+    // Helper: Normalize percentages to sum to 100%
+    const normalizePercentages = (percentages: Map<string, number>): Map<string, number> => {
+        const total = Array.from(percentages.values()).reduce((sum, val) => sum + val, 0);
+        if (total === 0) return percentages; // Avoid division by zero
+        
+        const normalized = new Map<string, number>();
+        percentages.forEach((value, key) => {
+            normalized.set(key, (value / total) * 100);
+        });
+        return normalized;
+    };
+    
+    // Helper: Enforce minimum percentage (5%) for all courses
+    const enforceMinimumPercentage = (percentages: Map<string, number>, minimum: number): Map<string, number> => {
+        const enforced = new Map<string, number>();
+        percentages.forEach((value, key) => {
+            enforced.set(key, Math.max(value, minimum));
+        });
+        // Re-normalize after enforcing minimums
+        return normalizePercentages(enforced);
+    };
+    
+    // NEW: Weighted course selection based on percentages
+    // Uses deficit-based allocation: courses that are behind their target get priority
+const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
+        if (!rankedList.length) return [];
+        
+        // STEP 1: Identify and extract Solo-with-TWR-DI block
+        const soloWithTwrDiIndices: number[] = [];
+        rankedList.forEach((trainee, index) => {
+            const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+            if (nextEvent && 
+                nextEvent.sortieType === 'Solo' && 
+                nextEvent.twrDiReqd === 'YES') {
+                soloWithTwrDiIndices.push(index);
+            }
+        });
+        
+        // If there are 2+ Solo-with-TWR-DI events, protect them as a block
+        let soloWithTwrDiBlock: Trainee[] = [];
+        let soloBlockStartIndex = -1;
+        let traineesForCourseMixing: Trainee[] = [];
+        
+        if (soloWithTwrDiIndices.length >= 2) {
+            // Extract the Solo-with-TWR-DI block (they should already be consecutive from reorderSoloWithTwrDi)
+            soloBlockStartIndex = soloWithTwrDiIndices[0];
+            soloWithTwrDiIndices.forEach(idx => {
+                soloWithTwrDiBlock.push(rankedList[idx]);
+            });
+            
+            // Extract all other trainees for course mixing
+            rankedList.forEach((trainee, index) => {
+                if (!soloWithTwrDiIndices.includes(index)) {
+                    traineesForCourseMixing.push(trainee);
+                }
+            });
+        } else {
+            // No Solo-with-TWR-DI block to protect, use all trainees
+            traineesForCourseMixing = [...rankedList];
+        }
+        
+        // STEP 2: Apply course mixing to non-Solo-with-TWR-DI trainees
+        // 1. Normalize and enforce minimum percentages
+        const normalizedPercentages = normalizePercentages(coursePercentages);
+        const enforcedPercentages = enforceMinimumPercentage(normalizedPercentages, 5);
+        
+        // 2. Group trainees by course (maintaining their ranked order within each course)
+        const listByCourse = new Map<string, Trainee[]>();
+        coursePriorities.forEach(c => listByCourse.set(c, []));
+        traineesForCourseMixing.forEach(t => listByCourse.get(t.course)?.push(t));
+        
+        // 3. Event-by-event selection based on deficit
+        const mixedTrainees: Trainee[] = [];
+        const courseAllocations = new Map<string, number>();
+        coursePriorities.forEach(c => courseAllocations.set(c, 0));
+        
+        let totalAllocated = 0;
+        
+        // Continue until all trainees are allocated
+        while (mixedTrainees.length < traineesForCourseMixing.length) {
+            totalAllocated++;
+            
+            // Calculate deficit for each course
+            let maxDeficit = -Infinity;
+            let selectedCourse: string | null = null;
+            
+            for (const course of coursePriorities) {
+                const courseTrainees = listByCourse.get(course);
+                if (!courseTrainees || courseTrainees.length === 0) continue;
+                
+                const allocated = courseAllocations.get(course) || 0;
+                const percentage = enforcedPercentages.get(course) || 0;
+                const target = (percentage / 100) * totalAllocated;
+                const deficit = target - allocated;
+                
+                // Select course with largest deficit
+                if (deficit > maxDeficit) {
+                    maxDeficit = deficit;
+                    selectedCourse = course;
+                }
+            }
+            
+            // Allocate next trainee from selected course
+            if (selectedCourse) {
+                const courseTrainees = listByCourse.get(selectedCourse)!;
+                const trainee = courseTrainees.shift()!;
+                mixedTrainees.push(trainee);
+                courseAllocations.set(selectedCourse, (courseAllocations.get(selectedCourse) || 0) + 1);
+            } else {
+                // Safety: if no course selected, break to avoid infinite loop
+                break;
+            }
+        }
+        
+        // STEP 3: Reinsert Solo-with-TWR-DI block at its original position
+        if (soloWithTwrDiBlock.length >= 2) {
+            const finalTrainees: Trainee[] = [];
+            let soloBlockInserted = false;
+            
+            // Calculate where to insert the block in the mixed list
+            // The block should be inserted at the position where the first Solo-with-TWR-DI event was
+            // relative to the non-Solo events
+            let nonSoloCountBeforeBlock = 0;
+            for (let i = 0; i < soloBlockStartIndex; i++) {
+                if (!soloWithTwrDiIndices.includes(i)) {
+                    nonSoloCountBeforeBlock++;
+                }
+            }
+            
+            // Build final list
+            for (let i = 0; i < mixedTrainees.length; i++) {
+                if (i === nonSoloCountBeforeBlock && !soloBlockInserted) {
+                    // Insert the Solo-with-TWR-DI block here
+                    finalTrainees.push(...soloWithTwrDiBlock);
+                    soloBlockInserted = true;
+                }
+                finalTrainees.push(mixedTrainees[i]);
+            }
+            
+            // If block wasn't inserted yet (it was at the end), add it now
+            if (!soloBlockInserted) {
+                finalTrainees.push(...soloWithTwrDiBlock);
+            }
+            
+            return finalTrainees;
+        } else {
+            // No Solo-with-TWR-DI block, return mixed trainees as-is
+            return mixedTrainees;
+        }
+    };    const bnfTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));

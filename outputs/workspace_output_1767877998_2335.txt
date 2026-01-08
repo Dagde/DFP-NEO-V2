@@ -1,0 +1,204 @@
+const computeNextEventsForTrainee = (
+    trainee: Trainee,
+    traineeLMPs: Map<string, SyllabusItemDetail[]>,
+    scores: Map<string, Score[]>,
+    masterSyllabus: SyllabusItemDetail[], // Added fallback
+    publishedSchedules?: Record<string, ScheduleEvent[]>, // NEW: Optional for ELCE
+    buildDate?: string // NEW: Optional for ELCE
+): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
+    // Check individual LMP first, then fallback to master syllabus
+    const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
+    const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+    
+    // Debug logging for remedial tracking
+    if (hasIndividualLMP) {
+        const remedialEvents = individualLMP.filter(item => item.isRemedial);
+        if (remedialEvents.length > 0) {
+            console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
+        }
+    } else {
+        console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
+    }
+
+    if (!individualLMP || individualLMP.length === 0) {
+        return { next: null, plusOne: null };
+    }
+    
+    const traineeScores = scores.get(trainee.fullName) || [];
+    const completedEventIds = new Set(traineeScores.map(s => s.event));
+    
+    // DEBUG: Log completion status
+    const hasCompletedEvents = completedEventIds.size > 0;
+    if (!hasCompletedEvents) {
+        console.log(`\ud83d\udcc8 [${trainee.fullName}] No completed events found - trainee at start of syllabus`);
+    }
+    
+    
+    // NEW: Check for ELCE - events completed yesterday but not yet in PT-051
+    if (publishedSchedules && buildDate) {
+        const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
+        if (elce) {
+            completedEventIds.add(elce);
+        }
+    }
+
+    let nextEvt: SyllabusItemDetail | null = null;
+    let plusOneEvt: SyllabusItemDetail | null = null;
+    let nextEventIndex = -1;
+
+    // Find Next Event
+    for (let i = 0; i < individualLMP.length; i++) {
+        const item = individualLMP[i];
+        if (completedEventIds.has(item.id) || item.code.includes(' MB')) {
+            continue;
+        }
+
+        // If no completed events, skip prerequisite check for first event (trainee at start of syllabus)
+        const prereqsMet = hasCompletedEvents
+            ? item.prerequisites.every(p => completedEventIds.has(p))
+            : item.prerequisites.length === 0 || item.prerequisites.every(p => p.includes(' MB'));
+        if (prereqsMet) {
+            nextEvt = item;
+            nextEventIndex = i;
+            
+            // Debug logging for remedial events
+            if (item.isRemedial) {
+                console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
+            }
+            break;
+        }
+    }
+    
+    // Find Next +1 Event (sequentially)
+    if (nextEventIndex !== -1) {
+        for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
+            const item = individualLMP[i];
+            // Skip non-schedulable events
+            if (!item.code.includes(' MB')) {
+                plusOneEvt = item;
+                break;
+            }
+        }
+    }
+
+    return { next: nextEvt, plusOne: plusOneEvt };
+};
+
+// Helper for Trainee Priority Scoring
+const calculateTraineePriorityScore = (
+    trainee: Trainee,
+    buildDate: string,
+    courseMedian: number,
+    traineeProgress: number,
+    isRemedial: boolean
+): number => {
+    const today = new Date(buildDate + 'T00:00:00Z').getTime();
+    const lastEvent = trainee.lastEventDate ? new Date(trainee.lastEventDate + 'T00:00:00Z').getTime() : 0;
+    const lastFlight = trainee.lastFlightDate ? new Date(trainee.lastFlightDate + 'T00:00:00Z').getTime() : 0;
+
+    const daysSinceEvent = lastEvent === 0 ? 100 : Math.floor((today - lastEvent) / (1000 * 3600 * 24));
+    const daysSinceFlight = lastFlight === 0 ? 100 : Math.floor((today - lastFlight) / (1000 * 3600 * 24));
+    
+    // Lag is positive if they are behind the median
+    const lag = courseMedian - traineeProgress; 
+
+    // Weighting Logic
+    let score = 0;
+    score += daysSinceEvent * 2;
+    score += daysSinceFlight * 1;
+    score += lag * 5; // High weight for being behind
+    
+    if (isRemedial) score += 500; // Massive boost for remedial
+    
+    return score;
+};
+
+// Planned Event Interface
+interface PlannedEvent {
+    id: string;
+    type: 'manual' | 'sct' | 'trainee';
+    subType: 'flight' | 'ftd' | 'ground' | 'cpt' | 'stby';
+    priorityScore: number;
+    trainee?: Trainee;
+    instructor?: Instructor;
+    eventCode: string;
+    isRemedial: boolean;
+    isSct: boolean;
+}
+
+interface CourseAnalysis {
+    courseName: string;
+    targetPercentage: number;
+    actualPercentage: number;
+    deviation: number;
+    eventCount: number;
+    possibleEvents: number;
+    schedulingEfficiency: number;
+    eventsByType: {
+        flight: number;
+        ftd: number;
+        cpt: number;
+        ground: number;
+    };
+    limitingFactors: {
+        insufficientInstructors: number;
+        noAircraftSlots: number;
+        noFtdSlots: number;
+        noCptSlots: number;
+        traineeLimit: number;
+        instructorLimit: number;
+        noTimeSlots: number;
+    };
+    status: 'good' | 'fair' | 'poor';
+}
+
+interface TimeDistribution {
+    eventsByHour: Map<number, number>;
+    clusteringScore: number;
+    uniformityScore: number;
+}
+
+interface ResourceUtilization {
+    aircraftUtilization: number;
+    instructorUtilization: number;
+    ftdUtilization: number;
+    standbyCount: number;
+}
+
+interface Insight {
+    type: 'success' | 'warning' | 'error' | 'info';
+    message: string;
+    recommendation?: string;
+}
+
+interface BuildAnalysis {
+    buildDate: string;
+    totalEvents: number;
+    availableAircraft: number;
+    courseAnalysis: CourseAnalysis[];
+    timeDistribution: TimeDistribution;
+    resourceUtilization: ResourceUtilization;
+    insights: Insight[];
+}
+
+
+// Helper function to count possible events per course
+function countPossibleEvents(
+    traineesData: Trainee[],
+    coursePriorities: string[],
+    traineeLMPs: Map<string, LMP[]>,
+    scores: Map<string, Score[]>,
+    syllabusDetails: SyllabusDetail[],
+    publishedSchedules: Map<string, Omit<ScheduleEvent, 'date'>[]>,
+    buildDate: string
+): Map<string, number> {
+    const possibleEventCounts = new Map<string, number>();
+    
+    // Initialize counts
+    coursePriorities.forEach(course => {
+        possibleEventCounts.set(course, 0);
+    });
+    
+    // Count trainees with next events per course
+    const activeTrainees = traineesData.filter(t => !t.isPaused);
+    

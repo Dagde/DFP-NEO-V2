@@ -1,0 +1,17 @@
+2:import { fetchInstructors, fetchTrainees, fetchSchedule, fetchScores, saveSchedule as saveScheduleAPI } from './api';
+16:  SCORES: 'dfp-neo-scores',
+100:      const [instructorsResult, traineesResult, scheduleResult, scoresResult] = await Promise.all([
+104:        fetchScores(),
+118:        scores: scoresResult.size,
+119:        scoresSample: Array.from(scoresResult.entries()).slice(0, 1),
+176:        saveToStorage(STORAGE_KEYS.SCORES, Array.from(scoresResult.entries()));
+186:        scores: scoresResult,
+203:      const fallbackScores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+214:        scores: fallbackScores.size,
+270:        scores: fallbackScores || new Map(),
+286:    const localScores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+327:      scores: localScores,
+370:    scores: new Map(),
+411:// Save scores data (to localStorage)
+412:export function saveScoresData(scores: Map<string, Score[]>) {
+413:  saveToStorage(STORAGE_KEYS.SCORES, Array.from(scores.entries()));

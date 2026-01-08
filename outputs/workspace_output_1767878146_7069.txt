@@ -1,0 +1,29 @@
+export async function fetchScores(traineeId?: string, traineeFullName?: string): Promise<Map<string, Score[]>> {
+  let url = '/scores';  // Note: fetchAPI already adds /api/ prefix
+  const params = new URLSearchParams();
+  
+  if (traineeId) {
+    params.append('traineeId', traineeId);
+  }
+  if (traineeFullName) {
+    params.append('traineeFullName', traineeFullName);
+  }
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+  
+  try {
+    // API returns { scores: [[traineeName, [scoreObjects]]], count: number }
+    const result = await fetchAPI<{ scores: [string, Score[]][], count: number }>(url);
+    if (result.success && result.data && result.data.scores) {
+      // Convert [[traineeName, [scoreObjects]]] to Map<string, Score[]>
+      return new Map(result.data.scores);
+    }
+    console.error('Failed to fetch scores:', result.error);
+    return new Map();
+  } catch (error) {
+    console.error('Error fetching scores:', error);
+    return new Map();
+  }
+}

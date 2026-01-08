@@ -1,0 +1,13 @@
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object
+--
+ ✅ Trainees sample: Array(3)
+ 📋 Unique trainee courses: Array(8)
+ ⚠️ Trainees without course: 0 Array(0)
+ 📚 Initializing traineeLMPs with master syllabus for 117 trainees
+ ✅ traineeLMPs initialized with 117 entries
+ 📦 Data received from initializeData: Object

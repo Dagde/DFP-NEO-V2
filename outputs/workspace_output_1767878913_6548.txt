@@ -1,0 +1,67 @@
+export async function fetchTrainees(): Promise<Trainee[]> {
+  console.log('🔍 Fetching trainees from /personnel?role=TRAINEE');
+  const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
+  
+  console.log('📥 Trainees API response:', {
+    success: result.success,
+    hasData: !!result.data,
+    dataKeys: result.data ? Object.keys(result.data) : [],
+    personnelCount: result.data?.personnel?.length || 0,
+    error: result.error
+  });
+  
+  if (result.success && result.data?.personnel) {
+    const converted = result.data.personnel.map(convertPersonnelToTrainee);
+    console.log('✅ Converted trainees:', {
+      originalCount: result.data.personnel.length,
+      convertedCount: converted.length,
+      sample: converted.slice(0, 2)
+    });
+    return converted;
+  }
+  console.error('❌ Failed to fetch trainees:', result.error);
+  return [];
+}
+
+export async function fetchAllPersonnel(): Promise<any[]> {
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel;
+  }
+  console.error('Failed to fetch personnel:', result.error);
+  return [];
+}
+
+// Aircraft API
+export async function fetchAircraft(): Promise<Aircraft[]> {
+  const result = await fetchAPI<AircraftResponse[]>('/aircraft');
+  if (result.success && result.data) {
+    return result.data.map(convertAircraft);
+  }
+  console.error('Failed to fetch aircraft:', result.error);
+  return [];
+}
+
+// Schedule API
+export async function fetchSchedule(date?: string): Promise<ScheduleEvent[]> {
+  const endpoint = date ? `/schedule?date=${date}` : '/schedule';
+  const result = await fetchAPI<{ schedules: ScheduleEvent[] }>(endpoint);
+  if (result.success && result.data?.schedules) {
+    return result.data.schedules;
+  }
+  console.error('Failed to fetch schedule:', result.error);
+  return [];
+}
+
+export async function saveSchedule(schedule: ScheduleEvent[]): Promise<boolean> {
+  const result = await fetchAPI<ScheduleEvent[]>('/schedule', {
+    method: 'POST',
+    body: JSON.stringify(schedule),
+  });
+  if (result.success) {
+    return true;
+  }
+  console.error('Failed to save schedule:', result.error);
+  return false;
+}
+

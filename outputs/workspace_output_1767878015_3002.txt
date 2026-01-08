@@ -1,0 +1,20 @@
+681:    standbyCount: number;
+762:    // Filter out non-scheduled events (Duty Sup, STBY)
+765:        !e.resourceId.startsWith('STBY') && 
+766:        !e.resourceId.startsWith('BNF-STBY')
+879:    const standbyCount = events.filter(e => 
+880:        e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')
+943:    if (standbyCount > 0) {
+946:            message: `${standbyCount} events placed on standby.`,
+965:            standbyCount
+1571:        standbyPrefix: string | null,
+1659:        // OLD STBY LOGIC REMOVED - Will be replaced with separate STBY pass after main build
+1737:                     // NEW ALGORITHM: Duty Supervisor counts toward total event limits
+1739:                     // Check total event limit including Duty Supervisor (Flight + FTD + CPT + Ground + Duty Sup = max 3)
+1746:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+1897:                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+1973:        // If no resource available, return null (STBY will be handled in separate pass)
+1986:                !e.resourceId.startsWith('STBY') && 
+1987:                !e.resourceId.startsWith('BNF-STBY')
+2027:    // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
+2028:    setProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });

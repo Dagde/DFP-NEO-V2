@@ -1,0 +1,301 @@
+            
+            // Extract all other trainees for course mixing
+            rankedList.forEach((trainee, index) => {
+                if (!soloWithTwrDiIndices.includes(index)) {
+                    traineesForCourseMixing.push(trainee);
+                }
+            });
+        } else {
+            // No Solo-with-TWR-DI block to protect, use all trainees
+            traineesForCourseMixing = [...rankedList];
+        }
+        
+        // STEP 2: Apply course mixing to non-Solo-with-TWR-DI trainees
+        // 1. Normalize and enforce minimum percentages
+        const normalizedPercentages = normalizePercentages(coursePercentages);
+        const enforcedPercentages = enforceMinimumPercentage(normalizedPercentages, 5);
+        
+        // 2. Group trainees by course (maintaining their ranked order within each course)
+        const listByCourse = new Map<string, Trainee[]>();
+        coursePriorities.forEach(c => listByCourse.set(c, []));
+        traineesForCourseMixing.forEach(t => listByCourse.get(t.course)?.push(t));
+        
+        // 3. Event-by-event selection based on deficit
+        const mixedTrainees: Trainee[] = [];
+        const courseAllocations = new Map<string, number>();
+        coursePriorities.forEach(c => courseAllocations.set(c, 0));
+        
+        let totalAllocated = 0;
+        
+        // Continue until all trainees are allocated
+        while (mixedTrainees.length < traineesForCourseMixing.length) {
+            totalAllocated++;
+            
+            // Calculate deficit for each course
+            let maxDeficit = -Infinity;
+            let selectedCourse: string | null = null;
+            
+            for (const course of coursePriorities) {
+                const courseTrainees = listByCourse.get(course);
+                if (!courseTrainees || courseTrainees.length === 0) continue;
+                
+                const allocated = courseAllocations.get(course) || 0;
+                const percentage = enforcedPercentages.get(course) || 0;
+                const target = (percentage / 100) * totalAllocated;
+                const deficit = target - allocated;
+                
+                // Select course with largest deficit
+                if (deficit > maxDeficit) {
+                    maxDeficit = deficit;
+                    selectedCourse = course;
+                }
+            }
+            
+            // Allocate next trainee from selected course
+            if (selectedCourse) {
+                const courseTrainees = listByCourse.get(selectedCourse)!;
+                const trainee = courseTrainees.shift()!;
+                mixedTrainees.push(trainee);
+                courseAllocations.set(selectedCourse, (courseAllocations.get(selectedCourse) || 0) + 1);
+            } else {
+                // Safety: if no course selected, break to avoid infinite loop
+                break;
+            }
+        }
+        
+        // STEP 3: Reinsert Solo-with-TWR-DI block at its original position
+        if (soloWithTwrDiBlock.length >= 2) {
+            const finalTrainees: Trainee[] = [];
+            let soloBlockInserted = false;
+            
+            // Calculate where to insert the block in the mixed list
+            // The block should be inserted at the position where the first Solo-with-TWR-DI event was
+            // relative to the non-Solo events
+            let nonSoloCountBeforeBlock = 0;
+            for (let i = 0; i < soloBlockStartIndex; i++) {
+                if (!soloWithTwrDiIndices.includes(i)) {
+                    nonSoloCountBeforeBlock++;
+                }
+            }
+            
+            // Build final list
+            for (let i = 0; i < mixedTrainees.length; i++) {
+                if (i === nonSoloCountBeforeBlock && !soloBlockInserted) {
+                    // Insert the Solo-with-TWR-DI block here
+                    finalTrainees.push(...soloWithTwrDiBlock);
+                    soloBlockInserted = true;
+                }
+                finalTrainees.push(mixedTrainees[i]);
+            }
+            
+            // If block wasn't inserted yet (it was at the end), add it now
+            if (!soloBlockInserted) {
+                finalTrainees.push(...soloWithTwrDiBlock);
+            }
+            
+            return finalTrainees;
+        } else {
+            // No Solo-with-TWR-DI block, return mixed trainees as-is
+            return mixedTrainees;
+        }
+    };    const bnfTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
+    const filterOutBnfTrainees = (list: Trainee[]) => 
+        nextEventLists.bnf.length >= 2 ? list.filter(t => !bnfTraineeNames.has(t.fullName)) : list;
+    
+    const nightPairings = new Map<string, string>();
+    let instructors = [...originalInstructors.map(i => ({...i, unavailability: [...(i.unavailability || [])]}))]; 
+
+    // NEW LOGIC: If there are 2+ trainees waiting for night flying, then night flying is programmed
+    if (nextEventLists.bnf.length >= 2) {
+        const bnfTraineeCount = nextEventLists.bnf.length;
+        const instructorsNeeded = bnfTraineeCount;
+
+        const nightDutyStartTime = commenceNightFlying;
+        const nightDutyEndTime = ceaseNightFlying;
+        
+        console.log('🌙 ===== NIGHT INSTRUCTOR SELECTION =====');
+        console.log(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
+        
+        // CRITICAL: Filter out instructors who already have day events (including from Active DFP)
+        const nightEligiblePool = originalInstructors.filter(ip => {
+            if (ip.role !== 'QFI') return false;
+            if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, 'flight')) return false;
+            
+            // NEW: Check if instructor has day events (including Active DFP)
+            if (isPersonScheduledForDayEvents(ip.name)) {
+                console.log(`🌙 ❌ ${ip.name} excluded - has day events (Active DFP or NEO-Build)`);
+                return false;
+            }
+            
+            console.log(`🌙 ✅ ${ip.name} eligible for night flying`);
+            return true;
+        });
+        
+        console.log(`🌙 Eligible pool: ${nightEligiblePool.length} instructors`);
+        
+        const nightFlyingInstructors = [...nightEligiblePool].sort(() => 0.5 - Math.random()).slice(0, instructorsNeeded);
+        console.log(`🌙 Selected instructors: ${nightFlyingInstructors.map(i => i.name).join(', ')}`);
+        const bnfTrainees = nextEventLists.bnf;
+        
+        nightFlyingInstructors.forEach((nfi, index) => {
+            const trainee = bnfTrainees[index];
+            if (trainee) {
+                nightPairings.set(trainee.fullName, nfi.name);
+                // Track this instructor for night assignments
+                intendedNightStaff.add(nfi.name);
+
+                const instructorToUpdate = instructors.find(i => i.idNumber === nfi.idNumber);
+                if (instructorToUpdate) {
+                    const reservationPeriod: UnavailabilityPeriod = {
+                        id: `night-res-${nfi.idNumber}`,
+                        startDate: buildDate,
+                        endDate: buildDate,
+                        allDay: false,
+                        startTime: formatDecimalHourToString(flyingStartTime),
+                        endTime: formatDecimalHourToString(flyingEndTime),
+                        reason: 'Other',
+                        notes: 'Reserved for Night Flying'
+                    };
+                    instructorToUpdate.unavailability.push(reservationPeriod);
+                }
+            }
+        });
+    }
+
+
+    const scheduleList = (
+        list: Trainee[],
+        type: 'flight' | 'ftd' | 'cpt' | 'ground',
+        isPlusOne: boolean,
+        startTimeBoundary: number,
+        endTimeBoundary: number,
+        standbyPrefix: string | null,
+        isNightPass: boolean
+    ) => {
+        // Time increments for slot hunting:
+        // - Flight: 5 minutes (staggered departures to avoid all aircraft taxiing at once)
+        // - Ground/CPT: 15 minutes (represents minimum gap between end of one ground school and start of next)
+        const timeIncrement = type === 'flight' ? 5 / 60 : 15 / 60;
+        const listName = `${isNightPass ? 'BNF' : type.toUpperCase()} ${isPlusOne ? 'Next+1' : 'Next'}`;
+        setProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
+        
+        let unplacedTrainees = [...list];
+        let placedThisPass = true;
+
+        const segments: { start: number, end: number, count: number }[] = [];
+        if ((type === 'cpt' || type === 'ground') && !isNightPass) {
+            const segmentDuration = 2;
+            for (let t = startTimeBoundary; t < endTimeBoundary; t += segmentDuration) {
+                segments.push({ start: t, end: t + segmentDuration, count: 0 });
+            }
+        }
+
+        while(placedThisPass && unplacedTrainees.length > 0) {
+            placedThisPass = false;
+            const remainingForNextPass: Trainee[] = [];
+
+            for (const trainee of unplacedTrainees) {
+                const { next, plusOne } = traineeNextEventMap.get(trainee.fullName)!;
+                const syllabusItem = isPlusOne ? plusOne : next;
+                if (!syllabusItem) { continue; }
+
+                let searchStartTime = startTimeBoundary;
+                
+                // Plus-One Rule: Plus-one events are scheduled "after their primary"
+                // This means after the trainee's first scheduled event (their Next Event)
+                if (isPlusOne) { 
+                    const nextEvent = generatedEvents.find(e => getPersonnel(e).includes(trainee.fullName) && e.flightNumber === next!.id);
+                    if (!nextEvent) { 
+                        // Primary not scheduled yet, skip this trainee for now
+                        remainingForNextPass.push(trainee);
+                        continue; 
+                    }
+                    // Start search after primary event ends
+                    searchStartTime = Math.max(startTimeBoundary, nextEvent.startTime + nextEvent.duration);
+                }
+
+                const segmentSearchOrder = [...segments].sort((a, b) => a.count - b.count || a.start - b.start);
+                let placed = false;
+                const searchSpaces = (type === 'cpt' || type === 'ground') && !isNightPass && segments.length > 0 
+                    ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
+                    : [{ start: searchStartTime, end: endTimeBoundary }];
+
+                for (const space of searchSpaces) {
+                    if (placed) break;
+                    for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
+                        const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne);
+                        if (result && typeof result === 'object' && 'id' in result) {
+                            generatedEvents.push(result);
+                            // Only get instructor counts if not a solo flight
+                               const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
+                            const tCounts = eventCounts.get(trainee.fullName)!;
+                            if (type === 'flight' || type === 'ftd') { 
+                                tCounts.flightFtd++; 
+                                if (ipCounts) ipCounts.flightFtd++; 
+                            } else if (type === 'ground') { 
+                                tCounts.ground++; 
+                                if (ipCounts) ipCounts.ground++; // Count ground events for instructors
+                            } else if (type === 'cpt') {
+                                tCounts.cpt++; 
+                                if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                            }
+                            
+                            if (type === 'cpt' || type === 'ground') {
+                                const segment = segments.find(s => time >= s.start && time < s.end);
+                                if (segment) segment.count++;
+                            }
+
+                            placed = true;
+                            placedThisPass = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!placed) { remainingForNextPass.push(trainee); }
+            }
+            unplacedTrainees = remainingForNextPass;
+        }
+
+        // OLD STBY LOGIC REMOVED - Will be replaced with separate STBY pass after main build
+    };
+    
+    type ScheduleEventResult = Omit<ScheduleEvent, 'date'> | null;
+    
+    const scheduleEvent = (
+        trainee: Trainee,
+        syllabusItem: SyllabusItemDetail,
+        startTime: number,
+        type: 'flight' | 'ftd' | 'ground' | 'cpt',
+        isNightPass: boolean,
+        isPlusOne: boolean
+    ): ScheduleEventResult => {
+        
+        const traineeCounts = eventCounts.get(trainee.fullName)!;
+        
+        // CRITICAL FIX: For night flying BNF events, allow 2 flights per night
+        const isBnfEvent = syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight';
+        const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
+        
+        if (type === 'flight' || type === 'ftd') {
+             if (traineeCounts.flightFtd >= bnfFlightLimit) return null;
+        } else {
+             if (traineeCounts.ground >= 2) return null;
+        }
+        
+        // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
+        // For BNF events, allow higher total limit to accommodate 2 night flights
+        const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
+        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) return null;
+        
+        const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.id, duration: syllabusItem.duration }, syllabusDetails);
+        if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) return null;
+
+        const findAvailableInstructor = (
+            traineeForCheck: Trainee, 
+            syllabusItemForCheck: SyllabusItemDetail,
+            isPlusOneCheck: boolean
+        ): Instructor | null => {
+            const isBnfEvent = syllabusItemForCheck.code.startsWith('BNF');
+            
+            if (isBnfEvent) {

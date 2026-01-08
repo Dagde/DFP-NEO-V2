@@ -1,0 +1,174 @@
+    // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
+    setProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
+    
+    // Duty Supervisor MUST cover entire Day flying window regardless of flight schedule
+    const dayFlights = generatedEvents.filter(e => e.type === 'flight' && !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
+    
+    // Duty Supervisor covers entire configured day flying window
+    const dutySupStartTime = flyingStartTime;
+    const dutySupEndTime = flyingEndTime;
+    
+    // Always schedule Duty Supervisor for day window, even if no flights
+    if (dutySupStartTime >= dutySupEndTime) {
+        setProgress({ message: 'Invalid day flying window', percentage: 90 });
+        // Continue to night flying setup even if day window is invalid
+    }
+    
+    const lastFlightEndTime = dutySupEndTime;
+    
+    // CRITICAL FIX: Determine night duty supervisor FIRST before scheduling day duty supervisors
+    // This ensures they are marked as intendedNightStaff and excluded from day scheduling
+    let nightDutySup: Instructor | null = null;
+    if (nextEventLists.bnf.length >= 2) {
+        console.log('🌙 Pre-selecting night duty supervisor to prevent day assignments...');
+        const nightFlyingInstructorNames = new Set(Array.from(nightPairings.values()));
+        const nightSupPool = instructors.filter(s => 
+            (s.isFlyingSupervisor || s.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate)) &&
+            !nightFlyingInstructorNames.has(s.name)
+        );
+        
+        console.log(`🌙 Night supervisor pool: ${nightSupPool.length} candidates`);
+        
+        // Find available night supervisor who does NOT have day events (including Active DFP)
+        nightDutySup = nightSupPool.find(sup => {
+            // Check static unavailability
+            if (isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, 'duty_sup')) {
+                console.log(`🌙 ❌ ${sup.name} - statically unavailable for night duty`);
+                return false;
+            }
+            
+            // CRITICAL: Check if supervisor has day events (including Active DFP)
+            if (isPersonScheduledForDayEvents(sup.name)) {
+                console.log(`🌙 ❌ ${sup.name} - has day events (Active DFP or NEO-Build)`);
+                return false;
+            }
+            
+            console.log(`🌙 ✅ ${sup.name} - eligible for night duty supervisor`);
+            return true;
+        }) || null;
+        
+        if (nightDutySup) {
+            // CRITICAL: Mark this instructor as intended for night duty BEFORE day scheduling
+            intendedNightStaff.add(nightDutySup.name);
+            console.log(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
+        } else {
+            console.log(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
+        }
+    }
+    
+    // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+    const dutySupEligible = instructors.filter(i => 
+        (i.isFlyingSupervisor || i.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate)) &&
+        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+    );
+    const tmuffSupervisors = dutySupEligible.filter(i => i.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate));
+    const normalSupervisors = dutySupEligible.filter(i => !tmuffSupervisors.find(t => t.idNumber === i.idNumber));
+    
+    // NEW ALGORITHM: Randomize supervisor selection instead of alphabetical/order-based
+    const shuffledNormalSupervisors = [...normalSupervisors].sort(() => 0.5 - Math.random());
+    const sortedSupervisors = [...tmuffSupervisors, ...shuffledNormalSupervisors];
+
+    let currentSupTime = dutySupStartTime;
+    // CRITICAL FIX: Schedule Duty Supervisors for the ENTIRE day window, not just when flights are active
+    console.log(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
+    while (currentSupTime < dutySupEndTime) {
+        const isBlockCovered = generatedEvents.some(e => e.resourceId === 'Duty Sup' && currentSupTime >= e.startTime && currentSupTime < e.startTime + e.duration);
+        if (isBlockCovered) {
+            currentSupTime += 0.5;
+            continue;
+        }
+
+        let bestSupervisor: Instructor | null = null;
+        let maxDuration = 0;
+
+        // NEW RULE: Prefer supervisors with 0 duty sup events, only use those with 1+ if no one else available
+        const supervisorsWithNoDutySup = sortedSupervisors.filter(s => eventCounts.get(s.name)!.dutySup === 0);
+        const supervisorsWithDutySup = sortedSupervisors.filter(s => eventCounts.get(s.name)!.dutySup > 0);
+        const prioritizedSupervisors = [...supervisorsWithNoDutySup, ...supervisorsWithDutySup];
+
+        for (const sup of prioritizedSupervisors) {
+            const ipCounts = eventCounts.get(sup.name)!;
+            const eventLimit = sup.isExecutive ? eventLimits.exec.maxFlightFtd + eventLimits.exec.maxDutySup : eventLimits.instructor.maxTotal;
+            const dutySupEventCount = sup.isExecutive ? eventLimits.exec.maxDutySup : eventLimits.instructor.maxDutySup;
+            const totalEventCount = sup.isExecutive ? eventLimits.exec.maxTotal : eventLimits.instructor.maxTotal;
+
+            // NEW ALGORITHM: Duty Supervisor counts toward total event limits (max 3)
+            if (ipCounts.dutySup >= dutySupEventCount) continue;
+            if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= totalEventCount) continue;
+            
+            if (isPersonStaticallyUnavailable(sup, currentSupTime, currentSupTime + 0.1, buildDate, 'duty_sup')) continue;
+
+            // CRITICAL FIX: Use the new helper function to calculate duty hours
+            // Check soft duty limit before assigning any duty supervisor time
+            const proposedDutySupEvent = {
+                startTime: currentSupTime,
+                duration: 2.0, // Standard 2-hour duty supervisor assignment
+                flightNumber: 'Duty Sup',
+                type: 'ground' as const
+            };
+            
+            const totalDutyHours = calculateInstructorDutyHours(sup.name, proposedDutySupEvent);
+            
+            console.log(`Duty Sup Check - ${sup.name}: Total Duty = ${totalDutyHours.toFixed(2)}hrs, Soft Limit = ${preferredDutyPeriod}hrs`);
+            
+            if (totalDutyHours > preferredDutyPeriod) {
+                console.log(`Skipping ${sup.name} - would exceed soft limit of ${preferredDutyPeriod}hrs`);
+                continue;
+            }
+            
+            const hasOverlapAtStart = generatedEvents
+                .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+                .some(e => {
+                    if (!getPersonnel(e).includes(sup.name)) return false;
+                    const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                    return currentSupTime < bookingWindow.end && (currentSupTime + 0.1) > bookingWindow.start;
+                });
+            if (hasOverlapAtStart) continue;
+
+            let potentialDuration = 0;
+            const targetDuration = 2.0;
+
+            // CRITICAL FIX: Don't extend duty supervisor beyond day window end or soft duty limit
+            for (let t = currentSupTime; t < dutySupEndTime; t += 0.25) {
+                if (potentialDuration >= targetDuration) break;
+                
+                const proposedEnd = t + 0.25;
+                if (isPersonStaticallyUnavailable(sup, t, proposedEnd, buildDate, 'duty_sup')) break;
+                
+                // Check if adding this additional duty time would exceed the soft limit
+                const proposedDutySupEvent = {
+                    startTime: currentSupTime,
+                    duration: proposedEnd - currentSupTime,
+                    flightNumber: 'Duty Sup',
+                    type: 'ground' as const
+                };
+                const proposedEvents = [...generatedEvents, proposedDutySupEvent];
+                
+                // Calculate total duty hours for the entire day
+                const instructorEventsForDay = proposedEvents.filter(e => getPersonnel(e).includes(sup.name));
+                if (instructorEventsForDay.length > 0) {
+                    const bookingWindows = instructorEventsForDay
+                        .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+                        .sort((a, b) => a.start - b.start);
+                    
+                    const dayStart = bookingWindows[0].start;
+                    const dayEnd = bookingWindows[bookingWindows.length - 1].end;
+                    const totalDutyHours = dayEnd - dayStart;
+                    
+                    if (totalDutyHours > preferredDutyPeriod) {
+                        // Adding more time would exceed soft limit, stop extending
+                        break;
+                    }
+                }
+                
+                const hasFutureOverlap = generatedEvents
+                     .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+                     .some(e => {
+                         if (!getPersonnel(e).includes(sup.name)) return false;
+                         const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                         return t < bookingWindow.end && proposedEnd > bookingWindow.start;
+                     });
+                if (hasFutureOverlap) break;
+
+                potentialDuration += 0.25;
+            }

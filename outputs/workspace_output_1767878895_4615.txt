@@ -1,0 +1,2 @@
+ ✅ API Response: /api/personnel?role=TRAINEE Object
+ 📥 Trainees API response: Object

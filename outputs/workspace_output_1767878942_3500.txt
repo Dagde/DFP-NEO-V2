@@ -1,0 +1,2 @@
+102:const convertPersonnelToTrainee = (p: TraineeResponse): Trainee => ({
+207:    const converted = result.data.personnel.map(convertPersonnelToTrainee);

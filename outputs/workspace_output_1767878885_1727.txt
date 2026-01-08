@@ -1,0 +1,3 @@
+21:const USE_API = true; // Toggle this to switch between API and localStorage
+95:  if (USE_API) {
+383:  if (USE_API) {

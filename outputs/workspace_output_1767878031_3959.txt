@@ -1,0 +1,301 @@
+            }
+
+            if (potentialDuration > maxDuration) {
+                maxDuration = Math.min(potentialDuration, targetDuration);
+                bestSupervisor = sup;
+            }
+        }
+        
+        if (bestSupervisor && maxDuration > 0) {
+            generatedEvents.push({
+                id: uuidv4(), type: 'ground', instructor: bestSupervisor.name,
+                flightNumber: 'Duty Sup', duration: maxDuration, startTime: currentSupTime, resourceId: 'Duty Sup',
+                color: 'bg-amber-500/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
+            });
+            eventCounts.get(bestSupervisor.name)!.dutySup++;
+            console.log(`Duty Sup assigned: ${bestSupervisor.name} from ${currentSupTime} to ${currentSupTime + maxDuration}`);
+            currentSupTime += maxDuration;
+        } else {
+            // CRITICAL FIX: If no supervisor available, we MUST still fill the gap
+            // This prevents gaps in duty supervisor coverage
+            console.log(`WARNING: No Duty Supervisor available for ${currentSupTime} to ${currentSupTime + 0.5} - GAP in coverage!`);
+            currentSupTime += 0.5;
+        }
+    }
+
+    // 2. Schedule DUTY SUP for Night Flying window (if 2+ BNF trainees)
+    if (nextEventLists.bnf.length >= 2 && nightDutySup) {
+        setProgress({ message: 'Scheduling Night Duty Supervisor...', percentage: 42 });
+        console.log(`Scheduling night duty supervisor: ${nightDutySup.name}`);
+        
+        // Schedule Night Duty Sup using the pre-selected supervisor
+        generatedEvents.push({
+            id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
+            flightNumber: 'Night Duty Sup', duration: ceaseNightFlying - commenceNightFlying, startTime: commenceNightFlying, resourceId: 'Duty Sup',
+            color: 'bg-amber-700/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
+        });
+        eventCounts.get(nightDutySup.name)!.dutySup++;
+    } else if (nextEventLists.bnf.length >= 2 && !nightDutySup) {
+        console.log('WARNING: Night flying scheduled but no night duty supervisor available!');
+    }
+
+    // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
+    // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
+    setProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
+    // Highest Priority Flight Events are already added at the start
+    
+    setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight)), 
+        'flight', 
+        false, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+    
+    // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
+    // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
+    setProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
+    if(nextEventLists.bnf.length >= 2) {
+         // Highest Priority Night Flight Events are already added at the start
+         
+         // Schedule Night Flight Next Events (Wave One)
+         const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf);
+         scheduleList(bnfWaveOneList, 'flight', false, commenceNightFlying, ceaseNightFlying, null, true);
+    }
+    
+    // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
+    setProgress({ message: 'Scheduling FTD Events (Priority)...', percentage: 60 });
+    // Highest Priority FTD Events are already added at the start
+    
+    setProgress({ message: 'Scheduling FTD Events (Next)...', percentage: 65 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)), 
+        'ftd', 
+        false, 
+        ftdStartTime, 
+        ftdEndTime, 
+        null, 
+        false
+    );
+    
+    // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
+    setProgress({ message: 'Scheduling CPT Events (Priority)...', percentage: 70 });
+    // Highest Priority CPT Events are already added at the start
+    
+    setProgress({ message: 'Scheduling CPT Events (Next)...', percentage: 72 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)), 
+        'cpt', 
+        false, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+    
+    setProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
+    // Highest Priority Ground Events are already added at the start
+    
+    setProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)), 
+        'ground', 
+        false, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+    
+    // 7. Schedule Day Flight Events: Plus-One
+    setProgress({ message: 'Scheduling Day Flight Events (Plus-One)...', percentage: 78 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight)), 
+        'flight', 
+        true, 
+        flyingStartTime, 
+        flyingEndTime, 
+        'STBY', 
+        false
+    );
+    
+    // Schedule Night Flight Plus-One Events (Wave Two) - if 2+ BNF trainees
+    // Two-Wave System: Wave One = Next Events, Wave Two = Plus-One Events
+    // Each BNF trainee can fly up to 2 night flights (special limit for BNF)
+    if(nextEventLists.bnf.length >= 2) {
+         setProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
+         const bnfWaveTwoList = nextEventLists.bnf.filter(trainee => {
+            const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
+            return plusOne && plusOne.code.startsWith('BNF') && plusOne.type === 'Flight';
+         });
+         scheduleList(bnfWaveTwoList, 'flight', true, commenceNightFlying, ceaseNightFlying, null, true);
+    }
+    
+    // 8. Schedule FTD Events: Plus-One
+    setProgress({ message: 'Scheduling FTD Events (Plus-One)...', percentage: 82 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)), 
+        'ftd', 
+        true, 
+        ftdStartTime, 
+        ftdEndTime, 
+        'STBY', 
+        false
+    );
+    
+    // 9. Schedule CPT/Ground Events: Plus-One
+    setProgress({ message: 'Scheduling CPT Events (Plus-One)...', percentage: 84 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)), 
+        'cpt', 
+        true, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+    
+    setProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
+    scheduleList(
+        applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground)), 
+        'ground', 
+        true, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+
+    // NEW STBY SCHEDULING PASS - "8 Flights Per Hour" Rule
+    // STBY flights are extra flights added on top of the main DFP when aircraft run out
+    setProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
+    
+    // Helper: Check if a flight start time already exists (aircraft or STBY flights only)
+    const hasFlightStartTime = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
+        return events.some(e => 
+            e.type === 'flight' && 
+            Math.abs(e.startTime - time) < 0.01 // Within 0.6 minutes
+        );
+    };
+    
+    // Helper: Count FLIGHT start times in a 60-minute window (aircraft + STBY, excluding FTD/CPT/Ground)
+    const countFlightStartsInWindow = (windowStart: number, windowEnd: number, events: Omit<ScheduleEvent, 'date'>[]): number => {
+        return events.filter(e => 
+            e.type === 'flight' && 
+            e.startTime > windowStart && 
+            e.startTime <= windowEnd
+        ).length;
+    };
+    
+    // Helper: Check if adding a flight at this time would violate the 8-per-hour rule
+    // Must check both backward (previous 60 min) and forward (impact on future DFP flights)
+    const wouldViolate8PerHourRule = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
+        // Check 1: Would adding this flight create more than 8 in the previous 60 minutes?
+        const oneHourBefore = time - 1.0;
+        const flightsInPreviousHour = countFlightStartsInWindow(oneHourBefore, time, events);
+        if (flightsInPreviousHour >= 8) return true; // Already at limit
+        
+        // Check 2: Would adding this flight cause any future 60-minute window to exceed 8?
+        // Look at all existing DFP flights (not STBY) that are within 60 minutes after this time
+        const oneHourAfter = time + 1.0;
+        const futureDfpFlights = events.filter(e => 
+            e.type === 'flight' && 
+            !e.resourceId.startsWith('STBY') &&
+            e.startTime > time && 
+            e.startTime <= oneHourAfter
+        );
+        
+        // For each future DFP flight, check if adding our STBY flight would cause that window to exceed 8
+        for (const dfpFlight of futureDfpFlights) {
+            const windowStart = dfpFlight.startTime - 1.0;
+            const windowEnd = dfpFlight.startTime;
+            const flightsInWindow = countFlightStartsInWindow(windowStart, windowEnd, events);
+            
+            // If adding our STBY flight at 'time' would be counted in this window
+            if (time > windowStart && time <= windowEnd) {
+                if (flightsInWindow >= 8) return true; // Would exceed limit
+            }
+        }
+        
+        return false; // No violation
+    };
+    
+    // Helper: Check if instructor is available for entire event duration
+    const isInstructorAvailableForEvent = (
+        instructorName: string,
+        startTime: number,
+        duration: number,
+        syllabusItem: SyllabusItemDetail,
+        events: Omit<ScheduleEvent, 'date'>[]
+    ): boolean => {
+        const preTime = syllabusItem.preFlightTime || 0;
+        const postTime = syllabusItem.postFlightTime || 0;
+        const eventStart = startTime - preTime;
+        const eventEnd = startTime + duration + postTime;
+        
+        // Check for overlaps with existing events
+        return !events.some(e => {
+            if (!getPersonnel(e).includes(instructorName)) return false;
+            const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return eventStart < existingBookingWindow.end && eventEnd > existingBookingWindow.start;
+        });
+    };
+    
+    // Helper: Find best available instructor
+    const findBestInstructorForStby = (
+        trainee: Trainee,
+        syllabusItem: SyllabusItemDetail,
+        startTime: number,
+        duration: number,
+        type: 'flight' | 'ftd',
+        events: Omit<ScheduleEvent, 'date'>[]
+    ): string | null => {
+        // Get qualified instructors
+        let candidates: Instructor[] = [];
+        
+        if (type === 'ftd') {
+            const simIps = instructors.filter(i => i.role === 'SIM IP');
+            const qfis = instructors.filter(i => i.role === 'QFI');
+            candidates = [...simIps, ...qfis];
+        } else {
+            candidates = instructors.filter(i => i.role === 'QFI');
+        }
+        
+        // Filter to only available instructors
+        const available = candidates.filter(ip => 
+            isInstructorAvailableForEvent(ip.name, startTime, duration, syllabusItem, events)
+        );
+        
+        if (available.length === 0) return null;
+        
+        // Count events for each instructor
+        const instructorEventCounts = available.map(ip => ({
+            instructor: ip,
+            count: events.filter(e => e.instructor === ip.name).length
+        }));
+        
+        // Find minimum count
+        const minCount = Math.min(...instructorEventCounts.map(ic => ic.count));
+        
+        // Get all instructors with minimum count
+        const withMinCount = instructorEventCounts.filter(ic => ic.count === minCount);
+        
+        // Random selection among tied instructors
+        const selected = withMinCount[Math.floor(Math.random() * withMinCount.length)];
+        return selected.instructor.name;
+    };
+    
+    // Helper: Find available STBY line for event
+    const findAvailableStbyLine = (
+        startTime: number,
+        duration: number,
+        stbyEvents: Omit<ScheduleEvent, 'date'>[],
+        prefix: string
+    ): number => {
+        const eventEnd = startTime + duration;
+        
+        // Group events by STBY line
+        const lineEvents = new Map<number, Array<{ start: number; end: number }>>();

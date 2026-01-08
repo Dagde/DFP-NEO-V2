@@ -1,0 +1,83 @@
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ === Building combinedHistory ===
+ === Building combinedHistory ===
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ === Building combinedHistory ===
+ === Building combinedHistory ===
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ === Building combinedHistory ===
+ === Building combinedHistory ===
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🚀 [NEO-Build] handleBuildDfp called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] todayStr: 2026-01-09
+ 🚀 [NEO-Build] Date comparison: 2026-01-10 <= 2026-01-09 = false
+ 🚀 [NEO-Build] Starting build process
+ 🚀 [NEO-Build] startBuildProcess called
+ 🚀 [NEO-Build] DEBUG ===== PRE-BUILD ANALYSIS START =====
+ 🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...
+ === Building combinedHistory ===
+ === Building combinedHistory ===
+ 🚀 [NEO-Build] runBuildAlgorithm called
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] preservedEvents: 0
+ 🚀 [NEO-Build] highestPriorityEvents: 0
+ 🚀 [NEO-Build] DEBUG runBuildAlgorithm called with 0 highest priority events
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ === Building combinedHistory ===
+ === Building combinedHistory ===
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🚀 [NEO-Build] Starting DFP build process for 2026-01-10
+ 🚀 [NEO-Build] Config: Object
+ PASS 1: Scheduling STBY with instructors available...
+ FTD STBY: Scheduling 18 events with 0.50hr spacing
+index-DCARJBzL.js:sourcemap:760 🚀 [NEO-Build] DFP build completed, generated 59 events
+index-DCARJBzL.js:sourcemap:760 🚀 [NEO-Build] Generated events sample: Array(3)
+index-DCARJBzL.js:sourcemap:760 🚀 [NEO-Build] setNextDayBuildEvents called with 59 events
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] nextDayBuildEvents.length: 59
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] buildEventsWithDate.length: 59
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] Final segments.length: 59
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] buildDfpDate: 2026-01-10
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] nextDayBuildEvents.length: 59
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] buildEventsWithDate.length: 59
+index-DCARJBzL.js:sourcemap:756 🚀 [NEO-Build] Final segments.length: 59
+index-DCARJBzL.js:sourcemap:332 === Building combinedHistory ===
+index-DCARJBzL.js:sourcemap:332 === Building combinedHistory ===
+index-DCARJBzL.js:sourcemap:760 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+index-DCARJBzL.js:sourcemap:760 🟠 NEO flyout is closed, skipping useEffect
+index-DCARJBzL.js:sourcemap:760 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+index-DCARJBzL.js:sourcemap:760 🚀 [NEO-Build] Build process complete, navigating to NextDayBuild
+index-DCARJBzL.js:sourcemap:760 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+index-DCARJBzL.js:sourcemap:760 🟠 NEO flyout is closed, skipping useEffect
+index-DCARJBzL.js:sourcemap:760 🟠 ========== NEO USEEFFECT END (CLOSED) ==========

@@ -1,0 +1,5 @@
+517:const computeNextEventsForTrainee = (
+724:        const { next, plusOne } = computeNextEventsForTrainee(
+1216:        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+5849:            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+6383:            const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);

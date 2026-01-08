@@ -120,6 +120,7 @@ export async function initializeData() {
         pt051Assessments: pt051Assessments.size,
         coursePercentages: coursePercentages.size,
         traineeLMPs: traineeLMPs.size,
+        traineeSample: trainees.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course })),
       });
       
       console.log('✅ Instructors sample:', instructors.slice(0, 3));
