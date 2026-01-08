@@ -1,0 +1,4 @@
+7705:                return <CourseRosterView 
+7706-                            events={events}
+7707-                            traineesData={traineesData}
+7708-                            courseColors={courseColors}

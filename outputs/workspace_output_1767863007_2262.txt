@@ -1,0 +1,31 @@
+[feature/comprehensive-build-algorithm 0255717] Add CourseRoster debugging - check course configuration
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 18 files changed, 1182 insertions(+), 1 deletion(-)
+ create mode 100644 COURSE_DEBUGGING_ADDED.md
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CryvKnNk.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CryvKnNk.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CaxHUf1n.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CaxHUf1n.js.map
+ create mode 100644 outputs/workspace_output_1767862908_8130.txt
+ create mode 100644 outputs/workspace_output_1767862918_6723.txt
+ create mode 100644 outputs/workspace_output_1767862921_8205.txt
+ create mode 100644 outputs/workspace_output_1767862934_7297.txt
+ create mode 100644 outputs/workspace_output_1767862951_8734.txt
+ create mode 100644 outputs/workspace_output_1767862954_6826.txt
+ create mode 100644 outputs/workspace_output_1767862968_9343.txt
+ create mode 100644 outputs/workspace_output_1767862972_7828.txt
+ create mode 100644 outputs/workspace_output_1767862992_4406.txt
+ create mode 100644 outputs/workspace_output_1767863007_2262.txt
+To https://github.com/Dagde/DFP---NEO.git
+   a72d539..0255717  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

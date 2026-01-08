@@ -1,0 +1,6 @@
+135:dataService.ts:129 📋 Unique trainee courses: Array(8)
+148:dataService.ts:129 📋 Unique trainee courses: Array(8)
+153:App.tsx:3322 buildResources - Current view: CourseRoster Current date: 2026-01-08
+156:App.tsx:3322 buildResources - Current view: CourseRoster Current date: 2026-01-08
+159:App.tsx:3486 🔄 useEffect triggered - activeView: CourseRoster remedialRequests count: 0
+160:App.tsx:3491 ⏸️ Not syncing - activeView is: CourseRoster

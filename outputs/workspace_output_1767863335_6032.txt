@@ -1,0 +1,20 @@
+7495-                           resources={buildResources}
+7496-                           instructors={instructorsData.map(i => i.name)}
+7497:                           traineesData={traineesData}
+7498-                           timezoneOffset={timezoneOffset}
+7499-                           airframeCount={24}
+--
+7569-                            instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank }))}
+7570-                            instructorsData={instructorsData}
+7571:                            traineesData={traineesData}
+7572-                            onSelectEvent={handleOpenModal}
+7573-                            onUpdateEvent={handleScheduleUpdate}
+--
+7598-                                .map(t => t.fullName)
+7599-                            }
+7600:                            traineesData={traineesData}
+7601-                            onSelectEvent={handleOpenModal}
+7602-                            onUpdateEvent={handleScheduleUpdate}
+--
+7619-                console.log('🔍 eventSegmentsForDate count:', eventSegmentsForDate?.length);
+7620-                console.log('🔍 instructorsData count:', instructorsData?.length);

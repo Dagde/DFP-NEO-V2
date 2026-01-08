@@ -83,6 +83,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onViewLogbook
        , onDeleteTrainee
 }) => {
+    console.log('🎯 CourseRosterView - Props received:', {
+        traineesDataCount: traineesData.length,
+        courseColorsKeys: Object.keys(courseColors).length,
+        activeCourseNumbers: Object.keys(courseColors).length,
+        eventsCount: events.length
+    });
+
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
