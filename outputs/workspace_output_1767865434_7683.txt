@@ -1,0 +1,20 @@
+6:const STORAGE_KEYS = {
+61:  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+63:    STORAGE_KEYS.PT051_ASSESSMENTS, 
+66:  let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+68:    STORAGE_KEYS.COURSE_COLORS, 
+72:    STORAGE_KEYS.ARCHIVED_COURSES, 
+76:    STORAGE_KEYS.COURSE_PRIORITIES, 
+80:    STORAGE_KEYS.COURSE_PERCENTAGES, 
+84:    STORAGE_KEYS.TRAINEE_LMPS, 
+136:      saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+137:      saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+138:      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+144:      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+145:      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+146:      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+167:        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+168:        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+169:        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+175:    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+176:    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);

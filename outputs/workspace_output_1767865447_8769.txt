@@ -1,0 +1,14 @@
+const computeNextEventsForTrainee = (
+    trainee: Trainee,
+    traineeLMPs: Map<string, SyllabusItemDetail[]>,
+    scores: Map<string, Score[]>,
+    masterSyllabus: SyllabusItemDetail[], // Added fallback
+    publishedSchedules?: Record<string, ScheduleEvent[]>, // NEW: Optional for ELCE
+    buildDate?: string // NEW: Optional for ELCE
+): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
+    // Check individual LMP first, then fallback to master syllabus
+    const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
+    const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+    
+    // Debug logging for remedial tracking
+    if (hasIndividualLMP) {

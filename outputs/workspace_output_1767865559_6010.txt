@@ -1,0 +1,90 @@
+const simulateProgressAndScores = (
+    trainees: Trainee[],
+    syllabus: SyllabusItemDetail[],
+    instructors: Instructor[]
+): Map<string, Score[]> => {
+    const scoreMap = new Map<string, Score[]>();
+    const qfiInstructors = instructors.filter(i => i.role === 'QFI');
+    const syllabusIds = syllabus.map(s => s.code);
+
+    trainees.forEach(trainee => {
+        const range = courseProgressRanges[trainee.course];
+        if (!range) {
+            scoreMap.set(trainee.fullName, []);
+            return;
+        }
+
+        const startIndex = syllabusIds.indexOf(range.start);
+        const endIndex = syllabusIds.indexOf(range.end);
+
+        if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
+             scoreMap.set(trainee.fullName, []);
+            return;
+        }
+        
+        // Pick a random event index within the range for the trainee's current progress
+        const progressIndex = Math.floor(Math.random() * (endIndex - startIndex + 1)) + startIndex;
+        
+        const completedEvents = syllabus.slice(0, progressIndex);
+        const traineeScores: Score[] = [];
+        let latestEventDate: Date | null = null;
+        let latestFlightDate: Date | null = null;
+        
+        // Start generating score dates from a random point in the last 6 months
+        const today = new Date();
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - 180);
+
+        completedEvents.forEach(event => {
+            // Generate a random score between 1 and 5, or 5 for completed ground events
+            let scoreValue: number;
+            if (event.code.includes('MB')) {
+                // Mass Brief events get score 5 to indicate completion
+                scoreValue = 5;
+            } else if (event.type === 'Ground School') {
+                // Other ground events get score 5 to indicate completion
+                scoreValue = 5;
+            } else {
+                // Flight events get random score between 1 and 5
+                scoreValue = Math.floor(Math.random() * 5) + 1;
+            }
+
+            const instructor = qfiInstructors.length > 0
+                ? qfiInstructors[Math.floor(Math.random() * qfiInstructors.length)].name
+                : 'Unknown Instructor';
+
+            // Move date forward for the next event
+            const daysToAdd = Math.floor(Math.random() * 3) + 1; // 1 to 3 days
+            startDate.setDate(startDate.getDate() + daysToAdd);
+            
+            const scoreDate = new Date(startDate);
+            
+            traineeScores.push({
+                event: event.code,
+                score: scoreValue as Score['score'],
+                date: scoreDate.toISOString().split('T')[0],
+                instructor,
+                notes: scoreValue === 5 ? `Ground event completed for ${event.code}.` : `Simulated score for ${event.code}.`,
+                details: scoreValue === 5 ? [] : [{ criteria: 'General Handling', score: scoreValue, comment: 'Auto-generated comment.' }],
+            });
+            
+            latestEventDate = scoreDate;
+            if (event.type === 'Flight') {
+                latestFlightDate = scoreDate;
+            }
+        });
+
+        scoreMap.set(trainee.fullName, traineeScores);
+        
+        // Update trainee object with the latest dates from the simulation
+        if (latestEventDate) {
+            trainee.lastEventDate = latestEventDate.toISOString().split('T')[0];
+        }
+        if (latestFlightDate) {
+            trainee.lastFlightDate = latestFlightDate.toISOString().split('T')[0];
+        } else if (latestEventDate) {
+             // If no flights were completed, last flight date is same as last event date (if any)
+            trainee.lastFlightDate = latestEventDate.toISOString().split('T')[0];
+        }
+    });
+

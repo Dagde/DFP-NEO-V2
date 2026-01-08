@@ -1,0 +1,26 @@
+    console.log('🎨 Auto-generated courseColors:', courseColors);
+    saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+  }
+
+  return {
+    instructors,
+    trainees,
+    events,
+    scores,
+    pt051Assessments,
+    courses,
+    courseColors,
+    archivedCourses,
+    coursePriorities,
+    coursePercentages,
+    traineeLMPs,
+  };
+}
+
+// Save schedule
+export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+  if (USE_API) {
+    const success = await saveScheduleAPI(events);
+    if (success) {
+      // Also save to localStorage for backup
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);

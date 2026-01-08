@@ -1,0 +1,10 @@
+16:  SCORES: 'dfp-neo-scores',
+61:  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, new Map());
+83:  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+118:        scores: scores.size,
+121:        traineeLMPs: traineeLMPs.size,
+203:    scores,
+210:    traineeLMPs,
+244:// Save scores data (to localStorage)
+245:export function saveScoresData(scores: Map<string, Score[]>) {
+246:  saveToStorage(STORAGE_KEYS.SCORES, Array.from(scores.entries()));

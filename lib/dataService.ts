@@ -196,6 +196,18 @@ export async function initializeData() {
     saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
   }
 
+  // Auto-populate traineeLMPs with master syllabus for each trainee
+  if (trainees.length > 0 && traineeLMPs.size === 0) {
+    console.log('📚 Initializing traineeLMPs with master syllabus for', trainees.length, 'trainees');
+    
+    trainees.forEach(trainee => {
+      traineeLMPs.set(trainee.fullName, INITIAL_SYLLABUS_DETAILS);
+    });
+    
+    console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+    saveToStorage(STORAGE_KEYS.TRAINEE_LMPS, Array.from(traineeLMPs.entries()));
+  }
+
   return {
     instructors,
     trainees,

@@ -1,0 +1,3 @@
+1203:    const traineeLMPs = new Map<string, SyllabusItemDetail[]>();
+1204:    allocatedTrainees.forEach(t => traineeLMPs.set(t.fullName, INITIAL_SYLLABUS_DETAILS));
+1216:        traineeLMPs,

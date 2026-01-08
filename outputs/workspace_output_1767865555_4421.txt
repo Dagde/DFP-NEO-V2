@@ -1,0 +1,2 @@
+761:const simulateProgressAndScores = (
+1169:    const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);

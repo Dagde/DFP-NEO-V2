@@ -1,0 +1,20 @@
+83:import PT051View from './components/PT051View';
+109:import { initializeData, saveSchedule as saveScheduleService, saveCoursesData, saveScoresData, savePT051AssessmentsData, saveTraineeLMPsData } from './lib/dataService';
+114:const PT051_STRUCTURE = [
+126:const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
+3101:                   setPt051Assessments(data.pt051Assessments);
+3138:    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
+3473:            syncPt051WithActiveDfp(publishedSchedules, pt051Assessments);
+3475:    }, [activeView, publishedSchedules, pt051Assessments]);
+4585:    const onSavePT051Assessment = (assessment: Pt051Assessment) => {
+4587:        const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
+5570:        const assessments = currentPt051Assessments || pt051Assessments;
+5658:                        id: `pt051-${assessmentKey}`,
+7774:                    const traineeAssessments = Array.from(pt051Assessments.values()).filter(
+7783:                                pt051Events={traineeAssessments}
+7804:                                        handleNavigation('PT051');
+7810:                                            handleNavigation('PT051');
+7842:                                            handleNavigation('PT051');
+7855:                                        eventId: `inserted-pt051-${Date.now()}`,
+7900:                                    handleNavigation('PT051');
+8116:                    pt051Assessments={pt051Assessments}

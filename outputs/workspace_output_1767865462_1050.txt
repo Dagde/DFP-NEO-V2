@@ -1,0 +1,5 @@
+305:export const INITIAL_SYLLABUS_DETAILS: SyllabusItemDetail[] = populatePrerequisites(syllabusItems);
+967:    const flightSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.code.startsWith('BGF') && s.type === 'Flight');
+1007:    const ftdSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.type === 'FTD');
+1008:    const groundSyllabus = INITIAL_SYLLABUS_DETAILS.filter(s => s.type === 'Ground School' && s.code.includes('MB'));
+1169:    const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);

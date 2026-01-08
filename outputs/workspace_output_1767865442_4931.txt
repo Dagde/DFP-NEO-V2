@@ -1,0 +1,8 @@
+517:const computeNextEventsForTrainee = (
+714:        const { next, plusOne } = computeNextEventsForTrainee(
+961:function generateDfpInternal(
+1206:        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+5839:            const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+5944:                const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+6373:            const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+7196:            const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
