@@ -96,13 +96,22 @@ export async function initializeData() {
     console.log('Initializing data from API...');
     
     try {
-      // Try to fetch from API
-      const [instructorsResult, traineesResult, scheduleResult, scoresResult] = await Promise.all([
-        fetchInstructors(),
-        fetchTrainees(),
-        fetchSchedule(),
-        fetchScores(),
-      ]);
+      // Fetch data sequentially to avoid overwhelming the browser
+      console.log('📥 Fetching instructors...');
+      const instructorsResult = await fetchInstructors();
+      console.log('✅ Instructors loaded:', instructorsResult.length);
+      
+      console.log('📥 Fetching trainees...');
+      const traineesResult = await fetchTrainees();
+      console.log('✅ Trainees loaded:', traineesResult.length);
+      
+      console.log('📥 Fetching schedule...');
+      const scheduleResult = await fetchSchedule();
+      console.log('✅ Schedule loaded:', scheduleResult.length);
+      
+      console.log('📥 Fetching scores (this may take a moment)...');
+      const scoresResult = await fetchScores();
+      console.log('✅ Scores loaded:', scoresResult.size);
 
       // Ensure arrays
       instructors = Array.isArray(instructorsResult) ? instructorsResult : [];

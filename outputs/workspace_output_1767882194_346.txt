@@ -1,0 +1,37 @@
+[feature/comprehensive-build-algorithm 6864ca2] Add 30s timeout and better error handling to API fetch calls
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 25 files changed, 955 insertions(+), 16 deletions(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-B7pRpEMW.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-B7pRpEMW.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-C7-q9go0.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-C7-q9go0.js.map
+ create mode 100644 outputs/workspace_output_1767882066_3215.txt
+ create mode 100644 outputs/workspace_output_1767882071_3047.txt
+ create mode 100644 outputs/workspace_output_1767882075_8763.txt
+ create mode 100644 outputs/workspace_output_1767882082_9045.txt
+ create mode 100644 outputs/workspace_output_1767882086_3855.txt
+ create mode 100644 outputs/workspace_output_1767882093_6063.txt
+ create mode 100644 outputs/workspace_output_1767882097_9236.txt
+ create mode 100644 outputs/workspace_output_1767882102_4684.txt
+ create mode 100644 outputs/workspace_output_1767882109_3766.txt
+ create mode 100644 outputs/workspace_output_1767882114_8660.txt
+ create mode 100644 outputs/workspace_output_1767882120_8579.txt
+ create mode 100644 outputs/workspace_output_1767882144_688.txt
+ create mode 100644 outputs/workspace_output_1767882154_1677.txt
+ create mode 100644 outputs/workspace_output_1767882169_1291.txt
+ create mode 100644 outputs/workspace_output_1767882184_8522.txt
+ create mode 100644 outputs/workspace_output_1767882189_6476.txt
+ create mode 100644 outputs/workspace_output_1767882194_346.txt
+To https://github.com/Dagde/DFP---NEO.git
+   6453f5a..6864ca2  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

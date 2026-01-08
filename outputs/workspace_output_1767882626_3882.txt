@@ -1,0 +1,32 @@
+{
+  "id": "cmk4uszqn0053i9wetvqeroll",
+  "userId": null,
+  "idNumber": 1456755,
+  "name": "Anderson, Benjamin",
+  "fullName": "Anderson, Benjamin – ADF305",
+  "rank": "PLTOFF",
+  "service": "RAAF",
+  "course": "ADF305",
+  "lmpType": "BPC+IPC",
+  "traineeCallsign": "CHLE324",
+  "seatConfig": "Normal",
+  "isPaused": false,
+  "unavailability": [],
+  "unit": "2FTS",
+  "flight": "A",
+  "location": "Pearce",
+  "phoneNumber": "0425291076",
+  "email": "benjamin.anderson@flightschool.mil",
+  "primaryInstructor": "Edwards, Noah",
+  "secondaryInstructor": "Green, Charlotte",
+  "lastEventDate": "2025-08-28T00:00:00.000Z",
+  "lastFlightDate": "2025-08-28T00:00:00.000Z",
+  "currencyStatus": null,
+  "permissions": [
+    "Trainee"
+  ],
+  "priorExperience": null,
+  "isActive": true,
+  "createdAt": "2026-01-08T02:54:22.704Z",
+  "updatedAt": "2026-01-08T02:54:22.704Z"
+}

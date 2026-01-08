@@ -1,0 +1,80 @@
+[
+  "Anderson, Benjamin – ADF305",
+  [
+    {
+      "event": "BGF MB1",
+      "score": 3,
+      "date": "2025-07-14",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF MB1",
+      "details": [
+        {
+          "score": 3,
+          "comment": "Auto-generated score from mock data import",
+          "criteria": "General Handling"
+        }
+      ]
+    },
+    {
+      "event": "BGF MB2",
+      "score": 4,
+      "date": "2025-07-16",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF MB2",
+      "details": [
+        {
+          "score": 4,
+          "comment": "Auto-generated score from mock data import",
+          "criteria": "General Handling"
+        }
+      ]
+    },
+    {
+      "event": "BGF CPT1",
+      "score": 4,
+      "date": "2025-07-19",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF CPT1",
+      "details": [
+        {
+          "score": 4,
+          "comment": "Auto-generated score from mock data import",
+          "criteria": "General Handling"
+        }
+      ]
+    },
+    {
+      "event": "BGF TUT1A",
+      "score": 3,
+      "date": "2025-07-22",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF TUT1A",
+      "details": [
+        {
+          "score": 3,
+          "comment": "Auto-generated score from mock data import",
+          "criteria": "General Handling"
+        }
+      ]
+    },
+    {
+      "event": "BGF TUT1B",
+      "score": 3,
+      "date": "2025-07-23",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF TUT1B",
+      "details": [
+        {
+          "score": 3,
+          "comment": "Auto-generated score from mock data import",
+          "criteria": "General Handling"
+        }
+      ]
+    },
+    {
+      "event": "BGF TUT2",
+      "score": 3,
+      "date": "2025-07-25",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF TUT2",
+      "details": [
