@@ -1962,6 +1962,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
                 
+                // DEBUG: Show why resource is occupied
+                if (type === 'ground' || type === 'cpt') {
+                    const existingEventEnd = e.startTime + e.duration;
+                    const newEventStart = startTime;
+                    const newEventEnd = startTime + syllabusItem.duration;
+                    const overlap = newEventStart < existingEventEnd && newEventEnd > e.startTime;
+                    if (overlap) {
+                        console.log(`  🚫 RESOURCE ${id} OCCUPIED by ${e.flightNumber} (${e.type}) from ${e.startTime.toFixed(2)}-${(e.startTime + e.duration).toFixed(2)}hrs`);
+                        console.log(`     Trying to schedule from ${startTime.toFixed(2)}-${newEventEnd.toFixed(2)}hrs`);
+                    }
+                }
+                
                 let turnaround = 0;
                 if (e.type === 'flight') {
                     const isExistingEventNight = e.flightNumber.startsWith('BNF');
@@ -1989,7 +2001,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const newEventStart = startTime;
                 return newEventStart < existingEventEnd && (startTime + syllabusItem.duration) > e.startTime;
             });
-            if (!resourceIsOccupied) { resourceId = id; break; }
+            if (!resourceIsOccupied) { 
+                // DEBUG: Ground resource found
+                if (type === 'ground' || type === 'cpt') {
+                    console.log(`✅ GROUND RESOURCE FOUND: ${id} is available at ${startTime.toFixed(2)}hrs`);
+                }
+                resourceId = id; 
+                break; 
+            }
         }
         
         // If no resource available, return null (STBY will be handled in separate pass)

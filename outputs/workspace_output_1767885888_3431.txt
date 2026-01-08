@@ -1,0 +1,25 @@
+[feature/comprehensive-build-algorithm 3881c54] Add enhanced debugging for Ground/CPT event scheduling
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 12 files changed, 1065 insertions(+), 1 deletion(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-F3ndBmg3.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-F3ndBmg3.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-MPXyphSd.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-MPXyphSd.js.map
+ create mode 100644 outputs/workspace_output_1767885848_3590.txt
+ create mode 100644 outputs/workspace_output_1767885852_10.txt
+ create mode 100644 outputs/workspace_output_1767885872_4533.txt
+ create mode 100644 outputs/workspace_output_1767885885_4417.txt
+ create mode 100644 outputs/workspace_output_1767885888_3431.txt
+To https://github.com/Dagde/DFP---NEO.git
+   706a192..3881c54  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
