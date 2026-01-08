@@ -1,0 +1,18 @@
+        setIsLocalityChangeVisible(true);
+        setTimeout(() => setIsLocalityChangeVisible(false), 2000);
+
+        const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
+        setInstructorsData(data.instructors);
+        setTraineesData(data.trainees);
+        setEvents(data.events);
+        setCourses(data.courses);
+        setScores(data.scores);
+        setPt051Assessments(data.pt051Assessments);
+        setCourseColors(data.courseColors);
+        setArchivedCourses(data.archivedCourses);
+        setCoursePriorities(data.coursePriorities);
+        setCoursePercentages(data.coursePercentages);
+        setTraineeLMPs(data.traineeLMPs); // Load the correct LMPs for the new school
+        setNextDayBuildEvents([]); // Clear the build when changing schools
+        setPublishedSchedules({}); // Clear published schedules on school change
+        

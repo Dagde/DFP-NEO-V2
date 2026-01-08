@@ -1,0 +1,11 @@
+
+        // Add back to active courses
+        setCourseColors(prev => ({ ...prev, [courseName]: color }));
+
+        // Add back to courses array (recreate from mock data)
+        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
+        if (courseFromMockData) {
+            setCourses(prev => [...prev, courseFromMockData]);
+        }
+
+        setSuccessMessage(`Course ${courseName} unarchived successfully!`);

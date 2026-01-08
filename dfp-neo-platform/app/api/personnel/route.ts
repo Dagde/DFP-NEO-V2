@@ -21,30 +21,60 @@ export async function GET(request: NextRequest) {
     const available = searchParams.get('available');
     const search = searchParams.get('search');
 
-    // Build where clause
-    const where: any = {};
+    let personnel: any[] = [];
 
-    if (role) {
-      where.role = role;
+    // If role is INSTRUCTOR, query Personnel table (QFI and SIM IP)
+    if (role === 'INSTRUCTOR' || !role) {
+      const where: any = {
+        isActive: true,
+      };
+
+      // Filter by availability if specified
+      if (available === 'true') {
+        // Check if they have any unavailability records
+        where.availability = { isEmpty: true };
+      } else if (available === 'false') {
+        where.availability = { isEmpty: false };
+      }
+
+      // Search functionality
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { rank: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      const instructors = await prisma.personnel.findMany({
+        where,
+        orderBy: { name: 'asc' },
+      });
+      
+      personnel = personnel.concat(instructors);
     }
 
-    if (available === 'true') {
-      where.isAvailable = true;
-    } else if (available === 'false') {
-      where.isAvailable = false;
-    }
+    // If role is PILOT or TRAINEE, query Trainee table
+    if (role === 'PILOT' || role === 'TRAINEE' || !role) {
+      const where: any = {
+        isPaused: false,
+      };
 
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { rank: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+      // Search functionality
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { rank: { contains: search, mode: 'insensitive' } },
+        ];
+      }
 
-    const personnel = await prisma.personnel.findMany({
-      where,
-      orderBy: { name: 'asc' },
-    });
+      const trainees = await prisma.trainee.findMany({
+        where,
+        orderBy: { name: 'asc' },
+      });
+      
+      personnel = personnel.concat(trainees);
+    }
 
     return NextResponse.json({ personnel });
   } catch (error) {

@@ -10,58 +10,20 @@ interface ApiResponse<T> {
   error?: string;
 }
 
-interface InstructorResponse {
+interface PersonnelResponse {
   id: string;
-  userId?: string;
-  name: string;
+  userId: string;
+  role: string;
+  firstName: string;
+  lastName: string;
   rank?: string;
-  role?: string;
-  qualifications?: any;
-  availability?: any;
-  preferences?: any;
-  isActive?: boolean;
   callsignNumber?: number;
-  category?: string;
-  email?: string;
-  flight?: string;
-  idNumber?: number;
-  isAdminStaff?: boolean;
-  isCFI?: boolean;
-  isCommandingOfficer?: boolean;
-  isContractor?: boolean;
-  isDeputyFlightCommander?: boolean;
-  isExecutive?: boolean;
-  isFlyingSupervisor?: boolean;
-  isIRE?: boolean;
-  isOFI?: boolean;
-  isQFI?: boolean;
-  isTestingOfficer?: boolean;
-  location?: string;
-  permissions?: string[];
-  phoneNumber?: string;
-  priorExperience?: any;
-  seatConfig?: string;
-  service?: string;
-  unavailability?: any[];
+  callsignPrefix?: string;
   unit?: string;
-}
-
-interface TraineeResponse {
-  id: string;
-  userId?: string;
-  idNumber: number;
-  name: string;
-  fullName: string;
-  rank?: string;
-  service?: string;
-  course?: string;
-  lmpType?: string;
-  traineeCallsign?: string;
-  seatConfig?: string;
-  isPaused?: boolean;
-  unavailability?: any;
-  unit?: string;
-  flight?: string;
+  qualificationStatus?: string;
+  isAvailable?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface AircraftResponse {
@@ -74,46 +36,26 @@ interface AircraftResponse {
 }
 
 // Helper function to convert API personnel to Instructor/Trainee format
-const convertPersonnelToInstructor = (p: InstructorResponse): Instructor => ({
+const convertPersonnelToInstructor = (p: PersonnelResponse): Instructor => ({
   id: p.id,
-  idNumber: p.idNumber || 0,
-  name: p.name,
-  rank: (p.rank as InstructorRank) || 'FLTLT',
-  role: (p.role as 'QFI' | 'SIM IP') || 'QFI',
-  callsignNumber: p.callsignNumber || 0,
-  service: p.service as 'RAAF' | 'RAN' | 'ARA' || 'RAAF',
-  category: (p.category as InstructorCategory) || 'UnCat',
-  isTestingOfficer: p.isTestingOfficer || false,
-  seatConfig: (p.seatConfig as SeatConfig) || 'Normal',
-  isExecutive: p.isExecutive || false,
-  isFlyingSupervisor: p.isFlyingSupervisor || false,
-  isIRE: p.isIRE || false,
-  isCommandingOfficer: p.isCommandingOfficer || false,
-  isCFI: p.isCFI || false,
-  isDeputyFlightCommander: p.isDeputyFlightCommander || false,
-  isOFI: p.isOFI || false,
-  isQFI: p.isQFI || false,
-  isContractor: p.isContractor || false,
-  isAdminStaff: p.isAdminStaff || false,
+  name: `${p.rank} ${p.lastName}`,
+  rank: p.rank || '',
   unit: p.unit || '',
-  isAvailable: true, // Default to available if no unavailability
+  callsign: p.callsignNumber && p.callsignPrefix 
+    ? `${p.callsignPrefix} ${String(p.callsignNumber).padStart(3, '0')}`
+    : '',
+  isAvailable: p.isAvailable ?? true,
 });
 
-const convertPersonnelToTrainee = (p: TraineeResponse): Trainee => ({
+const convertPersonnelToTrainee = (p: PersonnelResponse): Trainee => ({
   id: p.id,
-  idNumber: p.idNumber,
-  fullName: p.fullName,
-  name: p.name,
-  rank: (p.rank as TraineeRank) || 'OCDT',
-  service: p.service,
-  course: p.course || '',
-  lmpType: (p.lmpType as any) || 'BPC+IPC',
-  traineeCallsign: p.traineeCallsign || '',
-  seatConfig: (p.seatConfig as SeatConfig) || 'Normal',
-  isPaused: p.isPaused || false,
+  fullName: `${p.rank} ${p.lastName}`,
+  rank: p.rank as TraineeRank,
   unit: p.unit || '',
-  flight: p.flight || '',
-  isAvailable: true, // Default to available if no unavailability
+  traineeCallsign: p.callsignNumber && p.callsignPrefix
+    ? `${p.callsignPrefix} ${String(p.callsignNumber).padStart(3, '0')}`
+    : '',
+  isAvailable: p.isAvailable ?? true,
 });
 
 const convertAircraft = (a: AircraftResponse): Aircraft => ({
@@ -154,27 +96,27 @@ async function fetchAPI<T>(
 
 // Personnel API
 export async function fetchInstructors(): Promise<Instructor[]> {
-  const result = await fetchAPI<{ personnel: InstructorResponse[] }>('/personnel?role=INSTRUCTOR');
-  if (result.success && result.data?.personnel) {
-    return result.data.personnel.map(convertPersonnelToInstructor);
+  const result = await fetchAPI<PersonnelResponse[]>('/personnel?role=INSTRUCTOR');
+  if (result.success && result.data) {
+    return result.data.map(convertPersonnelToInstructor);
   }
   console.error('Failed to fetch instructors:', result.error);
   return [];
 }
 
 export async function fetchTrainees(): Promise<Trainee[]> {
-  const result = await fetchAPI<{ personnel: TraineeResponse[] }>('/personnel?role=TRAINEE');
-  if (result.success && result.data?.personnel) {
-    return result.data.personnel.map(convertPersonnelToTrainee);
+  const result = await fetchAPI<PersonnelResponse[]>('/personnel?role=PILOT,TRAINEE');
+  if (result.success && result.data) {
+    return result.data.map(convertPersonnelToTrainee);
   }
   console.error('Failed to fetch trainees:', result.error);
   return [];
 }
 
-export async function fetchAllPersonnel(): Promise<any[]> {
-  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
-  if (result.success && result.data?.personnel) {
-    return result.data.personnel;
+export async function fetchAllPersonnel(): Promise<PersonnelResponse[]> {
+  const result = await fetchAPI<PersonnelResponse[]>('/personnel');
+  if (result.success && result.data) {
+    return result.data;
   }
   console.error('Failed to fetch personnel:', result.error);
   return [];

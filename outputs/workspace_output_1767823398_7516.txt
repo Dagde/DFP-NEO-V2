@@ -1,0 +1,2 @@
+./dfp-neo-platform/public/flight-school-app
+./dfp-neo-platform/app/flight-school

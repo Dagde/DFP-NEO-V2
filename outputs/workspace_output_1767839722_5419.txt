@@ -1,0 +1,19 @@
+    };
+    
+    useEffect(() => {
+        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;
+        setEvents(initialData.events);
+        setCourses(initialData.courses);
+        const todayStr = getLocalDateString();
+        setPublishedSchedules({ [todayStr]: initialData.events.filter(e => e.date === todayStr) });
+    }, [school]);
+
+    // Training Records Handlers
+    const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
+        // Add to courseColors
+        setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
+        
+        // Add to courses array
+        const newCourse: Course = {
+            name: data.number,
+            color: data.color,

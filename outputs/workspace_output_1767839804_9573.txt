@@ -1,0 +1,56 @@
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // If localStorage is empty, use mock data
+      if (instructors.length === 0) {
+        console.log('📦 Using mock data as fallback');
+        instructors = ESL_DATA.instructors;
+        trainees = ESL_DATA.trainees;
+        events = ESL_DATA.events;
+        
+        // Save mock data to localStorage
+        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      }
+    }
+  } else {
+    // Load from localStorage or use mock data
+    console.log('📦 Loading data from localStorage (API disabled)');
+    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, ESL_DATA.instructors);
+    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, ESL_DATA.trainees);
+    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, ESL_DATA.events);
+  }
+
+  // Load other data from localStorage (these are always stored locally for now)
+  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, ESL_DATA.scores);
+  const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
+    STORAGE_KEYS.PT051_ASSESSMENTS, 
+    ESL_DATA.pt051Assessments
+  );
+  const courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, ESL_DATA.courses);
+  const courseColors = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.COURSE_COLORS, 
+    ESL_DATA.courseColors
+  );
+  const archivedCourses = loadFromStorage<{ [key: string]: string }>(
+    STORAGE_KEYS.ARCHIVED_COURSES, 
+    ESL_DATA.archivedCourses
+  );
+  const coursePriorities = loadFromStorage<string[]>(
+    STORAGE_KEYS.COURSE_PRIORITIES, 
+    ESL_DATA.coursePriorities
+  );
+  const coursePercentages = loadFromStorage<Map<string, number>>(
+    STORAGE_KEYS.COURSE_PERCENTAGES, 
+    ESL_DATA.coursePercentages
+  );
+  const traineeLMPs = loadFromStorage<Map<string, SyllabusItemDetail[]>>(
+    STORAGE_KEYS.TRAINEE_LMPS, 
+    ESL_DATA.traineeLMPs
+  );
+
+  return {
+    instructors,
+    trainees,

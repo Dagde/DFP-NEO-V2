@@ -1,0 +1,80 @@
+                    resolve(false);
+                },
+                confirmText: 'Yes',
+                cancelText: 'Cancel'
+            });
+        });
+    };
+
+    const [activeView, setActiveView] = useState<string>('Program Schedule');
+    const [previousView, setPreviousView] = useState<string>('Program Schedule');
+    const [date, setDate] = useState<string>(() => getLocalDateString());
+    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+    const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
+    const [isEditingDefault, setIsEditingDefault] = useState(false);
+    const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
+    const [conflict, setConflict] = useState<Conflict | null>(null);
+    const [showValidation, setShowValidation] = useState(false);
+    const [showPrePost, setShowPrePost] = useState(true);
+    const [isMagnifierEnabled, setIsMagnifierEnabled] = useState(false);
+    const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+    const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
+    
+    // Dark Message Modal state
+    const [darkMessageModal, setDarkMessageModal] = useState<{
+        type: 'alert' | 'confirm';
+        title: string;
+        message: string;
+        variant?: 'error' | 'warning' | 'info' | 'success';
+        onConfirm?: () => void;
+        onCancel?: () => void;
+        confirmText?: string;
+        cancelText?: string;
+    } | null>(null);
+    
+    // Visual Adjust state
+    const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
+
+    // Data state
+    const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
+    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+    const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
+    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+       const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+    
+    // Current User State (for permission checking)
+    // Default to Joe Bloggs (Super Admin) - in production this would come from authentication
+    const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
+    const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
+    const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
+    
+    // Set current user for audit logging
+    useEffect(() => {
+        if (currentUser) {
+            const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
+            setCurrentUser(userString);
+        }
+    }, [currentUser]);
+    
+    // User change handler
+    const handleUserChange = (userName: string) => {
+        setCurrentUserName(userName);
+        const newUser = instructorsData.find(inst => inst.name === userName);
+        if (newUser) {
+            setCurrentUserId(newUser.idNumber);
+        }
+    };
+    // Find the highest permission level - prioritize Super Admin, then Admin, etc.
+    const getHighestPermission = (permissions?: string[]): 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor' => {
+        if (!permissions || permissions.length === 0) return 'Staff';
+        if (permissions.includes('Super Admin')) return 'Super Admin';
+        if (permissions.includes('Admin')) return 'Admin';
+        if (permissions.includes('Scheduler')) return 'Scheduler';
+        if (permissions.includes('Course Supervisor')) return 'Course Supervisor';
+        if (permissions.includes('Ops')) return 'Ops';
+        if (permissions.includes('Staff')) return 'Staff';
+        return 'Trainee';
+    };
+    const currentUserPermission = getHighestPermission(currentUser?.permissions);
+    const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);

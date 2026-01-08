@@ -1,0 +1,30 @@
+import { PrismaClient } from '../dfp-neo-platform/node_modules/@prisma/client/index.js';
+
+const prisma = new PrismaClient();
+
+// Import the mock data generators
+import { ESL_DATA, PEA_DATA } from '../mockData.js';
+
+async function migratePersonnelAndTrainees() {
+  try {
+    console.log('Starting Personnel and Trainee migration...\n');
+    
+    // Get the data from mockData
+    const eslData = ESL_DATA;
+    const peaData = PEA_DATA;
+    
+    console.log(`ESL Instructors: ${eslData.instructors.length}`);
+    console.log(`ESL Trainees: ${eslData.trainees.length}`);
+    console.log(`PEA Instructors: ${peaData.instructors.length}`);
+    console.log(`PEA Trainees: ${peaData.trainees.length}\n`);
+    
+    // Combine all instructors
+    const allInstructors = [...eslData.instructors, ...peaData.instructors];
+    
+    // Combine all trainees
+    const allTrainees = [...eslData.trainees, ...peaData.trainees];
+    
+    console.log('=== MIGRATING PERSONNEL (INSTRUCTORS) ===\n');
+    
+    // First, clear existing Personnel records
+    const deletedPersonnel = await prisma.personnel.deleteMany({});

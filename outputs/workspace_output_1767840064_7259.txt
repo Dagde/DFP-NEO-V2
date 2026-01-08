@@ -1,0 +1,16 @@
+### Goal
+Update the frontend to use the database instead of mock data.
+
+### Tasks
+
+#### 4.1 Personnel Integration
+- [ ] Update App.tsx to fetch personnel from API
+- [ ] Replace mock data with API calls
+- [ ] Add loading states
+- [ ] Add error handling
+
+#### 4.2 Aircraft Integration
+- [ ] Update App.tsx to fetch aircraft from API
+- [ ] Replace mock data with API calls
+- [ ] Add loading states
+- [ ] Add error handling

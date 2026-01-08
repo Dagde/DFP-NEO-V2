@@ -1,0 +1,11 @@
+
+    const changeSchool = (newSchool: 'ESL' | 'PEA') => {
+        setSchool(newSchool);
+        setIsLocalityChangeVisible(true);
+        setTimeout(() => setIsLocalityChangeVisible(false), 2000);
+
+        const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
+        setInstructorsData(data.instructors);
+        setTraineesData(data.trainees);
+        setEvents(data.events);
+        setCourses(data.courses);

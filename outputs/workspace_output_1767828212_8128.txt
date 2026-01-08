@@ -1,0 +1,15 @@
+108:import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+3031:    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+3060:    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+3062:    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+3099:    const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
+3100:    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
+3101:    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
+3102:    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
+3103:    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
+3104:    const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
+3105:    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(ESL_DATA.coursePercentages);
+3107:    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(ESL_DATA.traineeLMPs);
+4426:        const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
+4447:        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;
+4525:        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);

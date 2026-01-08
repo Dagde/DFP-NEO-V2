@@ -1,0 +1,38 @@
+#### 3.7 Deployment
+- [x] Commit API routes to git
+- [x] Push to GitHub
+- [x] Verify Railway deployment succeeds
+- [ ] Test APIs in production
+
+---
+
+## 📋 Phase 4: Frontend Integration (NEXT PHASE)
+
+### Goal
+Update the frontend to use the database instead of mock data.
+
+### Tasks
+
+#### 4.1 Personnel Integration
+- [ ] Update App.tsx to fetch personnel from API
+- [ ] Replace mock data with API calls
+- [ ] Add loading states
+- [ ] Add error handling
+
+#### 4.2 Aircraft Integration
+- [ ] Update App.tsx to fetch aircraft from API
+- [ ] Replace mock data with API calls
+- [ ] Add loading states
+- [ ] Add error handling
+
+#### 4.3 Schedule Integration
+- [ ] Update save functionality to use API
+- [ ] Update load functionality to use API
+- [ ] Test saving schedules to database
+- [ ] Test loading schedules from database
+
+#### 4.4 LMP Upload Integration
+- [ ] Update LMP upload to use new API
+- [ ] Test file upload
+- [ ] Test data parsing
+- [ ] Test NEO build with real data

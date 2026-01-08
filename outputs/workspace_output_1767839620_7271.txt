@@ -1,0 +1,11 @@
+        
+        // Reset baseline on school change to avoid stale comparisons
+        const todayStr = getLocalDateString();
+        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(data.events.filter(e => e.date === todayStr))) });
+    };
+    
+    useEffect(() => {
+        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;
+        setEvents(initialData.events);
+        setCourses(initialData.courses);
+        const todayStr = getLocalDateString();

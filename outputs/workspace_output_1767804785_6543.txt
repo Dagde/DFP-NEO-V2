@@ -1,0 +1,66 @@
+[feature/comprehensive-build-algorithm b39e2ee] Phase 3: Create API routes for personnel, aircraft, schedule, and unavailability
+ Committer: root <root@172.16.219.126>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 52 files changed, 1784 insertions(+), 60 deletions(-)
+ create mode 100644 Screen Shot 2026-01-08 at 3.17.15 am.jpg
+ create mode 100644 Screen Shot 2026-01-08 at 3.27.43 am.jpg
+ create mode 100644 dfp-neo-platform/app/api/aircraft/[id]/route.ts
+ create mode 100644 dfp-neo-platform/app/api/aircraft/route.ts
+ create mode 100644 dfp-neo-platform/app/api/personnel/[id]/route.ts
+ create mode 100644 dfp-neo-platform/app/api/personnel/route.ts
+ create mode 100644 dfp-neo-platform/app/api/schedule/route.ts
+ create mode 100644 dfp-neo-platform/app/api/unavailability/[id]/route.ts
+ create mode 100644 dfp-neo-platform/app/api/unavailability/route.ts
+ create mode 100644 outputs/workspace_output_1767802249_6232.txt
+ create mode 100644 outputs/workspace_output_1767802694_7529.txt
+ create mode 100644 outputs/workspace_output_1767802708_4448.txt
+ create mode 100644 outputs/workspace_output_1767802713_9027.txt
+ create mode 100644 outputs/workspace_output_1767802729_2282.txt
+ create mode 100644 outputs/workspace_output_1767802733_92.txt
+ create mode 100644 outputs/workspace_output_1767802752_7740.txt
+ create mode 100644 outputs/workspace_output_1767802770_7220.txt
+ create mode 100644 outputs/workspace_output_1767803435_5241.txt
+ create mode 100644 outputs/workspace_output_1767803482_4010.txt
+ create mode 100644 outputs/workspace_output_1767803541_3583.txt
+ create mode 100644 outputs/workspace_output_1767803580_5056.txt
+ create mode 100644 outputs/workspace_output_1767803585_7974.txt
+ create mode 100644 outputs/workspace_output_1767803620_3621.txt
+ create mode 100644 outputs/workspace_output_1767803625_6209.txt
+ create mode 100644 outputs/workspace_output_1767803776_7750.txt
+ create mode 100644 outputs/workspace_output_1767804197_5237.txt
+ create mode 100644 outputs/workspace_output_1767804244_2372.txt
+ create mode 100644 outputs/workspace_output_1767804250_6726.txt
+ create mode 100644 outputs/workspace_output_1767804256_2746.txt
+ create mode 100644 outputs/workspace_output_1767804372_3709.txt
+ create mode 100644 outputs/workspace_output_1767804386_1044.txt
+ create mode 100644 outputs/workspace_output_1767804403_3435.txt
+ create mode 100644 outputs/workspace_output_1767804425_2185.txt
+ create mode 100644 outputs/workspace_output_1767804438_9044.txt
+ create mode 100644 outputs/workspace_output_1767804457_8848.txt
+ create mode 100644 outputs/workspace_output_1767804473_5093.txt
+ create mode 100644 outputs/workspace_output_1767804488_9617.txt
+ create mode 100644 outputs/workspace_output_1767804506_7054.txt
+ create mode 100644 outputs/workspace_output_1767804532_3722.txt
+ create mode 100644 outputs/workspace_output_1767804559_8029.txt
+ create mode 100644 outputs/workspace_output_1767804583_8003.txt
+ create mode 100644 outputs/workspace_output_1767804615_9920.txt
+ create mode 100644 outputs/workspace_output_1767804642_4628.txt
+ create mode 100644 outputs/workspace_output_1767804660_2430.txt
+ create mode 100644 outputs/workspace_output_1767804687_8063.txt
+ create mode 100644 outputs/workspace_output_1767804730_4812.txt
+ create mode 100644 outputs/workspace_output_1767804745_4166.txt
+ create mode 100644 outputs/workspace_output_1767804785_6543.txt
+ create mode 100644 reset-admin-password.cjs
+ create mode 100644 reset-admin-password.ts
+To https://github.com/Dagde/DFP---NEO.git
+   111b397..b39e2ee  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

@@ -1,0 +1,21 @@
+    };
+
+    const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
+        const color = archivedCourses[courseName];
+        if (!color) return;
+
+        // Remove from archived courses
+        const newArchived = { ...archivedCourses };
+        delete newArchived[courseName];
+        setArchivedCourses(newArchived);
+
+        // Add back to active courses
+        setCourseColors(prev => ({ ...prev, [courseName]: color }));
+
+        // Add back to courses array (recreate from mock data)
+        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
+        if (courseFromMockData) {
+            setCourses(prev => [...prev, courseFromMockData]);
+        }
+
+        setSuccessMessage(`Course ${courseName} unarchived successfully!`);

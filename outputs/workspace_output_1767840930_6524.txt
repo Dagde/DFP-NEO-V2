@@ -1,0 +1,9 @@
+export type InstructorRank = 'WGCDR' | 'SQNLDR' | 'FLTLT' | 'FLGOFF' | 'PLTOFF' | 'Mr';
+export type TraineeRank = 'OCDT' | 'MIDN' | 'PLTOFF' | 'FLGOFF' | 'SBLT' | '2LT' | 'FLTLT';
+
+export type InstructorCategory = 'UnCat' | 'D' | 'C' | 'B' | 'A';
+export type SeatConfig = 'Normal' | 'FWD/SHORT' | 'REAR/SHORT' | 'FWD/LONG';
+
+export type UnavailabilityReason = 'TMUF' | 'TMUF - Ground Duties only' | 'Leave' | 'Appointment' | 'Other';
+
+export interface UnavailabilityPeriod {

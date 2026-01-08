@@ -1,0 +1,20 @@
+568:const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
+574:    const isESL = targetLocation === 'ESL';
+606:            location: isESL ? 'East Sale' : 'Pearce',
+607:            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+616:    const numFltlts = isESL ? 30 : 31;
+644:            location: isESL ? 'East Sale' : 'Pearce',
+645:            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+671:    // --- ADD JOE BLOGGS (ESL ONLY) ---
+672:    if (isESL) {
+718:            location: isESL ? 'East Sale' : 'Pearce',
+719:            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+930:    location: 'ESL' | 'PEA',
+1121:                    origin: 'ESL',
+1122:                    destination: 'ESL'
+1149:const generateDataSet = (location: 'ESL' | 'PEA') => {
+1150:    const isESL = location === 'ESL';
+1151:    const courses = isESL ? eslCourses : peaCourses;
+1152:    const aircraftCount = isESL ? 15 : 12;
+1162:        trainees = [...trainees, ...generateTraineesForCourse(c.name, distribution, isESL ? '1FTS' : '2FTS')];
+1221:export const ESL_DATA = generateDataSet('ESL');

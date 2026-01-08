@@ -1,0 +1,20 @@
+/workspace/migration-scripts/migrate-personnel.ts:import { ESL_DATA, PEA_DATA } from '../dfp-neo-platform/mockData';
+/workspace/migration-scripts/migrate-personnel.ts:    ...ESL_DATA.instructors.map((inst) => ({
+/workspace/migration-scripts/migrate-personnel.ts:    ...ESL_DATA.trainees.map((trainee) => ({
+/workspace/migration-scripts/migrate-personnel.ts:    ...PEA_DATA.instructors.map((inst) => ({
+/workspace/migration-scripts/migrate-personnel.ts:    ...PEA_DATA.trainees.map((trainee) => ({
+/workspace/migration-scripts/migrate-personnel-and-trainees.ts:import { ESL_DATA, PEA_DATA } from '../mockData.js';
+/workspace/migration-scripts/migrate-personnel-and-trainees.ts:    const eslData = ESL_DATA;
+/workspace/migration-scripts/migrate-personnel-and-trainees.ts:    const peaData = PEA_DATA;
+/workspace/current_build_algorithm.ts:    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+/workspace/current_build_algorithm.ts:    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+/workspace/current_build_algorithm.ts:    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+/workspace/data/ESLDATA.ts:const ESL_DATA = {
+/workspace/data/ESLDATA.ts:export default ESL_DATA;
+/workspace/lib/dataService.ts:import { ESL_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from '../mockData';
+/workspace/lib/dataService.ts:        instructors = ESL_DATA.instructors;
+/workspace/lib/dataService.ts:        trainees = ESL_DATA.trainees;
+/workspace/lib/dataService.ts:        events = ESL_DATA.events;
+/workspace/lib/dataService.ts:    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, ESL_DATA.instructors);
+/workspace/lib/dataService.ts:    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, ESL_DATA.trainees);
+/workspace/lib/dataService.ts:    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, ESL_DATA.events);

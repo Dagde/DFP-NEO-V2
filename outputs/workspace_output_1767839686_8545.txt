@@ -1,0 +1,18 @@
+            const trainee = filteredTrainees.find(t => t.id === e.traineeId);
+            return instructor || trainee;
+        });
+        setEvents(filteredEvents);
+        
+        // Keep courses, scores, pt051Assessments, courseColors, archivedCourses, 
+        // coursePriorities, coursePercentages, and traineeLMPs as-is since they're not unit-specific
+        // These would need proper school filtering if the database supported it
+        setNextDayBuildEvents([]); // Clear the build when changing schools
+        setPublishedSchedules({}); // Clear published schedules on school change
+        
+        // Reset baseline on school change to avoid stale comparisons
+        const todayStr = getLocalDateString();
+        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(data.events.filter(e => e.date === todayStr))) });
+    };
+    
+    useEffect(() => {
+        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;

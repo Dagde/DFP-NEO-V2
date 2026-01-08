@@ -1,0 +1,2 @@
+DATABASE_URL="postgresql://postgres:WxMnHCNEfpTRYbVOTgOXjMykwHNhCqFw@caboose.proxy.rlwy.net:15652/railway"
+BACKUP_DATABASE_URL="postgresql://user:password@host:5432/dfp_neo_backup"

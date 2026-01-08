@@ -1,0 +1,15 @@
+3:import { ESL_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from '../mockData';
+87:        instructors = ESL_DATA.instructors;
+88:        trainees = ESL_DATA.trainees;
+89:        events = ESL_DATA.events;
+100:    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, ESL_DATA.instructors);
+101:    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, ESL_DATA.trainees);
+102:    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, ESL_DATA.events);
+106:  const scores = loadFromStorage<Map<string, Score[]>>(STORAGE_KEYS.SCORES, ESL_DATA.scores);
+109:    ESL_DATA.pt051Assessments
+111:  const courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, ESL_DATA.courses);
+114:    ESL_DATA.courseColors
+118:    ESL_DATA.archivedCourses
+122:    ESL_DATA.coursePriorities
+126:    ESL_DATA.coursePercentages
+130:    ESL_DATA.traineeLMPs

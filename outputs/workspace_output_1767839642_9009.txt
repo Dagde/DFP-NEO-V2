@@ -1,0 +1,3 @@
+    let type: 'Flight' | 'FTD' | 'Ground School' = 'Flight';
+        type = 'Ground School';
+        type = 'Ground School';

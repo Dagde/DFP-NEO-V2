@@ -1,0 +1,94 @@
+On branch feature/comprehensive-build-algorithm
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   App.tsx
+	modified:   dfp-neo-platform/public/flight-school-app/index.html
+	modified:   outputs/workspace_output_1767804785_6543.txt
+	modified:   package-lock.json
+	modified:   todo.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	FRONTEND_INTEGRATION_PLAN.md
+	PHASE3_COMPLETE.md
+	PROGRESS_REPORT.md
+	WORK_SUMMARY.md
+	components/AppDataWrapper.tsx
+	dfp-neo-platform/public/flight-school-app/assets/index-CAXuvKPw.js
+	dfp-neo-platform/public/flight-school-app/assets/index-CAXuvKPw.js.map
+	dfp-neo-platform/public/flight-school-app/assets/index.es-B6yfW_I1.js
+	dfp-neo-platform/public/flight-school-app/assets/index.es-B6yfW_I1.js.map
+	hooks/useAppData.ts
+	lib/api.ts
+	lib/dataService.ts
+	outputs/workspace_output_1767823235_6615.txt
+	outputs/workspace_output_1767823251_3622.txt
+	outputs/workspace_output_1767823276_3391.txt
+	outputs/workspace_output_1767823307_1190.txt
+	outputs/workspace_output_1767823315_4121.txt
+	outputs/workspace_output_1767823328_8648.txt
+	outputs/workspace_output_1767823335_9107.txt
+	outputs/workspace_output_1767823346_8376.txt
+	outputs/workspace_output_1767823353_9438.txt
+	outputs/workspace_output_1767823364_7904.txt
+	outputs/workspace_output_1767823369_3549.txt
+	outputs/workspace_output_1767823375_4457.txt
+	outputs/workspace_output_1767823383_3589.txt
+	outputs/workspace_output_1767823390_7437.txt
+	outputs/workspace_output_1767823398_7516.txt
+	outputs/workspace_output_1767823412_1193.txt
+	outputs/workspace_output_1767823423_8182.txt
+	outputs/workspace_output_1767823448_1003.txt
+	outputs/workspace_output_1767823498_7255.txt
+	outputs/workspace_output_1767823515_1773.txt
+	outputs/workspace_output_1767823609_2384.txt
+	outputs/workspace_output_1767823624_5539.txt
+	outputs/workspace_output_1767823643_2648.txt
+	outputs/workspace_output_1767828059_2064.txt
+	outputs/workspace_output_1767828074_3335.txt
+	outputs/workspace_output_1767828126_8226.txt
+	outputs/workspace_output_1767828133_6306.txt
+	outputs/workspace_output_1767828137_4814.txt
+	outputs/workspace_output_1767828212_8128.txt
+	outputs/workspace_output_1767829035_8866.txt
+	outputs/workspace_output_1767829044_8126.txt
+	outputs/workspace_output_1767829157_5432.txt
+	outputs/workspace_output_1767829501_2454.txt
+	outputs/workspace_output_1767829625_9444.txt
+	outputs/workspace_output_1767829656_3168.txt
+	outputs/workspace_output_1767839612_7677.txt
+	outputs/workspace_output_1767839618_5058.txt
+	outputs/workspace_output_1767839620_7271.txt
+	outputs/workspace_output_1767839627_4491.txt
+	outputs/workspace_output_1767839634_8148.txt
+	outputs/workspace_output_1767839639_1505.txt
+	outputs/workspace_output_1767839642_9009.txt
+	outputs/workspace_output_1767839648_9197.txt
+	outputs/workspace_output_1767839656_7255.txt
+	outputs/workspace_output_1767839663_3364.txt
+	outputs/workspace_output_1767839686_8545.txt
+	outputs/workspace_output_1767839722_5419.txt
+	outputs/workspace_output_1767839737_4985.txt
+	outputs/workspace_output_1767839771_5334.txt
+	outputs/workspace_output_1767839778_820.txt
+	outputs/workspace_output_1767839783_5640.txt
+	outputs/workspace_output_1767839789_8764.txt
+	outputs/workspace_output_1767839793_6198.txt
+	outputs/workspace_output_1767839804_9573.txt
+	outputs/workspace_output_1767839861_2703.txt
+	outputs/workspace_output_1767839865_1693.txt
+	outputs/workspace_output_1767839881_7552.txt
+	outputs/workspace_output_1767839898_2954.txt
+	outputs/workspace_output_1767839911_1324.txt
+	outputs/workspace_output_1767839944_2671.txt
+	outputs/workspace_output_1767839949_1536.txt
+	outputs/workspace_output_1767839966_364.txt
+	outputs/workspace_output_1767839971_7013.txt
+	outputs/workspace_output_1767839974_7404.txt
+	summarized_conversations/original_conversation_1767823094_2310.txt
+	summarized_conversations/original_conversation_1767839582_6976.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

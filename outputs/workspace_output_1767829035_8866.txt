@@ -1,0 +1,4 @@
+305:export const INITIAL_SYLLABUS_DETAILS: SyllabusItemDetail[] = populatePrerequisites(syllabusItems);
+307:export const DEFAULT_PHRASE_BANK: PhraseBank = {
+1221:export const ESL_DATA = generateDataSet('ESL');
+1222:export const PEA_DATA = generateDataSet('PEA');

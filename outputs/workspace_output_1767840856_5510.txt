@@ -1,0 +1,41 @@
+Starting Personnel and Trainee migration...
+
+ESL Instructors: 41
+ESL Trainees: 89
+PEA Instructors: 41
+PEA Trainees: 38
+
+=== MIGRATING PERSONNEL (INSTRUCTORS) ===
+
+✓ Cleared 82 existing Personnel records
+
+  Created 20 Personnel records...
+  Created 40 Personnel records...
+  Created 60 Personnel records...
+  Created 80 Personnel records...
+
+✓ Created 82 Personnel records
+
+=== MIGRATING TRAINEES ===
+
+✓ Cleared 127 existing Trainee records
+
+  Created 20 Trainee records...
+  Created 40 Trainee records...
+  Created 60 Trainee records...
+  Created 80 Trainee records...
+  Created 100 Trainee records...
+  Created 120 Trainee records...
+
+✓ Created 127 Trainee records
+
+=== MIGRATION SUMMARY ===
+Personnel (Instructors): 82 created
+Trainees: 127 created
+Total records: 209
+
+=== DATABASE VERIFICATION ===
+Personnel in database: 82
+Trainees in database: 127
+
+✓ Migration completed successfully!
