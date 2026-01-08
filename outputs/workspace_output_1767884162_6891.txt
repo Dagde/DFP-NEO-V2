@@ -50,12 +50,13 @@ export async function GET(request: NextRequest) {
       if (!scoresByTrainee.has(fullName)) {
         scoresByTrainee.set(fullName, []);
       }
-      // OPTIMIZED: Only return essential fields to reduce response size
-      // Removed: instructor, notes, details (reduces 371KB to ~50KB)
       scoresByTrainee.get(fullName).push({
         event: score.event,
         score: score.score,
-        date: score.date.toISOString().split('T')[0]
+        date: score.date.toISOString().split('T')[0],
+        instructor: score.instructor,
+        notes: score.notes,
+        details: score.details
       });
     });
 

@@ -1,0 +1,26 @@
+[feature/comprehensive-build-algorithm 95a31e8] CRITICAL FIX: Skip scores loading entirely to prevent browser hang - app will load without scores
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 13 files changed, 841 insertions(+), 16 deletions(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-0mWWF6yd.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-0mWWF6yd.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CDrNBD5R.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CDrNBD5R.js.map
+ create mode 100644 outputs/workspace_output_1767883506_1573.txt
+ create mode 100644 outputs/workspace_output_1767883515_6669.txt
+ create mode 100644 outputs/workspace_output_1767883523_7727.txt
+ create mode 100644 outputs/workspace_output_1767883540_4923.txt
+ create mode 100644 outputs/workspace_output_1767883554_7845.txt
+ create mode 100644 outputs/workspace_output_1767883560_6613.txt
+To https://github.com/Dagde/DFP---NEO.git
+   b2e87e5..95a31e8  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

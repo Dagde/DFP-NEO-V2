@@ -1,24 +1,21 @@
-# NEO Build Investigation - Browser Hanging on Large JSON Parsing
+# Optimize Scores API to Restore NEO Build
 
-## Problem
-- NEO Build generates 0 events because traineesData state is empty
-- API responses are received but JSON parsing hangs the browser
-- Trainees endpoint (85KB) and Scores endpoint (371KB) never complete parsing
+## Current Status
+- ✅ App loads successfully
+- ✅ Staff and trainees visible
+- ✅ Duty Supervisors scheduled
+- ❌ No training events scheduled (need scores)
 
-## Root Cause IDENTIFIED
-- Promise.all() fetches all 4 endpoints simultaneously
-- Browser receives responses but hangs during JSON.parse() for large responses
-- Trainees: 117 records = 85KB JSON
-- Scores: 1,612 records with nested details = 371KB JSON
-- Browser cannot handle parsing both large responses simultaneously
+## Task: Optimize Scores API Response
+- [ ] Modify /api/scores endpoint to return minimal fields
+- [ ] Remove: notes, details array, instructor
+- [ ] Keep: event, score, date
+- [ ] Test response size (should be ~50KB instead of 371KB)
+- [ ] Re-enable scores loading in dataService.ts
+- [ ] Test NEO Build with optimized scores
+- [ ] Verify training events are scheduled
 
-## Solution Implemented
-- Changed from Promise.all() to sequential loading
-- Load instructors → trainees → schedule → scores (one at a time)
-- Added progress logging for each step
-
-## Next Steps
-- Wait for Railway deployment
-- Test if sequential loading resolves the issue
-- Look for "✅ Instructors loaded", "✅ Trainees loaded", "✅ Scores loaded" messages
-- If still fails, may need to reduce response size or add pagination
+## Expected Outcome
+- Scores load without browser hang
+- NEO Build schedules flights, FTD, CPT, Ground events
+- Full functionality restored

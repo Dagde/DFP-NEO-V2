@@ -1,0 +1,6 @@
+ 🚀 [NEO-Build] traineesData state: Object
+ 📊 DEBUG: Total trainees passed to build: 0
+ 📊 DEBUG: Active trainees (not paused, available): 0
+ 🚀 [NEO-Build] traineesData state: Object
+ 📊 DEBUG: Total trainees passed to build: 117
+ 📊 DEBUG: Active trainees (not paused, available): 117

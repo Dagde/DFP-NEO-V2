@@ -109,11 +109,9 @@ export async function initializeData() {
       const scheduleResult = await fetchSchedule();
       console.log('✅ Schedule loaded:', scheduleResult.length);
       
-      // TEMPORARY: Skip scores loading due to large response size (371KB) causing browser hang
-      // TODO: Implement pagination or lazy loading for scores
-      console.log('⚠️ Skipping scores fetch (too large, causes browser hang)');
-      console.log('📝 App will work without scores, but NEO Build will be limited');
-      const scoresResult = new Map<string, Score[]>();
+      console.log('📥 Fetching scores (optimized response)...');
+      const scoresResult = await fetchScores();
+      console.log('✅ Scores loaded:', scoresResult.size);
 
       // Ensure arrays
       instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
