@@ -1,0 +1,3 @@
+        const todayEndTime = todayEnd.getTime();
+
+        const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));

@@ -1,0 +1,2 @@
+3713:    const nextDayEventSegments = useMemo(() => {
+3714:        console.log('🚀 [NEO-Build] nextDayEventSegments useMemo recalculating');

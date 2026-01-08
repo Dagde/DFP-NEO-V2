@@ -1,0 +1,31 @@
+
+> daily-flying-program@0.0.0 build
+> vite build
+
+vite v6.4.1 building for production...
+transforming...
+✓ 4 modules transformed.
+✗ Build failed in 92ms
+error during build:
+[vite:esbuild] Transform failed with 1 error:
+/workspace/App.tsx:3718:9: ERROR: Syntax error "n"
+file: /workspace/App.tsx:3718:9
+
+Syntax error "n"
+3716|          console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
+3717|          
+3718|          \n        // FIX: Try to restore from localStorage if state is empty\n        let eventsToUse = nextDayBuildEvents;\n        if (nextDayBuildEvents.length === 0) {\n            try {\n                const stored = localStorage.getItem("neo-build-events-backup");\n                if (stored) {\n                    const parsed = JSON.parse(stored);\n                    eventsToUse = parsed;\n                    console.log("RESTORED:", parsed.length, "events from localStorage backup");\n                    setNextDayBuildEvents(parsed);\n                }\n            } catch (error) {\n                console.warn("Could not restore events from backup:", error);\n            }\n        }
+   |           ^
+3719|          const segments: EventSegment[] = [];
+3720|          const todayStart = new Date(`${buildDfpDate}T00:00:00Z`).getTime();
+
+    at failureErrorWithLog (/workspace/node_modules/esbuild/lib/main.js:1467:15)
+    at /workspace/node_modules/esbuild/lib/main.js:736:50
+    at responseCallbacks.<computed> (/workspace/node_modules/esbuild/lib/main.js:603:9)
+    at handleIncomingPacket (/workspace/node_modules/esbuild/lib/main.js:658:12)
+    at Socket.readFromStdout (/workspace/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:524:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)

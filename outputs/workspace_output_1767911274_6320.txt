@@ -1,0 +1,5 @@
+0000000                   c   o   n   s   t       n   e   x   t   D   a
+0000020   y   E   v   e   n   t   S   e   g   m   e   n   t   s       =
+0000040       u   s   e   M   e   m   o   (   (   )       =   >       {
+0000060  \n
+0000061

@@ -3715,13 +3715,29 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
         
+        // FIX: Restore from localStorage if state is empty
+        let eventsToUse = nextDayBuildEvents;
+        if (nextDayBuildEvents.length === 0) {
+            try {
+                const stored = localStorage.getItem('neo-build-events-backup');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    eventsToUse = parsed;
+                    console.log('🚀 [NEO-Build] RESTORED:', parsed.length, 'events from localStorage');
+                    setNextDayBuildEvents(parsed);
+                }
+            } catch (error) {
+                console.warn('🚀 [NEO-Build] Could not restore events:', error);
+            }
+        }
+        
         const segments: EventSegment[] = [];
         const todayStart = new Date(`${buildDfpDate}T00:00:00Z`).getTime();
         const todayEnd = new Date(todayStart);
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
 
-        const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));
+        const buildEventsWithDate: ScheduleEvent[] = eventsToUse.map(e => ({...e, date: buildDfpDate}));
         console.log('🚀 [NEO-Build] buildEventsWithDate.length:', buildEventsWithDate.length);
         
         const dayBeforeBuild = new Date(todayStart);
@@ -6054,6 +6070,14 @@ const App: React.FC = () => {
                 
                 setNextDayBuildEvents(generated);
                 console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+                
+                // FIX: Backup events to localStorage
+                try {
+                    localStorage.setItem('neo-build-events-backup', JSON.stringify(generated));
+                    console.log('🚀 [NEO-Build] Events backed up to localStorage');
+                } catch (error) {
+                    console.warn('🚀 [NEO-Build] Failed to backup events:', error);
+                }
 
                 // Analyze build results
                 const analysis = analyzeBuildResults(

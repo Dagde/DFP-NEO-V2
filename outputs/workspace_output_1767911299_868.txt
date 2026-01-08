@@ -1,0 +1,6 @@
+        const dayBeforeBuildStr = dayBeforeBuild.toISOString().split('T')[0];
+
+        const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
+
+        for (const event of allEvents) {
+            const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);

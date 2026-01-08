@@ -1,0 +1,5 @@
+                
+                setNextDayBuildEvents(generated);
+                console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+
+                // Analyze build results

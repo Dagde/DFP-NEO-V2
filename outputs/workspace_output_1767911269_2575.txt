@@ -1,0 +1,8 @@
+    const nextDayEventSegments = useMemo(() => {
+        console.log('🚀 [NEO-Build] nextDayEventSegments useMemo recalculating');
+        console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
+        console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
+        
+        const segments: EventSegment[] = [];
+        const todayStart = new Date(`${buildDfpDate}T00:00:00Z`).getTime();
+        const todayEnd = new Date(todayStart);
