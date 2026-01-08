@@ -109,21 +109,11 @@ export async function initializeData() {
       const scheduleResult = await fetchSchedule();
       console.log('✅ Schedule loaded:', scheduleResult.length);
       
-      console.log('📥 Fetching scores (this may take a moment)...');
-      let scoresResult = new Map<string, Score[]>();
-      try {
-        // Try to fetch scores with a shorter timeout
-        const scoresPromise = fetchScores();
-        const timeoutPromise = new Promise<Map<string, Score[]>>((_, reject) => 
-          setTimeout(() => reject(new Error('Scores fetch timeout')), 10000)
-        );
-        scoresResult = await Promise.race([scoresPromise, timeoutPromise]);
-        console.log('✅ Scores loaded:', scoresResult.size);
-      } catch (error) {
-        console.warn('⚠️ Scores fetch failed or timed out, continuing without scores:', error);
-        console.log('📝 App will work without scores, but NEO Build may be limited');
-        // Continue with empty scores - app will still work
-      }
+      // TEMPORARY: Skip scores loading due to large response size (371KB) causing browser hang
+      // TODO: Implement pagination or lazy loading for scores
+      console.log('⚠️ Skipping scores fetch (too large, causes browser hang)');
+      console.log('📝 App will work without scores, but NEO Build will be limited');
+      const scoresResult = new Map<string, Score[]>();
 
       // Ensure arrays
       instructors = Array.isArray(instructorsResult) ? instructorsResult : [];

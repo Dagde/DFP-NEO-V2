@@ -1,0 +1,13 @@
+index-BGD9yxPf.js:sourcemap:756 ✅ Trainees loaded: 117
+index-BGD9yxPf.js:sourcemap:756 📥 Fetching schedule...
+index-BGD9yxPf.js:sourcemap:756 🌐 API Request: /api/schedule Object
+index-BGD9yxPf.js:sourcemap:756 📥 Parsing response from /api/personnel?role=TRAINEE...
+index-BGD9yxPf.js:sourcemap:760 🚀 [NEO-Build] Build process complete, navigating to NextDayBuild
+index-BGD9yxPf.js:sourcemap:756 buildResources - Current view: NextDayBuild Current date: 2026-01-09
+--
+index-BGD9yxPf.js:sourcemap:756 ✅ Trainees loaded: 117
+index-BGD9yxPf.js:sourcemap:756 📥 Fetching schedule...
+index-BGD9yxPf.js:sourcemap:756 🌐 API Request: /api/schedule Object
+index-BGD9yxPf.js:sourcemap:756 📥 Parsing response from /api/schedule...
+index-BGD9yxPf.js:sourcemap:756 ✅ API Response: /api/schedule Object
+index-BGD9yxPf.js:sourcemap:756 ✅ Schedule loaded: 0
