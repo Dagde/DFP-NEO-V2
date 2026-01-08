@@ -1,0 +1,2 @@
+170:  // Auto-generate courseColors based on trainee courses
+198:  // Auto-generate courseColors based on trainee courses

@@ -1,0 +1,31 @@
+      console.warn('API fetch failed, falling back to localStorage or mock data:', error);
+      console.error('Full error details:', error);
+      
+      // Try localStorage first
+      instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+      trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+      events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructors) ? instructors : [];
+      trainees = Array.isArray(trainees) ? trainees : [];
+      events = Array.isArray(events) ? events : [];
+      
+      console.log('Loaded from localStorage:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+      });
+
+      // If localStorage is empty, use empty arrays
+      if (instructors.length === 0) {
+        console.log('Using empty data as fallback');
+        instructors = [];
+        trainees = [];
+        events = [];
+        
+        // Save empty data to localStorage
+        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      }

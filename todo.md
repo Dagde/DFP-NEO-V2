@@ -140,6 +140,35 @@ Update the frontend to use the database instead of mock data.
 
 ---
 
+## 🔍 Current Debugging: Trainee Visibility Issue
+
+### Problem
+Trainees are not visible in the Course Roster view, even though:
+- 117 trainees are successfully loaded from the API
+- Trainees have course assignments (8 unique courses)
+- All state updates are successful
+
+### Investigation Steps
+- [x] Add API-level logging (lib/api.ts)
+- [x] Add data service logging (lib/dataService.ts)
+- [x] Add App component logging (App.tsx)
+- [x] Add CourseRoster component logging (CourseRosterView.tsx)
+- [x] Build and deploy with enhanced logging
+- [ ] Wait for user to provide console logs from production
+- [ ] Analyze courseColors data
+- [ ] Fix courseColors configuration if needed
+- [ ] Test trainee visibility after fix
+
+### Key Findings
+- CourseRosterView only displays courses that exist in `courseColors` configuration
+- If trainee courses aren't in `courseColors.keys()`, they won't display
+- Need to verify if `courseColors` is properly populated
+
+### Latest Commit
+- 8ad6367 - "Add detailed logging for courseColors debugging"
+
+---
+
 ## 📊 Progress Summary
 
 **Overall Progress:** 85% Complete

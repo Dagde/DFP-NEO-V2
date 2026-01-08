@@ -1,0 +1,38 @@
+[feature/comprehensive-build-algorithm 8ad6367] Add detailed logging for courseColors debugging
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 25 files changed, 1330 insertions(+), 1 deletion(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-D8al-0P0.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-D8al-0P0.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-BlGQpM-e.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-BlGQpM-e.js.map
+ create mode 100644 outputs/workspace_output_1767864409_3709.txt
+ create mode 100644 outputs/workspace_output_1767864435_7226.txt
+ create mode 100644 outputs/workspace_output_1767864439_3875.txt
+ create mode 100644 outputs/workspace_output_1767864443_1363.txt
+ create mode 100644 outputs/workspace_output_1767864447_3693.txt
+ create mode 100644 outputs/workspace_output_1767864458_7893.txt
+ create mode 100644 outputs/workspace_output_1767864469_3975.txt
+ create mode 100644 outputs/workspace_output_1767864475_1216.txt
+ create mode 100644 outputs/workspace_output_1767864486_3028.txt
+ create mode 100644 outputs/workspace_output_1767864494_5442.txt
+ create mode 100644 outputs/workspace_output_1767864498_9635.txt
+ create mode 100644 outputs/workspace_output_1767864504_7982.txt
+ create mode 100644 outputs/workspace_output_1767864510_3794.txt
+ create mode 100644 outputs/workspace_output_1767864516_5606.txt
+ create mode 100644 outputs/workspace_output_1767864522_1477.txt
+ create mode 100644 outputs/workspace_output_1767864536_266.txt
+ create mode 100644 outputs/workspace_output_1767864538_4250.txt
+ create mode 100644 summarized_conversations/original_conversation_1767864405_5927.txt
+To https://github.com/Dagde/DFP---NEO.git
+   fe2fe82..8ad6367  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

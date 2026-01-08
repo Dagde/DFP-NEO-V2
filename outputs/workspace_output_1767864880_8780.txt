@@ -1,0 +1,5 @@
+12:    courses: string[] = ['BPC+IPC'] // Default to the standard pilot course
+937:    const courseColors = Object.fromEntries(courses.map(c => [c.name, c.color]));
+1151:    const courses = isESL ? eslCourses : peaCourses;
+1159:    courses.forEach(c => {
+1197:    courses.forEach((c, idx) => {

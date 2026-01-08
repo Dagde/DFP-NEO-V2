@@ -1,0 +1,21 @@
+        
+        // Save empty data to localStorage
+        saveToStorage(STORAGE_KEYS.INSTRUCTORS, instructors);
+        saveToStorage(STORAGE_KEYS.TRAINEES, trainees);
+        saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+      }
+    }
+  } else {
+    // Load from localStorage or use empty arrays
+    console.log('Loading data from localStorage (API disabled)');
+    instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
+    trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
+    events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+  }
+
+  return {
+    instructors,
+    trainees,
+    events,
+    scores,
+    pt051Assessments,

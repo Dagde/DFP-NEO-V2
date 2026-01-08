@@ -1,0 +1,11 @@
+    trainees: Trainee[],
+    courses: Course[],
+    aircraftCount: number,
+    location: 'ESL' | 'PEA',
+    date: string
+): ScheduleEvent[] => {
+    const newEvents: ScheduleEvent[] = [];
+    const personnelSchedule: { [key: string]: { start: number, end: number }[] } = {};
+    const areas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+    const courseColors = Object.fromEntries(courses.map(c => [c.name, c.color]));

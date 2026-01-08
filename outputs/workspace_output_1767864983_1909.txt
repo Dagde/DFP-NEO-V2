@@ -1,0 +1,1 @@
+Inserted courseColors generation code at line 198

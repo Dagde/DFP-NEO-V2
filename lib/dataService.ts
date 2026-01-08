@@ -64,7 +64,7 @@ export async function initializeData() {
     new Map()
   );
   let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
-  const courseColors = loadFromStorage<{ [key: string]: string }>(
+  let courseColors = loadFromStorage<{ [key: string]: string }>(
     STORAGE_KEYS.COURSE_COLORS, 
     {}
   );
@@ -175,6 +175,25 @@ export async function initializeData() {
     instructors = loadFromStorage(STORAGE_KEYS.INSTRUCTORS, []);
     trainees = loadFromStorage(STORAGE_KEYS.TRAINEES, []);
     events = loadFromStorage(STORAGE_KEYS.SCHEDULE, []);
+  }
+
+  // Auto-generate courseColors based on trainee courses
+  if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+    const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+    const predefinedColors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+      '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+      '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+    ];
+    
+    courseColors = {};
+    uniqueCourses.forEach((course, index) => {
+      courseColors[course] = predefinedColors[index % predefinedColors.length];
+    });
+    
+    console.log('🎨 Auto-generated courseColors:', courseColors);
+    saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
   }
 
   return {

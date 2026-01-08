@@ -1,0 +1,35 @@
+dataService.ts:129 📋 Unique trainee courses: Array(8)
+dataService.ts:133 ⚠️ Trainees without course: 0 Array(0)
+App.tsx:3087 📦 Data received from initializeData: Object
+App.tsx:3109 ✅ State updated successfully
+api.ts:153 ✅ API Response: /api/schedule Object
+api.ts:153 ✅ API Response: /api/personnel?role=TRAINEE Object
+api.ts:198 📥 Trainees API response: Object
+api.ts:208 ✅ Converted trainees: Object
+api.ts:153 ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+api.ts:173 📥 Instructors API response: Object
+api.ts:183 ✅ Converted instructors: Object
+dataService.ts:112 Data loaded from API: Object
+dataService.ts:124 ✅ Instructors sample: Array(3)
+dataService.ts:125 ✅ Trainees sample: Array(3)
+dataService.ts:129 📋 Unique trainee courses: Array(8)
+dataService.ts:133 ⚠️ Trainees without course: 0 Array(0)
+App.tsx:3087 📦 Data received from initializeData: Object
+App.tsx:3109 ✅ State updated successfully
+ScheduleView.tsx:204 Global mouse up called, draggingState exists: false
+App.tsx:3322 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3322 buildResources - Current view: Instructors Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3486 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+App.tsx:3491 ⏸️ Not syncing - activeView is: Instructors
+App.tsx:7060 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7061 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7065 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7066 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+App.tsx:3322 buildResources - Current view: CourseRoster Current date: 2026-01-08
+App.tsx:3350 deploymentCount: 0
+App.tsx:3408 Built all resources: Array(45) STBY lines: 4
+App.tsx:3322 buildResources - Current view: CourseRoster Current date: 2026-01-08
