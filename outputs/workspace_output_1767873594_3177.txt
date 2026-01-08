@@ -1,0 +1,15 @@
+  console.log(`\n📈 Total scores generated: ${allScores.length}\n`);
+  
+  // Save to JSON file
+  const fs = require('fs');
+  fs.writeFileSync('/workspace/generated_scores.json', JSON.stringify(allScores, null, 2));
+  console.log('💾 Saved scores to /workspace/generated_scores.json\n');
+  
+  // Print sample
+  console.log('📋 Sample scores (first 5):');
+  console.log(JSON.stringify(allScores.slice(0, 5), null, 2));
+  
+  return allScores;
+}
+
+generateScores().catch(console.error);

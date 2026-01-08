@@ -1,0 +1,11 @@
+export interface Score {
+  event: string;
+  score: 0 | 1 | 2 | 3 | 4 | 5;
+  date: string;
+  instructor: string;
+  notes: string;
+  details: {
+    criteria: string;
+    score: number;
+    comment: string;
+  }[];

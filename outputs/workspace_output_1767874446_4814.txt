@@ -1,0 +1,51 @@
+On branch feature/comprehensive-build-algorithm
+Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   dfp-neo-platform/prisma/schema.prisma
+	modified:   outputs/workspace_output_1767867938_1981.txt
+	modified:   todo.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	NEO_BUILD_PREREQUISITE_FIX.md
+	SCORE_IMPORT_SOLUTION.md
+	db_trainee_names.txt
+	dfp-neo-platform/app/api/scores/
+	dfp-neo-platform/import_scores_to_db.js
+	generated_scores.json
+	import_mock_scores.js
+	outputs/workspace_output_1767873486_5731.txt
+	outputs/workspace_output_1767873490_5720.txt
+	outputs/workspace_output_1767873494_6816.txt
+	outputs/workspace_output_1767873499_6652.txt
+	outputs/workspace_output_1767873503_2507.txt
+	outputs/workspace_output_1767873519_6061.txt
+	outputs/workspace_output_1767873523_2604.txt
+	outputs/workspace_output_1767873529_3715.txt
+	outputs/workspace_output_1767873578_7115.txt
+	outputs/workspace_output_1767873589_3657.txt
+	outputs/workspace_output_1767873594_3177.txt
+	outputs/workspace_output_1767873602_4653.txt
+	outputs/workspace_output_1767873611_5505.txt
+	outputs/workspace_output_1767873618_8359.txt
+	outputs/workspace_output_1767873625_4289.txt
+	outputs/workspace_output_1767873629_8812.txt
+	outputs/workspace_output_1767873633_6660.txt
+	outputs/workspace_output_1767873638_6157.txt
+	outputs/workspace_output_1767873644_4910.txt
+	outputs/workspace_output_1767873647_4838.txt
+	outputs/workspace_output_1767873661_9555.txt
+	outputs/workspace_output_1767873665_1008.txt
+	outputs/workspace_output_1767873676_7646.txt
+	outputs/workspace_output_1767873717_8614.txt
+	outputs/workspace_output_1767873722_9069.txt
+	outputs/workspace_output_1767873768_7290.txt
+	outputs/workspace_output_1767873781_7707.txt
+	outputs/workspace_output_1767873796_3756.txt
+	outputs/workspace_output_1767874446_4814.txt
+	summarized_conversations/original_conversation_1767874441_5791.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

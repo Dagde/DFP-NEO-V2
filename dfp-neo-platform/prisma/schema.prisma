@@ -189,6 +189,7 @@ model Trainee {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
+  scores              Score[]   @relation("TraineeScores")
 
   @@index([userId])
   @@index([idNumber])
@@ -233,6 +234,24 @@ model CancellationHistory {
   @@index([scheduleId])
   @@index([cancelledAt])
   @@index([cancellationCode])
+}
+
+model Score {
+  id              String   @id @default(cuid())
+  traineeId       String
+  trainee         Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+  event           String
+  score           Int      // 0-5
+  date            DateTime
+  instructor      String
+  notes           String?
+  details         Json?    // Array of {criteria, score, comment}
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([traineeId])
+  @@index([event])
+  @@index([date])
 }
 
 enum Role {

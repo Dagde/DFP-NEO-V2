@@ -1,0 +1,1 @@
+3:import { Instructor, Trainee, ScheduleEvent, SyllabusItemDetail, Score, TraineeRank, InstructorRank, InstructorCategory, Course, Pt051Assessment, PhraseBank } from './types';

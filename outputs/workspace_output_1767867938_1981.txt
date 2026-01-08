@@ -1,0 +1,51 @@
+[feature/comprehensive-build-algorithm 0db39e2] Fix NEO Build - handle trainees at start of syllabus with no completed events
+ Committer: root <root@172.16.96.43>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly:
+
+    git config --global user.name "Your Name"
+    git config --global user.email you@example.com
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 39 files changed, 2041 insertions(+), 3 deletions(-)
+ create mode 100644 NEO_BUILD_FIX.md
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cf0ZZ2HQ.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cf0ZZ2HQ.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CsY83xoA.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-CsY83xoA.js.map
+ create mode 100644 outputs/workspace_output_1767867741_5756.txt
+ create mode 100644 outputs/workspace_output_1767867750_2641.txt
+ create mode 100644 outputs/workspace_output_1767867754_3764.txt
+ create mode 100644 outputs/workspace_output_1767867765_6994.txt
+ create mode 100644 outputs/workspace_output_1767867770_5481.txt
+ create mode 100644 outputs/workspace_output_1767867774_514.txt
+ create mode 100644 outputs/workspace_output_1767867787_3840.txt
+ create mode 100644 outputs/workspace_output_1767867790_7555.txt
+ create mode 100644 outputs/workspace_output_1767867796_4782.txt
+ create mode 100644 outputs/workspace_output_1767867802_3397.txt
+ create mode 100644 outputs/workspace_output_1767867808_5906.txt
+ create mode 100644 outputs/workspace_output_1767867813_4586.txt
+ create mode 100644 outputs/workspace_output_1767867816_523.txt
+ create mode 100644 outputs/workspace_output_1767867819_798.txt
+ create mode 100644 outputs/workspace_output_1767867826_6020.txt
+ create mode 100644 outputs/workspace_output_1767867829_5600.txt
+ create mode 100644 outputs/workspace_output_1767867834_902.txt
+ create mode 100644 outputs/workspace_output_1767867840_208.txt
+ create mode 100644 outputs/workspace_output_1767867843_1396.txt
+ create mode 100644 outputs/workspace_output_1767867852_6056.txt
+ create mode 100644 outputs/workspace_output_1767867860_9497.txt
+ create mode 100644 outputs/workspace_output_1767867877_2276.txt
+ create mode 100644 outputs/workspace_output_1767867890_5668.txt
+ create mode 100644 outputs/workspace_output_1767867893_687.txt
+ create mode 100644 outputs/workspace_output_1767867900_6277.txt
+ create mode 100644 outputs/workspace_output_1767867903_1193.txt
+ create mode 100644 outputs/workspace_output_1767867906_3377.txt
+ create mode 100644 outputs/workspace_output_1767867913_7440.txt
+ create mode 100644 outputs/workspace_output_1767867926_2174.txt
+ create mode 100644 outputs/workspace_output_1767867938_1981.txt
+To https://github.com/Dagde/DFP---NEO.git
+   b34c9a4..0db39e2  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

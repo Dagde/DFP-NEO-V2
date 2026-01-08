@@ -1,0 +1,10 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "railway", schema "public" at "caboose.proxy.rlwy.net:15652"
+
+🚀  Your database is now in sync with your Prisma schema. Done in 1.12s
+
+Running generate... (Use --skip-generate to skip the generators)
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[G✔ Generated Prisma Client (v6.19.1) to ./node_modules/@prisma/client in 221ms
+

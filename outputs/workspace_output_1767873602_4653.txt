@@ -1,0 +1,108 @@
+🎯 Generating mock scores for database trainees...
+
+📊 Found 117 trainees in database
+
+✅ Generated scores for 10/117 trainees
+✅ Generated scores for 20/117 trainees
+✅ Generated scores for 30/117 trainees
+✅ Generated scores for 40/117 trainees
+✅ Generated scores for 50/117 trainees
+✅ Generated scores for 60/117 trainees
+✅ Generated scores for 70/117 trainees
+✅ Generated scores for 80/117 trainees
+✅ Generated scores for 90/117 trainees
+✅ Generated scores for 100/117 trainees
+✅ Generated scores for 110/117 trainees
+
+📈 Total scores generated: 1612
+
+💾 Saved scores to /workspace/generated_scores.json
+
+📋 Sample scores (first 5):
+[
+  {
+    "traineeFullName": "Anderson, Benjamin – ADF305",
+    "score": {
+      "event": "BGF MB1",
+      "score": 3,
+      "date": "2025-07-14",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF MB1",
+      "details": [
+        {
+          "criteria": "General Handling",
+          "score": 3,
+          "comment": "Auto-generated score from mock data import"
+        }
+      ]
+    }
+  },
+  {
+    "traineeFullName": "Anderson, Benjamin – ADF305",
+    "score": {
+      "event": "BGF MB2",
+      "score": 4,
+      "date": "2025-07-16",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF MB2",
+      "details": [
+        {
+          "criteria": "General Handling",
+          "score": 4,
+          "comment": "Auto-generated score from mock data import"
+        }
+      ]
+    }
+  },
+  {
+    "traineeFullName": "Anderson, Benjamin – ADF305",
+    "score": {
+      "event": "BGF CPT1",
+      "score": 4,
+      "date": "2025-07-19",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF CPT1",
+      "details": [
+        {
+          "criteria": "General Handling",
+          "score": 4,
+          "comment": "Auto-generated score from mock data import"
+        }
+      ]
+    }
+  },
+  {
+    "traineeFullName": "Anderson, Benjamin – ADF305",
+    "score": {
+      "event": "BGF TUT1A",
+      "score": 3,
+      "date": "2025-07-22",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF TUT1A",
+      "details": [
+        {
+          "criteria": "General Handling",
+          "score": 3,
+          "comment": "Auto-generated score from mock data import"
+        }
+      ]
+    }
+  },
+  {
+    "traineeFullName": "Anderson, Benjamin – ADF305",
+    "score": {
+      "event": "BGF TUT1B",
+      "score": 3,
+      "date": "2025-07-23",
+      "instructor": "Edwards, Noah",
+      "notes": "Simulated score for BGF TUT1B",
+      "details": [
+        {
+          "criteria": "General Handling",
+          "score": 3,
+          "comment": "Auto-generated score from mock data import"
+        }
+      ]
+    }
+  }
+]

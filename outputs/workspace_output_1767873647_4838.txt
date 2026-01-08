@@ -1,0 +1,6 @@
+  @@index([cancellationCode])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
