@@ -320,9 +320,51 @@ This issue has occurred multiple times. The nuclear fix was first implemented on
 3. Accept them or fix in source code
 4. Do NOT re-enable purple-button-fix.js
 
+### Root Cause
+The purple buttons were being injected by an external script from the Ninja platform:
+```html
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+```
+
+This script has a `makeBodyEditable()` function that creates Edit and Save buttons using GrapesJS (a web builder framework) for website editing purposes. These buttons are NOT part of the DFP-NEO application.
+
+### Solution
+
+**Remove the Ninja script from index.html:**
+
+```bash
+sed -i '/ninja-daytona-script.js/d' /workspace/dfp-neo-platform/public/flight-school-app/index.html
+```
+
+This removes the external script that was injecting the buttons.
+
+### Why This Works
+
+1. **Removes Source**: Eliminates the script that creates the buttons
+2. **No Performance Impact**: No JavaScript overhead
+3. **Permanent Fix**: Buttons won't reappear
+4. **Safe**: Doesn't affect application functionality
+
+### Historical Context
+The purple buttons were first noticed on 2025-01-08. Multiple attempts were made to fix them with CSS and JavaScript overrides (purple-button-fix.js), but these failed because:
+1. CSS cannot override inline styles
+2. JavaScript fix caused page freezing (aggressive MutationObserver)
+3. The buttons weren't in the application code
+
+On 2025-01-09, investigation revealed the buttons were injected by the external Ninja script, which was then removed.
+
+**Commits:**
+- `272ce24` - "Remove Ninja script that was injecting purple Edit/Save buttons"
+
 ### Prevention
 
-**DO NOT ENABLE purple-button-fix.js** - It causes page freezing issues
+Ensure the Ninja script is never re-added to index.html:
+```bash
+# Check if script is present
+grep "ninja-daytona-script" /workspace/dfp-neo-platform/public/flight-school-app/index.html
+
+# Should return nothing if script is properly removed
+```
 
 ---
 
