@@ -297,13 +297,32 @@ This issue has occurred multiple times. The nuclear fix was first implemented on
 - `edc9fba` - Initial nuclear fix
 - `d900efa` - Restored fix after buttons reappeared
 
+### ⚠️ CRITICAL WARNING - PAGE UNRESPONSIVE ISSUE
+
+**IMPORTANT**: The purple-button-fix.js script can cause the page to become unresponsive and freeze! This happened on 2025-01-09.
+
+**Root Cause**: 
+- Script runs every 100ms (10 times per second)
+- MutationObserver triggers on ALL DOM changes
+- Can create infinite loops when pages are complex
+- Overwhelms browser CPU, causing "Page Unresponsive" error
+
+**Current Status**: ⚠️ **DISABLED** - Script removed from production
+
+**Recommendation**: 
+- Do NOT use purple-button-fix.js in production
+- Use CSS-based solutions instead
+- Or fix the purple buttons at the source code level
+
+**If Purple Buttons Return**:
+1. The buttons are cosmetic only (Edit/Save in bottom left)
+2. They do not affect functionality
+3. Accept them or fix in source code
+4. Do NOT re-enable purple-button-fix.js
+
 ### Prevention
 
-To prevent this from happening again:
-1. **Always include purple-button-fix.js in production builds**
-2. **Verify script reference in index.html after every build**
-3. **Add purple-button-fix.js to gitignore-exclusions list** (if needed)
-4. **Test for purple buttons after every deployment**
+**DO NOT ENABLE purple-button-fix.js** - It causes page freezing issues
 
 ---
 
