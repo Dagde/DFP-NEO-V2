@@ -1,0 +1,4 @@
+[feature/comprehensive-build-algorithm f290e5f] Add critical warning about purple-button-fix.js causing page unresponsive
+ 1 file changed, 24 insertions(+), 5 deletions(-)
+To https://github.com/Dagde/DFP---NEO.git
+   1dbc1fe..f290e5f  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

@@ -1,0 +1,5 @@
+350:  courseColors: { [key: string]: string };
+981:        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
+2101:            color: courseColors[trainee.course] || 'bg-gray-500',
+2683:                color: courseColors[trainee.course] || 'bg-gray-500',
+2736:                color: courseColors[trainee.course] || 'bg-gray-500',

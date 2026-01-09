@@ -1,0 +1,20 @@
+function makeBodyEditable() {
+  const btnEdit = document.createElement("button");
+  btnEdit.textContent = "✏️ Edit";
+  styleBtn(btnEdit);
+  const btnSave = document.createElement("button");
+  btnSave.textContent = "💾 Save";
+  styleBtn(btnSave);
+  btnSave.disabled = true; btnSave.style.opacity = "0.6"; btnSave.style.cursor = "not-allowed";
+  controls.append(btnEdit, btnSave);
+  let editor = null;
+  btnEdit.onclick = () => {
+    if (editor) return;
+    editor = grapesjs.init({
+      richTextEditor: { actions: ["bold", "italic", "underline"] },
+    editor.on("load", () => {
+        .gjs-editor, .gjs-cv-canvas { background: transparent !important; left: 0 !important; right: 0 !important; width: 100% !important; }
+    editor.setComponents(originalHtml);
+      const res = editor.getWrapper().find('#ninja-badge');
+          editable: false,
+    btnEdit.disabled = true;

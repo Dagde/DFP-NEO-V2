@@ -1,0 +1,50 @@
+// NOTE: The following BASE_DOMAIN is environment-specific
+// and is replaced by the website_assets Lambda during CDK deployment
+// If ever deploying / uploading manually, you will need to update these values.
+// DO NOT UPDATE THE FORMATTING OF THE FOLLOWING LINES.
+const BASE_DOMAIN = "super.myninja.ai";
+const WEBSITE_DOMAIN_PREFIX = "sites";
+
+const BASE_URL = `https://${WEBSITE_DOMAIN_PREFIX}.${BASE_DOMAIN}`;
+const ALLOWED_PARENTS = new Set([`https://${BASE_DOMAIN}`]);
+const HEALTH_CHECK_INTERVAL_SECONDS = 30;
+const HEALTH_CHECK_TIMEOUT_SECONDS = 10;
+
+function getParentOrigin() {
+  try {
+    if (window.self === window.top) return null;
+    const ref = document.referrer || "";
+    if (!ref) return null;
+    const origin = new URL(ref).origin;
+    return ALLOWED_PARENTS.has(origin) ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
+function initDomainSpecificContent() {
+  const hostname = window.location.hostname;
+  const bannerName = "ninja-daytona-banner";
+  const footerName = "ninja-badge";
+
+  function createBanner() {
+    if (!document.body) {
+      setTimeout(createBanner, 100);
+      return;
+    }
+
+    const banner = document.createElement("div");
+    fetch(`${BASE_URL}/_assets/${bannerName}.html`)
+      .then((response) => response.text())
+      .then((html) => {
+        banner.innerHTML = html;
+        document.body.appendChild(banner);
+        const ninjaBanner = document.getElementById(bannerName);
+        if (!ninjaBanner) return;
+        document.body.style.paddingTop = "40px";
+        // Initialize connection status checker after banner is loaded
+        initConnectionStatusChecker();
+      })
+      .catch((error) => {
+        console.error("Error fetching banner content:", error);
+      });

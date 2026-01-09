@@ -1,0 +1,100 @@
+import React, { useState, useMemo } from 'react';
+import { Course } from '../types';
+import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
+import { showDarkConfirm } from './DarkMessageModal';
+
+interface CoursesManagementViewProps {
+    courses: Course[];
+    courseColors: { [key: string]: string };
+    archivedCourses: { [key: string]: string };
+    onAddCourse: (data: NewCourseData) => void;
+    onDeleteCourse: (courseName: string, archive: boolean) => void;
+    onNavigateToCourseRoster: (courseName: string) => void;
+    onNavigateToArchivedCourses: () => void;
+}
+
+const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
+    courses,
+    courseColors,
+    archivedCourses,
+    onAddCourse,
+    onDeleteCourse,
+    onNavigateToCourseRoster,
+    onNavigateToArchivedCourses
+}) => {
+    const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
+    const [pinInput, setPinInput] = useState('');
+    const [showPinDialog, setShowPinDialog] = useState(false);
+    const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
+
+    // Group courses by type (only active courses, not archived)
+    const groupedCourses = useMemo(() => {
+        const groups: { [key: string]: Course[] } = {
+            'ADF': [],
+            'FIC': [],
+            'WSO': [],
+            'IFIC': [],
+            'OFI': [],
+            'Pilot Conversion': [],
+            'Other': []
+        };
+
+        // Filter out archived courses
+        const activeCourses = courses.filter(course => courseColors.hasOwnProperty(course.name));
+
+        activeCourses.forEach(course => {
+            if (course.name.startsWith('ADF')) {
+                groups['ADF'].push(course);
+            } else if (course.name.startsWith('FIC')) {
+                groups['FIC'].push(course);
+            } else if (course.name.startsWith('WSO')) {
+                groups['WSO'].push(course);
+            } else if (course.name.startsWith('IFIC')) {
+                groups['IFIC'].push(course);
+            } else if (course.name.startsWith('OFI')) {
+                groups['OFI'].push(course);
+            } else if (course.name.toLowerCase().includes('conversion')) {
+                groups['Pilot Conversion'].push(course);
+            } else {
+                groups['Other'].push(course);
+            }
+        });
+
+        // Remove empty groups
+        Object.keys(groups).forEach(key => {
+            if (groups[key].length === 0) {
+                delete groups[key];
+            }
+        });
+
+        return groups;
+    }, [courses, courseColors]);
+
+    const handleDeleteClick = async (courseName: string) => {
+        setCourseToDelete(courseName);
+        setShowPinDialog(true);
+    };
+
+    const handlePinSubmit = async () => {
+        if (pinInput !== '1234') { // Replace with actual PIN validation
+            await showDarkConfirm(
+                'Invalid PIN',
+                'The PIN you entered is incorrect. Please try again.',
+                'error'
+            );
+            setPinInput('');
+            return;
+        }
+
+        if (!courseToDelete) return;
+
+        const archiveChoice = await showDarkConfirm(
+            'Delete Course',
+            `Do you want to archive or permanently delete "${courseToDelete}"?\n\nClick "Archive" to archive the course (can be restored later).\nClick "Delete" to permanently delete the course.`,
+            'warning',
+            'Archive',
+            'Delete'
+        );
+
+        const shouldArchive = archiveChoice === true;
+        onDeleteCourse(courseToDelete, shouldArchive);

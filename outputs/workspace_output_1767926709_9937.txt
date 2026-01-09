@@ -1,0 +1,6 @@
+11:    <script src="https://cdn.tailwindcss.com"></script>
+12:    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+13:    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+14:    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+15:    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+182:  <script type="module" crossorigin src="./assets/index-CFus4ZwJ.js"></script>
