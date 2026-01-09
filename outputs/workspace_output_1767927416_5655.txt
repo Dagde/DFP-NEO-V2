@@ -1,0 +1,4 @@
+components/CourseProgressGraph.tsx
+components/TrainingRecordsView.tsx
+components/CourseProgressView.tsx
+components/TrainingRecordsExportView.tsx

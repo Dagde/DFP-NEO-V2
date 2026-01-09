@@ -1,0 +1,41 @@
+    const [traineesData, setTraineesData] = useState<Trainee[]>([]);
+       const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+    
+    // Current User State (for permission checking)
+    // Default to Joe Bloggs (Super Admin) - in production this would come from authentication
+    const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
+    const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
+    const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
+    
+    // Set current user for audit logging
+    useEffect(() => {
+        if (currentUser) {
+            const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
+            setCurrentUser(userString);
+        }
+    }, [currentUser]);
+
+       // Load data from API on mount
+       useEffect(() => {
+           const loadInitialData = async () => {
+               console.log('🔄 Starting to load initial data...');
+               try {
+                   const data = await initializeData();
+                   console.log('📦 Data received from initializeData:', {
+                       instructorsCount: data.instructors.length,
+                       traineesCount: data.trainees.length,
+                       eventsCount: data.events.length,
+                       scoresCount: data.scores.size,
+                       coursesCount: data.courses.length,
+                       courseColorsKeys: Object.keys(data.courseColors),
+                       traineeLMPsCount: data.traineeLMPs.size
+                   });
+                   
+                   setInstructorsData(data.instructors);
+                   setTraineesData(data.trainees);
+                   setEvents(data.events);
+                   setScores(data.scores);
+                   setPt051Assessments(data.pt051Assessments);
+                   setCourses(data.courses);
+                   setCourseColors(data.courseColors);
+                   setArchivedCourses(data.archivedCourses);

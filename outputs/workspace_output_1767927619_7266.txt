@@ -1,0 +1,16 @@
+    pt051Assessments,
+    courses: [],
+    courseColors: {},
+    archivedCourses: {},
+    coursePriorities: [],
+    coursePercentages: new Map(),
+    traineeLMPs: new Map(),
+  };
+}
+
+// Save schedule
+export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+  if (USE_API) {
+    const success = await saveScheduleAPI(events);
+    if (success) {
+      // Also save to localStorage for backup

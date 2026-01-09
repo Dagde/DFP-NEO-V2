@@ -1,0 +1,19 @@
+10:  COURSES: 'dfp-neo-courses',
+12:  ARCHIVED_COURSES: 'dfp-neo-archived-courses',
+75:    courses: [],
+88:  let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
+111:  courses = Array.isArray(courses) ? courses : [];
+148:        courses: courses.length,
+163:      console.log('📋 Unique trainee courses:', uniqueCourses);
+165:      // Log trainees with empty/missing courses
+169:      // Auto-generate courseColors based on trainee courses
+222:        courses,
+271:      // Auto-generate courseColors based on trainee courses
+312:        courses,
+328:    // Auto-generate courseColors based on trainee courses
+379:      courses: ESL_DATA.courses,
+388:  // Auto-generate courseColors based on trainee courses
+422:    courses: [],
+446:// Save courses data (to localStorage)
+448:  courses: Course[];
+454:  saveToStorage(STORAGE_KEYS.COURSES, data.courses);

@@ -1,0 +1,11 @@
+        
+        console.log('✅ traineeLMPs initialized with', traineeLMPs.size, 'entries');
+        // Don't save traineeLMPs to localStorage - too large, always fetch from API or use master syllabus
+      }
+      
+      return {
+        instructors,
+        trainees,
+        events,
+        scores: fallbackScores || new Map(),
+        pt051Assessments,

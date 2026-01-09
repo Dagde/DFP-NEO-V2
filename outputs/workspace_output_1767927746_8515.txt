@@ -1,0 +1,5 @@
+394:export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+409:export function saveCoursesData(data: {
+424:export function saveScoresData(scores: Map<string, Score[]>) {
+429:export function savePT051AssessmentsData(assessments: Map<string, Pt051Assessment>) {
+434:export function saveTraineeLMPsData(lmps: Map<string, SyllabusItemDetail[]>) {

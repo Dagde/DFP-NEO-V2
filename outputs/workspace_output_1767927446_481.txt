@@ -1,0 +1,26 @@
+                    archivedCourses={archivedCourses}
+                    onAddCourse={handleAddCourseFromTrainingRecords}
+                    onDeleteCourse={handleDeleteCourseFromTrainingRecords}
+                    onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
+                    onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
+                    archivedTraineesData={archivedTraineesData}
+                    archivedInstructorsData={archivedInstructorsData}
+                    events={events}
+                    scores={scores}
+                    publishedSchedules={publishedSchedules}
+                    syllabusDetails={syllabusDetails}
+                    pt051Assessments={pt051Assessments}
+                    onSavePT051Assessment={onSavePT051Assessment}
+                />;
+            case 'ArchivedCourses':
+                return <ArchivedCoursesView 
+                    archivedCourses={archivedCourses}
+                    onUnarchiveCourse={handleUnarchiveCourseFromArchivedView}
+                    onDeleteCourse={handleDeleteCourseFromArchivedView}
+                    onNavigateBack={() => handleNavigation('TrainingRecords')}
+                />;
+            case 'ProgramData':
+                 return <ProgramDataView
+                            date={buildDfpDate}

@@ -1,0 +1,8 @@
+// Initialize data from API or fallback to localStorage or mock data
+  
+  // Load other data from localStorage first (these are always stored locally for now)
+  const pt051Assessments = loadFromStorage<Map<string, Pt051Assessment>>(
+    STORAGE_KEYS.PT051_ASSESSMENTS, 
+    new Map()
+  );
+  let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);

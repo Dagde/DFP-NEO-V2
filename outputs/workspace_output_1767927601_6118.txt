@@ -1,0 +1,23 @@
+  courses = Array.isArray(courses) ? courses : [];
+  coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
+    // Load courses from mock data if empty
+    if (courses.length === 0) {
+      console.log("⚠️ Courses empty, loading from mock data");
+      const { ESL_DATA } = await import("../mockData");
+      courses = ESL_DATA.courses;
+      courseColors = ESL_DATA.courseColors;
+      archivedCourses = ESL_DATA.archivedCourses;
+      coursePriorities = ESL_DATA.coursePriorities;
+      coursePercentages = ESL_DATA.coursePercentages;
+      console.log("✅ Loaded courses from mock data:", courses.length);
+    }
+
+
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {
+    console.log('Initializing data from API...');
+    
+    try {

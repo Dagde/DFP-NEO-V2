@@ -1,0 +1,51 @@
+      console.log('✅ Schedule loaded:', scheduleResult.length);
+      
+      console.log('📥 Fetching scores (optimized response)...');
+      const scoresResult = await fetchScores();
+      console.log('✅ Scores loaded:', scoresResult.size);
+
+      // Ensure arrays
+      instructors = Array.isArray(instructorsResult) ? instructorsResult : [];
+      trainees = Array.isArray(traineesResult) ? traineesResult : [];
+      events = Array.isArray(scheduleResult) ? scheduleResult : [];
+
+      console.log('Data loaded from API:', {
+        instructors: instructors.length,
+        trainees: trainees.length,
+        events: events.length,
+        courses: courses.length,
+        coursePriorities: coursePriorities.length,
+        scores: scoresResult.size,
+        scoresSample: Array.from(scoresResult.entries()).slice(0, 1),
+        pt051Assessments: pt051Assessments.size,
+        coursePercentages: coursePercentages.size,
+        traineeLMPs: traineeLMPs.size,
+        traineeSample: trainees.slice(0, 3).map(t => ({ fullName: t.fullName, course: t.course })),
+      });
+      
+      console.log('✅ Instructors sample:', instructors.slice(0, 3));
+      console.log('✅ Trainees sample:', trainees.slice(0, 3));
+      
+      // Log all unique course names from trainees
+      const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+      console.log('📋 Unique trainee courses:', uniqueCourses);
+      
+      // Log trainees with empty/missing courses
+      const traineesWithoutCourse = trainees.filter(t => !t.course || t.course.trim() === '');
+      console.log('⚠️ Trainees without course:', traineesWithoutCourse.length, traineesWithoutCourse.slice(0, 5));
+
+      // Auto-generate courseColors based on trainee courses
+      if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+        const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+        const predefinedColors = [
+          '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+          '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+          '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+          '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+        ];
+        
+        courseColors = {};
+        uniqueCourses.forEach((course, index) => {
+          courseColors[course] = predefinedColors[index % predefinedColors.length];
+        });
+        

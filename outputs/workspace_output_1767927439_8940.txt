@@ -1,0 +1,21 @@
+                />;
+            case 'CourseProgress':
+                return <CourseProgressView
+                            courses={courses}
+                            traineesData={traineesData}
+                            courseColors={courseColors}
+                            scores={scores}
+                            traineeLMPs={traineeLMPs}
+                            onUpdateGradDate={handleUpdateGradDate}
+                            onUpdateStartDate={handleUpdateStartDate}
+                        />;
+            case 'TrainingRecords':
+                return <TrainingRecordsView 
+                    courses={courses}
+                    courseColors={courseColors}
+                    archivedCourses={archivedCourses}
+                    onAddCourse={handleAddCourseFromTrainingRecords}
+                    onDeleteCourse={handleDeleteCourseFromTrainingRecords}
+                    onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
+                    onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                    traineesData={traineesData}

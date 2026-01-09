@@ -1,0 +1,21 @@
+                       traineeLMPsCount: data.traineeLMPs.size
+                   });
+                   
+                   setInstructorsData(data.instructors);
+                   setTraineesData(data.trainees);
+                   setEvents(data.events);
+                   setScores(data.scores);
+                   setPt051Assessments(data.pt051Assessments);
+                   setCourses(data.courses);
+                   setCourseColors(data.courseColors);
+                   setArchivedCourses(data.archivedCourses);
+                   setCoursePriorities(data.coursePriorities);
+                   setCoursePercentages(data.coursePercentages);
+                   setTraineeLMPs(data.traineeLMPs);
+                   
+                   console.log('✅ State updated successfully');
+               } catch (error) {
+                   console.error('❌ Failed to load initial data:', error);
+               }
+           };
+           loadInitialData();

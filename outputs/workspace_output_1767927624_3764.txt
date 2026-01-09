@@ -1,0 +1,21 @@
+  // Note: The auto-generation of courseColors and traineeLMPs is now handled
+  // in each return path separately to ensure they're properly initialized
+  
+  // This code should never be reached, but return empty data as safety fallback
+  console.warn('⚠️ initializeData reached end without returning data, returning empty data');
+  return {
+    instructors: [],
+    trainees: [],
+    events: [],
+    scores: new Map(),
+    pt051Assessments,
+    courses: [],
+    courseColors: {},
+    archivedCourses: {},
+    coursePriorities: [],
+    coursePercentages: new Map(),
+    traineeLMPs: new Map(),
+  };
+}
+
+// Save schedule

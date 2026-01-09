@@ -1,0 +1,4 @@
+92:import CourseProgressView from './components/CourseProgressView';
+93:import TrainingRecordsView from './components/TrainingRecordsView';
+8202:                return <CourseProgressView
+8212:                return <TrainingRecordsView 

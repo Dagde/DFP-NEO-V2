@@ -1,0 +1,8 @@
+  courses = Array.isArray(courses) ? courses : [];
+  coursePriorities = Array.isArray(coursePriorities) ? coursePriorities : [];
+
+  let instructors: Instructor[] = [];
+  let trainees: Trainee[] = [];
+  let events: ScheduleEvent[] = [];
+
+  if (USE_API) {

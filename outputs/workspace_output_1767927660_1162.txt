@@ -1,0 +1,76 @@
+    }
+    
+    // TEMPORARY FIX: Use mock data to test NEO Build
+    console.log('⚠️ TEMPORARY: Reverting to mock data to test NEO Build - FORCING MOCK DATA');
+    // Import mock data directly
+    const { ESL_DATA } = await import('../mockData');
+    console.log('📦 Loaded ESL_DATA from mockData:', {
+      instructors: ESL_DATA.instructors.length,
+      trainees: ESL_DATA.trainees.length,
+      events: ESL_DATA.events.length,
+      scores: ESL_DATA.scores.size
+    });
+    return {
+      instructors: ESL_DATA.instructors,
+      trainees: ESL_DATA.trainees,
+      events: ESL_DATA.events,
+      scores: ESL_DATA.scores,
+      pt051Assessments: ESL_DATA.pt051Assessments,
+      courses: ESL_DATA.courses,
+      courseColors: ESL_DATA.courseColors,
+      archivedCourses: ESL_DATA.archivedCourses,
+      coursePriorities: ESL_DATA.coursePriorities,
+      coursePercentages: ESL_DATA.coursePercentages,
+      traineeLMPs: ESL_DATA.traineeLMPs,
+    };
+  }
+
+  // Auto-generate courseColors based on trainee courses
+  if (trainees.length > 0 && Object.keys(courseColors).length === 0) {
+    const uniqueCourses = [...new Set(trainees.map(t => t.course).filter(c => c))];
+    const predefinedColors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+      '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
+      '#F8B500', '#00CED1', '#FF69B4', '#32CD32',
+      '#FF6347', '#40E0D0', '#9370DB', '#20B2AA'
+    ];
+    
+    courseColors = {};
+    uniqueCourses.forEach((course, index) => {
+      courseColors[course] = predefinedColors[index % predefinedColors.length];
+    });
+    
+    console.log('🎨 Auto-generated courseColors:', courseColors);
+    try {
+      saveToStorage(STORAGE_KEYS.COURSE_COLORS, courseColors);
+    } catch (error) {
+      console.warn('Failed to save courseColors to localStorage (continuing anyway):', error);
+    }
+  }
+
+  // Note: The auto-generation of courseColors and traineeLMPs is now handled
+  // in each return path separately to ensure they're properly initialized
+  
+  // This code should never be reached, but return empty data as safety fallback
+  console.warn('⚠️ initializeData reached end without returning data, returning empty data');
+  return {
+    instructors: [],
+    trainees: [],
+    events: [],
+    scores: new Map(),
+    pt051Assessments,
+    courses: [],
+    courseColors: {},
+    archivedCourses: {},
+    coursePriorities: [],
+    coursePercentages: new Map(),
+    traineeLMPs: new Map(),
+  };
+}
+
+// Save schedule
+export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+  if (USE_API) {
+    const success = await saveScheduleAPI(events);
+    if (success) {
+      // Also save to localStorage for backup

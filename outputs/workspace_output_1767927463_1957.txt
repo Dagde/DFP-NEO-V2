@@ -1,0 +1,9 @@
+3188:                   setCourses(data.courses);
+3225:    const [courses, setCourses] = useState<Course[]>([]);
+4601:        setCourses(prev => [...prev, newCourse]);
+4618:            setCourses(prev => prev.filter(c => c.name !== courseName));
+4628:            setCourses(prev => prev.filter(c => c.name !== courseName));
+4663:        setCourses(prev => [...prev, restoredCourse]);
+4675:        setCourses(prev => prev.filter(c => c.name !== courseName));
+6417:        setCourses(prevCourses => 
+6425:        setCourses(prevCourses => 

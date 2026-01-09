@@ -1,0 +1,18 @@
+    console.log('Initializing data from API...');
+    
+    try {
+      // Fetch data sequentially to avoid overwhelming the browser
+      console.log('📥 Fetching instructors...');
+      const instructorsResult = await fetchInstructors();
+      console.log('✅ Instructors loaded:', instructorsResult.length);
+      
+      console.log('📥 Fetching trainees...');
+      const traineesResult = await fetchTrainees();
+      console.log('✅ Trainees loaded:', traineesResult.length);
+      
+      console.log('📥 Fetching schedule...');
+      const scheduleResult = await fetchSchedule();
+      console.log('✅ Schedule loaded:', scheduleResult.length);
+      
+      console.log('📥 Fetching scores (optimized response)...');
+      const scoresResult = await fetchScores();

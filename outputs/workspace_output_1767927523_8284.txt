@@ -1,0 +1,31 @@
+
+// Save schedule
+export async function saveSchedule(events: ScheduleEvent[]): Promise<boolean> {
+  if (USE_API) {
+    const success = await saveScheduleAPI(events);
+    if (success) {
+      // Also save to localStorage for backup
+      saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    }
+    return success;
+  } else {
+    saveToStorage(STORAGE_KEYS.SCHEDULE, events);
+    return true;
+  }
+}
+
+// Save courses data (to localStorage)
+export function saveCoursesData(data: {
+  courses: Course[];
+  courseColors: { [key: string]: string };
+  archivedCourses: { [key: string]: string };
+  coursePriorities: string[];
+  coursePercentages: Map<string, number>;
+}) {
+  saveToStorage(STORAGE_KEYS.COURSES, data.courses);
+  saveToStorage(STORAGE_KEYS.COURSE_COLORS, data.courseColors);
+  saveToStorage(STORAGE_KEYS.ARCHIVED_COURSES, data.archivedCourses);
+  saveToStorage(STORAGE_KEYS.COURSE_PRIORITIES, data.coursePriorities);
+  saveToStorage(STORAGE_KEYS.COURSE_PERCENTAGES, Array.from(data.coursePercentages.entries()));
+}
+
