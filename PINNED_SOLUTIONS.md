@@ -1,523 +1,270 @@
-# PINNED SOLUTIONS - Critical Issues and Fixes
+# 📌 PINNED SOLUTIONS - Critical Fixes for Common Issues
 
-This document contains critical solutions to common problems encountered during development. These solutions have been tested and verified to work.
-
----
-
-## 🔴 CRITICAL: Temporal Dead Zone Error in generateDfpInternal
-
-### Symptoms
-- NEO Build fails with error: `ReferenceError: Cannot access 'X' before initialization`
-- Error occurs when running the NEO Build algorithm
-- Console shows error similar to: `at aO (App.tsx:978:45)`
-
-### Root Cause
-The `generateDfpInternal` function in `App.tsx` was attempting to use variables in `console.log` statements BEFORE they were declared in the destructuring assignment. This creates a temporal dead zone where variables exist but cannot be accessed yet.
-
-**Problematic Code Pattern:**
-```typescript
-function generateDfpInternal(
-    config: DfpConfig,
-    setProgress: (progress: { message: string, percentage: number }) => void,
-    publishedSchedules: Record<string, ScheduleEvent[]>
-): Omit<ScheduleEvent, 'date'>[] {
-    // ❌ ERROR: Variables used BEFORE declaration
-    console.log(`🎯 CONFIG DEBUG:`);
-    console.log(`  - originalInstructors: ${originalInstructors.length}`);  // ERROR!
-    console.log(`  - trainees: ${trainees.length}`);  // ERROR!
-    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);  // ERROR!
-    
-    // Variables declared HERE
-    const { 
-        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
-        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
-        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
-        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
-        // ... more variables
-    } = config;
-    
-    // ✅ Variables can only be used AFTER this line
-}
-```
-
-### Solution
-
-**Approach 1: Move Console Logs After Variable Declaration (RECOMMENDED)**
-Move all `console.log` statements that reference these variables to AFTER the destructuring assignment:
-
-```typescript
-function generateDfpInternal(
-    config: DfpConfig,
-    setProgress: (progress: { message: string, percentage: number }) => void,
-    publishedSchedules: Record<string, ScheduleEvent[]>
-): Omit<ScheduleEvent, 'date'>[] {
-    // ✅ Declare variables FIRST
-    const { 
-        instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
-        coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
-        courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
-        ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
-        // ... more variables
-    } = config;
-    
-    // ✅ THEN use variables in console.log
-    console.log(`🎯 CONFIG DEBUG:`);
-    console.log(`  - originalInstructors: ${originalInstructors.length}`);
-    console.log(`  - trainees: ${trainees.length}`);
-    console.log(`  - syllabusDetails: ${syllabusDetails.length}`);
-    console.log(`  - scores: ${scores.size} entries`);
-    console.log(`  - availableAircraftCount: ${availableAircraftCount}`);
-    console.log(`  - ftdCount: ${ftdCount}`);
-    console.log(`  - cptCount: ${cptCount}`);
-}
-```
-
-**Approach 2: Remove Debug Console Logs (FASTEST)**
-If the debug logs are not essential, simply remove them:
-
-```bash
-# Remove all problematic console.log statements related to config debug
-sed -i '/console.log.*CONFIG DEBUG:/d' /workspace/App.tsx
-sed -i '/console.log.*originalInstructors/d' /workspace/App.tsx
-sed -i '/console.log.*trainees/d' /workspace/App.tsx
-sed -i '/console.log.*syllabusDetails/d' /workspace/App.tsx
-sed -i '/console.log.*scores.*entries/d' /workspace/App.tsx
-sed -i '/console.log.*availableAircraftCount/d' /workspace/App.tsx
-sed -i '/console.log.*ftdCount/d' /workspace/App.tsx
-sed -i '/console.log.*cptCount/d' /workspace/App.tsx
-```
-
-### Verification Steps
-
-1. **Check for the error pattern:**
-   ```bash
-   grep -n "console.log" /workspace/App.tsx | head -20
-   ```
-
-2. **Ensure variables are declared BEFORE use:**
-   - Look for `const { ... } = config;` lines
-   - Ensure all `console.log` using those variables come AFTER this line
-
-3. **Build the application:**
-   ```bash
-   cd /workspace && npm run build
-   ```
-
-4. **Test NEO Build:**
-   - Open https://dfp-neo.com/flight-school-app/
-   - Navigate to NEO Build
-   - Run the build algorithm
-   - Verify no errors appear in console
-
-### Prevention Tips
-
-1. **Always declare variables before using them** - This is a fundamental JavaScript rule
-2. **Use linter rules** - Enable `no-use-before-define` ESLint rule to catch these issues early
-3. **Test builds regularly** - Run `npm run build` after significant code changes
-4. **Check console for errors** - Always look at browser console when testing features
-
-### Related Files
-- `/workspace/App.tsx` - Main application file containing `generateDfpInternal` function
-- `/workspace/lib/dataService.ts` - Data service layer (may have similar issues)
-
-### Historical Context
-This error was first encountered on 2025-01-08 during Phase 4 frontend integration. The error manifested when the NEO Build algorithm was executed after database integration was completed.
-
-**Commit Reference:** `d16bc5c` - "Fix temporal dead zone error in generateDfpInternal - remove console.log before variable declaration"
+**Last Updated:** 2025-01-09  
+**Purpose:** Quick reference for common issues and their verified fixes
 
 ---
 
-## 🔴 CRITICAL: Course Progress and Training Records Pages Not Working
+## 1. Temporal Dead Zone Error in dataService.ts (FIXED)
+**Status:** ✅ RESOLVED
 
-### Symptoms
-- Course Progress page shows no data
-- Training Records page shows no data
-- Pages appear blank or empty after backend integration
+**Symptoms:**
+- Error: `ReferenceError: Cannot access 'r' before initialization`
+- App fails to load data from API
+- Console shows errors in `dataService.ts` at line 153
 
-### Root Cause
-After backend integration, the `initializeData()` function in `/workspace/lib/dataService.ts` had a temporary fix that forced mock data but returned `courses: []` (empty array). This caused the Course Progress and Training Records pages to have no course data to display.
-
-**Problematic Code:**
+**Root Cause:**
+Variables declared with `const` were being reassigned:
 ```typescript
-// TEMPORARY FIX: Force use mock data to test NEO Build
-return {
-  instructors: ESL_DATA.instructors,
-  trainees: ESL_DATA.trainees,
-  events: ESL_DATA.events,
-  scores: ESL_DATA.scores,
-  pt051Assessments: new Map(),
-  courses: [],  // ❌ EMPTY - causes pages to fail
-  courseColors: ESL_DATA.courseColors,
-  // ...
-};
-```
-
-### Solution
-
-**Approach 1: Fix the temporary fix (QUICKEST)**
-Change `courses: []` to `courses: ESL_DATA.courses`:
-
-```bash
-sed -i 's/courses: \[\]/courses: ESL_DATA.courses/' /workspace/lib/dataService.ts
-```
-
-**Approach 2: Remove temporary fix completely (PROPER)**
-Remove the entire temporary mock data block and let the function load from API/localStorage properly.
-
-**Approach 3: Add fallback for courses (ROBUST)**
-Add fallback to load courses from mock data if empty in localStorage:
-
-```typescript
-// Load courses from mock data if empty
-if (courses.length === 0) {
-  console.log("⚠️ Courses empty, loading from mock data");
-  const { ESL_DATA } = await import("../mockData");
-  courses = ESL_DATA.courses;
-  courseColors = ESL_DATA.courseColors;
-  // ...
-}
-```
-
-### Implementation Steps
-
-1. **Apply the fix:**
-   ```bash
-   cd /workspace
-   sed -i 's/courses: \[\]/courses: ESL_DATA.courses/' lib/dataService.ts
-   ```
-
-2. **Build the application:**
-   ```bash
-   npm run build
-   ```
-
-3. **Copy to production:**
-   ```bash
-   cp -r dist/* dfp-neo-platform/public/flight-school-app/
-   ```
-
-4. **Commit and push:**
-   ```bash
-   git add -A
-   git commit -m "Fix Course Progress and Training Records pages"
-   git push origin feature/comprehensive-build-algorithm
-   ```
-
-### Why This Works
-
-1. **Populates courses data**: Pages now have course data to display
-2. **Maintains functionality**: Doesn't change how pages work
-3. **Uses existing mock data**: Leverages the well-tested mock course data
-4. **Minimal changes**: Single line change, low risk
-
-### Verification
-
-After deployment:
-1. Open Course Progress page - should show course cards
-2. Open Training Records page - should show course management
-3. Check browser console for: `⚠️ TEMPORARY: FORCING MOCK DATA TO TEST NEO BUILD`
-4. Verify courses are displayed with proper colors
-
-### Historical Context
-This issue appeared immediately after backend integration was completed. The temporary mock data fix was added to test NEO Build but had `courses: []` which broke Course Progress and Training Records pages.
-
-**Commit:** `f40762d` - "Fix Course Progress and Training Records pages - populate courses data from mock data instead of empty array"
-
-### Prevention
-
-To prevent this from happening again:
-1. **Review all data fields** when adding temporary fixes
-2. **Test all pages** after any data service changes
-3. **Don't return empty arrays** for critical data structures
-4. **Use fallback data** instead of empty arrays
-
----
-
-## 🔴 CRITICAL: Map Deserialization Issue in localStorage
-
-### Symptoms
-- Error: `k.filter is not a function`
-- Data loaded from localStorage behaves unexpectedly
-- Map objects become arrays after localStorage retrieval
-
-### Root Cause
-When Map objects are saved to localStorage using `JSON.stringify()`, they become arrays of key-value pairs. When loaded back with `JSON.parse()`, they remain as arrays, not Map objects.
-
-### Solution
-Update the `loadFromStorage` function to detect and convert Map objects:
-
-```typescript
-function loadFromStorage<T>(key: string, defaultValue: T): T {
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      
-      // Handle Map deserialization
-      if (defaultValue instanceof Map) {
-        return new Map(parsed) as T;
-      }
-      
-      return parsed;
-    }
-  } catch (error) {
-    console.error(`Error loading ${key} from localStorage:`, error);
-  }
-  return defaultValue;
-}
-```
-
-### Historical Context
-This error was encountered during Phase 4 frontend integration when loading scores, PT051 assessments, and traineeLMPs from localStorage.
-
-**Commit Reference:** `1e0186e` - "Fix temporal dead zone error - declare variables before use in dataService"
-
----
-
-## 🔴 CRITICAL: Assignment to Constant Variable
-
-### Symptoms
-- Error: `TypeError: Assignment to constant variable`
-- Data not updating properly
-- Changes not persisting
-
-### Root Cause
-Variables declared with `const` cannot be reassigned. This error occurs when trying to reassign a `const` variable.
-
-### Solution
-Change `const` to `let` for variables that need to be reassigned:
-
-```typescript
-// ❌ BROKEN:
 const courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
 courses = Array.isArray(courses) ? courses : [];  // ERROR!
+```
 
-// ✅ FIXED:
+**Solution Applied:**
+Changed `const` to `let` to allow reassignment:
+```typescript
 let courses = loadFromStorage<Course[]>(STORAGE_KEYS.COURSES, []);
 courses = Array.isArray(courses) ? courses : [];  // OK!
 ```
 
-### Historical Context
-This error was found in `/workspace/lib/dataService.ts` during Phase 4 integration.
+**Verification:**
+Check that `courses` and `coursePriorities` use `let` not `const` in `dataService.ts`.
+
+**Prevention:**
+Never reassign `const` variables. Use `let` if you need to reassign.
 
 **Commit Reference:** `5546608` - "Fix temporal dead zone error - declare variables before use in dataService"
 
 ---
 
-## 🔴 CRITICAL: Purple Buttons (Edit/Save) Appearing
+## 2. Map Deserialization Issue (FIXED)
+**Status:** ✅ RESOLVED
 
-### Symptoms
+**Symptoms:**
+- Error: `TypeError: k.filter is not a function`
+- App crashes when loading data from localStorage
+- Map objects not properly converted when loaded
+
+**Root Cause:**
+Map objects stored in localStorage become arrays when parsed with `JSON.parse()`:
+```typescript
+localStorage.setItem('scores', JSON.stringify(myMap));
+// Stored as: [["key1", {data}], ["key2", {data}]]
+const parsed = JSON.parse(localStorage.getItem('scores'));
+// parsed is Array, not Map!
+```
+
+**Solution Applied:**
+Added Map detection and conversion in `loadFromStorage()`:
+```typescript
+if (defaultValue instanceof Map) {
+  return new Map(parsed) as T;
+}
+```
+
+**Verification:**
+Maps should load correctly without `filter is not a function` errors.
+
+**Prevention:**
+Always convert localStorage data back to Map when storing Map objects.
+
+**Commit Reference:** `1e0186e` - "Fix Map deserialization issue - properly convert localStorage arrays to Maps"
+
+---
+
+## 3. Assignment to Constant Variable (FIXED)
+**Status:** ✅ RESOLVED
+
+**Symptoms:**
+- Error: `TypeError: Assignment to constant variable`
+- App crashes during data initialization
+- `dataService.ts` line 153 showing error
+
+**Root Cause:**
+Same as issue #1 - trying to reassign `const` variables.
+
+**Solution Applied:**
+See issue #1 - changed `const` to `let`.
+
+**Commit Reference:** `5546608`
+
+---
+
+## 4. School Switching Data Loss (FIXED)
+**Status:** ✅ RESOLVED
+
+**Symptoms:**
+- Staff disappears when switching from ESL to PEA
+- Trainees never visible in any school
+- Console shows `instructorsData count: 0`
+
+**Root Cause:**
+`changeSchool()` function was overwriting state with filtered data:
+```typescript
+const filteredInstructors = instructorsData.filter(i => targetUnits.includes(i.unit));
+setInstructorsData(filteredInstructors);  // Lost all other data!
+```
+
+**Solution Applied:**
+Modified `changeSchool()` to NOT overwrite state:
+```typescript
+// Don't overwrite state - just change school and let filtering happen during display
+setSchool(newSchool);
+```
+
+**Verification:**
+Switch schools - staff should persist and be filtered by unit during display.
+
+**Prevention:**
+Never overwrite state with filtered data. Filter during render or use derived state.
+
+**Commit Reference:** `ff379d5` - "Fix school switching data loss - don't overwrite state with filtered data"
+
+---
+
+## 5. Purple Buttons (Edit/Save) - ⚠️ PERMANENT FIX APPLIED
+**Status:** ✅ PERMANENTLY RESOLVED - FLAGGED TO NEVER REVERT
+
+**Symptoms:**
 - Purple buttons with "✏️ Edit" and "💾 Save" icons appear in the UI
 - Buttons have inline styles that cannot be overridden with CSS
 - Buttons reappear after attempts to remove them
 
-### Root Cause
-The buttons are created with inline styles that CSS cannot override:
-```html
-<button style="padding: 10px 16px; background: rgb(118, 75, 162); color: rgb(255, 255, 255); ...">✏️ Edit</button>
-```
+**Root Cause:**
+The buttons are injected by **external Ninja web builder platform script**:
+- Script: `https://sites.super.myninja.ai/_assets/ninja-daytona-script.js`
+- Contains `makeBodyEditable()` function that adds Edit/Save buttons
+- NOT part of application code - external interference
 
-### Solution: Nuclear Style Fix
+### ⚠️ PERMANENT SOLUTION APPLIED (Commit 97bb5be)
 
-**File Created:** `dfp-neo-platform/public/purple-button-fix.js`
-
-This JavaScript file:
-1. **Runs every 100ms** - Directly overwrites inline styles on purple buttons
-2. **Uses MutationObserver** - Catches dynamically added buttons immediately
-3. **Targeted by emoji** - Only affects buttons with ✏️ or 💾 emojis
-
-**Key Code:**
-```javascript
-function nukeInlineStyles() {
-    const buttons = document.querySelectorAll('button');
-    
-    buttons.forEach(btn => {
-        const text = btn.textContent || '';
-        const hasEditEmoji = text.includes('✏️');
-        const hasSaveEmoji = text.includes('💾');
-        
-        if (hasEditEmoji || hasSaveEmoji) {
-            btn.style.background = '#3b82f6';
-            btn.style.backgroundColor = '#3b82f6';
-            btn.style.setProperty('background', '#3b82f6', 'important');
-            btn.style.setProperty('background-color', '#3b82f6', 'important');
-            
-            console.log('DFP-NEO: Nuked purple button:', text.trim());
-        }
-    });
-}
-
-// Run every 100ms forever
-setInterval(nukeInlineStyles, 100);
-```
-
-### Implementation Steps
-
-1. **Create the fix file:**
-   ```bash
-   # File: dfp-neo-platform/public/purple-button-fix.js
-   # (Full code above)
-   ```
-
-2. **Add script to HTML:**
-   ```html
-   <!-- Add before </body> in index.html -->
-   <script src="/purple-button-fix.js"></script>
-   ```
-
-3. **Deploy to production:**
-   ```bash
-   # Copy fix file to flight-school-app directory
-   cp dfp-neo-platform/public/purple-button-fix.js \
-      dfp-neo-platform/public/flight-school-app/purple-button-fix.js
-   
-   # Commit and push
-   git add -A
-   git commit -m "Restore purple button fix"
-   git push origin feature/comprehensive-build-algorithm
-   ```
-
-### Why This Works
-
-1. **Direct Inline Style Manipulation** - Not trying to override with CSS, directly changing the inline style itself
-2. **High Frequency** - Running every 100ms means buttons are fixed almost instantly
-3. **Continuous Monitoring** - Even if buttons are recreated, they get fixed within 100ms
-4. **MutationObserver** - Watches for DOM changes and triggers immediate fix
-
-### Verification
-
-After deployment, open browser console to see:
-```
-DFP-NEO: Purple button fix script loaded
-DFP-NEO: Running initial fixes...
-DFP-NEO: Nuked purple button: ✏️ Edit
-DFP-NEO: Nuked purple button: 💾 Save
-DFP-NEO: Nuclear style fix active - running every 100ms
-DFP-NEO: MutationObserver watching for new buttons
-```
-
-### Historical Context
-This issue has occurred multiple times. The nuclear fix was first implemented on 2025-01-04 and has been reapplied on 2025-01-08 after the buttons reappeared due to missing fix file during rebuild.
-
-**Commits:** 
-- `edc9fba` - Initial nuclear fix
-- `d900efa` - Restored fix after buttons reappeared
-
-### ⚠️ CRITICAL WARNING - PAGE UNRESPONSIVE ISSUE
-
-**IMPORTANT**: The purple-button-fix.js script can cause the page to become unresponsive and freeze! This happened on 2025-01-09.
-
-**Root Cause**: 
-- Script runs every 100ms (10 times per second)
-- MutationObserver triggers on ALL DOM changes
-- Can create infinite loops when pages are complex
-- Overwhelms browser CPU, causing "Page Unresponsive" error
-
-**Current Status**: ⚠️ **DISABLED** - Script removed from production
-
-**Recommendation**: 
-- Do NOT use purple-button-fix.js in production
-- Use CSS-based solutions instead
-- Or fix the purple buttons at the source code level
-
-**If Purple Buttons Return**:
-1. The buttons are cosmetic only (Edit/Save in bottom left)
-2. They do not affect functionality
-3. Accept them or fix in source code
-4. Do NOT re-enable purple-button-fix.js
-
-### Root Cause
-The purple buttons were being injected by an external script from the Ninja platform:
-```html
-<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
-```
-
-This script has a `makeBodyEditable()` function that creates Edit and Save buttons using GrapesJS (a web builder framework) for website editing purposes. These buttons are NOT part of the DFP-NEO application.
-
-### Solution
-
-**Remove the Ninja script from index.html:**
-
+**Fix Applied:**
 ```bash
 sed -i '/ninja-daytona-script.js/d' /workspace/dfp-neo-platform/public/flight-school-app/index.html
 ```
 
-This removes the external script that was injecting the buttons.
+**Previous Attempted Solutions (FAILED):**
+1. **JavaScript override** (ABANDONED) - Caused "Page Unresponsive" errors due to aggressive DOM manipulation
+2. **CSS overrides** (FAILED) - Buttons have inline styles that CSS cannot override
+3. **Manual deletion** (TEMPORARY) - Script kept reappearing
 
-### Why This Works
+**Final Solution:**
+- ✅ Removed external Ninja script from source
+- ✅ Verified removal from production build
+- ✅ Created permanent documentation: `PERMANENT_NINJA_SCRIPT_BLOCK.md`
+- ✅ **FLAGGED TO NEVER REMOVE THIS FIX**
 
-1. **Removes Source**: Eliminates the script that creates the buttons
-2. **No Performance Impact**: No JavaScript overhead
-3. **Permanent Fix**: Buttons won't reappear
-4. **Safe**: Doesn't affect application functionality
-
-### Historical Context
-The purple buttons were first noticed on 2025-01-08. Multiple attempts were made to fix them with CSS and JavaScript overrides (purple-button-fix.js), but these failed because:
-1. CSS cannot override inline styles
-2. JavaScript fix caused page freezing (aggressive MutationObserver)
-3. The buttons weren't in the application code
-
-On 2025-01-09, investigation revealed the buttons were injected by the external Ninja script, which was then removed.
-
-**Commits:**
-- `272ce24` - "Remove Ninja script that was injecting purple Edit/Save buttons"
-
-### Prevention
-
-Ensure the Ninja script is never re-added to index.html:
+### Verification Commands
 ```bash
-# Check if script is present
-grep "ninja-daytona-script" /workspace/dfp-neo-platform/public/flight-school-app/index.html
+# Check if script is removed (should return nothing)
+grep -n "ninja" /workspace/dfp-neo-platform/public/flight-school-app/index.html
 
-# Should return nothing if script is properly removed
+# Check Next.js build output
+grep -r "ninja" /workspace/dfp-neo-platform/.next/server/app/page.html
 ```
+
+### ⚠️ CRITICAL WARNING
+This fix is **PERMANENT** and should **NEVER** be removed:
+- External Ninja script has no legitimate purpose in production app
+- If purple buttons reappear:
+  1. Immediately check `index.html` for ninja script references
+  2. Remove them: `sed -i '/ninja-daytona-script.js/d' index.html`
+  3. Rebuild and redeploy
+  4. Verify in production
+- Any code that re-adds this script should be rejected immediately
+
+**Commit Reference:** `97bb5be` - "PERMANENT FIX: Remove Ninja script that was injecting purple Edit/Save buttons - flagged to never revert"
 
 ---
 
-## 📋 General Debugging Approach
+## 6. Course Progress & Training Records Pages Blank (FIXED)
+**Status:** ✅ RESOLVED
 
-When encountering errors:
+**Symptoms:**
+- Course Progress page shows no data
+- Training Records page shows no data
+- Console shows courses array is empty
 
-1. **Check browser console** - Look for error messages and stack traces
-2. **Check build output** - Run `npm run build` to catch TypeScript/compilation errors
-3. **Check logs** - Review `/workspace/*.log` files for detailed error information
-4. **Search for patterns** - Use grep to find similar issues in codebase:
+**Root Cause:**
+Temporary mock data fix in `initializeData()` was returning `courses: []`:
+```typescript
+return {
+  instructors: mockData.instructors,
+  trainees: mockData.trainees,
+  courses: [],  // Empty!
+  scores: mockData.scores,
+  // ...
+};
+```
+
+**Solution Applied:**
+Changed to populate courses from mock data:
+```typescript
+courses: ESL_DATA.courses
+```
+
+**Verification:**
+Both pages should display course data properly.
+
+**Commit Reference:** `f40762d` - "Fix Course Progress and Training Records pages - populate courses data from mock data instead of empty array"
+
+---
+
+## Troubleshooting Checklist
+
+Before creating new issues, check:
+
+1. **Check console for errors** - F12 → Console tab
+2. **Check Network tab** - F12 → Network tab → Look for failed requests
+3. **Check localStorage** - F12 → Application → Local Storage → Look for data
+4. **Check this document** - See if the issue matches any of the solutions above
+5. **Check commits** - Review recent commits for related changes
+
+---
+
+## Additional Resources
+
+- **PERMANENT_NINJA_SCRIPT_BLOCK.md** - Detailed Ninja script removal documentation
+- **BACKEND_STATUS_REPORT.md** - Current backend status and API endpoints
+- **PHASE4_COMPLETE.md** - Phase 4 completion documentation
+- **TODO.md** - Current project tasks and progress
+
+---
+
+## If Purple Buttons Return (CRITICAL):
+
+1. **Immediate Action:**
    ```bash
-   grep -r "error pattern" /workspace/
+   grep -n "ninja" /workspace/dfp-neo-platform/public/flight-school-app/index.html
    ```
-5. **Rollback if needed** - Use git to revert to last working state:
+   
+2. **If script found:**
    ```bash
-   git log --oneline -10
-   git checkout <commit-hash>
+   sed -i '/ninja-daytona-script.js/d' /workspace/dfp-neo-platform/public/flight-school-app/index.html
    ```
 
----
+3. **Verify removal:**
+   ```bash
+   grep -n "ninja" /workspace/dfp-neo-platform/public/flight-school-app/index.html
+   # Should return nothing
+   ```
 
-## 📞 Quick Reference Commands
+4. **Rebuild and redeploy:**
+   ```bash
+   npm run build
+   git add -A
+   git commit -m "Emergency fix: Remove ninja script again"
+   git push origin feature/comprehensive-build-algorithm
+   ```
 
-### Build and Deploy
-```bash
-cd /workspace && npm run build
-cp -r /workspace/dist/* /workspace/dfp-neo-platform/public/flight-school-app/
-git add -A && git commit -m "Description"
-git push origin feature/comprehensive-build-algorithm
-```
-
-### Debug Commands
-```bash
-# Check for temporal dead zone issues
-grep -n "console.log.*originalInstructors\|console.log.*trainees\|console.log.*syllabusDetails" /workspace/App.tsx
-
-# Check build status
-ls -la /workspace/dist/
-
-# Check git status
-git status
-git log --oneline -5
-```
+5. **Test in production:**
+   - Visit https://dfp-neo.com/flight-school-app/
+   - Hard refresh (Ctrl+Shift+R)
+   - Verify no purple buttons appear
 
 ---
 
-**Last Updated:** 2025-01-08  
-**Maintained By:** SuperNinja Bot  
-**Project:** DFP-NEO Platform - Phase 4 Frontend Integration
+**Document Version:** 2.0  
+**Total Issues Documented:** 6  
+**All Issues:** ✅ RESOLVED  
+**Permanent Fixes:** 1 (Ninja Script Block - NEVER REMOVE)
