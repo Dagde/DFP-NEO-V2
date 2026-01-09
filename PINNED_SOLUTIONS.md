@@ -127,6 +127,112 @@ This error was first encountered on 2025-01-08 during Phase 4 frontend integrati
 
 ---
 
+## 🔴 CRITICAL: Course Progress and Training Records Pages Not Working
+
+### Symptoms
+- Course Progress page shows no data
+- Training Records page shows no data
+- Pages appear blank or empty after backend integration
+
+### Root Cause
+After backend integration, the `initializeData()` function in `/workspace/lib/dataService.ts` had a temporary fix that forced mock data but returned `courses: []` (empty array). This caused the Course Progress and Training Records pages to have no course data to display.
+
+**Problematic Code:**
+```typescript
+// TEMPORARY FIX: Force use mock data to test NEO Build
+return {
+  instructors: ESL_DATA.instructors,
+  trainees: ESL_DATA.trainees,
+  events: ESL_DATA.events,
+  scores: ESL_DATA.scores,
+  pt051Assessments: new Map(),
+  courses: [],  // ❌ EMPTY - causes pages to fail
+  courseColors: ESL_DATA.courseColors,
+  // ...
+};
+```
+
+### Solution
+
+**Approach 1: Fix the temporary fix (QUICKEST)**
+Change `courses: []` to `courses: ESL_DATA.courses`:
+
+```bash
+sed -i 's/courses: \[\]/courses: ESL_DATA.courses/' /workspace/lib/dataService.ts
+```
+
+**Approach 2: Remove temporary fix completely (PROPER)**
+Remove the entire temporary mock data block and let the function load from API/localStorage properly.
+
+**Approach 3: Add fallback for courses (ROBUST)**
+Add fallback to load courses from mock data if empty in localStorage:
+
+```typescript
+// Load courses from mock data if empty
+if (courses.length === 0) {
+  console.log("⚠️ Courses empty, loading from mock data");
+  const { ESL_DATA } = await import("../mockData");
+  courses = ESL_DATA.courses;
+  courseColors = ESL_DATA.courseColors;
+  // ...
+}
+```
+
+### Implementation Steps
+
+1. **Apply the fix:**
+   ```bash
+   cd /workspace
+   sed -i 's/courses: \[\]/courses: ESL_DATA.courses/' lib/dataService.ts
+   ```
+
+2. **Build the application:**
+   ```bash
+   npm run build
+   ```
+
+3. **Copy to production:**
+   ```bash
+   cp -r dist/* dfp-neo-platform/public/flight-school-app/
+   ```
+
+4. **Commit and push:**
+   ```bash
+   git add -A
+   git commit -m "Fix Course Progress and Training Records pages"
+   git push origin feature/comprehensive-build-algorithm
+   ```
+
+### Why This Works
+
+1. **Populates courses data**: Pages now have course data to display
+2. **Maintains functionality**: Doesn't change how pages work
+3. **Uses existing mock data**: Leverages the well-tested mock course data
+4. **Minimal changes**: Single line change, low risk
+
+### Verification
+
+After deployment:
+1. Open Course Progress page - should show course cards
+2. Open Training Records page - should show course management
+3. Check browser console for: `⚠️ TEMPORARY: FORCING MOCK DATA TO TEST NEO BUILD`
+4. Verify courses are displayed with proper colors
+
+### Historical Context
+This issue appeared immediately after backend integration was completed. The temporary mock data fix was added to test NEO Build but had `courses: []` which broke Course Progress and Training Records pages.
+
+**Commit:** `f40762d` - "Fix Course Progress and Training Records pages - populate courses data from mock data instead of empty array"
+
+### Prevention
+
+To prevent this from happening again:
+1. **Review all data fields** when adding temporary fixes
+2. **Test all pages** after any data service changes
+3. **Don't return empty arrays** for critical data structures
+4. **Use fallback data** instead of empty arrays
+
+---
+
 ## 🔴 CRITICAL: Map Deserialization Issue in localStorage
 
 ### Symptoms
