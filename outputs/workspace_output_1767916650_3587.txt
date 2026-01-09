@@ -1,0 +1,25 @@
+[feature/comprehensive-build-algorithm d900efa] Restore purple button fix - re-add purple-button-fix.js and script reference to index.html
+ 23 files changed, 813 insertions(+)
+ create mode 100644 Screen Shot 2026-01-09 at 10.52.17 am.jpg
+ create mode 100644 dfp-neo-platform/public/flight-school-app/purple-button-fix.js
+ create mode 100644 dfp-neo-platform/public/purple-button-fix.js
+ create mode 100644 outputs/workspace_output_1767911971_8890.txt
+ create mode 100644 outputs/workspace_output_1767916094_8404.txt
+ create mode 100644 outputs/workspace_output_1767916433_8866.txt
+ create mode 100644 outputs/workspace_output_1767916438_4941.txt
+ create mode 100644 outputs/workspace_output_1767916444_8657.txt
+ create mode 100644 outputs/workspace_output_1767916449_2543.txt
+ create mode 100644 outputs/workspace_output_1767916455_5720.txt
+ create mode 100644 outputs/workspace_output_1767916460_4841.txt
+ create mode 100644 outputs/workspace_output_1767916472_974.txt
+ create mode 100644 outputs/workspace_output_1767916476_1354.txt
+ create mode 100644 outputs/workspace_output_1767916481_3045.txt
+ create mode 100644 outputs/workspace_output_1767916493_3093.txt
+ create mode 100644 outputs/workspace_output_1767916598_9611.txt
+ create mode 100644 outputs/workspace_output_1767916621_9810.txt
+ create mode 100644 outputs/workspace_output_1767916635_9877.txt
+ create mode 100644 outputs/workspace_output_1767916640_394.txt
+ create mode 100644 outputs/workspace_output_1767916644_3377.txt
+ create mode 100644 outputs/workspace_output_1767916650_3587.txt
+To https://github.com/Dagde/DFP---NEO.git
+   0adacc2..d900efa  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
