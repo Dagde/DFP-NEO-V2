@@ -1,0 +1,19 @@
+Saved working directory and index state WIP on feature/comprehensive-build-algorithm: 207558a Make Course.studentCount optional to prevent deployment failure
+Note: switching to 'v1.0-stable-before-integration'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+HEAD is now at b39e2ee Phase 3: Create API routes for personnel, aircraft, schedule, and unavailability

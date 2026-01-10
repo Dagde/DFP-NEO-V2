@@ -1,0 +1,7 @@
+Switched to a new branch 'restore-stable-version'
+remote: 
+remote: Create a pull request for 'restore-stable-version' on GitHub by visiting:        
+remote:      https://github.com/Dagde/DFP---NEO/pull/new/restore-stable-version        
+remote: 
+To https://github.com/Dagde/DFP---NEO.git
+ * [new branch]      restore-stable-version -> restore-stable-version

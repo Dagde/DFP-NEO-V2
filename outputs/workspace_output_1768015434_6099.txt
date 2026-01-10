@@ -1,0 +1,4 @@
+error: Your local changes to the following files would be overwritten by checkout:
+	dfp-neo-platform/public/flight-school-app/index.html
+Please commit your changes or stash them before you switch branches.
+Aborting
