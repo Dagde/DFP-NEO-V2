@@ -250,7 +250,10 @@ model Course {
   code          String   @unique
   startDate     String
   endDate       String
-  studentCount  Int?
+  armyCount     Int?
+  navyCount     Int?
+  raafCount     Int?
+  totalStudents Int?
   location      String
   unit          String
   status        String   @default("ACTIVE")
