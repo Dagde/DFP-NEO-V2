@@ -1863,9 +1863,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                </div>
                                <button
                                    onClick={() => handleToggleDataSource("staff")}
-                                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.staff ? \'bg-green-600\' : \'bg-gray-600\'}`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.staff ? 'bg-green-600' : 'bg-gray-600'}`}
                                >
-                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.staff ? \'translate-x-6\' : \'translate-x-1\'}`} />
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.staff ? 'translate-x-6' : 'translate-x-1'}`} />
                                </button>
                            </div>
 
@@ -1879,9 +1879,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                </div>
                                <button
                                    onClick={() => handleToggleDataSource("trainees")}
-                                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.trainees ? \'bg-green-600\' : \'bg-gray-600\'}`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.trainees ? 'bg-green-600' : 'bg-gray-600'}`}
                                >
-                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.trainees ? \'translate-x-6\' : \'translate-x-1\'}`} />
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.trainees ? 'translate-x-6' : 'translate-x-1'}`} />
                                </button>
                            </div>
 
@@ -1895,9 +1895,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                </div>
                                <button
                                    onClick={() => handleToggleDataSource("courses")}
-                                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.courses ? \'bg-green-600\' : \'bg-gray-600\'}`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.courses ? 'bg-green-600' : 'bg-gray-600'}`}
                                >
-                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.courses ? \'translate-x-6\' : \'translate-x-1\'}`} />
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.courses ? 'translate-x-6' : 'translate-x-1'}`} />
                                </button>
                            </div>
 
