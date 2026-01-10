@@ -1,0 +1,19 @@
+    // Set current user for audit logging
+    useEffect(() => {
+        if (currentUser) {
+            const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
+            setCurrentUser(userString);
+        }
+    }, [currentUser]);
+    
+    // User change handler
+    const handleUserChange = (userName: string) => {
+        setCurrentUserName(userName);
+        const newUser = instructorsData.find(inst => inst.name === userName);
+        if (newUser) {
+            setCurrentUserId(newUser.idNumber);
+        }
+    };
+    // Find the highest permission level - prioritize Super Admin, then Admin, etc.
+    const getHighestPermission = (permissions?: string[]): 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor' => {
+        if (!permissions || permissions.length === 0) return 'Staff';
