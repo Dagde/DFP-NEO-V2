@@ -1,0 +1,10 @@
+/workspace/PURPLE_BUTTON_FIX_FINAL.md
+/workspace/PURPLE_BUTTON_FIX.md
+/workspace/dfp-neo-platform/public/flight-school-app/_next/purple-fix-1767504792915
+/workspace/dfp-neo-platform/node_modules/caniuse-lite/data/features/css-rebeccapurple.js
+/workspace/NUCLEAR_PURPLE_FIX_EXPLANATION.md
+/workspace/node_modules/caniuse-lite/data/features/css-rebeccapurple.js
+/workspace/PURPLE_BUTTONS_FIX.md
+/workspace/COMPREHENSIVE_PURPLE_BUTTON_FIX.md
+/workspace/PURPLE_BUTTON_FINAL_FIX.md
+/workspace/outputs/workspace_output_PURPLE_CSS_CODE_1731.txt

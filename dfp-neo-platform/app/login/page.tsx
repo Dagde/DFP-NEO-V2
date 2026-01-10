@@ -134,7 +134,7 @@ export default function LoginPage() {
       )}
 
       {/* LOGIN BUTTON */}
-      <div className="absolute bottom-[30px] scale-50">
+      <div className="absolute bottom-[30px] scale-100">
         <button 
           type="submit"
           disabled={isLoading}
