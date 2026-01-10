@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 // GET /api/scores - Get all scores, optionally filtered by trainee
 export async function GET(request: NextRequest) {
