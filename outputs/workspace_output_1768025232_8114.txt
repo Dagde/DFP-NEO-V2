@@ -1,0 +1,10 @@
+total 153572
+drwxr-xr-x 2 root root    4096 Jan 10 06:07 .
+drwxr-xr-x 5 root root    4096 Jan 10 06:05 ..
+-rw-r--r-- 1 root root  202432 Jan 10 06:07 html2canvas.esm-QH1iLAAe.js
+-rw-r--r-- 1 root root  603210 Jan 10 06:07 html2canvas.esm-QH1iLAAe.js.map
+-rw-r--r-- 1 root root 1761370 Jan 10 06:05 index-B32GbIkA.js
+-rw-r--r-- 1 root root 6307394 Jan 10 06:05 index-B32GbIkA.js.map
+-rw-r--r-- 1 root root 1761148 Jan 10 06:05 index-BCojCDFQ.js
+-rw-r--r-- 1 root root 6306687 Jan 10 06:05 index-BCojCDFQ.js.map
+-rw-r--r-- 1 root root 1761370 Jan 10 06:05 index-BiUszwTI.js

@@ -1,0 +1,5 @@
+8767307 Fix LMP bulk upload issue - filter events by LMP type
+ca5ace0 Fix LMP parsing and Individual LMP error
+bef775c Fix Settings button courseColors error and add comprehensive error handling
+0e52ed3 Merge remote - keeping local changes with Master LMP Day/Night implementation
+3d3f7fa Add Master LMP Day/Night field and fix conflict detection

@@ -1,0 +1,17 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://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@github.com/Dagde/DFP---NEO.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "feature/comprehensive-build-algorithm"]
+	remote = origin
+	merge = refs/heads/feature/comprehensive-build-algorithm
+[user]
+	email = bot@dfp-neo.com
+	name = SuperNinja Bot

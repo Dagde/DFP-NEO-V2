@@ -1,0 +1,21 @@
+                           onBulkUpdateInstructors(updatedInstructors);
+                           logAudit({
+                               page: 'Settings - Permissions',
+                               action: 'update',
+                               description: `Updated instructor permission: ${instructor?.name}`,
+                               changes: `From: ${oldPermission} To: ${permissionLevel}`
+                           });
+                       }}
+                       onUpdateTraineePermission={(idNumber, permissionLevel) => {
+                           const trainee = traineesData.find(t => t.idNumber === idNumber);
+                           const oldPermission = trainee?.permissions?.[0] || 'None';
+                           const updatedTrainees = traineesData.map(t => 
+                               t.idNumber === idNumber 
+                                   ? { ...t, permissions: [permissionLevel] }
+                                   : t
+                           );
+                           onBulkUpdateTrainees(updatedTrainees);
+                           logAudit({
+                               page: 'Settings - Permissions',
+                               action: 'update',
+                               description: `Updated trainee permission: ${trainee?.name}`,

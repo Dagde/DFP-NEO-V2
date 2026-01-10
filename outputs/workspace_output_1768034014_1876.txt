@@ -1,0 +1,100 @@
+                                <legend className="px-2 text-sm font-semibold text-gray-300">Trainees</legend>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Max Flight/FTD:</span>
+                                        {isEditingLimits ? (
+                                            <input type="number" value={tempLimits.trainee.maxFlightFtd || 1} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                        ) : <span className="text-white font-mono">1</span>}
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Max total all events:</span>
+                                        {isEditingLimits ? (
+                                            <input type="number" value={tempLimits.trainee.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, trainee: {maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                        ) : <span className="text-white font-mono">2</span>}
+                                    </div>
+                                </div>
+                            </fieldset>
+                            {/* SIM IPs */}
+                            <fieldset className="p-3 border border-gray-600 rounded-lg">
+                                <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Max FTD:</span>
+                                        {isEditingLimits ? (
+                                            <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                        ) : <span className="text-white font-mono">2</span>}
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Max total all events:</span>
+                                        {isEditingLimits ? (
+                                            <input type="number" value={tempLimits.simIp.maxTotal || 2} onChange={e => setTempLimits({...tempLimits, simIp: {maxTotal: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
+                                        ) : <span className="text-white font-mono">2</span>}
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+
+                   )}
+                   {/* Permissions Manager Window */}
+                   {activeSection === 'permissions' && (
+                   <PermissionsManagerWindow
+                       instructors={instructorsData}
+                       trainees={traineesData}
+                       onUpdateInstructorPermission={(idNumber, permissionLevel) => {
+                           const instructor = instructorsData.find(inst => inst.idNumber === idNumber);
+                           const oldPermission = instructor?.permissions?.[0] || 'None';
+                           const updatedInstructors = instructorsData.map(inst => 
+                               inst.idNumber === idNumber 
+                                   ? { ...inst, permissions: [permissionLevel] }
+                                   : inst
+                           );
+                           onBulkUpdateInstructors(updatedInstructors);
+                           logAudit({
+                               page: 'Settings - Permissions',
+                               action: 'update',
+                               description: `Updated instructor permission: ${instructor?.name}`,
+                               changes: `From: ${oldPermission} To: ${permissionLevel}`
+                           });
+                       }}
+                       onUpdateTraineePermission={(idNumber, permissionLevel) => {
+                           const trainee = traineesData.find(t => t.idNumber === idNumber);
+                           const oldPermission = trainee?.permissions?.[0] || 'None';
+                           const updatedTrainees = traineesData.map(t => 
+                               t.idNumber === idNumber 
+                                   ? { ...t, permissions: [permissionLevel] }
+                                   : t
+                           );
+                           onBulkUpdateTrainees(updatedTrainees);
+                           logAudit({
+                               page: 'Settings - Permissions',
+                               action: 'update',
+                               description: `Updated trainee permission: ${trainee?.name}`,
+                               changes: `From: ${oldPermission} To: ${permissionLevel}`
+                           });
+                       }}
+                       onShowSuccess={onShowSuccess}
+                          currentUserPermission={currentUserPermission}
+                   />
+
+                   )}
+               </div>
+               {showScoringMatrix && <ScoringMatrixFlyout onClose={() => setShowScoringMatrix(false)} phraseBank={phraseBank} onUpdatePhraseBank={handleUpdatePhraseBank} initialTab={scoringMatrixTab} />}
+            {showUpload && <UploadFileFlyout onClose={() => setShowUpload(false)} onConfirm={handleUploadConfirm} />}
+            {showSelectDestination && fileToUpload && <SelectDestinationFlyout onClose={() => setShowSelectDestination(false)} onConfirm={handleDestinationConfirm} fileName={fileToUpload.name} folders={folders.filter(f => !(f as any).isSub)} />}
+            {fileToDownload && <DownloadConfirmationFlyout fileName={fileToDownload.name} onConfirm={handleDownloadConfirm} onClose={() => setFileToDownload(null)} />}
+            {fileToDelete && <DeleteFileConfirmationFlyout fileName={fileToDelete.name} onConfirm={handleDeleteConfirm} onClose={() => setFileToDelete(null)} />}
+            {showUpdateConfirmation && fileToProcess && <UpdateConfirmationFlyout fileName={fileToProcess.name} onConfirm={handleUpdateConfirm} onClose={() => setShowUpdateConfirmation(false)} />}
+            {showNewRecordConfirm && unmatchedRowData && <NewRecordConfirmationFlyout rowData={unmatchedRowData} onConfirm={handleConfirmNewRecord} onCancel={handleRejectNewRecord} />}
+            {showUpdateError && <UpdateErrorFlyout message={updateErrorMessage} onClose={() => setShowUpdateError(false)} />}
+            {showUpdateSummary && <UpdateSummaryFlyout summary={updateSummary} onClose={() => setShowUpdateSummary(false)} />}
+            <CourseSelectionDialog
+                isOpen={showCourseSelection}
+                courses={courseOptions}
+                onSelect={handleCourseSelection}
+                onCancel={handleCourseSelectionCancel}
+                mode={updateMode}
+            />
+        </>
+    );
+};

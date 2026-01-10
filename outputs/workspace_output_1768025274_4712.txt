@@ -1,0 +1,21 @@
+On branch deploy-data-source-toggle
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   public/flight-school-app/assets/index-CUxjHfJw.js
+	new file:   public/flight-school-app/assets/index-CUxjHfJw.js.map
+	new file:   public/flight-school-app/assets/index.es-CUhFaOHz.js
+	new file:   public/flight-school-app/assets/index.es-CUhFaOHz.js.map
+	modified:   public/flight-school-app/index.html
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	../outputs/workspace_output_1768025168_9131.txt
+	../outputs/workspace_output_1768025180_782.txt
+	../outputs/workspace_output_1768025196_6932.txt
+	../outputs/workspace_output_1768025208_4808.txt
+	../outputs/workspace_output_1768025220_9806.txt
+	../outputs/workspace_output_1768025232_8114.txt
+	../outputs/workspace_output_1768025244_2123.txt
+	../outputs/workspace_output_1768025253_7976.txt
+	../outputs/workspace_output_1768025274_4712.txt
+

@@ -1,0 +1,3 @@
+52:type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'data-source';
+115:        { id: 'permissions' as const, label: 'Permissions', icon: (
+171:                            {activeSection === 'permissions' && 'Permissions Manager'}

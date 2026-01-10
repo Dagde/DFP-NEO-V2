@@ -1,0 +1,127 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	new file:   dfp-neo-platform/public/flight-school-app/LMP_Syllabus_Template.xlsx
+	new file:   dfp-neo-platform/public/flight-school-app/Staff_Bulk_Update_Template.xlsx
+	new file:   dfp-neo-platform/public/flight-school-app/Trainee_Bulk_Update_Template.xlsx
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/199-d68807470d310e91.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/255-cb395327542b56ef.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/394-b9e790b2947ff25e.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/4bd1b696-c023c6e3521b1417.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/_not-found/page-cfbe4427268781e3.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/admin/layout-44bb4d322ea52bfb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/admin/page-d2f12d515f051f0a.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/admin/users/page-e446a69d637ba9fb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/api/admin/users/[id]/route-44bb4d322ea52bfb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/api/admin/users/route-44bb4d322ea52bfb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/api/auth/[...nextauth]/route-44bb4d322ea52bfb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/api/schedule/filter/route-44bb4d322ea52bfb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/flight-school/page-43a47b35d5864f47.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/layout-3e3db7a0250679b1.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/login/page-f932b0b6371b25ca.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/page-44bb4d322ea52bfb.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/select/page-4d1828d48f4e224b.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/app/test-login/page-891ecc2c7dda7b2d.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/framework-d7de93249215fb06.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/main-a4753544b5b73813.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/main-app-c5d5af050ad54be3.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/pages/_app-7d307437aca18ad4.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/pages/_error-cb2a52f75f2162e2.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/polyfills-42372ed130431b0a.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/chunks/webpack-74c939c87fa0092a.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/css/01aee2f2811cbcaf.css
+	new file:   dfp-neo-platform/public/flight-school-app/_next/purple-fix-1767504792915/_buildManifest.js
+	new file:   dfp-neo-platform/public/flight-school-app/_next/purple-fix-1767504792915/_ssgManifest.js
+	new file:   dfp-neo-platform/public/flight-school-app/aircraft-icon.png
+	new file:   dfp-neo-platform/public/flight-school-app/assets/html2canvas.esm-QH1iLAAe.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/html2canvas.esm-QH1iLAAe.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-B32GbIkA.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-B32GbIkA.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-BCojCDFQ.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-BCojCDFQ.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-BiUszwTI.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-BiUszwTI.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-BjUJyT2V.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-BjUJyT2V.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-C-Gm8wkn.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-C-Gm8wkn.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-C2PVgj_X.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-C2PVgj_X.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CBAHxCMp.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CBAHxCMp.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CGq4LvfV.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CGq4LvfV.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CHdj6ICi.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CHdj6ICi.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CT8kx44m.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CT8kx44m.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CUxjHfJw.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CUxjHfJw.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CjcVQ336.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CjcVQ336.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CmDcbMTV.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-CmDcbMTV.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-Cu9GSreP.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-Cu9GSreP.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-DPqDFPki.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-DPqDFPki.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-DfaaHY89.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-DfaaHY89.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-uPhlgI5U.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index-uPhlgI5U.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es--BGTW5mc.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es--BGTW5mc.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-AtibyXJT.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-AtibyXJT.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-B9ciJOxM.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-B9ciJOxM.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-BDmStvbc.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-BDmStvbc.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-BIJ1rrCB.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-BIJ1rrCB.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-Be3I38yG.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-Be3I38yG.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-Bely8mM-.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-Bely8mM-.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-C3uMvCpb.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-C3uMvCpb.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-C6t8m4sl.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-C6t8m4sl.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-CUhFaOHz.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-CUhFaOHz.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-CjJEz6d0.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-CjJEz6d0.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-D-CxPbrL.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-D-CxPbrL.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-DRfgMC1f.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-DRfgMC1f.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-DVbKqt2L.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-DVbKqt2L.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-DgtSD4eD.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-DgtSD4eD.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-E2uVTJzD.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-E2uVTJzD.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-YN8ENOcZ.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/index.es-YN8ENOcZ.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/assets/purify.es-B9ZVCkUG.js
+	new file:   dfp-neo-platform/public/flight-school-app/assets/purify.es-B9ZVCkUG.js.map
+	new file:   dfp-neo-platform/public/flight-school-app/hide-buttons.js
+	new file:   dfp-neo-platform/public/flight-school-app/icons/multi-select-icon.png
+	new file:   dfp-neo-platform/public/flight-school-app/icons/warning-icon.png
+	new file:   dfp-neo-platform/public/flight-school-app/index.html
+	new file:   dfp-neo-platform/public/flight-school-app/index.html.backup
+	new file:   dfp-neo-platform/public/flight-school-app/multi-select-icon.png
+	new file:   dfp-neo-platform/public/flight-school-app/priority-analysis.html
+	new file:   dfp-neo-platform/public/flight-school-app/test-formation.html
+	new file:   dfp-neo-platform/public/flight-school-app/warning-icon.png
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	Screen Shot 2026-01-10 at 5.36.40 pm.jpg
+	dfp-neo-platform/.env
+	dfp-neo-platform/.next/
+	dfp-neo-platform/next-env.d.ts
+	outputs/
+

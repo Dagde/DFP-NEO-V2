@@ -1,0 +1,1000 @@
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (0ee84237-9085-4b90-9a2c-2931189aeae6) - personnel
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (bf561777-68b6-4a01-95a5-8f246aaa85e6) - personnel
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (7a5b3461-8d4e-4809-b7cb-3c6d87b5018c) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (23ce3af8-f353-47e8-a4e7-4f1e2dcd958d) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF MB3 (036b768b-0d2b-445d-b376-a0a5e9e7cb77) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: undefined
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(11)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (5a7c6df9-49ce-47b1-a48c-38dba70fa10a) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF19 (12c5560a-1fb7-426d-9a04-198418562510) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (99b79fa5-1138-4372-b636-c6efb9f9486d) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (60dd8b65-8f5a-4f7e-8808-8c34d215e2cb) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (22024740-4e8d-4bfc-9909-b22a0c96da68) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (3dedec2b-b243-433b-9edf-b6fcde8f651b) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF5 (1da70beb-1728-4169-b677-d2183d344b94) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e10e95f6-a2c3-4a4b-b69d-93090d02d725) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (7a0e7df4-9b48-44f2-b617-4ade423607ba) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (1aadacc6-98e3-4d61-ab39-4a023df03975) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (cc54c1de-3189-4099-a5c9-f8e5660801ba) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (ee0fc311-7619-49cf-bd9f-3b1b5ceaf575) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF13 (74e1dfbb-e9f4-4707-a50f-1f5500ed9ce5) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (a9dfbcac-36b0-49d6-99d5-4dfb32c0dc6f) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (318c9519-ed99-4e54-aa82-29891280846c) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (9e4c36bd-2f45-4fcf-b64b-f6433b305df7) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (28b68b8b-3686-4603-86b6-589a1c16cc9e) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (a5854e0d-9740-40b6-93cd-efe413e8201a) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (37e784f9-cd86-4598-a560-afe5dbb96991) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (183ccae1-16b4-44bf-b765-31597fcc8151) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (fd7ecb8d-c9ab-43d3-8537-3d26ef974c20) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (ed613be1-d791-4003-a7a7-c7414837be43) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (e17718e4-afa7-41ec-8c12-fd8b13dfa272) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (771b2aa6-60ec-4ef7-a54c-39b6bb7a248e) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (f44078d5-08a3-440e-8829-3eb0a8c483a7) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (9a4d5c10-fdde-4e9a-a3e1-103073811645) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (5a4f2923-8098-404c-bbde-16bf764d9940) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (8e9dcf8e-c694-4bc7-ad96-66c3b31568ff) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (fc05056e-489b-4335-a38d-81fe3365ead5) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (a1a840a8-e6f1-46e1-9429-31bff13f3c2f) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (ce118c8d-6876-4044-b560-9244e6d3abb5) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (b40e24cf-7543-4be3-a666-d1c71e496930) - personnel
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (0698a61c-b5fc-4e03-b9e4-5214d73fbd2b) - personnel
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (8b8c256c-a335-435d-b8a4-d62f421a537d) - personnel
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF9 (1d43212b-33c9-4a34-b294-e5268ec92c2f) - personnel
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (7894da60-53b5-4aaf-afa7-308778d9b8f5) - personnel
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (0d47f972-dac1-429e-a2d6-7b96c730bd50) - personnel
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF11 (697445d3-4084-4a1a-9e15-4f58220f0487) - personnel
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (856c9739-4a82-42ff-a28d-9f61e33a1bcd) - personnel
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (6fed611f-c70d-4df2-8340-bb2c40a69646) - personnel
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (95a4d950-e0c2-4526-9c37-c2c5be82380b) - personnel
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF22 (9718cc61-d278-4aed-ac6a-2bbf69a3f715) - personnel
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF22 (611cda29-8a14-4ab0-8f39-d55571f69e42) - personnel
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (0ee84237-9085-4b90-9a2c-2931189aeae6) - personnel
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (bf561777-68b6-4a01-95a5-8f246aaa85e6) - personnel
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (7a5b3461-8d4e-4809-b7cb-3c6d87b5018c) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (23ce3af8-f353-47e8-a4e7-4f1e2dcd958d) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF MB3 (036b768b-0d2b-445d-b376-a0a5e9e7cb77) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: undefined
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(11)
+ Global mouse up called, draggingState exists: false
+ buildResources - Current view: Settings Current date: 2026-01-10
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ buildResources - Current view: Settings Current date: 2026-01-10
+ deploymentCount: 0
+ Built all resources: Array(45) STBY lines: 4
+ 🔴 ❌ CONFLICT FOUND: BGF6 (5a7c6df9-49ce-47b1-a48c-38dba70fa10a) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF19 (12c5560a-1fb7-426d-9a04-198418562510) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (99b79fa5-1138-4372-b636-c6efb9f9486d) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (60dd8b65-8f5a-4f7e-8808-8c34d215e2cb) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (22024740-4e8d-4bfc-9909-b22a0c96da68) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (3dedec2b-b243-433b-9edf-b6fcde8f651b) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF5 (1da70beb-1728-4169-b677-d2183d344b94) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e10e95f6-a2c3-4a4b-b69d-93090d02d725) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (7a0e7df4-9b48-44f2-b617-4ade423607ba) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (1aadacc6-98e3-4d61-ab39-4a023df03975) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (cc54c1de-3189-4099-a5c9-f8e5660801ba) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (ee0fc311-7619-49cf-bd9f-3b1b5ceaf575) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF13 (74e1dfbb-e9f4-4707-a50f-1f5500ed9ce5) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (a9dfbcac-36b0-49d6-99d5-4dfb32c0dc6f) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (318c9519-ed99-4e54-aa82-29891280846c) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (9e4c36bd-2f45-4fcf-b64b-f6433b305df7) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (28b68b8b-3686-4603-86b6-589a1c16cc9e) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (a5854e0d-9740-40b6-93cd-efe413e8201a) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (37e784f9-cd86-4598-a560-afe5dbb96991) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (183ccae1-16b4-44bf-b765-31597fcc8151) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (fd7ecb8d-c9ab-43d3-8537-3d26ef974c20) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (ed613be1-d791-4003-a7a7-c7414837be43) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (e17718e4-afa7-41ec-8c12-fd8b13dfa272) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (771b2aa6-60ec-4ef7-a54c-39b6bb7a248e) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (f44078d5-08a3-440e-8829-3eb0a8c483a7) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (9a4d5c10-fdde-4e9a-a3e1-103073811645) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (5a4f2923-8098-404c-bbde-16bf764d9940) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (8e9dcf8e-c694-4bc7-ad96-66c3b31568ff) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (fc05056e-489b-4335-a38d-81fe3365ead5) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (a1a840a8-e6f1-46e1-9429-31bff13f3c2f) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (ce118c8d-6876-4044-b560-9244e6d3abb5) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (b40e24cf-7543-4be3-a666-d1c71e496930) - personnel
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (0698a61c-b5fc-4e03-b9e4-5214d73fbd2b) - personnel
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (8b8c256c-a335-435d-b8a4-d62f421a537d) - personnel
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF9 (1d43212b-33c9-4a34-b294-e5268ec92c2f) - personnel
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (7894da60-53b5-4aaf-afa7-308778d9b8f5) - personnel
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (0d47f972-dac1-429e-a2d6-7b96c730bd50) - personnel
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF11 (697445d3-4084-4a1a-9e15-4f58220f0487) - personnel
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (856c9739-4a82-42ff-a28d-9f61e33a1bcd) - personnel
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (6fed611f-c70d-4df2-8340-bb2c40a69646) - personnel
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (95a4d950-e0c2-4526-9c37-c2c5be82380b) - personnel
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF22 (9718cc61-d278-4aed-ac6a-2bbf69a3f715) - personnel
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF22 (611cda29-8a14-4ab0-8f39-d55571f69e42) - personnel
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (0ee84237-9085-4b90-9a2c-2931189aeae6) - personnel
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (bf561777-68b6-4a01-95a5-8f246aaa85e6) - personnel
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (7a5b3461-8d4e-4809-b7cb-3c6d87b5018c) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (23ce3af8-f353-47e8-a4e7-4f1e2dcd958d) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF MB3 (036b768b-0d2b-445d-b376-a0a5e9e7cb77) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: undefined
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(11)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (5a7c6df9-49ce-47b1-a48c-38dba70fa10a) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF19 (12c5560a-1fb7-426d-9a04-198418562510) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (99b79fa5-1138-4372-b636-c6efb9f9486d) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (60dd8b65-8f5a-4f7e-8808-8c34d215e2cb) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (22024740-4e8d-4bfc-9909-b22a0c96da68) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (3dedec2b-b243-433b-9edf-b6fcde8f651b) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF5 (1da70beb-1728-4169-b677-d2183d344b94) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e10e95f6-a2c3-4a4b-b69d-93090d02d725) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (7a0e7df4-9b48-44f2-b617-4ade423607ba) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (1aadacc6-98e3-4d61-ab39-4a023df03975) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (cc54c1de-3189-4099-a5c9-f8e5660801ba) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (ee0fc311-7619-49cf-bd9f-3b1b5ceaf575) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF13 (74e1dfbb-e9f4-4707-a50f-1f5500ed9ce5) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (a9dfbcac-36b0-49d6-99d5-4dfb32c0dc6f) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (318c9519-ed99-4e54-aa82-29891280846c) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (9e4c36bd-2f45-4fcf-b64b-f6433b305df7) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (28b68b8b-3686-4603-86b6-589a1c16cc9e) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (a5854e0d-9740-40b6-93cd-efe413e8201a) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (37e784f9-cd86-4598-a560-afe5dbb96991) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (183ccae1-16b4-44bf-b765-31597fcc8151) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (fd7ecb8d-c9ab-43d3-8537-3d26ef974c20) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (ed613be1-d791-4003-a7a7-c7414837be43) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (e17718e4-afa7-41ec-8c12-fd8b13dfa272) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (771b2aa6-60ec-4ef7-a54c-39b6bb7a248e) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (f44078d5-08a3-440e-8829-3eb0a8c483a7) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (9a4d5c10-fdde-4e9a-a3e1-103073811645) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (5a4f2923-8098-404c-bbde-16bf764d9940) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (8e9dcf8e-c694-4bc7-ad96-66c3b31568ff) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (fc05056e-489b-4335-a38d-81fe3365ead5) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (a1a840a8-e6f1-46e1-9429-31bff13f3c2f) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (ce118c8d-6876-4044-b560-9244e6d3abb5) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (b40e24cf-7543-4be3-a666-d1c71e496930) - personnel
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (0698a61c-b5fc-4e03-b9e4-5214d73fbd2b) - personnel
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (8b8c256c-a335-435d-b8a4-d62f421a537d) - personnel
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF9 (1d43212b-33c9-4a34-b294-e5268ec92c2f) - personnel
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (7894da60-53b5-4aaf-afa7-308778d9b8f5) - personnel
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (0d47f972-dac1-429e-a2d6-7b96c730bd50) - personnel
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF11 (697445d3-4084-4a1a-9e15-4f58220f0487) - personnel
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (856c9739-4a82-42ff-a28d-9f61e33a1bcd) - personnel
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (6fed611f-c70d-4df2-8340-bb2c40a69646) - personnel
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (95a4d950-e0c2-4526-9c37-c2c5be82380b) - personnel
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF22 (9718cc61-d278-4aed-ac6a-2bbf69a3f715) - personnel
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF22 (611cda29-8a14-4ab0-8f39-d55571f69e42) - personnel
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (0ee84237-9085-4b90-9a2c-2931189aeae6) - personnel
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (bf561777-68b6-4a01-95a5-8f246aaa85e6) - personnel
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (7a5b3461-8d4e-4809-b7cb-3c6d87b5018c) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD6 (23ce3af8-f353-47e8-a4e7-4f1e2dcd958d) - personnel
+ 🔴 Event instructor: King, Michael
+ 🔴 Event student: Hill, Richard – ADF301
+ 🔴 Event pilot: King, Michael
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF MB3 (036b768b-0d2b-445d-b376-a0a5e9e7cb77) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: undefined
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(11)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (5a7c6df9-49ce-47b1-a48c-38dba70fa10a) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF19 (12c5560a-1fb7-426d-9a04-198418562510) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (99b79fa5-1138-4372-b636-c6efb9f9486d) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (60dd8b65-8f5a-4f7e-8808-8c34d215e2cb) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (22024740-4e8d-4bfc-9909-b22a0c96da68) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF6 (3dedec2b-b243-433b-9edf-b6fcde8f651b) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF5 (1da70beb-1728-4169-b677-d2183d344b94) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e10e95f6-a2c3-4a4b-b69d-93090d02d725) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (7a0e7df4-9b48-44f2-b617-4ade423607ba) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF1 (1aadacc6-98e3-4d61-ab39-4a023df03975) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (cc54c1de-3189-4099-a5c9-f8e5660801ba) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (ee0fc311-7619-49cf-bd9f-3b1b5ceaf575) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF13 (74e1dfbb-e9f4-4707-a50f-1f5500ed9ce5) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (a9dfbcac-36b0-49d6-99d5-4dfb32c0dc6f) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (318c9519-ed99-4e54-aa82-29891280846c) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (9e4c36bd-2f45-4fcf-b64b-f6433b305df7) - turnaround
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (28b68b8b-3686-4603-86b6-589a1c16cc9e) - turnaround
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (a5854e0d-9740-40b6-93cd-efe413e8201a) - turnaround
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (37e784f9-cd86-4598-a560-afe5dbb96991) - turnaround
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF20 (183ccae1-16b4-44bf-b765-31597fcc8151) - turnaround
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF18 (fd7ecb8d-c9ab-43d3-8537-3d26ef974c20) - turnaround
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF12 (ed613be1-d791-4003-a7a7-c7414837be43) - turnaround
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (e17718e4-afa7-41ec-8c12-fd8b13dfa272) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (771b2aa6-60ec-4ef7-a54c-39b6bb7a248e) - turnaround
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+ 🔴 Event pilot: Brown, Mia
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (f44078d5-08a3-440e-8829-3eb0a8c483a7) - turnaround
+ 🔴 Event instructor: Brown, Robert
+ 🔴 Event student: Anderson, Daniel – ADF301
+ 🔴 Event pilot: Brown, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (9a4d5c10-fdde-4e9a-a3e1-103073811645) - turnaround
+ 🔴 Event instructor: Clark, Emily
+ 🔴 Event student: King, Linda – ADF301
+ 🔴 Event pilot: Clark, Emily
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF16 (5a4f2923-8098-404c-bbde-16bf764d9940) - turnaround
+ 🔴 Event instructor: Clark, Paul
+ 🔴 Event student: Davies, Olivia – ADF301
+ 🔴 Event pilot: Clark, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (8e9dcf8e-c694-4bc7-ad96-66c3b31568ff) - turnaround
+ 🔴 Event instructor: Evans, Charlotte
+ 🔴 Event student: Moore, David – ADF301
+ 🔴 Event pilot: Evans, Charlotte
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (fc05056e-489b-4335-a38d-81fe3365ead5) - turnaround
+ 🔴 Event instructor: Evans, Daniel
+ 🔴 Event student: Baker, Amelia – ADF301
+ 🔴 Event pilot: Evans, Daniel
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (a1a840a8-e6f1-46e1-9429-31bff13f3c2f) - turnaround
+ 🔴 Event instructor: Evans, Mark
+ 🔴 Event student: Morris, Emma – ADF301
+ 🔴 Event pilot: Evans, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (ce118c8d-6876-4044-b560-9244e6d3abb5) - personnel
+ 🔴 Event instructor: Clark, David
+ 🔴 Event student: Martin, Matthew – ADF301
+ 🔴 Event pilot: Clark, David
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF17 (b40e24cf-7543-4be3-a666-d1c71e496930) - personnel
+ 🔴 Event instructor: Jones, Robert
+ 🔴 Event student: King, Barbara – ADF301
+ 🔴 Event pilot: Jones, Robert
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (0698a61c-b5fc-4e03-b9e4-5214d73fbd2b) - personnel
+ 🔴 Event instructor: Lee, Elijah
+ 🔴 Event student: Baker, Harper – ADF301
+ 🔴 Event pilot: Lee, Elijah
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF15 (8b8c256c-a335-435d-b8a4-d62f421a537d) - personnel
+ 🔴 Event instructor: Roberts, Isabella
+ 🔴 Event student: Baker, Mia – ADF301
+ 🔴 Event pilot: Roberts, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF9 (1d43212b-33c9-4a34-b294-e5268ec92c2f) - personnel
+ 🔴 Event instructor: Roberts, Thomas
+ 🔴 Event student: Evans, Chris – ADF301
+ 🔴 Event pilot: Roberts, Thomas
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF7 (7894da60-53b5-4aaf-afa7-308778d9b8f5) - personnel
+ 🔴 Event instructor: Wood, Paul
+ 🔴 Event student: Smith, Linda – ADF301
+ 🔴 Event pilot: Wood, Paul
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (0d47f972-dac1-429e-a2d6-7b96c730bd50) - personnel
+ 🔴 Event instructor: Baker, Isabella
+ 🔴 Event student: Brown, Daniel – ADF301
+ 🔴 Event pilot: Baker, Isabella
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF11 (697445d3-4084-4a1a-9e15-4f58220f0487) - personnel
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Wright, Emma – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (856c9739-4a82-42ff-a28d-9f61e33a1bcd) - personnel
+ 🔴 Event instructor: Brown, Mia
+ 🔴 Event student: Clark, Robert – ADF301
+App.tsx:4071 🔴 Event pilot: Brown, Mia
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF12 (6fed611f-c70d-4df2-8340-bb2c40a69646) - personnel
+App.tsx:4069 🔴 Event instructor: Brown, Robert
+App.tsx:4070 🔴 Event student: Anderson, Daniel – ADF301
+App.tsx:4071 🔴 Event pilot: Brown, Robert
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF24 (95a4d950-e0c2-4526-9c37-c2c5be82380b) - personnel
+App.tsx:4069 🔴 Event instructor: Clark, Emily
+App.tsx:4070 🔴 Event student: King, Linda – ADF301
+App.tsx:4071 🔴 Event pilot: Clark, Emily
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF22 (9718cc61-d278-4aed-ac6a-2bbf69a3f715) - personnel
+App.tsx:4069 🔴 Event instructor: Clark, Paul
+App.tsx:4070 🔴 Event student: Davies, Olivia – ADF301
+App.tsx:4071 🔴 Event pilot: Clark, Paul
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF22 (611cda29-8a14-4ab0-8f39-d55571f69e42) - personnel
+App.tsx:4069 🔴 Event instructor: Evans, Charlotte
+App.tsx:4070 🔴 Event student: Moore, David – ADF301
+App.tsx:4071 🔴 Event pilot: Evans, Charlotte
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF15 (0ee84237-9085-4b90-9a2c-2931189aeae6) - personnel
+App.tsx:4069 🔴 Event instructor: Evans, Daniel
+App.tsx:4070 🔴 Event student: Baker, Amelia – ADF301
+App.tsx:4071 🔴 Event pilot: Evans, Daniel
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF1 (bf561777-68b6-4a01-95a5-8f246aaa85e6) - personnel
+App.tsx:4069 🔴 Event instructor: Evans, Mark
+App.tsx:4070 🔴 Event student: Morris, Emma – ADF301
+App.tsx:4071 🔴 Event pilot: Evans, Mark
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF FTD6 (7a5b3461-8d4e-4809-b7cb-3c6d87b5018c) - personnel
+App.tsx:4069 🔴 Event instructor: King, Michael
+App.tsx:4070 🔴 Event student: Hill, Richard – ADF301
+App.tsx:4071 🔴 Event pilot: King, Michael
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF FTD6 (23ce3af8-f353-47e8-a4e7-4f1e2dcd958d) - personnel
+App.tsx:4069 🔴 Event instructor: King, Michael
+App.tsx:4070 🔴 Event student: Hill, Richard – ADF301
+App.tsx:4071 🔴 Event pilot: King, Michael
+App.tsx:4072 🔴 Event personnel: Array(2)
+App.tsx:4068 🔴 ❌ CONFLICT FOUND: BGF MB3 (036b768b-0d2b-445d-b376-a0a5e9e7cb77) - personnel
+App.tsx:4069 🔴 Event instructor: Clark, David
+App.tsx:4070 🔴 Event student: undefined
+App.tsx:4071 🔴 Event pilot: Clark, David
+App.tsx:4072 🔴 Event personnel: Array(11)
+App.tsx:3473 🔄 useEffect triggered - activeView: Settings remedialRequests count: 0
+App.tsx:3478 ⏸️ Not syncing - activeView is: Settings
+App.tsx:7052 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+App.tsx:7053 🟠 neoProblemTileForFlyout: CLOSED
+App.tsx:7057 🟠 NEO flyout is closed, skipping useEffect
+App.tsx:7058 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
