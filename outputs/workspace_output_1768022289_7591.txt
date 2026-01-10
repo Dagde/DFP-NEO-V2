@@ -1,0 +1,6 @@
+31:    activeSection?: string;
+70:    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions';
+129:    activeSection = 'scoring-matrix',
+265:        // If no activeSection is set, show all sections (standalone mode)
+266:        if (!activeSection) return true;
+268:        return activeSection === sectionName;

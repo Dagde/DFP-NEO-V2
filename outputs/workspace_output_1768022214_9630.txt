@@ -1,0 +1,20 @@
+                                Elements
+                            </button>
+                        </div>
+                    </div>
+                   )}
+
+                    {/* Location Window */}
+                   {shouldShowSection('location') && (
+                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
+                        <div className="p-4 flex justify-between items-center border-b border-gray-700">
+                            <h2 className="text-lg font-semibold text-gray-200">Location</h2>
+                            {isEditingLocations ? (
+                                <div className="flex space-x-2">
+                                    <button onClick={handleSaveLocations} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
+                                    <button onClick={handleCancelLocations} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
+                                </div>
+                            ) : (
+                                <button 
+                                   onClick={handleEditLocations} 
+                                   disabled={!canEditSettings}

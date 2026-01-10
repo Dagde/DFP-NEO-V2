@@ -1,0 +1,15 @@
+                   {shouldShowSection('permissions') && (
+                   <PermissionsManagerWindow
+                       instructors={instructorsData}
+                       trainees={traineesData}
+                       onUpdateInstructorPermission={(idNumber, permissionLevel) => {
+                           const instructor = instructorsData.find(inst => inst.idNumber === idNumber);
+                           const oldPermission = instructor?.permissions?.[0] || 'None';
+                           const updatedInstructors = instructorsData.map(inst => 
+                               inst.idNumber === idNumber 
+                                   ? { ...inst, permissions: [permissionLevel] }
+                                   : inst
+                           );
+                           onBulkUpdateInstructors(updatedInstructors);
+                           logAudit({
+                               page: 'Settings - Permissions',

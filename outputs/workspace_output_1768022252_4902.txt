@@ -1,0 +1,10 @@
+            {fileToDownload && <DownloadConfirmationFlyout fileName={fileToDownload.name} onConfirm={handleDownloadConfirm} onClose={() => setFileToDownload(null)} />}
+            {fileToDelete && <DeleteFileConfirmationFlyout fileName={fileToDelete.name} onConfirm={handleDeleteConfirm} onClose={() => setFileToDelete(null)} />}
+            {showUpdateConfirmation && fileToProcess && <UpdateConfirmationFlyout fileName={fileToProcess.name} onConfirm={handleUpdateConfirm} onClose={() => setShowUpdateConfirmation(false)} />}
+            {showCourseSelection && <CourseSelectionFlyout courses={activeCourses} onConfirm={handleCourseSelection} onClose={() => setShowCourseSelection(false)} updateType={selectedUpdateType} />}
+            {showNewRecordConfirm && unmatchedRowData && <NewRecordConfirmationFlyout rowData={unmatchedRowData} onConfirm={handleConfirmNewRecord} onCancel={handleRejectNewRecord} />}
+            {showUpdateError && <UpdateErrorFlyout message={updateErrorMessage} onClose={() => setShowUpdateError(false)} />}
+            {showUpdateSummary && <UpdateSummaryFlyout summary={updateSummary} onClose={() => setShowUpdateSummary(false)} />}
+        </>
+    );
+};export default SettingsView;

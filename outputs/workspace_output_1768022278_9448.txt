@@ -1,0 +1,10 @@
+11:import PermissionsManagerFlyout from './PermissionsManagerFlyout';
+20:import PermissionsManagerWindow from './PermissionsManagerWindow';
+59:    onUpdateTimezoneOffset: (offset: number) => void;
+133:    onUpdateTimezoneOffset,
+162:    // Permissions Manager State
+163:    const [showPermissionsManager, setShowPermissionsManager] = useState(false);
+858:        // Permissions - parse newline-separated list
+859:        const permissionsStr = getStr(row, ['Permissions', 'permissions']);
+1207:                {/* Timezone Settings Window */}
+1216:                                Timezone Offset (UTC)

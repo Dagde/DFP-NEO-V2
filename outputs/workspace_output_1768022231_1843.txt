@@ -1,0 +1,5 @@
+1507:                   {shouldShowSection('currencies') && (
+1539:                   {shouldShowSection('business-rules') && (
+1576:                   {shouldShowSection('data-loaders') && (
+1656:                   {shouldShowSection('event-limits') && (
+1766:                   {shouldShowSection('permissions') && (
