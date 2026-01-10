@@ -1,0 +1,3 @@
+52:type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'data-source';
+120:           { id: 'data-source' as const, label: 'Data Source', icon: (
+177:                               {activeSection === 'data-source' && 'Data Source'}
