@@ -1,0 +1,10 @@
+total 8
+drwxr-xr-x 9 root root  148 Jan 10 03:24 .
+drwxr-xr-x 9 root root 4096 Jan  7 06:30 ..
+drwxr-xr-x 3 root root   27 Jan  2 14:44 admin
+drwxr-xr-x 3 root root   34 Jan 10 03:24 aircraft
+drwxr-xr-x 9 root root 4096 Jan  7 06:30 auth
+drwxr-xr-x 5 root root   72 Jan  7 06:30 mobile
+drwxr-xr-x 3 root root   46 Jan 10 03:24 personnel
+drwxr-xr-x 3 root root   48 Jan 10 03:24 schedule
+drwxr-xr-x 3 root root   46 Jan  7 16:43 unavailability
