@@ -194,7 +194,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     // Update process state
     const [fileToProcess, setFileToProcess] = useState<{ id: string; name: string; folderId: string } | null>(null);
     const [showUpdateConfirmation, setShowUpdateConfirmation] = useState(false);
-    const [showCourseSelection, setShowCourseSelection] = useState(false);
+// Data Source Settings State
+    const [dataSourceSettings, setDataSourceSettings] = useState<{
+        staff: boolean;
+        trainees: boolean;
+        courses: boolean;
+    }>({
+        staff: true,  // ON = combined (DB + mock)
+        trainees: true,  // ON = combined (DB + mock)
+        courses: true,  // ON = combined (localStorage + mock)
+    });
+
+    // Load data source settings from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('dataSourceSettings');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setDataSourceSettings({
+                    staff: parsed.staff ?? true,
+                    trainees: parsed.trainees ?? true,
+                    courses: parsed.courses ?? true,
+                });
+            } catch (error) {
+                console.error('Error loading data source settings:', error);
+            }
+        }
+    }, []);
+
+    // Toggle handler
+    const handleToggleDataSource = (source: 'staff' | 'trainees' | 'courses') => {
+        const newSettings = {
+            ...dataSourceSettings,
+            [source]: !dataSourceSettings[source]
+        };
+        setDataSourceSettings(newSettings);
+        localStorage.setItem('dataSourceSettings', JSON.stringify(newSettings));
+        console.log('📊 Data source settings updated:', newSettings);
+    };    const [showCourseSelection, setShowCourseSelection] = useState(false);
     const [selectedUpdateType, setSelectedUpdateType] = useState<'bulk' | 'minor'>('minor');
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [coursesFromFile, setCoursesFromFile] = useState<string[]>([]);
@@ -1825,10 +1862,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                    </p>
                                </div>
                                <button
-                                   onClick={() => {/* Will add handler in Phase 2 */}}
-                                   className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 bg-gray-600"
+                                   onClick={() => handleToggleDataSource("staff")}
+                                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.staff ? \'bg-green-600\' : \'bg-gray-600\'}`}
                                >
-                                   <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1" />
+                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.staff ? \'translate-x-6\' : \'translate-x-1\'}`} />
                                </button>
                            </div>
 
@@ -1841,10 +1878,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                    </p>
                                </div>
                                <button
-                                   onClick={() => {/* Will add handler in Phase 2 */}}
-                                   className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 bg-gray-600"
+                                   onClick={() => handleToggleDataSource("trainees")}
+                                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.trainees ? \'bg-green-600\' : \'bg-gray-600\'}`}
                                >
-                                   <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1" />
+                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.trainees ? \'translate-x-6\' : \'translate-x-1\'}`} />
                                </button>
                            </div>
 
@@ -1857,10 +1894,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                    </p>
                                </div>
                                <button
-                                   onClick={() => {/* Will add handler in Phase 2 */}}
-                                   className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 bg-gray-600"
+                                   onClick={() => handleToggleDataSource("courses")}
+                                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.courses ? \'bg-green-600\' : \'bg-gray-600\'}`}
                                >
-                                   <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1" />
+                                   <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.courses ? \'translate-x-6\' : \'translate-x-1\'}`} />
                                </button>
                            </div>
 
