@@ -1,0 +1,17 @@
+164b3f0 fix: Remove module-level console.log causing ReferenceError and restore data-source section
+c0ba843 fix: Copy latest build with data-source section disabled to deployment directory
+46353f7 test: Comment out data-source section to isolate ReferenceError
+d365761 debug: Add console logging to track Settings error
+a405edd fix: Fix export formatting issues causing ReferenceError in Settings
+87a3a75 fix: Rebuild to resolve ReferenceError in Settings Data Source page
+93df24b build: Rebuild production with Data Source toggle UI (index-CUxjHfJw.js)
+51a813a feat: Add Data Source page to Settings with error tracking
+1db0c15 deploy: Update production build with Data Source page and error tracking
+9d33c41 fix: Rebuild and deploy with Data Source page visible in Settings menu
+da135fc build: Update production build with Data Source menu item
+067058f debug: Add console logging for menu items
+f7f4f5a fix: Add data-source to SettingsSection type definition
+2f761a6 feat: Add Data Source menu item to Settings
+c17328d fix: Remove escaped backslashes from toggle button template literals
+cb3713a feat: Add dynamic state to data source toggle buttons
+6fe153e Phase 1: Add Data Source UI to Settings page (toggles for Staff, Trainees, Courses)
