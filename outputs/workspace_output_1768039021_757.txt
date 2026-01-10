@@ -1,0 +1,17 @@
+[main e883aed] fix: Rebuild and deploy with Data Source page visible in Settings menu
+ 14 files changed, 1319 insertions(+)
+ create mode 100644 DATA_SOURCE_FIX_SUMMARY.md
+ create mode 100644 Screen Shot 2026-01-10 at 8.54.15 pm.jpg
+ create mode 100644 outputs/workspace_output_1768038927_7595.txt
+ create mode 100644 outputs/workspace_output_1768038971_3065.txt
+ create mode 100644 outputs/workspace_output_1768038976_4441.txt
+ create mode 100644 outputs/workspace_output_1768038979_3503.txt
+ create mode 100644 outputs/workspace_output_1768038983_226.txt
+ create mode 100644 outputs/workspace_output_1768038989_1456.txt
+ create mode 100644 outputs/workspace_output_1768039003_4957.txt
+ create mode 100644 outputs/workspace_output_1768039007_1876.txt
+ create mode 100644 outputs/workspace_output_1768039014_3294.txt
+ create mode 100644 outputs/workspace_output_1768039018_3208.txt
+ create mode 100644 outputs/workspace_output_1768039021_757.txt
+To https://github.com/Dagde/DFP---NEO.git
+   4fcf9e1..e883aed  main -> main

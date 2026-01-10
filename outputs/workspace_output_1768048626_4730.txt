@@ -1,0 +1,2 @@
+drwxr-xr-x   7 root root  4096 Jan  9 09:30 .next
+-rw-r--r--   1 root root   262 Jan  2 13:24 next-env.d.ts
