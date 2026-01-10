@@ -188,8 +188,8 @@ model Trainee {
   isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
   scores              Score[]   @relation("TraineeScores")
+  user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([idNumber])
@@ -236,24 +236,16 @@ model CancellationHistory {
   @@index([cancellationCode])
 }
 
-enum Role {
-  SUPER_ADMIN
-  ADMIN
-  PILOT
-  INSTRUCTOR
-  USER
-}
-
 model Course {
   id            String   @id @default(cuid())
   name          String
   code          String   @unique
   startDate     String
   endDate       String
-  armyCount     Int?
-  navyCount     Int?
-  raafCount     Int?
   totalStudents Int?
+  raafCount     Int?
+  navyCount     Int?
+  armyCount     Int?
   location      String
   unit          String
   status        String   @default("ACTIVE")
@@ -263,15 +255,23 @@ model Course {
 }
 
 model Score {
-  id              String   @id @default(cuid())
-  traineeId       String
-  trainee         Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
-  event           String
-  score           Int
-  date            DateTime
-  instructor      String
-  notes           String?
-  details         Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id         String   @id @default(cuid())
+  traineeId  String
+  event      String
+  score      Int
+  date       DateTime
+  instructor String
+  notes      String?
+  details    Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PILOT
+  INSTRUCTOR
+  USER
 }
