@@ -1,0 +1,376 @@
+total 34148
+drwxr-xr-x  21 root root   20480 Jan 10 03:36 .
+drwxr-xr-x   1 root root     162 Jan 10 02:36 ..
+drwxr-xr-x   4 root root      77 Jan  8 02:31 .agent_hooks
+-rw-r--r--   1 root root     184 Jan  7 06:30 .env
+drwxr-xr-x   8 root root    4096 Jan 10 03:36 .git
+-rw-r--r--   1 root root     253 Jan  2 03:56 .gitignore
+-rw-r--r--   1 root root      24 Jan  2 03:56 .last-sync
+-rw-r--r--   1 root root  239547 Jan  2 14:44 3000-266375c4-e167-4965-8379-f82e010676b1.app.super.myninja.ai-1
+-rw-r--r--   1 root root    6448 Jan  2 14:44 AC_HISTORY_IMPLEMENTATION_SUMMARY.md
+-rw-r--r--   1 root root    3648 Jan  2 14:44 AC_HISTORY_SETUP.md
+-rw-r--r--   1 root root    9229 Jan  2 03:56 AUDIT_BUTTONS_COMPLETE.md
+-rw-r--r--   1 root root    3949 Jan  2 03:56 AUDIT_BUTTONS_SIDEBAR_FIX.md
+-rw-r--r--   1 root root    4664 Jan  2 03:56 AUDIT_BUTTON_IMPLEMENTATION_PLAN.md
+-rw-r--r--   1 root root    4390 Jan  2 03:56 AUDIT_DEBOUNCE_IMPLEMENTATION.md
+-rw-r--r--   1 root root    4295 Jan  2 03:56 AUDIT_DEBOUNCING.md
+-rw-r--r--   1 root root    5782 Jan  2 03:56 AUDIT_DETAILED_FIELD_TRACKING.md
+-rw-r--r--   1 root root    6472 Jan  2 03:56 AUDIT_FIXES_SUMMARY.md
+-rw-r--r--   1 root root    4414 Jan  2 03:56 AUDIT_IMPLEMENTATION_COMPLETE.md
+-rw-r--r--   1 root root    8792 Jan  2 03:56 AUDIT_IMPLEMENTATION_SUMMARY.md
+-rw-r--r--   1 root root    8385 Jan  2 03:56 AUDIT_LOGGING_IMPLEMENTATION_SUMMARY.md
+-rw-r--r--   1 root root    4641 Jan  2 03:56 AUDIT_LOGGING_TODO.md
+-rw-r--r--   1 root root    4146 Jan  2 03:56 AUDIT_PHASE1_IMPLEMENTATION.md
+-rw-r--r--   1 root root    4230 Jan  2 03:56 AUDIT_PRIORITIES_PAGE.md
+-rw-r--r--   1 root root    5742 Jan  2 03:56 AUDIT_SYSTEM_IMPROVEMENTS.md
+-rw-r--r--   1 root root    6767 Jan  2 03:56 AUDIT_SYSTEM_INTEGRATION_GUIDE.md
+-rw-r--r--   1 root root    2378 Jan  2 03:56 AUDIT_TODO.md
+-rw-r--r--   1 root root    1408 Jan  3 17:18 AUTHORISATION_VIEW_FIX.md
+-rw-r--r--   1 root root    2132 Jan  3 17:06 AUTH_TRUST_HOST_FIX.md
+-rw-r--r--   1 root root  455073 Jan 10 03:24 App.tsx
+-rw-r--r--   1 root root  409344 Jan  2 14:44 App.tsx.backup
+-rw-r--r--   1 root root  238574 Jan  2 03:56 App.tsx.backup_before_v2
+-rw-r--r--   1 root root  412937 Jan  2 14:44 App.tsx.original
+-rw-r--r--   1 root root    1017 Jan  2 03:56 App_debug.tsx
+-rw-r--r--   1 root root   61489 Jan  3 15:33 B300 copy.png
+-rw-r--r--   1 root root    8767 Jan  2 03:56 BUILD_ANALYSIS_ENHANCEMENT.md
+-rw-r--r--   1 root root    9144 Jan  2 03:56 BUILD_ANALYSIS_IMPLEMENTATION_PLAN.md
+-rw-r--r--   1 root root    7876 Jan  2 03:56 BUILD_ANALYSIS_INTEGRATION_COMPLETE.md
+-rw-r--r--   1 root root   10829 Jan  2 03:56 BUILD_RESULTS_ANALYSIS_COMPLETE.md
+-rw-r--r--   1 root root   12742 Jan  3 15:33 C-17 copy.png
+-rw-r--r--   1 root root    1938 Jan  2 14:44 COMMIT_SUMMARY.md
+-rw-r--r--   1 root root    5618 Jan  3 23:23 COMPREHENSIVE_PURPLE_BUTTON_FIX.md
+-rw-r--r--   1 root root    7853 Jan  4 02:56 DATABASE_AND_USER_MANAGEMENT.md
+-rw-r--r--   1 root root    2958 Jan  7 06:30 DATABASE_EMERGENCY_FIX.md
+-rw-r--r--   1 root root    8627 Jan  7 06:30 DATABASE_MIGRATION_VERIFICATION.md
+-rw-r--r--   1 root root    3160 Jan  2 03:56 DAY_NIGHT_SCHEDULING_ISSUE.md
+-rw-r--r--   1 root root    7350 Jan  2 03:56 DAY_NIGHT_SEPARATION_HARD_WIRED.md
+-rw-r--r--   1 root root    3378 Jan  3 16:52 DELETE_FUNCTIONALITY_FIX.md
+-rw-r--r--   1 root root    7568 Jan  2 03:56 DEPLOYED_RESOURCE_LINE_IMPLEMENTATION.md
+-rw-r--r--   1 root root    4498 Jan  7 13:30 DEPLOYMENT_ALL_ISSUES.md
+-rw-r--r--   1 root root    5437 Jan  2 14:44 DEPLOYMENT_CHECKLIST.md
+-rw-r--r--   1 root root    1463 Jan  7 13:11 DEPLOYMENT_FIX.md
+-rw-r--r--   1 root root    6170 Jan  7 15:16 DEPLOYMENT_FIX_COMPLETE.md
+-rw-r--r--   1 root root    2154 Jan  2 14:44 DEPLOYMENT_GUIDE.md
+-rw-r--r--   1 root root    3236 Jan  2 03:56 DEPLOYMENT_LEGS_REMOVAL.md
+-rw-r--r--   1 root root    5918 Jan  2 03:56 DEPLOYMENT_RESOURCE_LINE_CHANGE.md
+-rw-r--r--   1 root root    3502 Jan  3 17:54 DEPLOYMENT_STATUS.md
+drwxr-xr-x   4 root root    4096 Jan  7 06:30 DFP-NEO-iOS
+-rw-r--r--   1 root root    1689 Jan  2 03:56 DRAG_COLLAPSE_ANALYSIS.md
+-rw-r--r--   1 root root    1215 Jan  3 17:29 EDIT_SAVE_BUTTONS_UPDATE.md
+-rw-r--r--   1 root root    6660 Jan  2 03:56 ENHANCEMENT_SUMMARY.md
+-rw-r--r--   1 root root    4041 Jan  4 03:21 FINAL_STATUS_SUMMARY.md
+-rw-r--r--   1 root root   10297 Jan  2 03:56 FLIGHT_DETAILS_COMPLETE.md
+-rw-r--r--   1 root root    2453 Jan  2 03:56 FLIGHT_DETAILS_REDESIGN.md
+-rw-r--r--   1 root root    4731 Jan  7 06:31 GITHUB_PUSH_SUMMARY.md
+-rw-r--r--   1 root root    3282 Jan  2 03:56 GIT_AUTOMATION_README.md
+-rw-r--r--   1 root root    1693 Jan  2 14:44 GROUND_SCHOOL_ASSESSMENT_SUMMARY.md
+-rw-r--r--   1 root root    3612 Jan  2 14:44 GROUND_SCHOOL_REORGANIZATION_SUMMARY.md
+-rw-r--r--   1 root root   11076 Jan  2 03:56 IMPLEMENTATION_SUMMARY.md
+-rw-r--r--   1 root root    6804 Jan  2 03:56 IMPLEMENTATION_SUMMARY_PRIORITY_ANALYSIS.md
+-rw-r--r--   1 root root    9037 Jan  2 03:56 INDIVIDUAL_LMP_INITIALIZATION.md
+-rw-r--r--   1 root root    7631 Jan  2 03:56 LMP_CURRENCY_IMPLEMENTATION.md
+-rw-r--r--   1 root root   20996 Jan  7 06:30 LMP_MIGRATION_IMPACT_ANALYSIS.md
+-rw-r--r--   1 root root  234157 Jan  3 06:07 Landing page layout layout copy.jpg
+-rw-r--r--   1 root root       0 Jan  7 13:27 Let
+-rw-r--r--   1 root root  906299 Jan  2 14:44 Logo Final copy.png
+-rw-r--r--   1 root root    4669 Jan  2 14:44 MASS_BRIEF_COMPLETION_FIX_SUMMARY.md
+-rw-r--r--   1 root root    5697 Jan  2 14:44 MASS_COMPLETION_FEATURE_SUMMARY.md
+-rw-r--r--   1 root root    5536 Jan  7 06:30 MIGRATION_PROGRESS_REPORT.md
+-rw-r--r--   1 root root    7296 Jan  2 03:56 MORNING_BRIEFING.md
+-rw-r--r--   1 root root 1265480 Jan  3 06:24 Metal plate 1 copy.png
+-rw-r--r--   1 root root    3970 Jan  2 03:56 NEO_BUILD_INDIVIDUAL_LMP_ISSUE.md
+-rw-r--r--   1 root root    1510 Jan  3 17:02 NEXTAUTH_SECRET_GENERATOR.md
+-rw-r--r--   1 root root    4455 Jan  4 02:53 NUCLEAR_PURPLE_FIX_EXPLANATION.md
+-rw-r--r--   1 root root    5300 Jan  7 13:06 OPTION1_DEPLOYMENT_STATUS.md
+-rw-r--r--   1 root root    9493 Jan  7 13:04 OPTION1_MIGRATION_COMPLETE.md
+-rw-r--r--   1 root root    6351 Jan  2 03:56 ORACLE_BUTTON_ANALYSIS.md
+-rw-r--r--   1 root root    4987 Jan  2 03:56 ORACLE_FIX_SUMMARY.md
+-rw-r--r--   1 root root    3535 Jan  2 03:56 ORACLE_TRAINEE_FILTERING_ANALYSIS.md
+-rw-r--r--   1 root root   14024 Jan  3 15:33 P-8 copy.png
+-rw-r--r--   1 root root    8683 Jan  3 17:10 PIN_AND_PASSWORD_MANAGEMENT.md
+-rw-r--r--   1 root root   17922 Jan  2 03:56 PRIORITY_ALGORITHM_ANALYSIS.txt
+-rw-r--r--   1 root root    9525 Jan  2 03:56 PROGRESS_GRAPH_REWORK.md
+-rw-r--r--   1 root root   14015 Jan  2 03:56 PROGRESS_GRAPH_VISUAL_GUIDE.md
+-rw-r--r--   1 root root    2215 Jan  3 17:54 PURPLE_BUTTONS_FIX.md
+-rw-r--r--   1 root root    2792 Jan  3 22:22 PURPLE_BUTTON_FINAL_FIX.md
+-rw-r--r--   1 root root    2172 Jan  3 21:41 PURPLE_BUTTON_FIX.md
+-rw-r--r--   1 root root    5076 Jan  7 06:30 PURPLE_BUTTON_FIX_FINAL.md
+-rw-r--r--   1 root root  684742 Jan  2 14:44 Password 2 copy.png
+-rw-r--r--   1 root root    6190 Jan  7 06:30 RAILWAY_CHECKLIST.md
+-rw-r--r--   1 root root    8249 Jan  7 06:30 RAILWAY_DEPLOYMENT_GUIDE.md
+-rw-r--r--   1 root root    2192 Jan  7 06:30 RAILWAY_ENV_VARIABLES.txt
+-rw-r--r--   1 root root    1842 Jan  3 16:57 RAILWAY_NEXTAUTH_FIX.md
+-rw-r--r--   1 root root    3131 Jan  7 06:30 RAILWAY_QUICK_START.md
+-rw-r--r--   1 root root     553 Jan  2 03:56 README.md
+-rw-r--r--   1 root root   16496 Jan  2 03:56 REBUILD_INSTRUCTIONS.md
+-rw-r--r--   1 root root    1301 Jan  2 03:56 REMEDIAL_QUEUE_ERROR.md
+-rw-r--r--   1 root root     930 Jan  2 03:56 RESTORE_INSTRUCTIONS.md
+-rw-r--r--   1 root root    6635 Jan  2 03:56 SCT_EVENTS_FEATURE.md
+-rw-r--r--   1 root root    6346 Jan  2 03:56 SCT_EVENTS_USER_GUIDE.md
+-rw-r--r--   1 root root    3442 Jan  2 03:56 SCT_FORM_CRITICAL_FIX.md
+-rw-r--r--   1 root root    4757 Jan  2 03:56 SCT_FORM_IMPLEMENTATION_SUMMARY.md
+-rw-r--r--   1 root root    4000 Jan  4 04:05 SOLO_FLIGHT_FIX_SUMMARY.md
+-rw-r--r--   1 root root   92944 Jan  2 14:44 Screen Shot 2026-01-02 at 10.24.08 pm.jpg
+-rw-r--r--   1 root root   82453 Jan  2 14:44 Screen Shot 2026-01-02 at 10.32.49 pm.jpg
+-rw-r--r--   1 root root  149717 Jan  2 14:44 Screen Shot 2026-01-02 at 10.50.12 pm.jpg
+-rw-r--r--   1 root root  314847 Jan  2 14:44 Screen Shot 2026-01-02 at 3.47.56 pm.jpg
+-rw-r--r--   1 root root  414271 Jan  2 14:44 Screen Shot 2026-01-02 at 3.56.02 pm.jpg
+-rw-r--r--   1 root root  144402 Jan  2 14:44 Screen Shot 2026-01-02 at 4.14.33 pm.jpg
+-rw-r--r--   1 root root  159085 Jan  2 14:44 Screen Shot 2026-01-02 at 4.14.41 pm.jpg
+-rw-r--r--   1 root root  148761 Jan  2 14:44 Screen Shot 2026-01-02 at 4.14.48 pm.jpg
+-rw-r--r--   1 root root  148450 Jan  2 14:44 Screen Shot 2026-01-02 at 4.14.55 pm.jpg
+-rw-r--r--   1 root root  138194 Jan  2 14:44 Screen Shot 2026-01-02 at 4.15.01 pm.jpg
+-rw-r--r--   1 root root  151151 Jan  2 14:44 Screen Shot 2026-01-02 at 4.21.07 pm.jpg
+-rw-r--r--   1 root root  142882 Jan  2 14:44 Screen Shot 2026-01-02 at 4.21.14 pm.jpg
+-rw-r--r--   1 root root  137398 Jan  2 14:44 Screen Shot 2026-01-02 at 4.21.21 pm.jpg
+-rw-r--r--   1 root root  151610 Jan  2 14:44 Screen Shot 2026-01-02 at 4.21.29 pm.jpg
+-rw-r--r--   1 root root  139465 Jan  2 14:44 Screen Shot 2026-01-02 at 4.21.35 pm.jpg
+-rw-r--r--   1 root root  144525 Jan  2 14:44 Screen Shot 2026-01-02 at 4.27.06 pm.jpg
+-rw-r--r--   1 root root  150427 Jan  2 14:44 Screen Shot 2026-01-02 at 4.27.15 pm.jpg
+-rw-r--r--   1 root root  152090 Jan  2 14:44 Screen Shot 2026-01-02 at 4.27.20 pm.jpg
+-rw-r--r--   1 root root  153547 Jan  2 14:44 Screen Shot 2026-01-02 at 4.27.26 pm.jpg
+-rw-r--r--   1 root root  138318 Jan  2 14:44 Screen Shot 2026-01-02 at 4.27.32 pm.jpg
+-rw-r--r--   1 root root  227014 Jan  2 14:44 Screen Shot 2026-01-02 at 8.56.06 pm.jpg
+-rw-r--r--   1 root root  211083 Jan  2 14:15 Screen Shot 2026-01-03 at 1.14.44 am.jpg
+-rw-r--r--   1 root root  172018 Jan  2 14:22 Screen Shot 2026-01-03 at 1.22.30 am.jpg
+-rw-r--r--   1 root root  314431 Jan  2 14:27 Screen Shot 2026-01-03 at 1.26.56 am.jpg
+-rw-r--r--   1 root root  307212 Jan  2 14:43 Screen Shot 2026-01-03 at 1.43.16 am.jpg
+-rw-r--r--   1 root root  327769 Jan  2 14:49 Screen Shot 2026-01-03 at 1.49.02 am.jpg
+-rw-r--r--   1 root root  302960 Jan  2 14:49 Screen Shot 2026-01-03 at 1.49.11 am.jpg
+-rw-r--r--   1 root root  305632 Jan  2 14:58 Screen Shot 2026-01-03 at 1.57.40 am.jpg
+-rw-r--r--   1 root root  150162 Jan  2 13:33 Screen Shot 2026-01-03 at 12.33.03 am.jpg
+-rw-r--r--   1 root root  102328 Jan  2 13:37 Screen Shot 2026-01-03 at 12.36.08 am.jpg
+-rw-r--r--   1 root root   98022 Jan  2 13:37 Screen Shot 2026-01-03 at 12.36.19 am.jpg
+-rw-r--r--   1 root root  277912 Jan  2 13:43 Screen Shot 2026-01-03 at 12.43.34 am.jpg
+-rw-r--r--   1 root root  152631 Jan  2 13:48 Screen Shot 2026-01-03 at 12.47.31 am.jpg
+-rw-r--r--   1 root root  506503 Jan  2 13:48 Screen Shot 2026-01-03 at 12.47.52 am.jpg
+-rw-r--r--   1 root root  150191 Jan  2 13:53 Screen Shot 2026-01-03 at 12.53.34 am.jpg
+-rw-r--r--   1 root root  489850 Jan  2 13:54 Screen Shot 2026-01-03 at 12.53.39 am.jpg
+-rw-r--r--   1 root root  342931 Jan  2 14:00 Screen Shot 2026-01-03 at 12.59.53 am.jpg
+-rw-r--r--   1 root root  105601 Jan  2 15:08 Screen Shot 2026-01-03 at 2.07.57 am.jpg
+-rw-r--r--   1 root root  145927 Jan  2 15:13 Screen Shot 2026-01-03 at 2.12.51 am.jpg
+-rw-r--r--   1 root root  182949 Jan  2 15:16 Screen Shot 2026-01-03 at 2.15.48 am.jpg
+-rw-r--r--   1 root root   98283 Jan  2 15:16 Screen Shot 2026-01-03 at 2.15.56 am.jpg
+-rw-r--r--   1 root root  215774 Jan  2 15:20 Screen Shot 2026-01-03 at 2.20.31 am.jpg
+-rw-r--r--   1 root root  185136 Jan  2 15:23 Screen Shot 2026-01-03 at 2.22.50 am.jpg
+-rw-r--r--   1 root root  139207 Jan  2 15:41 Screen Shot 2026-01-03 at 2.40.47 am.jpg
+-rw-r--r--   1 root root   60039 Jan  2 15:50 Screen Shot 2026-01-03 at 2.48.44 am.jpg
+-rw-r--r--   1 root root   59173 Jan  2 15:50 Screen Shot 2026-01-03 at 2.48.51 am.jpg
+-rw-r--r--   1 root root  131492 Jan  3 04:41 Screen Shot 2026-01-03 at 3.41.02 pm.jpg
+-rw-r--r--   1 root root  179152 Jan  3 04:44 Screen Shot 2026-01-03 at 3.43.10 pm.jpg
+-rw-r--r--   1 root root  196637 Jan  3 04:44 Screen Shot 2026-01-03 at 3.43.23 pm.jpg
+-rw-r--r--   1 root root  192790 Jan  3 04:44 Screen Shot 2026-01-03 at 3.43.32 pm.jpg
+-rw-r--r--   1 root root  248690 Jan  3 04:44 Screen Shot 2026-01-03 at 3.43.41 pm.jpg
+-rw-r--r--   1 root root  330256 Jan  3 05:02 Screen Shot 2026-01-03 at 4.02.32 pm.jpg
+-rw-r--r--   1 root root  205573 Jan  3 05:05 Screen Shot 2026-01-03 at 4.05.07 pm.jpg
+-rw-r--r--   1 root root  321412 Jan  3 05:27 Screen Shot 2026-01-03 at 4.27.11 pm.jpg
+-rw-r--r--   1 root root  234157 Jan  3 05:46 Screen Shot 2026-01-03 at 4.46.19 pm.jpg
+-rw-r--r--   1 root root   94953 Jan  3 06:07 Screen Shot 2026-01-03 at 5.06.18 pm.jpg
+-rw-r--r--   1 root root   73909 Jan  3 06:15 Screen Shot 2026-01-03 at 5.15.43 pm.jpg
+-rw-r--r--   1 root root   50689 Jan  3 06:24 Screen Shot 2026-01-03 at 5.24.07 pm.jpg
+-rw-r--r--   1 root root  329456 Jan  3 06:28 Screen Shot 2026-01-03 at 5.27.10 pm.jpg
+-rw-r--r--   1 root root   30883 Jan  4 02:59 Screen Shot 2026-01-04 at 1.57.54 pm.jpg
+-rw-r--r--   1 root root  106413 Jan  3 14:58 Screen Shot 2026-01-04 at 1.58.46 am.jpg
+-rw-r--r--   1 root root  549509 Jan  3 23:21 Screen Shot 2026-01-04 at 10.20.54 am.jpg
+-rw-r--r--   1 root root  113382 Jan  7 06:30 Screen Shot 2026-01-04 at 10.31.39 pm.jpg
+-rw-r--r--   1 root root  471177 Jan  4 00:15 Screen Shot 2026-01-04 at 11.14.46 am.jpg
+-rw-r--r--   1 root root   28479 Jan  4 00:38 Screen Shot 2026-01-04 at 11.37.10 am.jpg
+-rw-r--r--   1 root root  534117 Jan  4 01:00 Screen Shot 2026-01-04 at 12.00.44 pm.jpg
+-rw-r--r--   1 root root  164446 Jan  3 15:01 Screen Shot 2026-01-04 at 2.01.31 am.jpg
+-rw-r--r--   1 root root  107493 Jan  3 15:35 Screen Shot 2026-01-04 at 2.34.57 am.jpg
+-rw-r--r--   1 root root  151854 Jan  4 03:38 Screen Shot 2026-01-04 at 2.37.24 pm.jpg
+-rw-r--r--   1 root root  307949 Jan  4 03:38 Screen Shot 2026-01-04 at 2.37.46 pm.jpg
+-rw-r--r--   1 root root  112028 Jan  4 04:00 Screen Shot 2026-01-04 at 2.59.57 pm.jpg
+-rw-r--r--   1 root root   75019 Jan  4 04:03 Screen Shot 2026-01-04 at 3.02.54 pm.jpg
+-rw-r--r--   1 root root   55094 Jan  3 16:27 Screen Shot 2026-01-04 at 3.06.02 am.jpg
+-rw-r--r--   1 root root  115450 Jan  4 04:09 Screen Shot 2026-01-04 at 3.08.32 pm.jpg
+-rw-r--r--   1 root root   81428 Jan  7 06:30 Screen Shot 2026-01-04 at 3.25.12 pm.jpg
+-rw-r--r--   1 root root  385404 Jan  7 06:30 Screen Shot 2026-01-04 at 3.28.10 pm.jpg
+-rw-r--r--   1 root root  317314 Jan  7 06:30 Screen Shot 2026-01-04 at 3.33.56 pm.jpg
+-rw-r--r--   1 root root  159266 Jan  3 16:56 Screen Shot 2026-01-04 at 3.39.13 am.jpg
+-rw-r--r--   1 root root  135292 Jan  7 06:30 Screen Shot 2026-01-04 at 3.45.06 pm.jpg
+-rw-r--r--   1 root root   55763 Jan  3 16:56 Screen Shot 2026-01-04 at 3.55.24 am.jpg
+-rw-r--r--   1 root root  123747 Jan  3 17:01 Screen Shot 2026-01-04 at 4.01.12 am.jpg
+-rw-r--r--   1 root root  144331 Jan  7 06:30 Screen Shot 2026-01-04 at 4.25.00 pm.jpg
+-rw-r--r--   1 root root   67105 Jan  3 17:25 Screen Shot 2026-01-04 at 4.25.39 am.jpg
+-rw-r--r--   1 root root   69013 Jan  3 17:27 Screen Shot 2026-01-04 at 4.26.18 am.jpg
+-rw-r--r--   1 root root  149049 Jan  3 17:32 Screen Shot 2026-01-04 at 4.32.15 am.jpg
+-rw-r--r--   1 root root  785015 Jan  3 17:49 Screen Shot 2026-01-04 at 4.48.09 am.jpg
+-rw-r--r--   1 root root  695894 Jan  3 17:53 Screen Shot 2026-01-04 at 4.52.57 am.jpg
+-rw-r--r--   1 root root  258815 Jan  3 18:00 Screen Shot 2026-01-04 at 4.59.52 am.jpg
+-rw-r--r--   1 root root  246386 Jan  3 22:16 Screen Shot 2026-01-04 at 9.16.27 am.jpg
+-rw-r--r--   1 root root  297993 Jan  7 06:30 Screen Shot 2026-01-05 at 1.02.08 am.jpg
+-rw-r--r--   1 root root  106242 Jan  7 06:30 Screen Shot 2026-01-05 at 1.50.55 pm.jpg
+-rw-r--r--   1 root root  107093 Jan  7 06:30 Screen Shot 2026-01-05 at 1.55.44 pm.jpg
+-rw-r--r--   1 root root  373629 Jan  7 06:30 Screen Shot 2026-01-05 at 12.37.41 am.jpg
+-rw-r--r--   1 root root  202628 Jan  7 06:30 Screen Shot 2026-01-05 at 12.38.50 am.jpg
+-rw-r--r--   1 root root  482820 Jan  7 06:30 Screen Shot 2026-01-05 at 12.55.17 am.jpg
+-rw-r--r--   1 root root  365653 Jan  7 06:30 Screen Shot 2026-01-05 at 12.59.00 am.jpg
+-rw-r--r--   1 root root  202681 Jan  7 06:30 Screen Shot 2026-01-05 at 2.35.24 am.jpg
+-rw-r--r--   1 root root  235252 Jan  7 06:30 Screen Shot 2026-01-05 at 3.49.28 pm.jpg
+-rw-r--r--   1 root root  113590 Jan  7 06:30 Screen Shot 2026-01-05 at 3.54.44 pm.jpg
+-rw-r--r--   1 root root  215784 Jan  7 06:30 Screen Shot 2026-01-05 at 4.00.29 pm.jpg
+-rw-r--r--   1 root root  155990 Jan  7 06:30 Screen Shot 2026-01-05 at 4.14.04 pm.jpg
+-rw-r--r--   1 root root  274027 Jan  7 06:30 Screen Shot 2026-01-05 at 4.25.48 pm.jpg
+-rw-r--r--   1 root root  156312 Jan  7 06:30 Screen Shot 2026-01-05 at 4.43.30 pm.jpg
+-rw-r--r--   1 root root   48613 Jan  7 06:30 Screen Shot 2026-01-05 at 4.50.31 pm.jpg
+-rw-r--r--   1 root root  341138 Jan  7 15:58 Screen Shot 2026-01-08 at 2.57.59 am.jpg
+-rw-r--r--   1 root root  329422 Jan  7 16:17 Screen Shot 2026-01-08 at 3.17.15 am.jpg
+-rw-r--r--   1 root root  276781 Jan  7 16:29 Screen Shot 2026-01-08 at 3.27.43 am.jpg
+-rw-r--r--   1 root root  122969 Jan 10 03:35 Screen Shot 2026-01-10 at 2.35.15 pm.jpg
+-rw-r--r--   1 root root    5619 Jan  2 03:56 TASK_COMPLETE_SCT_STAFF_CAT_DROPDOWNS.md
+-rw-r--r--   1 root root    2685 Jan  2 03:56 TRAINEE_ROSTER_COLOR_CODING.md
+-rw-r--r--   1 root root   11790 Jan  3 15:33 Trainer Aircraft copy.png
+-rw-r--r--   1 root root    6627 Jan  2 14:44 UNAVAILABILITY_VALIDATION_SYSTEM.md
+-rw-r--r--   1 root root    4894 Jan  7 09:40 USERID_MIGRATION_SUMMARY.md
+-rw-r--r--   1 root root  764337 Jan  2 14:44 Username 1 copy.png
+-rw-r--r--   1 root root    6298 Jan  2 03:56 VALIDATE_NEO_INTEGRATION.md
+-rw-r--r--   1 root root    1666 Jan  3 17:35 VISUAL_ADJUST_FIX.md
+-rw-r--r--   1 root root    5804 Jan  2 03:56 WEIGHTED_PRIORITY_IMPLEMENTATION_PLAN.md
+-rw-r--r--   1 root root    8758 Jan  2 03:56 WEIGHTED_PRIORITY_IMPLEMENTATION_SUMMARY.md
+-rwxr-xr-x   1 root root    1138 Jan  2 03:56 add_all_conditionals.sh
+-rwxr-xr-x   1 root root    3597 Jan  2 03:56 add_audit_buttons.sh
+-rw-r--r--   1 root root    1508 Jan  2 03:56 add_conditional_rendering.py
+-rw-r--r--   1 root root     636 Jan  2 14:44 ai-auth-test-verification.md
+-rw-r--r--   1 root root     864 Jan  2 03:56 audit_fixes_todo.md
+-rw-r--r--   1 root root    5120 Jan  2 03:56 audit_implementation_todo.md
+-rw-r--r--   1 root root    1294 Jan  8 09:28 build.log
+-rw-r--r--   1 root root    9856 Jan  2 03:56 buildAlgorithmV2.ts
+-rw-r--r--   1 root root    1294 Jan  3 18:00 build_error.log
+-rw-r--r--   1 root root    2721 Jan  2 14:44 calculation_button.txt
+-rwxr-xr-x   1 root root     301 Jan  7 15:40 check-db-users.sh
+-rw-r--r--   1 root root     998 Jan  7 15:40 check-users.ts
+-rw-r--r--   1 root root     718 Jan 10 03:36 check_course_schema.js
+-rw-r--r--   1 root root    1344 Jan  2 03:56 clean_all_headers.py
+drwxr-xr-x   2 root root    8192 Jan 10 03:24 components
+-rw-r--r--   1 root root   62583 Jan  2 14:44 current_build_algorithm.ts
+-rw-r--r--   1 root root   62583 Jan  2 14:44 current_build_algorithm.ts.backup
+-rw-r--r--   1 root root   62583 Jan  2 14:44 current_build_algorithm.ts.disabled
+-rw-r--r--   1 root root   57131 Jan  2 03:56 current_neo_algorithm.txt
+drwxr-xr-x   2 root root      89 Jan  2 14:44 data
+-rw-r--r--   1 root root     548 Jan  2 03:56 debug.html
+-rw-r--r--   1 root root     881 Jan  2 14:44 debug_timezone.js
+-rw-r--r--   1 root root    1980 Jan  2 14:44 deployment-todo.md
+-rw-r--r--   1 root root  489673 Jan  2 14:44 dfp-feature-branch-build.tar.gz
+-rw-r--r--   1 root root 1249853 Jan  2 14:44 dfp-neo-deployment.tar.gz
+drwxr-xr-x  15 root root    4096 Jan 10 03:24 dfp-neo-platform
+-rw-r--r--   1 root root  100769 Jan  3 17:58 dfp-neo.com-1767463096801.log
+-rw-r--r--   1 root root  394225 Jan  3 21:34 dfp-neo.com-1767475973842.log
+-rw-r--r--   1 root root  254505 Jan  4 03:10 dfp-neo.com-1767496208057.log
+-rw-r--r--   1 root root  134140 Jan  4 03:18 dfp-neo.com-1767496686816.log
+-rw-r--r--   1 root root    5928 Jan  8 03:44 dfp-neo.com-1767843856704.log
+-rw-r--r--   1 root root   17522 Jan  8 03:53 dfp-neo.com-1767844383620.log
+-rw-r--r--   1 root root    9148 Jan  8 04:01 dfp-neo.com-1767844859152.log
+-rw-r--r--   1 root root    6073 Jan  8 08:33 dfp-neo.com-1767861207663.log
+-rw-r--r--   1 root root    6832 Jan  8 08:41 dfp-neo.com-1767861689544.log
+-rw-r--r--   1 root root    4783 Jan  8 08:49 dfp-neo.com-1767862181908.log
+-rw-r--r--   1 root root    7970 Jan  8 08:55 dfp-neo.com-1767862528010.log
+-rw-r--r--   1 root root    7034 Jan  8 09:01 dfp-neo.com-1767862865576.log
+-rw-r--r--   1 root root    8400 Jan  8 09:08 dfp-neo.com-1767863274563.log
+-rw-r--r--   1 root root    9389 Jan  8 09:25 dfp-neo.com-1767864333743.log
+-rw-r--r--   1 root root    7810 Jan  8 09:33 dfp-neo.com-1767864830484.log
+-rw-r--r--   1 root root   19948 Jan  8 10:21 dfp-neo.com-1767867704017.log
+-rw-r--r--   1 root root   17893 Jan  8 12:33 dfp-neo.com-1767875570426.log
+-rw-r--r--   1 root root    8335 Jan  8 12:41 dfp-neo.com-1767876064696.log
+-rw-r--r--   1 root root   15800 Jan  8 12:53 dfp-neo.com-1767876761365.log
+-rw-r--r--   1 root root   62345 Jan  8 12:53 dfp-neo.com-1767876777468.log
+-rw-r--r--   1 root root   50122 Jan  8 13:07 dfp-neo.com-1767877623909.log
+-rw-r--r--   1 root root   13122 Jan  8 13:37 dfp-neo.com-1767879466631.log
+-rw-r--r--   1 root root   16304 Jan  8 13:45 dfp-neo.com-1767879922106.log
+-rw-r--r--   1 root root   13388 Jan  8 14:10 dfp-neo.com-1767881439848.log
+-rw-r--r--   1 root root   16382 Jan  8 14:20 dfp-neo.com-1767882016514.log
+-rw-r--r--   1 root root   17672 Jan  8 14:29 dfp-neo.com-1767882578255.log
+-rw-r--r--   1 root root   18391 Jan  8 14:37 dfp-neo.com-1767883032286.log
+-rw-r--r--   1 root root   18321 Jan  8 14:44 dfp-neo.com-1767883462946.log
+-rw-r--r--   1 root root   57399 Jan  8 14:51 dfp-neo.com-1767883866737.log
+-rw-r--r--   1 root root   39161 Jan  8 15:04 dfp-neo.com-1767884668943.log
+-rw-r--r--   1 root root   33991 Jan  8 15:27 dfp-neo.com-1767886031466.log
+-rw-r--r--   1 root root   32969 Jan  8 15:34 dfp-neo.com-1767886463714.log
+-rw-r--r--   1 root root   33124 Jan  8 15:41 dfp-neo.com-1767886897310.log
+-rw-r--r--   1 root root   18680 Jan  8 15:52 dfp-neo.com-1767887524761.log
+-rw-r--r--   1 root root   16004 Jan  8 15:58 dfp-neo.com-1767887874313.log
+-rw-r--r--   1 root root   17303 Jan  8 16:15 dfp-neo.com-1767888915774.log
+-rw-r--r--   1 root root    8553 Jan  8 22:23 dfp-neo.com-1767911029452.log
+-rw-r--r--   1 root root   48284 Jan  9 12:25 dfp-neo.com-1767961503322.log
+-rw-r--r--   1 root root   52697 Jan  9 12:38 dfp-neo.com-1767962296036.log
+-rw-r--r--   1 root root    7444 Jan  9 13:15 dfp-neo.com-1767962807758.log
+-rw-r--r--   1 root root   11771 Jan  9 13:17 dfp-neo.com-1767964580591.log
+-rw-r--r--   1 root root   61230 Jan  9 21:30 dfp-neo.com-1767994169676.log
+-rw-r--r--   1 root root   61243 Jan  9 21:40 dfp-neo.com-1767994787883.log
+-rw-r--r--   1 root root   62202 Jan  9 21:56 dfp-neo.com-1767995713500.log
+-rw-r--r--   1 root root   43369 Jan  9 22:14 dfp-neo.com-1767996881910.log
+-rw-r--r--   1 root root   30910 Jan  9 22:36 dfp-neo.com-1767998157438.log
+-rw-r--r--   1 root root   30910 Jan 10 02:44 dfp-neo.com-1768013070486.log
+-rw-r--r--   1 root root   30910 Jan 10 02:51 dfp-neo.com-1768013463316.log
+-rw-r--r--   1 root root   29579 Jan 10 02:58 dfp-neo.com-1768013888950.log
+drwxr-xr-x   4 root root    4096 Jan 10 03:23 dist
+drwxr-xr-x   2 root root     116 Jan  2 14:44 docs
+-rwxr-xr-x   1 root root     819 Jan  7 13:27 fix-all-permissionsRole.sh
+-rw-r--r--   1 root root    1733 Jan  2 14:44 fix_seat_configs.cjs
+-rw-r--r--   1 root root    2749 Jan  2 03:56 fix_settings_layout.py
+-rw-r--r--   1 root root    6623 Jan  2 03:56 git-automation.js
+-rw-r--r--   1 root root      99 Jan  2 03:56 git-status.js
+-rw-r--r--   1 root root      60 Jan  2 03:56 git-sync-once.js
+-rwxr-xr-x   1 root root    2377 Jan  2 03:56 git-sync.sh
+drwxr-xr-x   2 root root      48 Jan 10 03:24 hooks
+-rw-r--r--   1 root root    7647 Jan  2 14:44 index.html
+-rw-r--r--   1 root root    1675 Jan  2 03:56 index.tsx
+-rw-r--r--   1 root root     367 Jan  2 03:56 index_debug.tsx
+-rw-r--r--   1 root root    7384 Jan  2 03:56 index_original.html
+-rw-r--r--   1 root root    2148 Jan  2 14:44 integration-plan.md
+drwxr-xr-x   2 root root      29 Jan 10 03:24 lib
+-rw-r--r--   1 root root   23994 Jan  7 06:30 logo.png
+-rw-r--r--   1 root root    5839 Jan  3 17:06 logs.1767459963132.log
+-rw-r--r--   1 root root   15992 Jan  7 06:33 logs.1767767604212.log
+-rw-r--r--   1 root root   17161 Jan  7 09:21 logs.1767777332357.log
+-rw-r--r--   1 root root   15899 Jan  7 09:47 logs.1767779236233.log
+-rw-r--r--   1 root root   15861 Jan  7 11:49 logs.1767786547776.log
+-rw-r--r--   1 root root   15415 Jan  7 12:08 logs.1767787698491.log
+-rw-r--r--   1 root root   18430 Jan  7 13:10 logs.1767791391265.log
+-rw-r--r--   1 root root   16347 Jan  7 13:15 logs.1767791694680.log
+-rw-r--r--   1 root root   12152 Jan  7 13:19 logs.1767791974714.log
+-rw-r--r--   1 root root   15585 Jan  7 13:24 logs.1767792270925.log
+-rw-r--r--   1 root root   70521 Jan  7 15:20 logs.1767799208786.log
+-rw-r--r--   1 root root   15694 Jan  7 16:06 logs.1767801974190.log
+-rw-r--r--   1 root root   15025 Jan  9 09:29 logs.1767950952399.log
+-rw-r--r--   1 root root    9208 Jan 10 03:10 logs.1768014591217.log
+-rw-r--r--   1 root root   11221 Jan 10 03:15 logs.1768014917117.log
+-rw-r--r--   1 root root   14607 Jan 10 03:22 logs.1768015306620.log
+-rw-r--r--   1 root root   10924 Jan 10 03:29 logs.1768015772597.log
+-rw-r--r--   1 root root   15962 Jan 10 03:36 logs.1768016159701.log
+-rw-r--r--   1 root root     350 Jan  2 03:56 metadata.json
+drwxr-xr-x   2 root root    4096 Jan  7 13:03 migration-scripts
+-rw-r--r--   1 root root   54607 Jan  2 14:44 mockData.ts
+-rw-r--r--   1 root root    5620 Jan  2 03:56 new_algorithm_section.ts
+drwxr-xr-x 123 root root    4096 Jan  9 09:23 node_modules
+drwxr-xr-x   2 root root  184320 Jan 10 03:46 outputs
+-rw-r--r--   1 root root   98593 Jan 10 03:24 package-lock.json
+-rw-r--r--   1 root root     907 Jan  2 14:44 package.json
+-rw-r--r--   1 root root   64198 Jan  7 06:30 password.png
+-rw-r--r--   1 root root  255179 Jan  3 15:01 plate.png
+-rw-r--r--   1 root root  169605 Jan  2 15:15 porkbun.com | Domain Management.pdf
+-rw-r--r--   1 root root    1846 Jan  2 14:44 preview.html
+drwxr-xr-x   2 root root      29 Jan  7 06:30 prisma
+-rw-r--r--   1 root root     268 Jan  2 14:44 privacy-setup-test.txt
+drwxr-xr-x   3 root root    4096 Jan  2 14:44 public
+-rw-r--r--   1 root root    3875 Jan  2 03:56 remove_section_headers.py
+-rw-r--r--   1 root root     982 Jan  7 16:33 reset-admin-password.cjs
+-rw-r--r--   1 root root     982 Jan  7 16:32 reset-admin-password.ts
+-rw-r--r--   1 root root     476 Jan  7 06:30 solo-fix-todo.md
+drwxr-xr-x   4 root root    4096 Jan  2 14:44 static-demo
+-rw-r--r--   1 root root    4975 Jan  7 06:30 status.html
+drwxr-xr-x   2 root root    4096 Jan 10 03:24 summarized_conversations
+-rw-r--r--   1 root root    1797 Jan  2 03:56 temp_compute_next.txt
+-rw-r--r--   1 root root   16719 Jan  2 03:56 temp_part1.txt
+-rw-r--r--   1 root root    1328 Jan  2 14:44 test.html
+-rw-r--r--   1 root root    4430 Jan 10 03:24 todo.md
+-rw-r--r--   1 root root     542 Jan  2 03:56 tsconfig.json
+drwxr-xr-x   2 root root      65 Jan  2 14:44 types
+-rw-r--r--   1 root root   12310 Jan  2 14:44 types.ts
+-rwxr-xr-x   1 root root    1328 Jan  2 14:44 update_seat_configs.sh
+-rwxr-xr-x   1 root root    1423 Jan  2 14:44 update_student_configs.sh
+-rw-r--r--   1 root root   80158 Jan  7 06:30 username.png
+drwxr-xr-x   2 root root    4096 Jan  2 14:44 utils
+-rw-r--r--   1 root root     783 Jan  2 03:56 vite.config.backup.ts
+-rw-r--r--   1 root root     611 Jan  2 14:44 vite.config.ts
