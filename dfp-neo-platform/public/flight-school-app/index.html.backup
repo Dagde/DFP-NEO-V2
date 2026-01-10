@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <!-- Favicon removed to prevent 403 error -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flight School Scheduler - v2024-12-08-2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              // Remove purple colors by overriding them with gray
+              purple: {
+                50: '#f9fafb',
+                100: '#f3f4f6', 
+                200: '#e5e7eb',
+                300: '#d1d5db',
+                400: '#9ca3af',
+                500: '#6b7280',
+                600: '#4b5563',
+                700: '#374151',
+                800: '#1f2937',
+                900: '#111827',
+                950: '#030712',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* DO NOT hide buttons globally - only target sidebar buttons specifically */
+      /* This ensures Save buttons in Flight Details modal still work */
+      
+      /* Only hide purple buttons that are in the left sidebar area */
+      .sidebar button[style*="rgb(118, 75, 162)"],
+      [class*="sidebar"] button[style*="rgb(118, 75, 162)"],
+      .courses-section button[style*="rgb(118, 75, 162)"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+    </style>
+    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+  <style>
+  @keyframes fade-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out forwards;
+  }
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-slide-in-right {
+    animation: slide-in-right 0.2s ease-out forwards;
+  }
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  .btn-shape-fill {
+    background-color: #9ca3af; /* gray-400 fallback */
+    background-image: linear-gradient(to bottom, #e5e7eb, #b8bec7); /* light gray to mid gray */
+    border: 1px solid #6b7280; /* gray-500 */
+    color: #1f2937; /* gray-800 */
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.15);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-shape-fill:hover {
+    background-color: #e5e7eb;
+    background-image: linear-gradient(to bottom, #f3f4f6, #cdd2d9);
+  }
+  .btn-shape-fill.active, .btn-shape-fill:active {
+    background-color: #b8bec7;
+    background-image: linear-gradient(to top, #e5e7eb, #b8bec7);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    border-color: #4b5563; /* gray-600 */
+    color: #111827; /* gray-900 */
+    transform: translateY(1px);
+  }
+  .btn-gold-brushed {
+    background-color: #eab308; /* yellow-500 fallback */
+    background-image: linear-gradient(to bottom, #fde047, #ca8a04); /* yellow-300 to yellow-600 */
+    border: 1px solid #a16207; /* yellow-700 */
+    color: #422006; /* yellow-950 */
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-gold-brushed:hover {
+    background-image: linear-gradient(to bottom, #fef08a, #facc15); /* lighter yellow gradient */
+  }
+  .btn-gold-brushed.active, .btn-gold-brushed:active {
+    background-image: linear-gradient(to top, #fde047, #ca8a04);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    border-color: #854d0e; /* yellow-800 */
+    transform: translateY(1px);
+  }
+  .btn-green-brushed {
+    background-color: #166534; /* green-800 fallback */
+    background-image: linear-gradient(to bottom, #4ade80, #16a34a); /* green-400 to green-600 */
+    border: 1px solid #14532d; /* green-900 */
+    color: #1f2937; /* gray-800 */
+    text-shadow: 0 1px 1px rgba(255,255,255,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-green-brushed:hover {
+    background-image: linear-gradient(to bottom, #86efac, #22c55e); /* lighter green gradient */
+  }
+  .btn-green-brushed:active {
+    background-image: linear-gradient(to top, #4ade80, #16a34a);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    border-color: #14532d;
+    transform: translateY(1px);
+  }
+  .btn-orange-brushed {
+    background-color: #d97706; /* amber-600 fallback */
+    background-image: linear-gradient(to bottom, #fbbf24, #f59e0b); /* amber-400 to amber-500 */
+    border: 1px solid #92400e; /* amber-800 */
+    color: #ffffff;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-orange-brushed:hover {
+    background-image: linear-gradient(to bottom, #fcd34d, #fbbf24); /* lighter amber gradient */
+  }
+  .btn-orange-brushed:active {
+    background-image: linear-gradient(to top, #fbbf24, #f59e0b);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    border-color: #92400e;
+    transform: translateY(1px);
+  }
+  .btn-red-brushed {
+    background-color: #dc2626; /* red-600 fallback */
+    background-image: linear-gradient(to bottom, #f87171, #ef4444); /* red-400 to red-500 */
+    border: 1px solid #991b1b; /* red-800 */
+    color: #ffffff;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-red-brushed:hover {
+    background-image: linear-gradient(to bottom, #fca5a5, #f87171); /* lighter red gradient */
+  }
+  .btn-red-brushed:active {
+    background-image: linear-gradient(to top, #f87171, #ef4444);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    border-color: #991b1b;
+    transform: translateY(1px);
+  }
+  .btn-gunmetal-brushed {
+    background-color: #374151; /* gray-700 fallback */
+    background-image: linear-gradient(to right, #1f2937, #4b5563, #1f2937); /* gray-800, gray-600, gray-800 */
+    border: 1px solid #000; /* black */
+    color: #f9fafb; /* gray-50, white text for contrast */
+    text-shadow: 0 1px 1px rgba(0,0,0,0.5);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 2px rgba(0,0,0,0.3);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-gunmetal-brushed:hover {
+    background-image: linear-gradient(to right, #374151, #6b7280, #374151); /* gray-700, gray-500, gray-700 */
+  }
+  .btn-gunmetal-brushed.active, .btn-gunmetal-brushed:active {
+    background-image: linear-gradient(to right, #111827, #374151, #111827); /* gray-900, gray-700, gray-900 */
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    border-color: #000;
+    transform: translateY(1px);
+  }
+  .btn-aluminium-brushed {
+    background-color: #9ca3af; /* gray-400 fallback */
+    background-image: linear-gradient(to right, #d1d5db, #f9fafb, #d1d5db);
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #9ca3af;
+    border-left: 1px solid #9ca3af;
+    border-right: 1px solid #9ca3af;
+    color: #1f2937; /* gray-800 */
+    text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 1px rgba(0,0,0,0.1);
+    transition: all 0.1s ease-in-out;
+  }
+  .btn-aluminium-brushed:hover {
+    background-image: linear-gradient(to right, #e5e7eb, #ffffff, #e5e7eb);
+  }
+  .btn-aluminium-brushed.active, .btn-aluminium-brushed:active {
+    background-image: linear-gradient(to right, #9ca3af, #d1d5db, #9ca3af);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+    border-top-color: #9ca3af;
+    border-bottom-color: #d1d5db;
+    border-left-color: #9ca3af;
+    border-right-color: #9ca3af;
+    transform: translateY(1px);
+  }
+  .changed-bar-stripes {
+    background: repeating-linear-gradient(
+      135deg,
+      #eab308,
+      #eab308 4px,
+      #ef4444 4px,
+      #ef4444 8px
+    );
+  }
+  </style>
+  <script>
+    // IMMEDIATE purple button elimination - runs BEFORE React loads
+    (function() {
+      function hideUselessButtons() {
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+          const style = button.getAttribute('style');
+          const text = button.textContent.trim();
+          
+          // Only hide buttons with purple styling in the SIDEBAR (bottom left)
+          // Do NOT hide buttons in modals/dialogs (Flight Details, Visual Adjust, etc.)
+          const isInSidebar = button.closest('.sidebar, [class*="sidebar"]') || 
+                             button.closest('.courses-section, [class*="courses"]') ||
+                             (button.getBoundingClientRect().left < 250 && 
+                              button.getBoundingClientRect().top > 400); // Bottom left corner only
+          
+          const isPurpleButton = style && (style.includes('rgb(118, 75, 162)') || 
+                                          style.includes('118, 75, 162') || 
+                                          style.includes('#764ba2'));
+          
+          // Exclude Visual Adjust, Save, and other functional buttons
+          const isFunctionalButton = text.includes('Visual Adjust') || 
+                                     text.includes('Save') ||
+                                     text.includes('Cancel') ||
+                                     text.includes('Close') ||
+                                     text.includes('Apply') ||
+                                     text.includes('Confirm');
+          
+          // Only hide purple buttons in sidebar that are NOT functional
+          if (isPurpleButton && isInSidebar && !isFunctionalButton) {
+            button.style.setProperty('display', 'none', 'important');
+            button.style.setProperty('visibility', 'hidden', 'important');
+            button.style.setProperty('opacity', '0', 'important');
+            button.style.setProperty('pointer-events', 'none', 'important');
+            console.log('HIDDEN sidebar button:', text);
+          }
+        });
+      }
+      
+      // Run immediately
+      hideUselessButtons();
+      
+      // Run every 100ms for the first 10 seconds
+      let count = 0;
+      const interval = setInterval(() => {
+        hideUselessButtons();
+        count++;
+        if (count > 100) clearInterval(interval);
+      }, 100);
+      
+      // Run on DOM changes
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(hideUselessButtons);
+        observer.observe(document.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style']
+        });
+      }
+    })();
+  </script>
+  <script>
+    // Fix solo flight display - ensure SOLO flights show correctly
+    (function() {
+      function fixSoloFlights() {
+        // Find all flight tiles/events
+        const flightElements = document.querySelectorAll('[class*="flight"], [class*="event"], [data-event-type]');
+        
+        flightElements.forEach(element => {
+          const text = element.textContent;
+          
+          // Check if this is a solo flight (SCT, SOLO, or similar indicators)
+          const isSolo = text.includes('SCT') || 
+                        text.includes('SOLO') || 
+                        text.includes('[SOLO]') ||
+                        text.includes('Solo');
+          
+          if (isSolo) {
+            // Find duplicate names in the element
+            const nameMatches = text.match(/([A-Z][a-z]+,\s*[A-Z][a-z]+)/g);
+            
+            if (nameMatches &amp;&amp; nameMatches.length >= 2) {
+              // Check if the same name appears twice (indicating incorrect solo display)
+              const firstName = nameMatches[0];
+              const secondName = nameMatches[1];
+              
+              if (firstName === secondName) {
+                // This is a solo flight showing the same pilot twice
+                // Find the second occurrence and replace with "SOLO"
+                const innerHTML = element.innerHTML;
+                let count = 0;
+                const fixedHTML = innerHTML.replace(new RegExp(firstName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&amp;'), 'g'), (match) => {
+                  count++;
+                  return count === 1 ? match : '<strong style="color: #fbbf24;">SOLO</strong>';
+                });
+                
+                if (fixedHTML !== innerHTML) {
+                  element.innerHTML = fixedHTML;
+                  console.log('Fixed solo flight display for:', firstName);
+                }
+              }
+            }
+          }
+        });
+      }
+      
+      // Run immediately
+      fixSoloFlights();
+      
+      // Run periodically
+      setInterval(fixSoloFlights, 2000);
+      
+      // Run on DOM changes
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(fixSoloFlights);
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      }
+    })();
+  </script>
+  <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+  <script type="module" crossorigin src="./assets/index-uPhlgI5U.js"></script>
+  <script>
+    // DFP-NEO Event Handling Fixes
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DFP-NEO: Initializing event handling fixes...');
+      
+      // Apply fixes after app loads
+      setTimeout(applyEventHandlingFixes, 2000);
+      
+      // Also try periodically in case app loads slowly
+      const applyInterval = setInterval(function() {
+        if (document.querySelector('#root').children.length > 0) {
+          clearInterval(applyInterval);
+          applyEventHandlingFixes();
+        }
+      }, 3000);
+    });
+
+    function applyEventHandlingFixes() {
+      console.log('DFP-NEO: Applying event handling fixes...');
+      
+      // Hook into any global schedule processing functions
+      hookIntoScheduleFunctions();
+      
+      // Apply UI fixes
+      applyUIFixes();
+      
+      // Set up continuous monitoring
+      setupEventMonitoring();
+      
+      console.log('DFP-NEO: Event handling fixes applied');
+    }
+
+    function hookIntoScheduleFunctions() {
+      // Hook into window object functions if they exist
+      const originalFunctions = {};
+      
+      // Look for and hook schedule validation functions
+      ['validateSchedule', 'checkConflicts', 'calculateDutyHours', 'processEvents'].forEach(funcName => {
+        if (window[funcName]) {
+          originalFunctions[funcName] = window[funcName];
+          window[funcName] = createFilteredFunction(window[funcName]);
+          console.log(`DFP-NEO: Hooked into ${funcName}`);
+        }
+      });
+
+      // Create a filtered version that excludes cancelled events and STBY
+      function createFilteredFunction(originalFunc) {
+        return function(...args) {
+          // Filter out cancelled and STBY events from any event arrays
+          const filteredArgs = args.map(arg => {
+            if (Array.isArray(arg)) {
+              return arg.filter(event => {
+                // Filter conditions:
+                // 1. Remove cancelled/deleted events from processing
+                // 2. Remove STBY events from schedule displays/processing
+                const isCancelled = event.status === 'CANCELLED' || 
+                                  event.isCancelled === true || 
+                                  event.isDeleted === true ||
+                                  event.cancelled === true;
+                
+                const isSTBY = event.type === 'STBY' || 
+                             event.eventType === 'STBY' ||
+                             event.category === 'STBY';
+                
+                // For validation/duty calculation: exclude cancelled events
+                // For schedule display: exclude STBY events
+                if (funcName.includes('validate') || funcName.includes('Duty') || funcName.includes('Conflict')) {
+                  return !isCancelled; // Exclude cancelled from calculations
+                } else {
+                  return !isSTBY; // Exclude STBY from schedules
+                }
+              });
+            }
+            return arg;
+          });
+          
+          return originalFunc.apply(this, filteredArgs);
+        };
+      }
+    }
+
+    function applyUIFixes() {
+      // Hide STBY events from trainee and staff schedules
+      hideSTBYFromSchedules();
+      
+      // Ensure cancelled events show red X and remain visible
+      ensureCancelledEventsDisplay();
+    }
+
+    function hideSTBYFromSchedules() {
+      const stbySelectors = [
+        '[data-event-type="STBY"]',
+        '[data-category="STBY"]', 
+        '.event-stby',
+        '.stby-event',
+        '[data-event*="STBY"]'
+      ];
+      
+      stbySelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          // Hide STBY from schedule views but keep them in editing views
+          const isScheduleView = element.closest('.schedule-view, .trainee-schedule, .staff-schedule, .daily-schedule, .weekly-schedule');
+          const isEditingView = element.closest('.editing-view, .admin-view, .scheduler-view');
+          
+          if (isScheduleView && !isEditingView) {
+            element.style.display = 'none';
+            element.setAttribute('data-stby-hidden', 'true');
+            console.log('DFP-NEO: Hidden STBY event from schedule');
+          }
+        });
+      });
+    }
+
+    function ensureCancelledEventsDisplay() {
+      const cancelledSelectors = [
+        '[data-status="CANCELLED"]',
+        '[data-cancelled="true"]',
+        '.cancelled-event',
+        '.event-cancelled',
+        '[data-event*="CANCELLED"]'
+      ];
+      
+      cancelledSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          // Ensure cancelled events are visible with proper styling
+          element.style.display = '';
+          element.style.opacity = '0.6';
+          
+          // Add or ensure red X indicator
+          if (!element.querySelector('.dfp-cancel-x')) {
+            const redX = document.createElement('div');
+            redX.className = 'dfp-cancel-x';
+            redX.innerHTML = '❌';
+            redX.title = 'Cancelled Event';
+            redX.style.cssText = `
+              position: absolute;
+              top: 2px;
+              right: 2px;
+              font-size: 14px;
+              z-index: 100;
+              pointer-events: none;
+              text-shadow: 0 0 2px rgba(0,0,0,0.8);
+            `;
+            
+            if (element.style.position !== 'absolute' && element.style.position !== 'relative') {
+              element.style.position = 'relative';
+            }
+            
+            element.appendChild(redX);
+            console.log('DFP-NEO: Added red X to cancelled event');
+          }
+        });
+      });
+    }
+
+    function setupEventMonitoring() {
+      // Monitor for DOM changes to apply fixes dynamically
+      const observer = new MutationObserver(function(mutations) {
+        let shouldReapply = false;
+        
+        mutations.forEach(function(mutation) {
+          if (mutation.type === 'childList') {
+            // Check if any schedule or event elements were added
+            mutation.addedNodes.forEach(function(node) {
+              if (node.nodeType === 1) { // Element node
+                if (node.querySelector && (
+                  node.querySelector('[data-event-type]') ||
+                  node.querySelector('.event') ||
+                  node.querySelector('.schedule-item')
+                )) {
+                  shouldReapply = true;
+                }
+              }
+            });
+          }
+        });
+        
+        if (shouldReapply) {
+          setTimeout(applyUIFixes, 100);
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // Also reapply fixes periodically
+      setInterval(applyUIFixes, 5000);
+    }
+
+    // Add global function to manually trigger fixes
+    window.applyDFPFixes = applyEventHandlingFixes;
+    
+    console.log('DFP-NEO: Event handling system ready');
+  </script>
+</head>
+    <body class="bg-gray-800 text-white">
+      <div id="root"></div>
+    </body>
+  </html>
