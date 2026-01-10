@@ -1,0 +1,39 @@
+model Trainee {
+  id                  String    @id @default(cuid())
+  userId              String?   @unique
+  idNumber            Int       @unique
+  name                String
+  fullName            String
+  rank                String?
+  service             String?
+  course              String?
+  lmpType             String?   @default("BPC+IPC")
+  traineeCallsign     String?
+  seatConfig          String?
+  isPaused            Boolean   @default(false)
+  unavailability      Json?
+  unit                String?
+  flight              String?
+  location            String?
+  phoneNumber         String?
+  email               String?
+  primaryInstructor   String?
+  secondaryInstructor String?
+  lastEventDate       DateTime?
+  lastFlightDate      DateTime?
+  currencyStatus      Json?
+  permissions         String[]  @default([])
+  priorExperience     Json?
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([idNumber])
+  @@index([course])
+  @@index([unit])
+  @@index([isActive])
+}
+
+model Aircraft {

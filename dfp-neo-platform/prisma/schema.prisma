@@ -189,6 +189,7 @@ model Trainee {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
+  scores              Score[]   @relation("TraineeScores")
 
   @@index([userId])
   @@index([idNumber])
@@ -241,4 +242,33 @@ enum Role {
   PILOT
   INSTRUCTOR
   USER
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
+  startDate     String
+  endDate       String
+  studentCount  Int?
+  location      String
+  unit          String
+  status        String   @default("ACTIVE")
+  color         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Score {
+  id              String   @id @default(cuid())
+  traineeId       String
+  trainee         Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+  event           String
+  score           Int
+  date            DateTime
+  instructor      String
+  notes           String?
+  details         Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
