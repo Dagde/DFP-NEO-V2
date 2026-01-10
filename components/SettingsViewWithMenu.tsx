@@ -58,6 +58,10 @@ type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
+    
+    // Debug: Log menu items count
+    console.log('SettingsViewWithMenu - Menu items count:', menuItems.length);
+    console.log('SettingsViewWithMenu - Menu items:', menuItems.map(i => i.id));
 
     const menuItems = [
         { id: 'validation' as const, label: 'AC History', icon: (
