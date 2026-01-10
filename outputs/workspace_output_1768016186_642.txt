@@ -1,0 +1,40 @@
+2026-01-10T03:34:28.000000000Z [inf]  Starting Container
+2026-01-10T03:34:28.791510796Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-10T03:34:29.794090413Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-10T03:34:29.794098538Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-10T03:34:31.235886974Z [inf]  
+2026-01-10T03:34:31.235894245Z [inf]  ⚠️  There might be data loss when applying the changes:
+2026-01-10T03:34:31.235900261Z [inf]  
+2026-01-10T03:34:31.235909442Z [inf]    • You are about to drop the column `armyCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:31.235915340Z [inf]  
+2026-01-10T03:34:31.235919999Z [inf]    • You are about to drop the column `navyCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:31.235924424Z [inf]  
+2026-01-10T03:34:31.235930314Z [inf]    • You are about to drop the column `raafCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:31.235936174Z [inf]  
+2026-01-10T03:34:31.235940739Z [inf]    • You are about to drop the column `totalStudents` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:31.235945032Z [inf]  
+2026-01-10T03:34:31.235949254Z [inf]  
+2026-01-10T03:34:31.235963397Z [err]  Error: Use the --accept-data-loss flag to ignore the data loss warnings like prisma db push --accept-data-loss
+2026-01-10T03:34:32.315425643Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-10T03:34:33.889552467Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-10T03:34:33.889559787Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-10T03:34:35.300695126Z [inf]  
+2026-01-10T03:34:35.300703693Z [inf]  ⚠️  There might be data loss when applying the changes:
+2026-01-10T03:34:35.300712689Z [inf]  
+2026-01-10T03:34:35.300721448Z [inf]    • You are about to drop the column `armyCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:35.300730959Z [inf]  
+2026-01-10T03:34:35.300739547Z [inf]    • You are about to drop the column `navyCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:35.300749201Z [inf]  
+2026-01-10T03:34:35.300759024Z [inf]    • You are about to drop the column `raafCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:35.300767381Z [inf]  
+2026-01-10T03:34:35.300775868Z [inf]    • You are about to drop the column `totalStudents` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:35.300784168Z [inf]  
+2026-01-10T03:34:35.300792609Z [inf]  
+2026-01-10T03:34:35.300801222Z [err]  Error: Use the --accept-data-loss flag to ignore the data loss warnings like prisma db push --accept-data-loss
+2026-01-10T03:34:36.323999399Z [err]  npm warn config production Use `--omit=dev` instead.
+2026-01-10T03:34:38.022245537Z [inf]  Prisma schema loaded from prisma/schema.prisma
+2026-01-10T03:34:38.022255021Z [inf]  Datasource "db": PostgreSQL database "railway", schema "public" at "postgres.railway.internal:5432"
+2026-01-10T03:34:39.474017883Z [err]  Error: Use the --accept-data-loss flag to ignore the data loss warnings like prisma db push --accept-data-loss
+2026-01-10T03:34:39.474034416Z [inf]    • You are about to drop the column `navyCount` on the `Course` table, which still contains 5 non-null values.
+2026-01-10T03:34:39.474047896Z [inf]  
+2026-01-10T03:34:39.474057066Z [inf]    • You are about to drop the column `raafCount` on the `Course` table, which still contains 5 non-null values.
