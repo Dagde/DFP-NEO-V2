@@ -1,0 +1,11 @@
+
+
+2026-01-10T04:21:13.465973875Z [inf]  ./app/api/scores/route.ts
+Module not found: Can't resolve '@/lib/prisma'
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+2026-01-10T04:21:13.476932623Z [inf]  
+
+2026-01-10T04:21:13.477057888Z [inf]  > Build failed because of webpack errors

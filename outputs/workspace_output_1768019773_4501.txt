@@ -1,0 +1,2 @@
+2026-01-10T04:21:13.477057888Z [inf]  > Build failed because of webpack errors
+2026-01-10T04:21:14.501219719Z [err]  ERROR: failed to build: failed to solve: process "sh -c npm run build" did not complete successfully: exit code: 1
