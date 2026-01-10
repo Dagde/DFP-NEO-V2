@@ -106,6 +106,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { initializeData } from './lib/dataService';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
@@ -3075,7 +3076,31 @@ const App: React.FC = () => {
             setCurrentUser(userString);
         }
     }, [currentUser]);
-    
+// Load data from API on mount
+    useEffect(() => {
+        const loadInitialData = async () => {
+            console.log('🔄 Starting to load initial data...');
+            try {
+                const data = await initializeData();
+                console.log('📦 Data received from initializeData:', {
+                    instructorsCount: data.instructors.length,
+                    traineesCount: data.trainees.length,
+                    aircraftCount: data.aircraft.length,
+                    scoresCount: Object.keys(data.scores).length,
+                    eventsCount: data.events.length,
+                });
+                
+                setInstructorsData(data.instructors);
+                setTraineesData(data.trainees);
+                setEvents(data.events);
+                
+                console.log('✅ State updated successfully');
+            } catch (error) {
+                console.error('❌ Failed to load initial data:', error);
+            }
+        };
+        loadInitialData();
+    }, []);    
     // User change handler
     const handleUserChange = (userName: string) => {
         setCurrentUserName(userName);
