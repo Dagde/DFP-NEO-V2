@@ -1,0 +1,13 @@
+    // Fetch instructors
+    console.log('👨‍🏫 Fetching instructors from API...');
+    instructors = await fetchInstructors();
+         // Always merge with mock data for staff
+         instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+      
+    
+    // Fetch trainees
+    console.log('👨‍🎓 Fetching trainees from API...');
+    trainees = await fetchTrainees();
+    console.log('✅ Trainees loaded:', trainees.length);
+      
+      // Merge with mock data if trainee toggle is ON

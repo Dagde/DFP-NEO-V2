@@ -1,0 +1,10 @@
+264:    const shouldShowSection = (sectionName: string) => {
+1199:                {shouldShowSection('validation') && (
+1208:                {shouldShowSection('timezone') && (
+1265:                {shouldShowSection('scoring-matrix') && (
+1288:                   {shouldShowSection('location') && (
+1346:                      {shouldShowSection('location') && (
+1357:                   {shouldShowSection('units') && (
+1424:                   {shouldShowSection('duty-turnaround') && (
+1440:                   {shouldShowSection('sct-events') && (
+1507:                   {shouldShowSection('currencies') && (
