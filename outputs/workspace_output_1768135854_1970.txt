@@ -1,0 +1,4 @@
+86:        if (user.userType === 'STAFF') {
+90:        } else if (user.userType === 'TRAINEE') {
+95:            // Default to Staff profile if userType not specified
+118:                    'Content-Type': 'application/json',
