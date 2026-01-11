@@ -1,0 +1,6 @@
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PILOT
+  INSTRUCTOR
+  USER

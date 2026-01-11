@@ -1,0 +1,51 @@
+export interface Instructor {
+  idNumber: number;
+  name: string;
+  rank: InstructorRank;
+  role: 'QFI' | 'SIM IP';
+  callsignNumber: number;
+  service?: 'RAAF' | 'RAN' | 'ARA';
+  category: InstructorCategory;
+  isTestingOfficer: boolean;
+  seatConfig: SeatConfig;
+  isExecutive: boolean;
+  isFlyingSupervisor: boolean;
+  isIRE: boolean;
+  isCommandingOfficer?: boolean;
+  isCFI?: boolean;
+  isDeputyFlightCommander?: boolean;
+  isContractor?: boolean;
+  isAdminStaff?: boolean;
+  isQFI?: boolean;
+  isOFI?: boolean;
+  unavailability: UnavailabilityPeriod[];
+  currencyStatus?: PersonCurrencyStatus[];
+  location?: string;
+  unit?: string;
+  flight?: string;
+  phoneNumber?: string;
+  email?: string;
+  permissions?: string[];
+  priorExperience?: LogbookExperience;
+}
+
+export interface ScheduleEvent {
+  id: string;
+  date: string;
+  type: 'flight' | 'ftd' | 'ground' | 'cpt' | 'deployment';
+  instructor?: string;
+  student?: string;
+  pilot?: string;
+  crew?: string; // Second pilot for SCT events (not PIC)
+  group?: string;
+  groupTraineeIds?: number[];
+  flightNumber: string;
+  duration: number;
+  startTime: number;
+  resourceId: string;
+  color: string;
+  flightType: 'Dual' | 'Solo';
+  locationType: 'Local' | 'Land Away';
+  origin: string;
+  destination: string;
+  area?: string;

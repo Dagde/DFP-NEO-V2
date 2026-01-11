@@ -1,0 +1,1 @@
+✅ Successfully updated InstructorListView.tsx to check both role and isQFI

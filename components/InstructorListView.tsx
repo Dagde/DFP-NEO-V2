@@ -127,7 +127,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       };
 
       return instructorsData
-          .filter(i => i.role === 'QFI')
+          .filter(i => i.role === 'QFI' || i.isQFI === true)
           .sort((a, b) => {
               const rankA = rankOrder[a.rank] || 99;
               const rankB = rankOrder[b.rank] || 99;

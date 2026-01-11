@@ -1,0 +1,17 @@
+  const qfis = useMemo(() => {
+      const rankOrder: { [key: string]: number } = {
+          'WGCDR': 1,
+          'SQNLDR': 2,
+          'FLTLT': 3,
+          'FLGOFF': 4,
+          'PLTOFF': 5,
+          'Mr': 6
+      };
+
+      return instructorsData
+          .filter(i => i.role === 'QFI')
+          .sort((a, b) => {
+              const rankA = rankOrder[a.rank] || 99;
+              const rankB = rankOrder[b.rank] || 99;
+              
+              if (rankA !== rankB) {
