@@ -1,0 +1,21 @@
+                }
+            } else {
+                if (onShowSuccess) {
+                    setSuccessMessage(`Staff profile not found: ${user.name}`);
+                }
+            }
+        } else if (user.userType === 'TRAINEE') {
+            // Find trainee by name or PMKeys ID
+            const trainee = traineesData.find(t => 
+                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (trainee) {
+                // Navigate to CourseRoster view and select the trainee
+                setSelectedTrainee(trainee);
+                setActiveView('CourseRoster');
+                if (onShowSuccess) {
+                    setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
