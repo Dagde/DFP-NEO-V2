@@ -1,0 +1,3 @@
+27:    const [showEditModal, setShowEditModal] = useState(false);
+288:            {/* Edit User Modal (Placeholder - to be implemented) */}
+289:            {showEditModal && selectedUser && (

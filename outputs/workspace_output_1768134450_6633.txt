@@ -1,0 +1,45 @@
+    const handleSaveEdit = async () => {
+        if (!selectedUser) return;
+
+        try {
+            setIsSaving(true);
+            setEditError(null);
+
+            const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(editFormData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update user');
+            }
+
+            const updatedUser = await response.json();
+            
+            // Update the user in the list
+            setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+            setFilteredUsers(filteredUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
+            
+            setEditSuccess(true);
+            
+            // Auto-close after success
+            setTimeout(() => {
+                setShowEditModal(false);
+                setSelectedUser(null);
+                setEditFormData({});
+                setEditSuccess(false);
+            }, 1500);
+        } catch (error: any) {
+            console.error('Error updating user:', error);
+            setEditError(error.message || 'Failed to update user. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = (user: User) => {
