@@ -1,0 +1,11 @@
+model Trainee {
+  id                  String    @id @default(cuid())
+  userId              String?   @unique
+  idNumber            Int       @unique
+  name                String
+  fullName            String
+  rank                String?
+  service             String?
+  course              String?
+  lmpType             String?   @default("BPC+IPC")
+  traineeCallsign     String?

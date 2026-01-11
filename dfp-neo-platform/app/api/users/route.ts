@@ -19,32 +19,68 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
 
-    // Build where clause
-    const where: any = {};
+    // Get all personnel (staff/instructors)
+    const personnelWhere: any = {
+      isActive: true,
+      OR: [
+        { role: 'INSTRUCTOR' },
+        { role: 'OFI' },
+        { role: 'QFI' },
+      ],
+    };
 
     if (search) {
-      where.OR = [
+      personnelWhere.OR = [
+        ...personnelWhere.OR,
         { name: { contains: search, mode: 'insensitive' } },
         { idNumber: { equals: parseInt(search) } },
         { rank: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    // Get all personnel (staff and trainees)
     const personnel = await prisma.personnel.findMany({
-      where: {
-        ...where,
-        isActive: true,
-      },
+      where: personnelWhere,
       orderBy: [
         { name: 'asc' },
       ],
     });
 
-    // Transform to match expected format
-    const transformedUsers = personnel.map(p => {
-      // Determine if this is staff or trainee based on role
-      const userType = (p.role === 'TRAINEE' || p.role === 'CADET') ? 'TRAINEE' : 'STAFF';
+    // Get all trainees
+    const traineeWhere: any = {};
+
+    if (search) {
+      traineeWhere.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { idNumber: { equals: parseInt(search) } },
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { rank: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const trainees = await prisma.trainee.findMany({
+      where: traineeWhere,
+      orderBy: [
+        { name: 'asc' },
+      ],
+    });
+
+    // Transform personnel data
+    const transformedPersonnel = personnel.map(p => {
+      // Map category to service
+      const serviceMap: Record<string, string> = {
+        'A': 'RAAF',
+        'B': 'RAAF',
+        'D': 'RAAF',
+        'UnCat': 'N/A',
+      };
+      
+      // Map flight to unit
+      const unitMap: Record<string, string> = {
+        'A': '1FTS',
+        'B': '1FTS',
+        'C': '1FTS',
+        'D': '1FTS',
+      };
       
       return {
         id: p.id,
@@ -53,15 +89,38 @@ export async function GET(request: NextRequest) {
         role: p.role || 'STAFF',
         createdAt: p.createdAt.toISOString().split('T')[0],
         rank: p.rank,
-        service: p.category, // Using category as service for now
-        unit: p.flight || 'N/A', // Using flight as unit for now
-        userType: userType,
+        service: serviceMap[p.category || ''] || p.category || 'RAAF',
+        unit: unitMap[p.flight || ''] || p.flight || 'N/A',
+        userType: 'STAFF' as const,
         personnelId: p.id,
         email: p.email || 'N/A',
       };
     });
 
-    return NextResponse.json(transformedUsers);
+    // Transform trainee data
+    const transformedTrainees = trainees.map(t => {
+      return {
+        id: t.id,
+        name: t.name,
+        pmkeysId: t.idNumber ? t.idNumber.toString() : 'N/A',
+        role: 'TRAINEE',
+        createdAt: t.createdAt ? t.createdAt.toISOString().split('T')[0] : 'N/A',
+        rank: t.rank,
+        service: t.service || 'RAAF',
+        unit: t.course || 'N/A',
+        userType: 'TRAINEE' as const,
+        personnelId: t.id,
+        email: 'N/A',
+      };
+    });
+
+    // Combine both lists
+    const allUsers = [...transformedPersonnel, ...transformedTrainees];
+    
+    // Sort alphabetically by name
+    allUsers.sort((a, b) => a.name.localeCompare(b.name));
+
+    return NextResponse.json(allUsers);
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json(
