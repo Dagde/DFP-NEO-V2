@@ -97,30 +97,22 @@ export async function initializeData() {
   try {
     console.log('🌐 Initializing data from API...');
     
-    // Fetch instructors
-    console.log('👨‍🏫 Fetching instructors from API...');
-    instructors = await fetchInstructors();
-    console.log('✅ Instructors loaded:', instructors.length);
-      
-      // Merge with mock data if staff toggle is ON
-      if (dataSourceSettings.staff) {
-        console.log('🔄 Staff toggle is ON - merging database + mock data');
-        instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
-      }
-      
-    
-    // Fetch trainees
-    console.log('👨‍🎓 Fetching trainees from API...');
-    trainees = await fetchTrainees();
-    console.log('✅ Trainees loaded:', trainees.length);
-      
-      // Merge with mock data if trainee toggle is ON
-      if (dataSourceSettings.trainee) {
-        console.log('🔄 Trainee toggle is ON - merging database + mock data');
-        trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
-      }
-      
-    
+       // Fetch instructors
+       console.log('👨‍🏫 Fetching instructors from API...');
+       instructors = await fetchInstructors();
+       // Always merge with mock data for staff
+       console.log('🔁 Merging database + mock data for staff');
+       instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+   
+
+       // Fetch trainees
+       console.log('👨‍🎓 Fetching trainees from API...');
+       trainees = await fetchTrainees();
+       console.log('✅ Trainees loaded:', trainees.length);
+       // Always merge with mock data for trainees
+       console.log('🔁 Merging database + mock data for trainees');
+       trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+   
     // Fetch aircraft
     console.log('✈️ Fetching aircraft from API...');
     aircraft = await fetchAircraft();

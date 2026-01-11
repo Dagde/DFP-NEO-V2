@@ -1,0 +1,8 @@
+            console.log('🔄 Starting to load initial data...');
+            try {
+                const data = await initializeData();
+                console.log('📦 Data received from initializeData:', {
+                    instructorsCount: data.instructors.length,
+                    traineesCount: data.trainees.length,
+                    aircraftCount: data.aircraft.length,
+                    scoresCount: Object.keys(data.scores).length,

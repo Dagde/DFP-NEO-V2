@@ -1,0 +1,16 @@
+        { id: 'lmp_loads', name: 'LMP Loads' },
+        { id: 'logbook_templates', name: 'Logbook Template' },
+        { id: 'miscellaneous', name: 'Miscellaneous' },
+        { id: 'trainee_data', name: 'Trainee Data' },
+        { id: 'trainee_logbook', name: 'Logbook', isSub: true },
+        { id: 'staff_data', name: 'Staff Data' },
+        { id: 'staff_logbook', name: 'Logbook', isSub: true },
+    ]);
+    const [showUpload, setShowUpload] = useState(false);
+    const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+    const [showSelectDestination, setShowSelectDestination] = useState(false);
+    const [fileToDownload, setFileToDownload] = useState<{ id: string; name: string } | null>(null);
+    const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
+
+    // Update process state
+    const [fileToProcess, setFileToProcess] = useState<{ id: string; name: string; folderId: string } | null>(null);

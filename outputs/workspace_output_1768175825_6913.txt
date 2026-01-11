@@ -1,0 +1,21 @@
+    console.log('👨‍🎓 Fetching trainees from API...');
+    trainees = await fetchTrainees();
+    console.log('✅ Trainees loaded:', trainees.length);
+      
+      // Merge with mock data if trainee toggle is ON
+        trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+      
+    
+         // Always merge with mock data for trainees
+         trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+
+    // Fetch aircraft
+    console.log('✈️ Fetching aircraft from API...');
+    aircraft = await fetchAircraft();
+    console.log('✅ Aircraft loaded:', aircraft.length);
+    
+    // Fetch scores
+    console.log('📊 Fetching scores from API...');
+    scores = await fetchScores();
+    console.log('✅ Scores loaded:', Object.keys(scores).length, 'trainees with scores');
+    
