@@ -1,0 +1,59 @@
+[feature/comprehensive-build-algorithm 9d1c5bf] refactor: User List now shows Staff/Trainee profiles linked to User accounts
+ 60 files changed, 1288 insertions(+), 301 deletions(-)
+ create mode 100644 Screen Shot 2026-01-11 at 11.32.01 pm.jpg
+ create mode 100644 Screen Shot 2026-01-11 at 11.32.23 pm.jpg
+ create mode 100644 Screen Shot 2026-01-11 at 11.44.56 pm.jpg
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cmg2UHXz.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-Cmg2UHXz.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-FE6reoeJ.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-FE6reoeJ.js.map
+ create mode 100644 outputs/workspace_output_1768135795_5624.txt
+ create mode 100644 outputs/workspace_output_1768135799_9517.txt
+ create mode 100644 outputs/workspace_output_1768135817_1377.txt
+ create mode 100644 outputs/workspace_output_1768135825_6766.txt
+ create mode 100644 outputs/workspace_output_1768135830_1687.txt
+ create mode 100644 outputs/workspace_output_1768135833_6862.txt
+ create mode 100644 outputs/workspace_output_1768135837_6864.txt
+ create mode 100644 outputs/workspace_output_1768135840_342.txt
+ create mode 100644 outputs/workspace_output_1768135850_1567.txt
+ create mode 100644 outputs/workspace_output_1768135854_1970.txt
+ create mode 100644 outputs/workspace_output_1768135857_8775.txt
+ create mode 100644 outputs/workspace_output_1768135862_2395.txt
+ create mode 100644 outputs/workspace_output_1768135890_8338.txt
+ create mode 100644 outputs/workspace_output_1768135894_2096.txt
+ create mode 100644 outputs/workspace_output_1768135915_9586.txt
+ create mode 100644 outputs/workspace_output_1768135925_6632.txt
+ create mode 100644 outputs/workspace_output_1768135956_4000.txt
+ create mode 100644 outputs/workspace_output_1768135970_5029.txt
+ create mode 100644 outputs/workspace_output_1768135974_5474.txt
+ create mode 100644 outputs/workspace_output_1768135977_9552.txt
+ create mode 100644 outputs/workspace_output_1768135981_87.txt
+ create mode 100644 outputs/workspace_output_1768135985_768.txt
+ create mode 100644 outputs/workspace_output_1768135989_3958.txt
+ create mode 100644 outputs/workspace_output_1768135995_6336.txt
+ create mode 100644 outputs/workspace_output_1768136065_9579.txt
+ create mode 100644 outputs/workspace_output_1768136074_4579.txt
+ create mode 100644 outputs/workspace_output_1768136090_1490.txt
+ create mode 100644 outputs/workspace_output_1768136096_5609.txt
+ create mode 100644 outputs/workspace_output_1768136099_9050.txt
+ create mode 100644 outputs/workspace_output_1768136103_88.txt
+ create mode 100644 outputs/workspace_output_1768136107_412.txt
+ create mode 100644 outputs/workspace_output_1768136110_9616.txt
+ create mode 100644 outputs/workspace_output_1768136119_9399.txt
+ create mode 100644 outputs/workspace_output_1768136125_7471.txt
+ create mode 100644 outputs/workspace_output_1768136131_7059.txt
+ create mode 100644 outputs/workspace_output_1768136134_9541.txt
+ create mode 100644 outputs/workspace_output_1768136149_6938.txt
+ create mode 100644 outputs/workspace_output_1768136161_4748.txt
+ create mode 100644 outputs/workspace_output_1768136176_8936.txt
+ create mode 100644 outputs/workspace_output_1768136190_415.txt
+ create mode 100644 outputs/workspace_output_1768136194_1222.txt
+ create mode 100644 outputs/workspace_output_1768136208_7005.txt
+ create mode 100644 outputs/workspace_output_1768136302_3206.txt
+ create mode 100644 outputs/workspace_output_1768136354_1624.txt
+ create mode 100644 outputs/workspace_output_1768136369_7159.txt
+ create mode 100644 outputs/workspace_output_1768136403_418.txt
+ create mode 100644 outputs/workspace_output_1768136407_7154.txt
+ create mode 100644 outputs/workspace_output_1768136411_4302.txt
+To https://github.com/Dagde/DFP---NEO.git
+   df767b6..9d1c5bf  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
