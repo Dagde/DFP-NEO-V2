@@ -1,0 +1,5 @@
+54:            const response = await fetch('/api/users', {
+72:            const mockUsers: User[] = [
+77:            setUsers(mockUsers);
+78:            setFilteredUsers(mockUsers);
+103:            const response = await fetch(`/api/users/${selectedUser.id}`, {

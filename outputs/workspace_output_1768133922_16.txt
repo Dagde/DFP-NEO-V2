@@ -1,0 +1,6 @@
+            const filtered = users.filter(user => 
+                user.name.toLowerCase().includes(term) ||
+                (user.pmkeysId && user.pmkeysId.toString().includes(term))
+            );
+            setFilteredUsers(filtered);
+        }
