@@ -1,0 +1,51 @@
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+index-jmm3GvpJ.js?v=1768085719:324 Uncaught 
+index-jmm3GvpJ.js?v=1768085719:324 Uncaught 
+ 📝 onUpdateInstructor called with data: Object
+ 📝 Current instructorsData length: 43
+ 📝 Instructor exists in prev state: false
+ 📝 Adding new instructor to state: 8201111
+ 📝 Checking database ID for instructor...
+ 📝 Has database ID: undefined
+ 📝 Database ID: undefined
+ 💾 === CREATING NEW INSTRUCTOR ===
+ 💾 Payload: {
+  "idNumber": 8201111,
+  "name": "Evans, Daniel",
+  "rank": "SQNLDR",
+  "role": "INSTRUCTOR",
+  "callsignNumber": 2,
+  "category": "B1",
+  "isTestingOfficer": true,
+  "seatConfig": "Normal",
+  "isExecutive": true,
+  "isFlyingSupervisor": true,
+  "isIRE": false,
+  "location": "East Sale",
+  "unit": "1FTS",
+  "phoneNumber": "",
+  "email": "",
+  "unavailability": [],
+  "service": "RAAF",
+  "isCommandingOfficer": false,
+  "isCFI": false,
+  "isDeputyFlightCommander": false,
+  "isContractor": false,
+  "isAdminStaff": false,
+  "isQFI": false,
+  "isOFI": false,
+  "flight": "A",
+  "permissions": [
+    "Staff"
+  ],
+  "priorExperience": {
+    "day": {
+      "p1": 0,
+      "p2": 0,
+      "dual": 0
+    },
+    "night": {
+      "p1": 0,
+      "p2": 0,
+      "dual": 0
+    },

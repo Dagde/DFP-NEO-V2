@@ -1,0 +1,5 @@
+/workspace/mockData.ts:698:    // Generate SIM IPs (4)
+/workspace/components/InstructorListView.tsx:318:                    {/* SIM IPs */}
+/workspace/components/InstructorListView.tsx:321:                            <h3 className="text-lg font-bold text-teal-400">SIM IPs</h3>
+/workspace/components/SettingsView.tsx:1764:                            {/* SIM IPs */}
+/workspace/components/SettingsView.tsx:1766:                                <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>

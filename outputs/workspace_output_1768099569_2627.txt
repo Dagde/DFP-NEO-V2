@@ -1,0 +1,26 @@
+
+        if (aircraft.length === 0) {
+            console.log('⚠️ No aircraft from API, using mock data');
+            aircraft = ESL_DATA.aircraft || [];
+        }
+
+        console.log('📊 Data loaded successfully:', {
+            instructors: instructors.length,
+            trainees: trainees.length,
+            aircraft: aircraft.length,
+            scores: Object.keys(scores).length,
+            events: events.length,
+        });
+
+        return {
+            instructors,
+            trainees,
+            aircraft,
+            scores,
+            events,
+        };
+
+    } catch (error) {
+        console.error('❌ Failed to load data from API:', error);
+        console.log('⚠️ Falling back to mock data');
+

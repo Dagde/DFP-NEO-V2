@@ -1,0 +1,11 @@
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "git-sync": "node git-automation.js",
+    "git-sync-once": "node git-sync-once.js",
+    "git-pull": "node -e &quot;const git=require('./git-automation.js'); git.pullLatest();&quot;",
+    "git-push": "node -e &quot;const git=require('./git-automation.js'); git.pushChanges();&quot;",
+    "git-status": "node git-status.js"
+  },
+  "dependencies": {

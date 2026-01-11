@@ -1,0 +1,28 @@
+2:import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+109:import { initializeData } from './lib/dataService';
+2914:    React.useEffect(() => {
+2932:    React.useEffect(() => {
+2977:    useEffect(() => {
+3074:    useEffect(() => {
+3081:    useEffect(() => {
+3085:                const data = await initializeData();
+3086:                console.log('📦 Data received from initializeData:', {
+3445:    useEffect(() => {
+3459:    useEffect(() => {
+3466:    useEffect(() => {
+3473:    useEffect(() => {
+3474:        console.log('🔄 useEffect triggered - activeView:', activeView, 'remedialRequests count:', remedialRequests.filter(r => r.forceSchedule).length);
+3484:    useEffect(() => {
+3489:    useEffect(() => {
+3501:    useEffect(() => {
+3652:    useEffect(() => {
+4472:    useEffect(() => {
+7044:        // The useEffect below will detect the updated state, recalculate conflicts,
+7047:        console.log('🟣 NEO: handleSaveEvents returned, waiting for useEffect to recalculate conflicts');
+7052:    useEffect(() => {
+7058:            console.log('🟠 NEO flyout is closed, skipping useEffect');
+7259:    useEffect(() => {
+8071:                                // Force a sync with the latest state by triggering the useEffect
+8072:                                // The useEffect will catch the updated remedialRequests state
+8365:                                       const { fetchInstructors } = await import('./lib/api');
+8366:                                       const dbInstructors = await fetchInstructors();

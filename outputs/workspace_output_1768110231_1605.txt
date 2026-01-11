@@ -1,0 +1,20 @@
+8a7ee19 fix: Add start script for Railway deployment
+3c9641d docs: Add deployment issue summary explaining Railway configuration
+39b990b fix: Force Railway rebuild with updated dataService
+f2326d2 chore: Trigger Railway redeploy
+bc2c699 fix: Add cache-busting timestamp to force browser to load new build
+74228c4 feat: Add PUT endpoint for personnel updates and fix instructor persistence
+2b2cb42 feat: Add comprehensive data tracking for instructor creation
+7cd1028 fix: Correct syntax error in personnel route API
+ba78783 fix: Save new instructors to database via API endpoint
+3504a61 feat: Implement Staff Data toggle with database+mock integration and sorting
+4e12e30 fix: Update Data Source toggle descriptions to clarify ON/OFF behavior
+c42fa48 feat: Add Data Source page to Settings menu with toggle UI
+504eca4 rollback: Restore to stable version f1fcc03 (before Data Source changes)
+f1fcc03 Fix login button size (scale-50 to scale-100) and remove Ninja script (purple buttons)
+73a6ea8 Fix scores API - use PrismaClient directly instead of @/lib/prisma
+59f3812 Add missing scores API endpoint
+bfd6a0f Step 4: Add data loading useEffect to App.tsx - loads from API on mount
+de35d79 Step 3: Create data service with API loading and mock data fallback
+70568f6 Step 2: Create API client with plain objects (no Maps)
+c3c0fd9 Step 1: Verify and sync database schema with Prisma

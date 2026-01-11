@@ -1,0 +1,9 @@
+total 12M
+-rw-r--r-- 1 root root 198K Jan 11 09:21 html2canvas.esm-QH1iLAAe.js
+-rw-r--r-- 1 root root 590K Jan 11 09:21 html2canvas.esm-QH1iLAAe.js.map
+-rw-r--r-- 1 root root 2.5M Jan 11 09:21 index-CBAHxCMp.js
+-rw-r--r-- 1 root root 7.0M Jan 11 09:21 index-CBAHxCMp.js.map
+-rw-r--r-- 1 root root 156K Jan 11 09:21 index.es-BDmStvbc.js
+-rw-r--r-- 1 root root 627K Jan 11 09:21 index.es-BDmStvbc.js.map
+-rw-r--r-- 1 root root  23K Jan 11 09:21 purify.es-B9ZVCkUG.js
+-rw-r--r-- 1 root root  91K Jan 11 09:21 purify.es-B9ZVCkUG.js.map

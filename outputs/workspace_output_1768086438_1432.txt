@@ -1,0 +1,51 @@
+ 📝 onUpdateInstructor called with data: Object
+ 📝 Current instructorsData length: 2
+ 📝 Instructor exists in prev state: true
+ 📝 Updating existing instructor in state: 8207938
+ 📝 Checking database ID for instructor...
+ 📝 Has database ID: cmk8vukbx0000mv3adfc3eowo
+ 📝 Database ID: cmk8vukbx0000mv3adfc3eowo
+ 🔧 === UPDATING EXISTING INSTRUCTOR ===
+ 🔧 Database ID: cmk8vukbx0000mv3adfc3eowo
+ 🔧 Payload: {
+  "idNumber": 8207938,
+  "name": "Dawe, Daniel",
+  "rank": "FLTLT",
+  "role": "INSTRUCTOR",
+  "callsignNumber": 3,
+  "category": "B1",
+  "isTestingOfficer": true,
+  "seatConfig": "Normal",
+  "isExecutive": true,
+  "isFlyingSupervisor": true,
+  "isIRE": false,
+  "location": "East Sale",
+  "unit": "1FTS",
+  "phoneNumber": "",
+  "email": "",
+  "unavailability": [],
+  "service": "RAAF",
+  "isCommandingOfficer": false,
+  "isCFI": false,
+  "isDeputyFlightCommander": false,
+  "isContractor": false,
+  "isAdminStaff": false,
+  "isQFI": false,
+  "isOFI": false,
+  "flight": "A",
+  "permissions": [
+    "Admin"
+  ],
+  "priorExperience": {
+    "day": {
+      "p1": 0,
+      "p2": 0,
+      "dual": 0
+    },
+    "night": {
+      "p1": 0,
+      "p2": 0,
+      "dual": 0
+    },
+    "total": 0,
+    "captain": 0,

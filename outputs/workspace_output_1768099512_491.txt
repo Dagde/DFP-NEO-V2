@@ -1,0 +1,8 @@
+41:  instructorsData: Instructor[];
+62:    instructorsData, 
+112:        const updatedInstructor = instructorsData.find(i => i.idNumber === selectedInstructor.idNumber);
+117:  }, [instructorsData, selectedInstructor]);
+129:      return instructorsData
+140:  }, [instructorsData]);
+156:  const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
+379:            instructorsData={instructorsData}

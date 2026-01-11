@@ -1,0 +1,51 @@
+export async function initializeData() {
+    console.log('🔧 initializeData() - Starting data initialization');
+
+    // Load data source settings from localStorage
+    const dataSourceSettings = JSON.parse(localStorage.getItem('dataSourceSettings') || '{"staff":false,"trainee":false,"course":false}');
+    console.log('🎛️ Data source settings:', dataSourceSettings);
+
+    let instructors: any[] = [];
+    let trainees: any[] = [];
+    let aircraft: any[] = [];
+    let scores: Record<string, any[]> = {};
+    let events: any[] = [];
+
+    try {
+        console.log('🌐 Initializing data from API...');
+
+        // Fetch instructors (Staff)
+        console.log('👨‍🏫 Fetching instructors from API...');
+        const dbInstructors = await fetchInstructors();
+        console.log('✅ Database instructors loaded:', dbInstructors.length);
+
+        if (dataSourceSettings.staff) {
+            // Merge database + mock data for staff
+            console.log('🔗 Merging staff data (Database + Mock)...');
+            const mockInstructors = ESL_DATA.instructors || [];
+            instructors = mergeInstructorData(dbInstructors, mockInstructors);
+            console.log('✅ Merged instructors total:', instructors.length);
+        } else {
+            // Use only database data
+            console.log('📦 Using database only for staff...');
+            instructors = dbInstructors;
+        }
+
+        // Fetch trainees
+        console.log('👨‍🎓 Fetching trainees from API...');
+        trainees = await fetchTrainees();
+        console.log('✅ Trainees loaded:', trainees.length);
+
+        // Fetch aircraft
+        console.log('✈️ Fetching aircraft from API...');
+        aircraft = await fetchAircraft();
+        console.log('✅ Aircraft loaded:', aircraft.length);
+
+        // Fetch scores
+        console.log('📊 Fetching scores from API...');
+        scores = await fetchScores();
+        console.log('✅ Scores loaded:', Object.keys(scores).length, 'trainees with scores');
+
+        // Fetch schedule
+        console.log('📅 Fetching schedule from API...');
+        events = await fetchSchedule();

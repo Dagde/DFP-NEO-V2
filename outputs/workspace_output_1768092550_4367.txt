@@ -1,0 +1,5 @@
+App.tsx:8360 ✅ === DATABASE CREATE SUCCESSFUL ===
+App.tsx:8364 🔄 Reloading instructors from database to verify...
+api.ts:15 🌐 API Request: /api/personnel?role=INSTRUCTOR
+api.ts:30 ✅ API Response: /api/personnel?role=INSTRUCTOR Object
+App.tsx:8367 🔄 Database instructors after save: 3

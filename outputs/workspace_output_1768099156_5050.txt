@@ -1,0 +1,31 @@
+        // Fetch trainees
+        console.log('👨‍🎓 Fetching trainees from API...');
+        trainees = await fetchTrainees();
+        console.log('✅ Trainees loaded:', trainees.length);
+
+        // Fetch aircraft
+        console.log('✈️ Fetching aircraft from API...');
+        aircraft = await fetchAircraft();
+        console.log('✅ Aircraft loaded:', aircraft.length);
+
+        // Fetch scores
+        console.log('📊 Fetching scores from API...');
+        scores = await fetchScores();
+        console.log('✅ Scores loaded:', Object.keys(scores).length, 'trainees with scores');
+
+        // Fetch schedule
+        console.log('📅 Fetching schedule from API...');
+        events = await fetchSchedule();
+        console.log('✅ Schedule loaded:', events.length);
+
+        // Fallback to mock data if API returned no data
+        if (instructors.length === 0) {
+            console.log('⚠️ No instructors from API, using mock data');
+            instructors = ESL_DATA.instructors;
+        }
+
+        if (trainees.length === 0) {
+            console.log('⚠️ No trainees from API, using mock data');
+            trainees = ESL_DATA.trainees;
+        }
+

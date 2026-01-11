@@ -1,0 +1,3 @@
+109:import { initializeData } from './lib/dataService';
+3085:                const data = await initializeData();
+3086:                console.log('📦 Data received from initializeData:', {
