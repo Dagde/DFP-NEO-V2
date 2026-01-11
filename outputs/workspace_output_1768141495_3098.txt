@@ -1,0 +1,22 @@
+[feature/comprehensive-build-algorithm 5680199] debug: Add logging to handleNavigateToProfile
+ 21 files changed, 1830 insertions(+), 1 deletion(-)
+ create mode 100644 Screen Shot 2026-01-12 at 1.20.30 am.jpg
+ create mode 100644 add_debug_logs.py
+ create mode 100644 add_more_debug.py
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-BauNhff3.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-BauNhff3.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-DpVIlNKK.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-DpVIlNKK.js.map
+ create mode 100644 outputs/workspace_output_1768141321_4285.txt
+ create mode 100644 outputs/workspace_output_1768141334_4724.txt
+ create mode 100644 outputs/workspace_output_1768141397_1937.txt
+ create mode 100644 outputs/workspace_output_1768141403_8490.txt
+ create mode 100644 outputs/workspace_output_1768141434_8206.txt
+ create mode 100644 outputs/workspace_output_1768141455_9091.txt
+ create mode 100644 outputs/workspace_output_1768141460_413.txt
+ create mode 100644 outputs/workspace_output_1768141473_1797.txt
+ create mode 100644 outputs/workspace_output_1768141485_5991.txt
+ create mode 100644 outputs/workspace_output_1768141489_4723.txt
+ create mode 100644 outputs/workspace_output_1768141495_3098.txt
+To https://github.com/Dagde/DFP---NEO.git
+   1714eb0..5680199  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm
