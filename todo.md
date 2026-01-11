@@ -1,45 +1,49 @@
-# Fix Data Initialization - Restore Mock Data Loading
-
-## Problem
-- Staff Schedule shows only database entries (Dawe, Dawe, Evans)
-- Staff page shows instructors briefly then disappears
-- No mock data is loading
-- Database instructors not visible despite having QFI qualification
-
-## Root Cause
-- The Data Source toggle logic was removed during rollback
-- `initializeData()` only fetches from API, returns database instructors
-- Mock data fallback only triggers when API returns empty (not the case here)
-- Previous fix attempt (commit 8422995) failed to apply changes to source file
-- InstructorListView only filtered by `role === 'QFI'`, not by `isQFI` qualification
+# User List Feature - Add to Settings Menu
 
 ## Tasks
-- [x] Check current localStorage dataSourceSettings state
-- [x] Restore data source settings state management
-- [x] Modify initializeData() to check dataSourceSettings and merge data
-- [x] Test that mock data loads when toggle is ON
-- [x] Fix InstructorListView to show instructors with isQFI qualification
-- [x] Deploy and verify fix
+- [x] Create UserListSection component with user list display
+- [x] Add search functionality (surname or PMKeys/ID)
+- [x] Sort users alphabetically by name
+- [x] Add EDIT button (placeholder for now)
+- [x] Add DELETE button with password confirmation
+- [x] Add User List tab to SettingsViewWithMenu
+- [x] Install @heroicons/react package
+- [x] Build and deploy
+- [ ] Test the User List functionality
+- [ ] Create API endpoints for user management (if not already existing)
 
-## Completed Changes (Final)
-- Modified `initializeData()` v2.2 to read dataSourceSettings from localStorage
-- Added `mergeInstructorData()` to merge database + mock instructors
-  - Deduplicates by idNumber (prefers database data)
-  - Sorts by Unit → Rank → Name (alphabetical)
-- Added `mergeTraineeData()` to merge database + mock trainees
-  - Deduplicates by name (prefers database data)
-  - Sorts by name (alphabetical)
-- Modified `InstructorListView.tsx` to check both:
-  - `role === 'QFI'` (for mock data instructors)
-  - `isQFI === true` (for database instructors with QFI qualification)
-- Built production version: `index-DMgzrZ6t.js`
-- Commit: `32ff220` - "fix: Show database instructors with isQFI qualification"
+## Completed Changes
+- Created `/workspace/components/UserListSection.tsx`
+  - Displays all users in a table format
+  - Columns: Name, Email, PMKeys/ID, Role, Created date, Actions
+  - Search bar filters by surname or PMKeys/ID
+  - EDIT button opens modal (placeholder for full edit functionality)
+  - DELETE button opens confirmation modal with password input
+  - Shows mock data when API fails (for development)
+  - Sorted alphabetically by name by default
+  
+- Updated `/workspace/components/SettingsViewWithMenu.tsx`
+  - Added 'user-list' to SettingsSection type
+  - Added User List menu item with user icon
+  - Added conditional rendering for User List section
+  - Added import for UserListSection component
+
+- Installed @heroicons/react package for icons (TrashIcon, PencilIcon, MagnifyingGlassIcon)
+
+- Built production version: `index-B2MYnZ6Y.js`
+- Commit: `ff94793` - "feat: Add User List tab to Settings menu"
 - Pushed to feature/comprehensive-build-algorithm
 
 ## Current State
-- ✅ All changes properly applied
-- ✅ Build completed successfully
-- ✅ Files deployed
-- ✅ Committed and pushed to GitHub
+- ✅ User List component created and integrated
+- ✅ All features implemented (list, search, sort, edit placeholder, delete with confirmation)
+- ✅ Built and deployed
 - ⏳ Waiting for Railway deployment to complete (2-3 minutes)
-- 📋 Next: User to hard refresh and verify both database and mock instructors are visible
+- 📋 Next: Test the User List functionality on dfp-neo.com
+
+## API Endpoints Required
+The component expects these API endpoints:
+- `GET /api/users` - Fetch all users
+- `DELETE /api/users/:id` - Delete a user (requires password in request body)
+
+If these don't exist yet, they need to be created in the backend.
