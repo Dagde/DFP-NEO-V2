@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { SettingsView } from './SettingsView';
+import { UserListSection } from './UserListSection';
+import { UserListSection } from './UserListSection';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -54,7 +56,7 @@ interface SettingsViewWithMenuProps {
     cancellationCodes: CancellationCode[];
 }
 
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone';
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list';
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
@@ -174,6 +176,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             {activeSection === 'data-loaders' && 'Data Loaders'}
                             {activeSection === 'event-limits' && 'Event Limits'}
                             {activeSection === 'permissions' && 'Permissions Manager'}
+                               {activeSection === 'user-list' && 'User List'}
                         </h2>
                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
                             <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
@@ -182,6 +185,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         )}
                     </div>
                     <SettingsView {...props} hideHeader={true} activeSection={activeSection} />
+                       {activeSection === 'user-list' && (
+                           <UserListSection
+                               currentUserPermission={props.currentUserPermission}
+                               onShowSuccess={props.onShowSuccess}
+                           />
+                       )}
                 </div>
             </div>
         </div>
