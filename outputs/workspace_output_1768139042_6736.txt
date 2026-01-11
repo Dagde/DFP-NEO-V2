@@ -1,0 +1,10 @@
+/workspace/components/FlightDetailModal.tsx:        const selectedInstructor = crew[0]?.instructor;
+/workspace/components/FlightDetailModal.tsx:        if (isOracleContext && selectedInstructor) {
+/workspace/components/FlightDetailModal.tsx:            const instructorScts = sctRequests.filter(req => req.name === selectedInstructor);
+/workspace/components/InstructorListView.tsx:  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
+/workspace/components/InstructorListView.tsx:        setSelectedInstructor(selectedPersonForProfile);
+/workspace/components/InstructorListView.tsx:    if (selectedInstructor) {
+/workspace/components/InstructorListView.tsx:        const updatedInstructor = instructorsData.find(i => i.idNumber === selectedInstructor.idNumber);
+/workspace/components/InstructorListView.tsx:        if (updatedInstructor && JSON.stringify(updatedInstructor) !== JSON.stringify(selectedInstructor)) {
+/workspace/components/InstructorListView.tsx:            setSelectedInstructor(updatedInstructor);
+/workspace/components/InstructorListView.tsx:  }, [instructorsData, selectedInstructor]);

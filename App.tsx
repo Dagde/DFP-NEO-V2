@@ -2921,7 +2921,51 @@ const App: React.FC = () => {
         return originalSplit.apply(this, args);
       };
       
-      return () => {
+      
+
+    const handleNavigateToProfile = (user: any) => {
+        console.log('Navigating to profile:', user);
+        
+        // Find the instructor or trainee in the data
+        if (user.userType === 'STAFF') {
+            // Find instructor by name or PMKeys ID
+            const instructor = instructorsData.find(i => 
+                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (instructor) {
+                // Navigate to Instructors view and select the instructor
+                setSelectedInstructor(instructor);
+                setActiveView('Instructors');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Staff profile not found: ${user.name}`);
+                }
+            }
+        } else if (user.userType === 'TRAINEE') {
+            // Find trainee by name or PMKeys ID
+            const trainee = traineesData.find(t => 
+                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (trainee) {
+                // Navigate to CourseRoster view and select the trainee
+                setSelectedTrainee(trainee);
+                setActiveView('CourseRoster');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Trainee profile not found: ${user.name}`);
+                }
+            }
+        }
+    };
+    return () => {
         String.prototype.split = originalSplit;
       };
     }, []);
@@ -2947,7 +2991,51 @@ const App: React.FC = () => {
         }
       });
       
-      return () => {
+      
+
+    const handleNavigateToProfile = (user: any) => {
+        console.log('Navigating to profile:', user);
+        
+        // Find the instructor or trainee in the data
+        if (user.userType === 'STAFF') {
+            // Find instructor by name or PMKeys ID
+            const instructor = instructorsData.find(i => 
+                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (instructor) {
+                // Navigate to Instructors view and select the instructor
+                setSelectedInstructor(instructor);
+                setActiveView('Instructors');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Staff profile not found: ${user.name}`);
+                }
+            }
+        } else if (user.userType === 'TRAINEE') {
+            // Find trainee by name or PMKeys ID
+            const trainee = traineesData.find(t => 
+                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (trainee) {
+                // Navigate to CourseRoster view and select the trainee
+                setSelectedTrainee(trainee);
+                setActiveView('CourseRoster');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Trainee profile not found: ${user.name}`);
+                }
+            }
+        }
+    };
+    return () => {
         console.error = originalError;
       };
     }, []);
@@ -3518,7 +3606,51 @@ const App: React.FC = () => {
             updateBuildDate();
         }, 60000); // Check every minute
 
-        return () => clearInterval(checkInterval);
+        
+
+    const handleNavigateToProfile = (user: any) => {
+        console.log('Navigating to profile:', user);
+        
+        // Find the instructor or trainee in the data
+        if (user.userType === 'STAFF') {
+            // Find instructor by name or PMKeys ID
+            const instructor = instructorsData.find(i => 
+                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (instructor) {
+                // Navigate to Instructors view and select the instructor
+                setSelectedInstructor(instructor);
+                setActiveView('Instructors');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Staff profile not found: ${user.name}`);
+                }
+            }
+        } else if (user.userType === 'TRAINEE') {
+            // Find trainee by name or PMKeys ID
+            const trainee = traineesData.find(t => 
+                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (trainee) {
+                // Navigate to CourseRoster view and select the trainee
+                setSelectedTrainee(trainee);
+                setActiveView('CourseRoster');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Trainee profile not found: ${user.name}`);
+                }
+            }
+        }
+    };
+    return () => clearInterval(checkInterval);
     }, [timezoneOffset]); // Re-run when timezone changes
 
     const eventsForDate = useMemo(() => {
@@ -8473,6 +8605,7 @@ updates.forEach(update => {
                     onShowSuccess={setSuccessMessage}
                     eventLimits={eventLimits}
                     onUpdateEventLimits={setEventLimits}
+                        onNavigateToProfile={handleNavigateToProfile}
                     phraseBank={phraseBank} // Pass phraseBank state
                     onUpdatePhraseBank={setPhraseBank} // Pass update handler
                     onNavigate={handleNavigation}
@@ -8676,6 +8809,50 @@ updates.forEach(update => {
 
     // Note: Debug code removed for production deployment
 
+    
+
+    const handleNavigateToProfile = (user: any) => {
+        console.log('Navigating to profile:', user);
+        
+        // Find the instructor or trainee in the data
+        if (user.userType === 'STAFF') {
+            // Find instructor by name or PMKeys ID
+            const instructor = instructorsData.find(i => 
+                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (instructor) {
+                // Navigate to Instructors view and select the instructor
+                setSelectedInstructor(instructor);
+                setActiveView('Instructors');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Staff profile not found: ${user.name}`);
+                }
+            }
+        } else if (user.userType === 'TRAINEE') {
+            // Find trainee by name or PMKeys ID
+            const trainee = traineesData.find(t => 
+                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+            );
+            
+            if (trainee) {
+                // Navigate to CourseRoster view and select the trainee
+                setSelectedTrainee(trainee);
+                setActiveView('CourseRoster');
+                if (onShowSuccess) {
+                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
+                }
+            } else {
+                if (onShowSuccess) {
+                    onShowSuccess(`Trainee profile not found: ${user.name}`);
+                }
+            }
+        }
+    };
     return (
         <div id="app-content" className="flex h-screen bg-gray-900 text-white">
             <Sidebar

@@ -17,9 +17,17 @@ interface User {
 
 interface UserListSectionProps {
     showSection: boolean;
+    onNavigateToProfile?: (user: User) => void;
+    currentUserPermission?: any;
+    onShowSuccess?: (message: string) => void;
 }
 
-export const UserListSection: React.FC<UserListSectionProps> = ({ showSection }) => {
+export const UserListSection: React.FC<UserListSectionProps> = ({ 
+    showSection, 
+    onNavigateToProfile,
+    currentUserPermission,
+    onShowSuccess 
+}) => {
     const [users, setUsers] = useState<User[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -77,10 +85,15 @@ export const UserListSection: React.FC<UserListSectionProps> = ({ showSection })
 
     const handleEditProfile = (user: User) => {
         // Navigate to Staff or Trainee profile page
-        // For now, log the navigation and show a dark-themed alert
         console.log('Navigate to Profile:', user);
         
-        // Create a dark-themed notification
+        // Check if there's a navigation callback provided
+        if (onNavigateToProfile) {
+            onNavigateToProfile(user);
+            return;
+        }
+        
+        // If no callback provided, show a dark-themed notification
         const notification = document.createElement('div');
         notification.className = 'fixed top-4 right-4 bg-gray-800 border border-gray-600 rounded-lg p-4 shadow-lg z-50 max-w-md';
         notification.innerHTML = `
@@ -102,7 +115,7 @@ export const UserListSection: React.FC<UserListSectionProps> = ({ showSection })
                     </p>
                 </div>
                 <div class="ml-4 flex-shrink-0">
-                    <button type="button" class="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <button type="button" class="inline-flex text-gray-400 hover:text-gray-500 focus:outline-none" onclick="this.closest('.fixed').remove()">
                         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>
@@ -112,10 +125,12 @@ export const UserListSection: React.FC<UserListSectionProps> = ({ showSection })
         `;
         document.body.appendChild(notification);
         
-        // Remove notification after 3 seconds
+        // Remove notification after 5 seconds
         setTimeout(() => {
-            notification.remove();
-        }, 3000);
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
     };
 
     const handleDelete = (user: User) => {

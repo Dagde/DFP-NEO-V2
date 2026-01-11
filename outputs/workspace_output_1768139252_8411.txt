@@ -1,0 +1,14 @@
+                return <SettingsViewWithMenu 
+                    locations={locations}
+                    onUpdateLocations={setLocations}
+                    units={units}
+                    onUpdateUnits={setUnits}
+                    unitLocations={unitLocations}
+                    onUpdateUnitLocations={setUnitLocations}
+                    instructorsData={instructorsData}
+                    traineesData={traineesData}
+                    syllabusDetails={syllabusDetails}
+                    onBulkUpdateInstructors={handleBulkUpdateInstructors}
+                    onReplaceInstructors={handleReplaceInstructors}
+                    onBulkUpdateTrainees={handleBulkUpdateTrainees}
+                    onReplaceTrainees={handleReplaceTrainees}

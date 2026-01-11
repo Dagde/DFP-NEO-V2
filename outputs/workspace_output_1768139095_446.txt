@@ -1,0 +1,3 @@
+46:  onNavigateToCurrency: (person: Instructor) => void;
+67:    onNavigateToCurrency, 
+341:                    onNavigateToCurrency={onNavigateToCurrency}
