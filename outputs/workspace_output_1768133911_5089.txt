@@ -1,0 +1,11 @@
+
+    const confirmDelete = async () => {
+        if (!selectedUser || !deletePassword) {
+            setDeleteError('Please enter your password');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'DELETE',
+                headers: {
