@@ -1,0 +1,12 @@
+Found 0 occurrences of the old section
+
+=== Lines around UserListSection (192-200) ===
+192: '                    </div>'
+193: '                    <SettingsView {...props} hideHeader={true} activeSection={activeSection} />'
+194: "                       {activeSection === 'user-list' && ("
+195: '                           <UserListSection'
+196: '                               currentUserPermission={props.currentUserPermission}'
+197: '                               onShowSuccess={props.onShowSuccess}'
+198: '                           />'
+199: '                       )}'
+200: '                </div>'

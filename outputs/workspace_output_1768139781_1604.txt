@@ -1,0 +1,6 @@
+20:    onNavigateToProfile?: (user: User) => void;
+27:    onNavigateToProfile,
+86:    const handleEditProfile = (user: User) => {
+91:        if (onNavigateToProfile) {
+92:            onNavigateToProfile(user);
+262:                                            onClick={() => handleEditProfile(user)}

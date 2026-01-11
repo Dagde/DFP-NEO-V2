@@ -195,6 +195,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                            <UserListSection
                                currentUserPermission={props.currentUserPermission}
                                onShowSuccess={props.onShowSuccess}
+                               onNavigateToProfile={props.onNavigateToProfile}
                            />
                        )}
                 </div>

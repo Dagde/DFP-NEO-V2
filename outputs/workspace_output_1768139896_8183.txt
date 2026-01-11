@@ -1,0 +1,6 @@
+                    // FIX: Cannot find name 'onUpdateSyllabus'. Did you mean 'handleUpdateSyllabus'?
+                    onUpdateSyllabus={handleUpdateSyllabus}
+                    onShowSuccess={setSuccessMessage}
+                    eventLimits={eventLimits}
+                    onUpdateEventLimits={setEventLimits}
+                        onNavigateToProfile={handleNavigateToProfile}
