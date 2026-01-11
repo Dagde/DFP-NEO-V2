@@ -2936,7 +2936,8 @@ const App: React.FC = () => {
              idNumber: user.pmkeysId,
              role: 'INSTRUCTOR'
           } as Instructor);
-          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+          handleNavigation('Instructors');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
           console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
@@ -2944,7 +2945,8 @@ const App: React.FC = () => {
              idNumber: user.pmkeysId,
              role: 'TRAINEE'
           } as Trainee);
-          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
        }
     };
     return () => {
@@ -2988,7 +2990,8 @@ const App: React.FC = () => {
              idNumber: user.pmkeysId,
              role: 'INSTRUCTOR'
           } as Instructor);
-          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+          handleNavigation('Instructors');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
           console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
@@ -2996,7 +2999,8 @@ const App: React.FC = () => {
              idNumber: user.pmkeysId,
              role: 'TRAINEE'
           } as Trainee);
-          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
        }
     };
     return () => {
@@ -3585,7 +3589,8 @@ const App: React.FC = () => {
              idNumber: user.pmkeysId,
              role: 'INSTRUCTOR'
           } as Instructor);
-          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+          handleNavigation('Instructors');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
           console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
@@ -3593,7 +3598,8 @@ const App: React.FC = () => {
              idNumber: user.pmkeysId,
              role: 'TRAINEE'
           } as Trainee);
-          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
        }
     };
     return () => clearInterval(checkInterval);
@@ -8770,7 +8776,8 @@ updates.forEach(update => {
              idNumber: user.pmkeysId,
              role: 'INSTRUCTOR'
           } as Instructor);
-          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+          handleNavigation('Instructors');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (user.userType === 'TRAINEE') {
           console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
@@ -8778,7 +8785,8 @@ updates.forEach(update => {
              idNumber: user.pmkeysId,
              role: 'TRAINEE'
           } as Trainee);
-          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
        }
     };
     return (

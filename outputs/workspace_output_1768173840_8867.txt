@@ -1,0 +1,21 @@
+    const [showTimeOnlyRemedyConfirm, setShowTimeOnlyRemedyConfirm] = useState(false);
+    const [showNeoChoiceModal, setShowNeoChoiceModal] = useState(false);
+    const [timeShiftRemediesForChoice, setTimeShiftRemediesForChoice] = useState<NeoTimeShiftRemedy[]>([]);
+    const [instructorRemediesForChoice, setInstructorRemediesForChoice] = useState<NeoInstructorRemedy[]>([]);
+
+    // Aircraft Availability State
+    const [showAircraftAvailability, setShowAircraftAvailability] = useState(false);
+    const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
+
+    // Navigation and Modals state
+    const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
+    const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+    const [showAddGroundEvent, setShowAddGroundEvent] = useState(false);
+    const [cptConflict, setCptConflict] = useState<Conflict | null>(null);
+    const [isLocalityChangeVisible, setIsLocalityChangeVisible] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [initialSyllabusId, setInitialSyllabusId] = useState<string | null>(null);
+    const [syllabusBackTarget, setSyllabusBackTarget] = useState('Program Schedule');
+    const [selectedTraineeForLMP, setSelectedTraineeForLMP] = useState<Trainee | null>(null);
+    const [showAddRemedialPackage, setShowAddRemedialPackage] = useState(false);
+    const [selectedTraineeForRemedial, setSelectedTraineeForRemedial] = useState<Trainee | null>(null);

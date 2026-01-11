@@ -1,0 +1,15 @@
+          } as Instructor);
+          handleNavigation('Inscribers');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+--
+          } as Instructor);
+          handleNavigation('Inscribers');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+--
+          } as Instructor);
+          handleNavigation('Inscribers');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+--
+          } as Instructor);
+          handleNavigation('Inscribers');
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);

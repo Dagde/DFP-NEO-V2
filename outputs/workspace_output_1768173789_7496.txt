@@ -1,0 +1,30 @@
+    traineeLMPs,
+    onViewLogbook
+       , onDeleteTrainee
+}) => {
+    const [view, setView] = useState<'active' | 'archived'>('active');
+    const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+    const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
+    const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
+    const [hoveredTrainee, setHoveredTrainee] = useState<{ name: string; events: ScheduleEvent[] } | null>(null);
+    const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
+    
+    // Delete Trainee state
+    const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
+    const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+    useEffect(() => {
+        if (selectedPersonForProfile) {
+            setSelectedTrainee(selectedPersonForProfile);
+            setIsCreatingNew(false);
+            if (onProfileOpened) {
+                onProfileOpened();
+            }
+        }
+--
+        if (selectedTrainee && !isCreatingNew) {
+            const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
+
+            // Update the state only if the data has actually changed to avoid an infinite loop.

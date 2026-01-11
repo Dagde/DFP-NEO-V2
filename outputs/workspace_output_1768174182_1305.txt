@@ -1,0 +1,1 @@
+Fixed all handleNavigateToProfile instances to include navigation calls
