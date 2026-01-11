@@ -1,0 +1,34 @@
+                            <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                                <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} QFIs</span>
+                            </div>
+                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                                {renderInstructorList(qfisByUnit[unit])}
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {/* SIM IPs */}
+                    <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                        <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                            <h3 className="text-lg font-bold text-teal-400">SIM IPs</h3>
+                             <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
+                        </div>
+                         <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                             {renderInstructorList(simIps)}
+                        </div>
+                    </div>
+                 </div>
+            </div>
+      </div>
+      
+      {/* Profile Overlay - Fixed Position over Grid */}
+      {(selectedInstructor || (isAddingNew && newInstructorTemplate)) && (
+            <div className="fixed inset-y-0 right-0 w-full max-w-3xl bg-gray-900 shadow-2xl z-50 border-l border-gray-700 transform transition-transform duration-300 ease-in-out">
+                <InstructorProfileFlyout
+                    instructor={isAddingNew && newInstructorTemplate ? newInstructorTemplate : selectedInstructor!}
+                    onClose={handleCloseProfile}
+                    school={school}
+                    personnelData={personnelData}
+                    onUpdateInstructor={onUpdateInstructor}
+                    onNavigateToCurrency={onNavigateToCurrency}

@@ -1,0 +1,1 @@
+/workspace/lib/dataService.ts:        console.log('✅ Schedule loaded:', events.length);

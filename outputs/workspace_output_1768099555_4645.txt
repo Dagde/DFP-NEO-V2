@@ -1,0 +1,50 @@
+ */
+function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[] {
+    console.log('🔗 mergeInstructorData() - Starting merge process');
+    
+    // Create a Map to track unique instructors by idNumber (prefer database)
+    const instructorMap = new Map<number, any>();
+
+    // First, add all database instructors
+    dbInstructors.forEach(instructor => {
+        if (instructor.idNumber) {
+            instructorMap.set(instructor.idNumber, instructor);
+        }
+    });
+
+    // Then, add mock instructors only if they don't exist in database (by idNumber)
+    mockInstructors.forEach(instructor => {
+        if (instructor.idNumber && !instructorMap.has(instructor.idNumber)) {
+            instructorMap.set(instructor.idNumber, instructor);
+        }
+    });
+
+    // Convert Map to array
+    const mergedInstructors = Array.from(instructorMap.values());
+    console.log(`✅ Merged ${dbInstructors.length} DB + ${mockInstructors.length} Mock = ${mergedInstructors.length} unique instructors`);
+
+    // Sort the merged list: Unit → Rank → Name (alphabetical)
+    mergedInstructors.sort((a, b) => {
+        // First by unit
+        const unitA = a.unit || '';
+        const unitB = b.unit || '';
+        if (unitA !== unitB) {
+            return unitA.localeCompare(unitB);
+        }
+
+        // Then by rank
+        const rankA = a.rank || '';
+        const rankB = b.rank || '';
+        if (rankA !== rankB) {
+            return rankA.localeCompare(rankB);
+        }
+
+        // Finally by name (alphabetical)
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        return nameA.localeCompare(nameB);
+    });
+
+    console.log('✅ Merged and sorted instructors:', mergedInstructors.length);
+    return mergedInstructors;
+}

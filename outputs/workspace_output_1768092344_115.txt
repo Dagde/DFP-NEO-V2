@@ -1,0 +1,41 @@
+ 🔴 Event pilot: Harris, Sophia
+ 🔴 Event personnel: Array(11)
+ 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Instructors
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+index-jmm3GvpJ.js?v=1768085719:324 Uncaught 
+index-jmm3GvpJ.js?v=1768085719:324 Uncaught 
+ 📝 onUpdateInstructor called with data: Object
+ 📝 Current instructorsData length: 43
+ 📝 Instructor exists in prev state: true
+ 📝 Updating existing instructor in state: 8207938
+ 📝 Checking database ID for instructor...
+ 📝 Has database ID: cmk8vukbx0000mv3adfc3eowo
+ 📝 Database ID: cmk8vukbx0000mv3adfc3eowo
+ 🔧 === UPDATING EXISTING INSTRUCTOR ===
+ 🔧 Database ID: cmk8vukbx0000mv3adfc3eowo
+ 🔧 Payload: {
+  "idNumber": 8207938,
+  "name": "Dawe, Daniel",
+  "rank": "SQNLDR",
+  "role": "INSTRUCTOR",
+  "callsignNumber": 3,
+  "category": "B1",
+  "isTestingOfficer": false,
+  "seatConfig": "Normal",
+  "isExecutive": true,
+  "isFlyingSupervisor": true,
+  "isIRE": false,
+  "location": "East Sale",
+  "unit": "1FTS",
+  "phoneNumber": "",
+  "email": "",
+  "unavailability": [],
+  "service": "RAAF",
+  "isCommandingOfficer": false,
+  "isCFI": false,
+  "isDeputyFlightCommander": false,
+  "isContractor": false,

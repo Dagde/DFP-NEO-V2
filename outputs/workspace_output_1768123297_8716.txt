@@ -1,0 +1,13 @@
+function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[] {
+  console.log('🔄 Merging instructor data...');
+  console.log('  Database instructors:', dbInstructors.length);
+  console.log('  Mock instructors:', mockInstructors.length);
+  
+  // Create a map of database instructors by idNumber for deduplication
+--
+function mergeTraineeData(dbTrainees: any[], mockTrainees: any[]): any[] {
+  console.log('🔄 Merging trainee data...');
+  console.log('  Database trainees:', dbTrainees.length);
+  console.log('  Mock trainees:', mockTrainees.length);
+  
+  // Create a map of database trainees by name for deduplication

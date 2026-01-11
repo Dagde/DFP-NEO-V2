@@ -1,0 +1,82 @@
+export async function initializeData() {
+  console.log('🔧 initializeData() - Starting data initialization');
+  
+  let instructors: any[] = [];
+  let trainees: any[] = [];
+  let aircraft: any[] = [];
+  let scores: Record<string, any[]> = {};
+  let events: any[] = [];
+
+  try {
+    console.log('🌐 Initializing data from API...');
+    
+    // Fetch instructors
+    console.log('👨‍🏫 Fetching instructors from API...');
+    instructors = await fetchInstructors();
+    console.log('✅ Instructors loaded:', instructors.length);
+    
+    // Fetch trainees
+    console.log('👨‍🎓 Fetching trainees from API...');
+    trainees = await fetchTrainees();
+    console.log('✅ Trainees loaded:', trainees.length);
+    
+    // Fetch aircraft
+    console.log('✈️ Fetching aircraft from API...');
+    aircraft = await fetchAircraft();
+    console.log('✅ Aircraft loaded:', aircraft.length);
+    
+    // Fetch scores
+    console.log('📊 Fetching scores from API...');
+    scores = await fetchScores();
+    console.log('✅ Scores loaded:', Object.keys(scores).length, 'trainees with scores');
+    
+    // Fetch schedule
+    console.log('📅 Fetching schedule from API...');
+    events = await fetchSchedule();
+    console.log('✅ Schedule loaded:', events.length);
+    
+    // If API returned no data, fallback to mock data
+    if (instructors.length === 0) {
+      console.log('⚠️ No instructors from API, using mock data');
+      instructors = ESL_DATA.instructors;
+    }
+    
+    if (trainees.length === 0) {
+      console.log('⚠️ No trainees from API, using mock data');
+      trainees = ESL_DATA.trainees;
+    }
+    
+    if (aircraft.length === 0) {
+      console.log('⚠️ No aircraft from API, using mock data');
+      aircraft = ESL_DATA.aircraft || [];
+    }
+    
+    console.log('📊 Data loaded successfully:', {
+      instructors: instructors.length,
+      trainees: trainees.length,
+      aircraft: aircraft.length,
+      scores: Object.keys(scores).length,
+      events: events.length,
+    });
+    
+    return {
+      instructors,
+      trainees,
+      aircraft,
+      scores,
+      events,
+    };
+    
+  } catch (error) {
+    console.error('❌ Failed to load data from API:', error);
+    console.log('⚠️ Falling back to mock data');
+    
+    return {
+      instructors: ESL_DATA.instructors,
+      trainees: ESL_DATA.trainees,
+      aircraft: ESL_DATA.aircraft || [],
+      scores: {},
+      events: ESL_DATA.events || [],
+    };
+  }
+}

@@ -1,0 +1,21 @@
+export async function fetchInstructors(): Promise<any[]> {
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel?role=INSTRUCTOR');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel;
+  }
+  return [];
+}
+
+// Fetch trainees from API
+export async function fetchTrainees(): Promise<any[]> {
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel?role=TRAINEE');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel;
+  }
+  return [];
+}
+
+// Fetch aircraft from API
+export async function fetchAircraft(): Promise<any[]> {
+  const result = await fetchAPI<{ aircraft: any[] }>('/aircraft');
+  if (result.success && result.data?.aircraft) {
