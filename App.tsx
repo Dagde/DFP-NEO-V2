@@ -8825,13 +8825,9 @@ updates.forEach(update => {
                 // Navigate to Instructors view and select the instructor
                 setSelectedInstructor(instructor);
                 setActiveView('Instructors');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
-                }
+                    setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
             } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Staff profile not found: ${user.name}`);
-                }
+                    setSuccessMessage(`Staff profile not found: ${user.name}`);
             }
         } else if (user.userType === 'TRAINEE') {
             // Find trainee by name or PMKeys ID
@@ -8843,13 +8839,9 @@ updates.forEach(update => {
                 // Navigate to CourseRoster view and select the trainee
                 setSelectedTrainee(trainee);
                 setActiveView('CourseRoster');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
-                }
+                    setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
             } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Trainee profile not found: ${user.name}`);
-                }
+                    setSuccessMessage(`Trainee profile not found: ${user.name}`);
             }
         }
     };
