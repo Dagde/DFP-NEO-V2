@@ -1,0 +1,855 @@
+ cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+(anonymous) @ (index):64
+flight-school:1 Uncaught (in promise) 
+flight-school:1 Uncaught (in promise) 
+flight-school:1 Uncaught (in promise) 
+flight-school:1 Uncaught (in promise) 
+flight-school:1 Uncaught (in promise) 
+flight-school:1 Uncaught (in promise) 
+flight-school:1 Uncaught (in promise) 
+ Starting app initialization...
+ React imported
+ ReactDOM imported
+ App imported
+ Root element: 
+ buildResources - Current view: Program Schedule Current date: 2026-01-12
+ Deployments overlapping with 2026-01-12: []
+ deploymentCount: 0
+ Built all resources: (45) ['PC-21 1', 'PC-21 2', 'PC-21 3', 'PC-21 4', 'PC-21 5', 'PC-21 6', 'PC-21 7', 'PC-21 8', 'PC-21 9', 'PC-21 10', 'PC-21 11', 'PC-21 12', 'PC-21 13', 'PC-21 14', 'PC-21 15', 'PC-21 16', 'PC-21 17', 'PC-21 18', 'PC-21 19', 'PC-21 20', 'PC-21 21', 'PC-21 22', 'PC-21 23', 'PC-21 24', 'Duty Sup', 'TWR DI', 'STBY 1', 'STBY 2', 'STBY 3', 'STBY 4', 'FTD 1', 'FTD 2', 'FTD 3', 'FTD 4', 'FTD 5', 'CPT 1', 'CPT 2', 'CPT 3', 'CPT 4', 'Ground 1', 'Ground 2', 'Ground 3', 'Ground 4', 'Ground 5', 'Ground 6'] STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-12
+ Deployments overlapping with 2026-01-12: []
+ deploymentCount: 0
+ Built all resources: (45) ['PC-21 1', 'PC-21 2', 'PC-21 3', 'PC-21 4', 'PC-21 5', 'PC-21 6', 'PC-21 7', 'PC-21 8', 'PC-21 9', 'PC-21 10', 'PC-21 11', 'PC-21 12', 'PC-21 13', 'PC-21 14', 'PC-21 15', 'PC-21 16', 'PC-21 17', 'PC-21 18', 'PC-21 19', 'PC-21 20', 'PC-21 21', 'PC-21 22', 'PC-21 23', 'PC-21 24', 'Duty Sup', 'TWR DI', 'STBY 1', 'STBY 2', 'STBY 3', 'STBY 4', 'FTD 1', 'FTD 2', 'FTD 3', 'FTD 4', 'FTD 5', 'CPT 1', 'CPT 2', 'CPT 3', 'CPT 4', 'Ground 1', 'Ground 2', 'Ground 3', 'Ground 4', 'Ground 5', 'Ground 6'] STBY lines: 4
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-12
+ 🟡 publishedSchedules keys: []
+ 🟡 eventsForDate count: 0
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-12
+ 🟡 publishedSchedules keys: []
+ 🟡 eventsForDate count: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-13
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-13
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ addTileSyllabusOptions filtering syllabusDetails: (129) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+ Filtered items: (89) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+ addTileSyllabusOptions filtering syllabusDetails: (129) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+ Filtered items: (89) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+ handleMouseMove called, draggingState exists: false
+ Early return: no draggingState
+ Local handleMouseUp called - ignoring when dragState exists: false
+ Clearing drag state in local handleMouseUp
+ 🔄 Starting to load initial data...
+ 🔧 initializeData() v2.2 - Starting data initialization
+ 🎛️ Data source settings: {staff: true, trainee: false, course: false}
+ 🌐 Initializing data from API...
+ 👨‍🏫 Fetching instructors from API...
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ 🔄 Starting to load initial data...
+ 🔧 initializeData() v2.2 - Starting data initialization
+ 🎛️ Data source settings: {staff: true, trainee: false, course: false}
+ 🌐 Initializing data from API...
+ 👨‍🏫 Fetching instructors from API...
+ 🌐 API Request: /api/personnel?role=INSTRUCTOR
+ 🔄 useEffect triggered - activeView: Program Schedule remedialRequests count: 0
+ ⏸️ Not syncing - activeView is: Program Schedule
+ 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+ 🟠 neoProblemTileForFlyout: CLOSED
+ 🟠 NEO flyout is closed, skipping useEffect
+ 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+ buildResources - Current view: Program Schedule Current date: 2026-01-12
+ Deployments overlapping with 2026-01-12: []
+ deploymentCount: 0
+ Built all resources: (45) ['PC-21 1', 'PC-21 2', 'PC-21 3', 'PC-21 4', 'PC-21 5', 'PC-21 6', 'PC-21 7', 'PC-21 8', 'PC-21 9', 'PC-21 10', 'PC-21 11', 'PC-21 12', 'PC-21 13', 'PC-21 14', 'PC-21 15', 'PC-21 16', 'PC-21 17', 'PC-21 18', 'PC-21 19', 'PC-21 20', 'PC-21 21', 'PC-21 22', 'PC-21 23', 'PC-21 24', 'Duty Sup', 'TWR DI', 'STBY 1', 'STBY 2', 'STBY 3', 'STBY 4', 'FTD 1', 'FTD 2', 'FTD 3', 'FTD 4', 'FTD 5', 'CPT 1', 'CPT 2', 'CPT 3', 'CPT 4', 'Ground 1', 'Ground 2', 'Ground 3', 'Ground 4', 'Ground 5', 'Ground 6'] STBY lines: 4
+ buildResources - Current view: Program Schedule Current date: 2026-01-12
+ Deployments overlapping with 2026-01-12: []
+ deploymentCount: 0
+ Built all resources: (45) ['PC-21 1', 'PC-21 2', 'PC-21 3', 'PC-21 4', 'PC-21 5', 'PC-21 6', 'PC-21 7', 'PC-21 8', 'PC-21 9', 'PC-21 10', 'PC-21 11', 'PC-21 12', 'PC-21 13', 'PC-21 14', 'PC-21 15', 'PC-21 16', 'PC-21 17', 'PC-21 18', 'PC-21 19', 'PC-21 20', 'PC-21 21', 'PC-21 22', 'PC-21 23', 'PC-21 24', 'Duty Sup', 'TWR DI', 'STBY 1', 'STBY 2', 'STBY 3', 'STBY 4', 'FTD 1', 'FTD 2', 'FTD 3', 'FTD 4', 'FTD 5', 'CPT 1', 'CPT 2', 'CPT 3', 'CPT 4', 'Ground 1', 'Ground 2', 'Ground 3', 'Ground 4', 'Ground 5', 'Ground 6'] STBY lines: 4
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-12
+ 🟡 publishedSchedules keys: ['2026-01-12']
+ 🟡 eventsForDate count: 48
+ 🟡 eventsForDate memo recalculating
+ 🟡 date: 2026-01-12
+ 🟡 publishedSchedules keys: ['2026-01-12']
+ 🟡 eventsForDate count: 48
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-13
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🚀 [NEO-Build] nextDayEventSegments useMemo recalculating
+ 🚀 [NEO-Build] buildDfpDate: 2026-01-13
+ 🚀 [NEO-Build] nextDayBuildEvents.length: 0
+ 🚀 [NEO-Build] buildEventsWithDate.length: 0
+ 🚀 [NEO-Build] Final segments.length: 0
+ 🔴 ❌ CONFLICT FOUND: BGF14 (fa5107c9-4fb0-4f0e-8a3c-399e1d3a9284) - turnaround
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF3 (03907172-ed8a-4793-ba84-bb0b74d31c3d) - turnaround
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF15 (4e6aadee-1afb-4584-bbd3-d896e11cc727) - turnaround
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF15 (3526aabe-8f8f-49c9-8654-c693049365e0) - turnaround
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (313f44a8-9729-4c08-887d-4d922a8369c9) - turnaround
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF1 (3aafc05c-e5de-48c9-b68c-362167ca17b6) - turnaround
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (2ca4baae-7071-45f0-b1b5-0760dd2fa85f) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (6213c09f-63de-4f7e-b71e-8c55aaae2040) - turnaround
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF3 (3a029cb0-64e8-4565-a309-10d41ece36f2) - turnaround
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (dc48dbd0-ae96-4d20-b776-1babc3491e2d) - turnaround
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (7ffc99bd-e112-430d-91f2-c3dca51791be) - turnaround
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF2 (1b765b24-7476-48df-b5ad-3c53cbc9f2f1) - turnaround
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (ab4794e4-f078-437b-a7ca-914d9f3ba0a4) - turnaround
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (ec94f632-9ecb-42ae-b08f-ac0e6e359215) - turnaround
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (85133e0d-61e2-472f-92dc-6b5254c6f269) - turnaround
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (3eb93fc1-6d97-400f-8d29-bac7c6440206) - turnaround
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (89823644-394d-4f39-827a-b772261c352b) - turnaround
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF12 (92f01bc0-9975-416f-841a-f46dcc87419a) - turnaround
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (164a1b44-2c27-4da7-a86e-95f06c15772e) - turnaround
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (6a119e06-3fac-453c-a3c1-526c6295f8da) - turnaround
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF14 (ce353d6f-f57f-46df-8fe8-5fa9db307d0a) - turnaround
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (e3b64c8f-07ed-449b-9f5b-b17fd1a562f0) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (a22b3c3a-94dc-4da0-a26d-2e3b7f48e0e2) - turnaround
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (a66d6ed8-254a-4b7a-ac36-3f1156265d6e) - turnaround
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (4724429b-acc5-4480-800b-59a772ee0668) - turnaround
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (cf3798de-d9c1-4e5d-bdfe-6b072d09764d) - turnaround
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (8e30b84e-d804-466f-b616-4d3f55e91fcb) - turnaround
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (958319e8-490a-49e5-8e38-d3c9c4b20e0e) - turnaround
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e12726e2-0c6b-4404-a6b1-554c01468ee9) - turnaround
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF17 (4b1737a4-4c77-4006-97bc-4bc86befed7e) - turnaround
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (2da8718e-1610-4348-9b6c-a1d9a4efc4a3) - personnel
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF17 (9c7ec6eb-2dbc-4d03-bb33-85d71cb5e681) - personnel
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF10 (3acc6898-59e6-42f6-9344-19813ba10ee5) - personnel
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF10 (a05e6050-f4bf-4578-b1e6-8cc8c422010e) - personnel
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF4 (c3df308b-da8f-4ded-afed-2196065a5b67) - personnel
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (ee2719a3-7ea0-4847-ace4-6db8f1709407) - personnel
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (f9e89f07-a647-4c4a-abab-15dcc0e8e68f) - personnel
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF10 (7fbac471-6e94-4b2f-b373-086d86d0bf40) - personnel
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF11 (c7b3faf4-b1a1-436a-a19b-8119e05f176a) - personnel
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (ecb5de57-d995-490a-a4fd-7525e7589e54) - personnel
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF19 (9a0055a2-45cb-4b08-8d17-4f1fa83fcb4d) - personnel
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (3d56671f-3321-4653-94ea-c981561b81c2) - personnel
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF18 (b959888c-d5c3-439d-a528-a012fba57755) - personnel
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF9 (67cbe942-3d28-4609-855b-eef58471aac6) - personnel
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF19 (c85753a8-72bc-4207-baca-450c08c68476) - personnel
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BNAV FTD1 (ffb81027-4e8d-46b8-868a-3214e3cc52a4) - personnel
+ 🔴 Event instructor: Johnson, Charlotte
+ 🔴 Event student: Morris, Charlotte – ADF301
+ 🔴 Event pilot: Johnson, Charlotte
+ 🔴 Event personnel: (2) ['Johnson, Charlotte', 'Morris, Charlotte – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF FTD8 (c49e3a7d-7e5b-46cf-b8f0-2c2f35d54552) - personnel
+ 🔴 Event instructor: Johnson, Charlotte
+ 🔴 Event student: Morris, Charlotte – ADF301
+ 🔴 Event pilot: Johnson, Charlotte
+ 🔴 Event personnel: (2) ['Johnson, Charlotte', 'Morris, Charlotte – ADF301']
+ 🔴 ❌ CONFLICT FOUND: QFI CONV MB1 (604066f5-149c-4eeb-b206-932325d38d9a) - personnel
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: undefined
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (11) ['Walker, Jessica', 'Anderson, Steven – ADF301', 'Scott, Susan – ADF301', 'Clark, Joseph – ADF301', 'Green, Emma – ADF301', 'Mitchell, Chris – ADF301', 'Williams, John – ADF301', 'Hill, Elijah – ADF301', 'Hall, Sophia – ADF301', 'Baker, Joseph – ADF301', 'King, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF14 (fa5107c9-4fb0-4f0e-8a3c-399e1d3a9284) - turnaround
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF3 (03907172-ed8a-4793-ba84-bb0b74d31c3d) - turnaround
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF15 (4e6aadee-1afb-4584-bbd3-d896e11cc727) - turnaround
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF15 (3526aabe-8f8f-49c9-8654-c693049365e0) - turnaround
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (313f44a8-9729-4c08-887d-4d922a8369c9) - turnaround
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF1 (3aafc05c-e5de-48c9-b68c-362167ca17b6) - turnaround
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (2ca4baae-7071-45f0-b1b5-0760dd2fa85f) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (6213c09f-63de-4f7e-b71e-8c55aaae2040) - turnaround
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF3 (3a029cb0-64e8-4565-a309-10d41ece36f2) - turnaround
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (dc48dbd0-ae96-4d20-b776-1babc3491e2d) - turnaround
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (7ffc99bd-e112-430d-91f2-c3dca51791be) - turnaround
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF2 (1b765b24-7476-48df-b5ad-3c53cbc9f2f1) - turnaround
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (ab4794e4-f078-437b-a7ca-914d9f3ba0a4) - turnaround
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (ec94f632-9ecb-42ae-b08f-ac0e6e359215) - turnaround
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (85133e0d-61e2-472f-92dc-6b5254c6f269) - turnaround
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (3eb93fc1-6d97-400f-8d29-bac7c6440206) - turnaround
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (89823644-394d-4f39-827a-b772261c352b) - turnaround
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF12 (92f01bc0-9975-416f-841a-f46dcc87419a) - turnaround
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (164a1b44-2c27-4da7-a86e-95f06c15772e) - turnaround
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (6a119e06-3fac-453c-a3c1-526c6295f8da) - turnaround
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF14 (ce353d6f-f57f-46df-8fe8-5fa9db307d0a) - turnaround
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (e3b64c8f-07ed-449b-9f5b-b17fd1a562f0) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (a22b3c3a-94dc-4da0-a26d-2e3b7f48e0e2) - turnaround
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (a66d6ed8-254a-4b7a-ac36-3f1156265d6e) - turnaround
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (4724429b-acc5-4480-800b-59a772ee0668) - turnaround
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (cf3798de-d9c1-4e5d-bdfe-6b072d09764d) - turnaround
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (8e30b84e-d804-466f-b616-4d3f55e91fcb) - turnaround
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (958319e8-490a-49e5-8e38-d3c9c4b20e0e) - turnaround
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e12726e2-0c6b-4404-a6b1-554c01468ee9) - turnaround
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF17 (4b1737a4-4c77-4006-97bc-4bc86befed7e) - turnaround
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (2da8718e-1610-4348-9b6c-a1d9a4efc4a3) - personnel
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF17 (9c7ec6eb-2dbc-4d03-bb33-85d71cb5e681) - personnel
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF10 (3acc6898-59e6-42f6-9344-19813ba10ee5) - personnel
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF10 (a05e6050-f4bf-4578-b1e6-8cc8c422010e) - personnel
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF4 (c3df308b-da8f-4ded-afed-2196065a5b67) - personnel
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (ee2719a3-7ea0-4847-ace4-6db8f1709407) - personnel
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (f9e89f07-a647-4c4a-abab-15dcc0e8e68f) - personnel
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF10 (7fbac471-6e94-4b2f-b373-086d86d0bf40) - personnel
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF11 (c7b3faf4-b1a1-436a-a19b-8119e05f176a) - personnel
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (ecb5de57-d995-490a-a4fd-7525e7589e54) - personnel
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF19 (9a0055a2-45cb-4b08-8d17-4f1fa83fcb4d) - personnel
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (3d56671f-3321-4653-94ea-c981561b81c2) - personnel
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF18 (b959888c-d5c3-439d-a528-a012fba57755) - personnel
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF9 (67cbe942-3d28-4609-855b-eef58471aac6) - personnel
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF19 (c85753a8-72bc-4207-baca-450c08c68476) - personnel
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BNAV FTD1 (ffb81027-4e8d-46b8-868a-3214e3cc52a4) - personnel
+ 🔴 Event instructor: Johnson, Charlotte
+ 🔴 Event student: Morris, Charlotte – ADF301
+ 🔴 Event pilot: Johnson, Charlotte
+ 🔴 Event personnel: (2) ['Johnson, Charlotte', 'Morris, Charlotte – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF FTD8 (c49e3a7d-7e5b-46cf-b8f0-2c2f35d54552) - personnel
+ 🔴 Event instructor: Johnson, Charlotte
+ 🔴 Event student: Morris, Charlotte – ADF301
+ 🔴 Event pilot: Johnson, Charlotte
+ 🔴 Event personnel: (2) ['Johnson, Charlotte', 'Morris, Charlotte – ADF301']
+ 🔴 ❌ CONFLICT FOUND: QFI CONV MB1 (604066f5-149c-4eeb-b206-932325d38d9a) - personnel
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: undefined
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (11) ['Walker, Jessica', 'Anderson, Steven – ADF301', 'Scott, Susan – ADF301', 'Clark, Joseph – ADF301', 'Green, Emma – ADF301', 'Mitchell, Chris – ADF301', 'Williams, John – ADF301', 'Hill, Elijah – ADF301', 'Hall, Sophia – ADF301', 'Baker, Joseph – ADF301', 'King, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF14 (fa5107c9-4fb0-4f0e-8a3c-399e1d3a9284) - turnaround
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF3 (03907172-ed8a-4793-ba84-bb0b74d31c3d) - turnaround
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF15 (4e6aadee-1afb-4584-bbd3-d896e11cc727) - turnaround
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF15 (3526aabe-8f8f-49c9-8654-c693049365e0) - turnaround
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (313f44a8-9729-4c08-887d-4d922a8369c9) - turnaround
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF1 (3aafc05c-e5de-48c9-b68c-362167ca17b6) - turnaround
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (2ca4baae-7071-45f0-b1b5-0760dd2fa85f) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (6213c09f-63de-4f7e-b71e-8c55aaae2040) - turnaround
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF3 (3a029cb0-64e8-4565-a309-10d41ece36f2) - turnaround
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (dc48dbd0-ae96-4d20-b776-1babc3491e2d) - turnaround
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF23 (7ffc99bd-e112-430d-91f2-c3dca51791be) - turnaround
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF2 (1b765b24-7476-48df-b5ad-3c53cbc9f2f1) - turnaround
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (ab4794e4-f078-437b-a7ca-914d9f3ba0a4) - turnaround
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (ec94f632-9ecb-42ae-b08f-ac0e6e359215) - turnaround
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (85133e0d-61e2-472f-92dc-6b5254c6f269) - turnaround
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (3eb93fc1-6d97-400f-8d29-bac7c6440206) - turnaround
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (89823644-394d-4f39-827a-b772261c352b) - turnaround
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+ 🔴 Event pilot: Cooper, Paul
+ 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF12 (92f01bc0-9975-416f-841a-f46dcc87419a) - turnaround
+ 🔴 Event instructor: Johnson, Olivia
+ 🔴 Event student: Clark, Joseph – ADF301
+ 🔴 Event pilot: Johnson, Olivia
+ 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (164a1b44-2c27-4da7-a86e-95f06c15772e) - turnaround
+ 🔴 Event instructor: Scott, Ava
+ 🔴 Event student: Green, Emma – ADF301
+ 🔴 Event pilot: Scott, Ava
+ 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (6a119e06-3fac-453c-a3c1-526c6295f8da) - turnaround
+ 🔴 Event instructor: Smith, Patricia
+ 🔴 Event student: Mitchell, Chris – ADF301
+ 🔴 Event pilot: Smith, Patricia
+ 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF14 (ce353d6f-f57f-46df-8fe8-5fa9db307d0a) - turnaround
+ 🔴 Event instructor: Williams, Noah
+ 🔴 Event student: Williams, John – ADF301
+ 🔴 Event pilot: Williams, Noah
+ 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (e3b64c8f-07ed-449b-9f5b-b17fd1a562f0) - turnaround
+ 🔴 Event instructor: Bloggs, Joe
+ 🔴 Event student: Hill, Elijah – ADF301
+ 🔴 Event pilot: Bloggs, Joe
+ 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF8 (a22b3c3a-94dc-4da0-a26d-2e3b7f48e0e2) - turnaround
+ 🔴 Event instructor: Brown, Linda
+ 🔴 Event student: Hall, Sophia – ADF301
+ 🔴 Event pilot: Brown, Linda
+ 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (a66d6ed8-254a-4b7a-ac36-3f1156265d6e) - turnaround
+ 🔴 Event instructor: Cooper, Matthew
+ 🔴 Event student: Baker, Joseph – ADF301
+ 🔴 Event pilot: Cooper, Matthew
+ 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (4724429b-acc5-4480-800b-59a772ee0668) - turnaround
+ 🔴 Event instructor: Davies, Oliver
+ 🔴 Event student: Carter, Olivia – ADF301
+ 🔴 Event pilot: Davies, Oliver
+ 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF13 (cf3798de-d9c1-4e5d-bdfe-6b072d09764d) - turnaround
+ 🔴 Event instructor: Green, Jessica
+ 🔴 Event student: Thompson, Michael – ADF301
+ 🔴 Event pilot: Green, Jessica
+ 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF16 (8e30b84e-d804-466f-b616-4d3f55e91fcb) - turnaround
+ 🔴 Event instructor: Green, Michael
+ 🔴 Event student: Jones, Chris – ADF301
+ 🔴 Event pilot: Green, Michael
+ 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF20 (958319e8-490a-49e5-8e38-d3c9c4b20e0e) - turnaround
+ 🔴 Event instructor: Hall, Barbara
+ 🔴 Event student: Clark, Patricia – ADF301
+ 🔴 Event pilot: Hall, Barbara
+ 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF7 (e12726e2-0c6b-4404-a6b1-554c01468ee9) - turnaround
+ 🔴 Event instructor: Hall, Richard
+ 🔴 Event student: Smith, Henry – ADF301
+ 🔴 Event pilot: Hall, Richard
+ 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF17 (4b1737a4-4c77-4006-97bc-4bc86befed7e) - turnaround
+ 🔴 Event instructor: Hill, Richard
+ 🔴 Event student: Roberts, Susan – ADF301
+ 🔴 Event pilot: Hill, Richard
+ 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF6 (2da8718e-1610-4348-9b6c-a1d9a4efc4a3) - personnel
+ 🔴 Event instructor: Walker, Jessica
+ 🔴 Event student: Anderson, Steven – ADF301
+ 🔴 Event pilot: Walker, Jessica
+ 🔴 Event personnel: (2) ['Walker, Jessica', 'Anderson, Steven – ADF301']
+ 🔴 ❌ CONFLICT FOUND: BGF17 (9c7ec6eb-2dbc-4d03-bb33-85d71cb5e681) - personnel
+ 🔴 Event instructor: Cooper, Paul
+ 🔴 Event student: Scott, Susan – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Cooper, Paul
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Cooper, Paul', 'Scott, Susan – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF10 (3acc6898-59e6-42f6-9344-19813ba10ee5) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Johnson, Olivia
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Clark, Joseph – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Johnson, Olivia
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Johnson, Olivia', 'Clark, Joseph – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF10 (a05e6050-f4bf-4578-b1e6-8cc8c422010e) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Scott, Ava
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Green, Emma – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Scott, Ava
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Scott, Ava', 'Green, Emma – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF4 (c3df308b-da8f-4ded-afed-2196065a5b67) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Smith, Patricia
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Mitchell, Chris – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Smith, Patricia
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Smith, Patricia', 'Mitchell, Chris – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF20 (ee2719a3-7ea0-4847-ace4-6db8f1709407) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Williams, Noah
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Williams, John – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Williams, Noah
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Williams, Noah', 'Williams, John – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF13 (f9e89f07-a647-4c4a-abab-15dcc0e8e68f) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Bloggs, Joe
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Hill, Elijah – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Bloggs, Joe
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Bloggs, Joe', 'Hill, Elijah – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF10 (7fbac471-6e94-4b2f-b373-086d86d0bf40) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Brown, Linda
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Hall, Sophia – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Brown, Linda
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Brown, Linda', 'Hall, Sophia – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF11 (c7b3faf4-b1a1-436a-a19b-8119e05f176a) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Cooper, Matthew
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Baker, Joseph – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Cooper, Matthew
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Cooper, Matthew', 'Baker, Joseph – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF23 (ecb5de57-d995-490a-a4fd-7525e7589e54) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Davies, Oliver
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Carter, Olivia – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Davies, Oliver
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Davies, Oliver', 'Carter, Olivia – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF19 (9a0055a2-45cb-4b08-8d17-4f1fa83fcb4d) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Green, Jessica
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Thompson, Michael – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Green, Jessica
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Green, Jessica', 'Thompson, Michael – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF23 (3d56671f-3321-4653-94ea-c981561b81c2) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Green, Michael
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Jones, Chris – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Green, Michael
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Green, Michael', 'Jones, Chris – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF18 (b959888c-d5c3-439d-a528-a012fba57755) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Hall, Barbara
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Clark, Patricia – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Hall, Barbara
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Hall, Barbara', 'Clark, Patricia – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF9 (67cbe942-3d28-4609-855b-eef58471aac6) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Hall, Richard
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Smith, Henry – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Hall, Richard
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Hall, Richard', 'Smith, Henry – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF19 (c85753a8-72bc-4207-baca-450c08c68476) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Hill, Richard
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Roberts, Susan – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Hill, Richard
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Hill, Richard', 'Roberts, Susan – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BNAV FTD1 (ffb81027-4e8d-46b8-868a-3214e3cc52a4) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Johnson, Charlotte
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Morris, Charlotte – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Johnson, Charlotte
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Johnson, Charlotte', 'Morris, Charlotte – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: BGF FTD8 (c49e3a7d-7e5b-46cf-b8f0-2c2f35d54552) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Johnson, Charlotte
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: Morris, Charlotte – ADF301
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Johnson, Charlotte
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (2) ['Johnson, Charlotte', 'Morris, Charlotte – ADF301']
+index-BNmihbVA.js:sourcemap:678 🔴 ❌ CONFLICT FOUND: QFI CONV MB1 (604066f5-149c-4eeb-b206-932325d38d9a) - personnel
+index-BNmihbVA.js:sourcemap:678 🔴 Event instructor: Walker, Jessica
+index-BNmihbVA.js:sourcemap:678 🔴 Event student: undefined
+index-BNmihbVA.js:sourcemap:678 🔴 Event pilot: Walker, Jessica
+index-BNmihbVA.js:sourcemap:678 🔴 Event personnel: (11) ['Walker, Jessica', 'Anderson, Steven – ADF301', 'Scott, Susan – ADF301', 'Clark, Joseph – ADF301', 'Green, Emma – ADF301', 'Mitchell, Chris – ADF301', 'Williams, John – ADF301', 'Hill, Elijah – ADF301', 'Hall, Sophia – ADF301', 'Baker, Joseph – ADF301', 'King, Michael – ADF301']
+index-BNmihbVA.js:sourcemap:682 🟠 ========== NEO USEEFFECT TRIGGERED ==========
+index-BNmihbVA.js:sourcemap:682 🟠 neoProblemTileForFlyout: CLOSED
+index-BNmihbVA.js:sourcemap:682 🟠 NEO flyout is closed, skipping useEffect
+index-BNmihbVA.js:sourcemap:682 🟠 ========== NEO USEEFFECT END (CLOSED) ==========
+index-BNmihbVA.js:sourcemap:275 Seeded Logbook Template (XLSX)
+index-BNmihbVA.js:sourcemap:275 Seeded Logbook Template (XLSX)
+index-BNmihbVA.js:sourcemap:278 Seeded Logbook Template (PDF)
+index-BNmihbVA.js:sourcemap:278 Seeded Logbook Template (PDF)
+index-BNmihbVA.js:sourcemap:278 Seeded NEO Logo PDF
+index-BNmihbVA.js:sourcemap:278 Seeded NEO Logo PDF
+index-BNmihbVA.js:sourcemap:678 ✅ API Response: /api/personnel?role=INSTRUCTOR {personnel: Array(3)}
+index-BNmihbVA.js:sourcemap:678 ✅ Instructors loaded: 3
+index-BNmihbVA.js:sourcemap:678 🔄 Staff toggle is ON - merging database + mock data
+index-BNmihbVA.js:sourcemap:678 🔄 Merging instructor data...
+index-BNmihbVA.js:sourcemap:678   Database instructors: 3
+index-BNmihbVA.js:sourcemap:678   Mock instructors: 41
+index-BNmihbVA.js:sourcemap:678   Merged result: 44 instructors
+index-BNmihbVA.js:sourcemap:678 👨‍🎓 Fetching trainees from API...
+index-BNmihbVA.js:sourcemap:678 🌐 API Request: /api/personnel?role=TRAINEE
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 handleMouseMove called, draggingState exists: false
+index-BNmihbVA.js:sourcemap:327 Early return: no draggingState
+index-BNmihbVA.js:sourcemap:327 Local handleMouseUp called - ignoring when dragState exists: false
+index-BNmihbVA.js:sourcemap:327 Clearing drag state in local handleMouseUp
