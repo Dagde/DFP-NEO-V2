@@ -1,0 +1,5 @@
+31:    selectedPersonForProfile?: Trainee | null;
+80:    selectedPersonForProfile,
+100:        if (selectedPersonForProfile) {
+101:            setSelectedTrainee(selectedPersonForProfile);
+107:    }, [selectedPersonForProfile, onProfileOpened]);

@@ -1,0 +1,3 @@
+7876:                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+8472:                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+8507:                                onProfileOpened={() => setSelectedPersonForProfile(null)}

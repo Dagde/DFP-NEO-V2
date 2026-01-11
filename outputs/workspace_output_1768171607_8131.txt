@@ -1,0 +1,11 @@
+        if (user.userType === 'STAFF') {
+            // Find instructor by name or PMKeys ID
+            const instructor = instructorsData.find(i => 
+                i.name === user.name && i.idNumber === user.pmkeysId
+            );
+            
+            if (instructor) {
+                // Navigate to Instructors view and select the instructor
+                setSelectedInstructor(instructor);
+                setActiveView('Instructors');
+                    setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);

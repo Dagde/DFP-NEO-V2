@@ -1,0 +1,27 @@
+
+    const handleNavigateToProfile = (user: any) => {
+       console.log('🎹 Navigating to profile:', user);
+       console.log('user:', JSON.stringify(user));
+       
+       // Use setSelectedPersonForProfile to directly open the profile
+       // This works the same way as clicking on a trainee name in CourseRoster
+       if (user.userType === 'STAFF') {
+          console.log('Opening staff profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'INSTRUCTOR'
+          } as Instructor);
+          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+       } else if (user.userType === 'TRAINEE') {
+          console.log('Opening trainee profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'TRAINEE'
+          } as Trainee);
+          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
+    };
+    return (
+        <div id="app-content" className="flex h-screen bg-gray-900 text-white">

@@ -2924,46 +2924,28 @@ const App: React.FC = () => {
       
 
     const handleNavigateToProfile = (user: any) => {
-        console.log('Navigating to profile:', user);
-        
-        // Find the instructor or trainee in the data
-        if (user.userType === 'STAFF') {
-            // Find instructor by name or PMKeys ID
-            const instructor = instructorsData.find(i => 
-                i.name === user.name && i.idNumber === user.pmkeysId
-            );
-            
-            if (instructor) {
-                // Navigate to Instructors view and select the instructor
-                setSelectedInstructor(instructor);
-                setActiveView('Instructors');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
-                }
-            } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Staff profile not found: ${user.name}`);
-                }
-            }
-        } else if (user.userType === 'TRAINEE') {
-            // Find trainee by name or PMKeys ID
-            const trainee = traineesData.find(t => 
-                t.name === user.name && t.idNumber === user.pmkeysId
-            );
-            
-            if (trainee) {
-                // Navigate to CourseRoster view and select the trainee
-                setSelectedTrainee(trainee);
-                setActiveView('CourseRoster');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
-                }
-            } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Trainee profile not found: ${user.name}`);
-                }
-            }
-        }
+       console.log('🎹 Navigating to profile:', user);
+       console.log('user:', JSON.stringify(user));
+       
+       // Use setSelectedPersonForProfile to directly open the profile
+       // This works the same way as clicking on a trainee name in CourseRoster
+       if (user.userType === 'STAFF') {
+          console.log('Opening staff profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'INSTRUCTOR'
+          } as Instructor);
+          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+       } else if (user.userType === 'TRAINEE') {
+          console.log('Opening trainee profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'TRAINEE'
+          } as Trainee);
+          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
     };
     return () => {
         String.prototype.split = originalSplit;
@@ -2994,46 +2976,28 @@ const App: React.FC = () => {
       
 
     const handleNavigateToProfile = (user: any) => {
-        console.log('Navigating to profile:', user);
-        
-        // Find the instructor or trainee in the data
-        if (user.userType === 'STAFF') {
-            // Find instructor by name or PMKeys ID
-            const instructor = instructorsData.find(i => 
-                i.name === user.name && i.idNumber === user.pmkeysId
-            );
-            
-            if (instructor) {
-                // Navigate to Instructors view and select the instructor
-                setSelectedInstructor(instructor);
-                setActiveView('Instructors');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
-                }
-            } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Staff profile not found: ${user.name}`);
-                }
-            }
-        } else if (user.userType === 'TRAINEE') {
-            // Find trainee by name or PMKeys ID
-            const trainee = traineesData.find(t => 
-                t.name === user.name && t.idNumber === user.pmkeysId
-            );
-            
-            if (trainee) {
-                // Navigate to CourseRoster view and select the trainee
-                setSelectedTrainee(trainee);
-                setActiveView('CourseRoster');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
-                }
-            } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Trainee profile not found: ${user.name}`);
-                }
-            }
-        }
+       console.log('🎹 Navigating to profile:', user);
+       console.log('user:', JSON.stringify(user));
+       
+       // Use setSelectedPersonForProfile to directly open the profile
+       // This works the same way as clicking on a trainee name in CourseRoster
+       if (user.userType === 'STAFF') {
+          console.log('Opening staff profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'INSTRUCTOR'
+          } as Instructor);
+          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+       } else if (user.userType === 'TRAINEE') {
+          console.log('Opening trainee profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'TRAINEE'
+          } as Trainee);
+          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
     };
     return () => {
         console.error = originalError;
@@ -3609,46 +3573,28 @@ const App: React.FC = () => {
         
 
     const handleNavigateToProfile = (user: any) => {
-        console.log('Navigating to profile:', user);
-        
-        // Find the instructor or trainee in the data
-        if (user.userType === 'STAFF') {
-            // Find instructor by name or PMKeys ID
-            const instructor = instructorsData.find(i => 
-                i.name === user.name && i.idNumber === user.pmkeysId
-            );
-            
-            if (instructor) {
-                // Navigate to Instructors view and select the instructor
-                setSelectedInstructor(instructor);
-                setActiveView('Instructors');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Staff Profile: ${user.name}`);
-                }
-            } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Staff profile not found: ${user.name}`);
-                }
-            }
-        } else if (user.userType === 'TRAINEE') {
-            // Find trainee by name or PMKeys ID
-            const trainee = traineesData.find(t => 
-                t.name === user.name && t.idNumber === user.pmkeysId
-            );
-            
-            if (trainee) {
-                // Navigate to CourseRoster view and select the trainee
-                setSelectedTrainee(trainee);
-                setActiveView('CourseRoster');
-                if (onShowSuccess) {
-                    onShowSuccess(`Navigated to Trainee Profile: ${user.name}`);
-                }
-            } else {
-                if (onShowSuccess) {
-                    onShowSuccess(`Trainee profile not found: ${user.name}`);
-                }
-            }
-        }
+       console.log('🎹 Navigating to profile:', user);
+       console.log('user:', JSON.stringify(user));
+       
+       // Use setSelectedPersonForProfile to directly open the profile
+       // This works the same way as clicking on a trainee name in CourseRoster
+       if (user.userType === 'STAFF') {
+          console.log('Opening staff profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'INSTRUCTOR'
+          } as Instructor);
+          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+       } else if (user.userType === 'TRAINEE') {
+          console.log('Opening trainee profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'TRAINEE'
+          } as Trainee);
+          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
     };
     return () => clearInterval(checkInterval);
     }, [timezoneOffset]); // Re-run when timezone changes
@@ -8812,43 +8758,28 @@ updates.forEach(update => {
     
 
     const handleNavigateToProfile = (user: any) => {
-        console.log('Navigating to profile:', user);
-           console.log("user.name:", user.name);
-           console.log("user.pmkeysId:", user.pmkeysId);
-        
-        // Find the instructor or trainee in the data
-        if (user.userType === 'STAFF') {
-            // Find instructor by name or PMKeys ID
-            const instructor = instructorsData.find(i => 
-                i.name === user.name && i.idNumber === user.pmkeysId
-            );
-            
-            if (instructor) {
-                // Navigate to Instructors view and select the instructor
-                setSelectedInstructor(instructor);
-                setActiveView('Instructors');
-                    setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-            } else {
-                    setSuccessMessage(`Staff profile not found: ${user.name}`);
-            }
-        } else if (user.userType === 'TRAINEE') {
-            // Find trainee by name or PMKeys ID
-            const trainee = traineesData.find(t => 
-                t.name === user.name && t.idNumber === user.pmkeysId
-            );
-            
-               console.log("First 3 trainees:", traineesData.slice(0, 3).map(t => ({name: t.name, idNumber: t.idNumber})));
-               console.log("Trainees count:", traineesData.length);
-               console.log("Trainee search result:", trainee);
-            if (trainee) {
-                // Navigate to CourseRoster view and select the trainee
-                setSelectedTrainee(trainee);
-                setActiveView('CourseRoster');
-                    setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-            } else {
-                    setSuccessMessage(`Trainee profile not found: ${user.name}`);
-            }
-        }
+       console.log('🎹 Navigating to profile:', user);
+       console.log('user:', JSON.stringify(user));
+       
+       // Use setSelectedPersonForProfile to directly open the profile
+       // This works the same way as clicking on a trainee name in CourseRoster
+       if (user.userType === 'STAFF') {
+          console.log('Opening staff profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'INSTRUCTOR'
+          } as Instructor);
+          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+       } else if (user.userType === 'TRAINEE') {
+          console.log('Opening trainee profile:', user.name);
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'TRAINEE'
+          } as Trainee);
+          setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
     };
     return (
         <div id="app-content" className="flex h-screen bg-gray-900 text-white">
