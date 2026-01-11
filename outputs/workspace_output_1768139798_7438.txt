@@ -1,0 +1,26 @@
+interface SettingsViewWithMenuProps {
+    locations: string[];
+    onUpdateLocations: (locations: string[]) => void;
+    units: string[];
+    onUpdateUnits: (units: string[]) => void;
+    unitLocations: Record<string, string>;
+    onUpdateUnitLocations: (locations: Record<string, string>) => void;
+    instructorsData: Instructor[];
+    traineesData: Trainee[];
+    syllabusDetails: SyllabusItemDetail[];
+    onBulkUpdateInstructors: (instructors: Instructor[]) => void;
+    onReplaceInstructors: (instructors: Instructor[]) => void;
+    onBulkUpdateTrainees: (trainees: Trainee[]) => void;
+    onReplaceTrainees: (trainees: Trainee[]) => void;
+    onUpdateSyllabus: (syllabus: SyllabusItemDetail[]) => void;
+    onShowSuccess: (message: string) => void;
+        onNavigateToProfile?: (user: any) => void;
+    eventLimits: EventLimits;
+    onUpdateEventLimits: (limits: EventLimits) => void;
+    phraseBank: PhraseBank;
+    onUpdatePhraseBank: (newBank: PhraseBank) => void;
+    onNavigate: (view: string) => void;
+    masterCurrencies: MasterCurrency[];
+    currencyRequirements: CurrencyRequirement[];
+    sctEvents: string[];
+    onUpdateSctEvents: (events: string[]) => void;

@@ -1,0 +1,7 @@
+                       {activeSection === 'user-list' && ($
+                           <UserListSection$
+                               currentUserPermission={props.currentUserPermission}$
+                               onShowSuccess={props.onShowSuccess}$
+                           />$
+                       )}$
+                </div>$
