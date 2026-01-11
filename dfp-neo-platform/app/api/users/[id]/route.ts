@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
-// DELETE /api/users/:id - Delete a user
+// DELETE /api/users/:id - Delete a user (personnel record and associated user account)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,9 +30,21 @@ export async function DELETE(
       );
     }
 
-    // TODO: Verify user's password (would need to implement password verification)
-    // For now, just delete the user
-    await prisma.user.delete({
+    // Get the personnel record to find associated user account
+    const personnel = await prisma.personnel.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (personnel?.userId) {
+      // Delete the user account
+      await prisma.user.delete({
+        where: { id: personnel.userId },
+      });
+    }
+
+    // Delete the personnel record
+    await prisma.personnel.delete({
       where: { id },
     });
 
@@ -46,57 +58,4 @@ export async function DELETE(
   }
 }
 
-// PUT /api/users/:id - Update a user
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await auth();
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { id } = await params;
-    const body = await request.json();
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: {
-        email: body.email,
-        role: body.role,
-        firstName: body.firstName,
-        lastName: body.lastName,
-      },
-      include: {
-        personnel: true,
-      },
-    });
-
-    // Transform to match expected format
-    const transformedUser = {
-      id: updatedUser.id,
-      name: updatedUser.personnel?.name || `${updatedUser.lastName || ''}, ${updatedUser.firstName || ''}`.trim(),
-      email: updatedUser.email || 'No email',
-      pmkeysId: updatedUser.userId || 'N/A',
-      role: updatedUser.role,
-      createdAt: updatedUser.createdAt.toISOString().split('T')[0],
-      username: updatedUser.username,
-      firstName: updatedUser.firstName,
-      lastName: updatedUser.lastName,
-    };
-
-    return NextResponse.json(transformedUser);
-  } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json(
-      { error: 'Failed to update user' },
-      { status: 500 }
-    );
-  }
-}
+// PUT endpoint is no longer needed - edits go to Staff/Trainee profile pages

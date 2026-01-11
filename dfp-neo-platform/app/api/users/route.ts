@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
-// GET /api/users - Get all users
+// GET /api/users - Get all Staff and Trainee users
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -18,48 +18,48 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
-    const role = searchParams.get('role');
 
     // Build where clause
     const where: any = {};
 
     if (search) {
       where.OR = [
-        { username: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { userId: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { idNumber: { equals: parseInt(search) } },
+        { rank: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    if (role) {
-      where.role = role;
-    }
-
-    const users = await prisma.user.findMany({
-      where,
-      include: {
-        personnel: true,
+    // Get all personnel (staff and trainees)
+    const personnel = await prisma.personnel.findMany({
+      where: {
+        ...where,
+        isActive: true,
       },
       orderBy: [
-        { lastName: 'asc' },
-        { firstName: 'asc' },
+        { name: 'asc' },
       ],
     });
 
     // Transform to match expected format
-    const transformedUsers = users.map(user => ({
-      id: user.id,
-      name: user.personnel?.name || `${user.lastName || ''}, ${user.firstName || ''}`.trim(),
-      email: user.email || 'No email',
-      pmkeysId: user.userId || 'N/A',
-      role: user.role,
-      createdAt: user.createdAt.toISOString().split('T')[0],
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    }));
+    const transformedUsers = personnel.map(p => {
+      // Determine if this is staff or trainee based on role
+      const userType = (p.role === 'TRAINEE' || p.role === 'CADET') ? 'TRAINEE' : 'STAFF';
+      
+      return {
+        id: p.id,
+        name: p.name,
+        pmkeysId: p.idNumber ? p.idNumber.toString() : 'N/A',
+        role: p.role || 'STAFF',
+        createdAt: p.createdAt.toISOString().split('T')[0],
+        rank: p.rank,
+        service: p.category, // Using category as service for now
+        unit: p.flight || 'N/A', // Using flight as unit for now
+        userType: userType,
+        personnelId: p.id,
+        email: p.email || 'N/A',
+      };
+    });
 
     return NextResponse.json(transformedUsers);
   } catch (error) {
@@ -70,5 +70,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
