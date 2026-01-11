@@ -1,0 +1,10 @@
+3061:    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+3093:                setInstructorsData(data.instructors);
+4452:        setInstructorsData(data.instructors);
+6247:        setInstructorsData(prevInstructors => {
+6256:        setInstructorsData(newInstructors);
+6484:        const qualifiedPilots = instructorsData.filter(i => i.role === 'QFI');
+8313:                                setInstructorsData(prev => {
+8326:                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+8334:                                    setInstructorsData(prev => [...prev, instructorToRestore]);
+8447:                                        setInstructorsData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));

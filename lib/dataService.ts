@@ -74,8 +74,20 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[]): any[] {
 }
 
 export async function initializeData() {
-  console.log('🔧 initializeData() - Starting data initialization');
+  console.log('🔧 initializeData() v2.2 - Starting data initialization');
   
+    // Read data source settings from localStorage
+    let dataSourceSettings = { staff: false, trainee: false, course: false };
+    try {
+      const settingsStr = localStorage.getItem('dataSourceSettings');
+      if (settingsStr) {
+        dataSourceSettings = JSON.parse(settingsStr);
+      }
+      console.log('🎛️ Data source settings:', dataSourceSettings);
+    } catch (e) {
+      console.log('⚠️ Could not read dataSourceSettings, using defaults');
+    }
+    
   let instructors: any[] = [];
   let trainees: any[] = [];
   let aircraft: any[] = [];
@@ -89,11 +101,25 @@ export async function initializeData() {
     console.log('👨‍🏫 Fetching instructors from API...');
     instructors = await fetchInstructors();
     console.log('✅ Instructors loaded:', instructors.length);
+      
+      // Merge with mock data if staff toggle is ON
+      if (dataSourceSettings.staff) {
+        console.log('🔄 Staff toggle is ON - merging database + mock data');
+        instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+      }
+      
     
     // Fetch trainees
     console.log('👨‍🎓 Fetching trainees from API...');
     trainees = await fetchTrainees();
     console.log('✅ Trainees loaded:', trainees.length);
+      
+      // Merge with mock data if trainee toggle is ON
+      if (dataSourceSettings.trainee) {
+        console.log('🔄 Trainee toggle is ON - merging database + mock data');
+        trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+      }
+      
     
     // Fetch aircraft
     console.log('✈️ Fetching aircraft from API...');

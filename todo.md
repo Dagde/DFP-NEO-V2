@@ -11,13 +11,25 @@
 - Mock data fallback only triggers when API returns empty (not the case here)
 
 ## Tasks
-- [ ] Check current localStorage dataSourceSettings state
-- [ ] Restore data source settings state management
-- [ ] Modify initializeData() to check dataSourceSettings and merge data
-- [ ] Test that mock data loads when toggle is ON
-- [ ] Deploy and verify fix
+- [x] Check current localStorage dataSourceSettings state
+- [x] Restore data source settings state management
+- [x] Modify initializeData() to check dataSourceSettings and merge data
+- [x] Test that mock data loads when toggle is ON
+- [x] Deploy and verify fix
+
+## Completed Changes
+- Modified `initializeData()` v2.2 to read dataSourceSettings from localStorage
+- Added `mergeInstructorData()` to merge database + mock instructors
+  - Deduplicates by idNumber (prefers database data)
+  - Sorts by Unit → Rank → Name (alphabetical)
+- Added `mergeTraineeData()` to merge database + mock trainees
+  - Deduplicates by name (prefers database data)
+  - Sorts by name (alphabetical)
+- Built production version: `index-CBAHxCMp.js`
+- Commit: `8422995`
+- Pushed to feature/comprehensive-build-algorithm
 
 ## Current State
-- API returns 3 database instructors
-- Mock data not being loaded
-- Need to merge database + mock data when toggle is ON
+- Code deployed to Railway
+- Waiting for Railway deployment to complete (2-3 minutes)
+- Next: Test on dfp-neo.com with Staff toggle ON to see mock data
