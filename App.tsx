@@ -2930,7 +2930,7 @@ const App: React.FC = () => {
         if (user.userType === 'STAFF') {
             // Find instructor by name or PMKeys ID
             const instructor = instructorsData.find(i => 
-                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+                i.name === user.name && i.idNumber === user.pmkeysId
             );
             
             if (instructor) {
@@ -2948,7 +2948,7 @@ const App: React.FC = () => {
         } else if (user.userType === 'TRAINEE') {
             // Find trainee by name or PMKeys ID
             const trainee = traineesData.find(t => 
-                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+                t.name === user.name && t.idNumber === user.pmkeysId
             );
             
             if (trainee) {
@@ -3000,7 +3000,7 @@ const App: React.FC = () => {
         if (user.userType === 'STAFF') {
             // Find instructor by name or PMKeys ID
             const instructor = instructorsData.find(i => 
-                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+                i.name === user.name && i.idNumber === user.pmkeysId
             );
             
             if (instructor) {
@@ -3018,7 +3018,7 @@ const App: React.FC = () => {
         } else if (user.userType === 'TRAINEE') {
             // Find trainee by name or PMKeys ID
             const trainee = traineesData.find(t => 
-                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+                t.name === user.name && t.idNumber === user.pmkeysId
             );
             
             if (trainee) {
@@ -3615,7 +3615,7 @@ const App: React.FC = () => {
         if (user.userType === 'STAFF') {
             // Find instructor by name or PMKeys ID
             const instructor = instructorsData.find(i => 
-                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+                i.name === user.name && i.idNumber === user.pmkeysId
             );
             
             if (instructor) {
@@ -3633,7 +3633,7 @@ const App: React.FC = () => {
         } else if (user.userType === 'TRAINEE') {
             // Find trainee by name or PMKeys ID
             const trainee = traineesData.find(t => 
-                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+                t.name === user.name && t.idNumber === user.pmkeysId
             );
             
             if (trainee) {
@@ -8820,7 +8820,7 @@ updates.forEach(update => {
         if (user.userType === 'STAFF') {
             // Find instructor by name or PMKeys ID
             const instructor = instructorsData.find(i => 
-                i.name === user.name || i.idNumber === parseInt(user.pmkeysId || '0')
+                i.name === user.name && i.idNumber === user.pmkeysId
             );
             
             if (instructor) {
@@ -8834,7 +8834,7 @@ updates.forEach(update => {
         } else if (user.userType === 'TRAINEE') {
             // Find trainee by name or PMKeys ID
             const trainee = traineesData.find(t => 
-                t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
+                t.name === user.name && t.idNumber === user.pmkeysId
             );
             
                console.log("First 3 trainees:", traineesData.slice(0, 3).map(t => ({name: t.name, idNumber: t.idNumber})));
