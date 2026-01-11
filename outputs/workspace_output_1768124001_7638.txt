@@ -1,0 +1,9 @@
+595:            role: 'QFI',
+635:            role: 'QFI',
+677:            role: 'QFI',
+767:    const qfiInstructors = instructors.filter(i => i.role === 'QFI');
+856:    const allocatableInstructors = instructors.filter(i => i.role === 'QFI');
+964:    const qfis = instructors.filter(i => i.role === 'QFI');
+1149:const generateDataSet = (location: 'ESL' | 'PEA') => {
+1221:export const ESL_DATA = generateDataSet('ESL');
+1222:export const PEA_DATA = generateDataSet('PEA');

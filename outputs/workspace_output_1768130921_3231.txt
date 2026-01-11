@@ -1,0 +1,1 @@
+/workspace/dfp-neo-platform/app/flight-school/page.tsx

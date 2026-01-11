@@ -1,0 +1,42 @@
+  const qfis = useMemo(() => {
+      const rankOrder: { [key: string]: number } = {
+          'WGCDR': 1,
+          'SQNLDR': 2,
+          'FLTLT': 3,
+          'FLGOFF': 4,
+          'PLTOFF': 5,
+          'Mr': 6
+      };
+
+      return instructorsData
+          .filter(i => i.role === 'QFI')
+          .sort((a, b) => {
+              const rankA = rankOrder[a.rank] || 99;
+              const rankB = rankOrder[b.rank] || 99;
+              
+              if (rankA !== rankB) {
+                  return rankA - rankB;
+              }
+              return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+          });
+  }, [instructorsData]);
+
+  const qfisByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      qfis.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [qfis]);
+
+  const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
+
+  const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
+    if (selectedInstructor || isArchiveMode) return; 
+    const rect = e.currentTarget.getBoundingClientRect();

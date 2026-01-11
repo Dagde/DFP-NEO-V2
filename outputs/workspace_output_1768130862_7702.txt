@@ -1,0 +1,1 @@
+ 📦 Data received from initializeData: Object

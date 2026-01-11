@@ -1,0 +1,2 @@
+77:  console.log('🔧 initializeData() v2.2 - Starting data initialization');
+86:      console.log('🎛️ Data source settings:', dataSourceSettings);
