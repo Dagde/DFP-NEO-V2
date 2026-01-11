@@ -1,0 +1,1 @@
+130:          .filter(i => i.role === 'QFI' || i.isQFI === true)

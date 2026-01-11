@@ -1,0 +1,2 @@
+/workspace/dfp-neo-platform/prisma/schema.prisma
+/workspace/dfp-neo-platform/node_modules/.prisma/client/schema.prisma

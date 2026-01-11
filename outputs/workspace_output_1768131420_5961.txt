@@ -1,0 +1,50 @@
+ 🔴 Event pilot: Evans, Charles
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF24 (c6762034-214f-4cb9-bbe4-97091cfdc599) - personnel
+ 🔴 Event instructor: Evans, Jennifer
+ 🔴 Event student: Lee, Oliver – ADF301
+ 🔴 Event pilot: Evans, Jennifer
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD10 (dd1cc69d-a6d1-4028-bb16-f0f07ed12ec8) - personnel
+ 🔴 Event instructor: Clark, Henry
+ 🔴 Event student: Harris, Michael – ADF301
+ 🔴 Event pilot: Clark, Henry
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF FTD3 (0e19a9fb-5740-498e-9f96-0ee7b1090aa4) - personnel
+ 🔴 Event instructor: Clark, Henry
+ 🔴 Event student: Harris, Michael – ADF301
+ 🔴 Event pilot: Clark, Henry
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF MB10 (bb7e7754-026e-41af-816e-6789386dfdf5) - personnel
+ 🔴 Event instructor: King, Luna
+ 🔴 Event student: undefined
+ 🔴 Event pilot: King, Luna
+ 🔴 Event personnel: Array(11)
+ 🔴 ❌ CONFLICT FOUND: BGF10 (0e33bc7a-bf74-445d-96e0-e454696e83f2) - turnaround
+ 🔴 Event instructor: King, Luna
+ 🔴 Event student: Baker, Matthew – ADF301
+ 🔴 Event pilot: King, Luna
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF8 (d1a43590-0640-4f31-8574-b1c460bb7eee) - turnaround
+ 🔴 Event instructor: Johnson, John
+ 🔴 Event student: Clark, Jennifer – ADF301
+ 🔴 Event pilot: Johnson, John
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (06850629-bc1b-4fc5-b0f6-f9a4f3f76485) - turnaround
+ 🔴 Event instructor: Morris, Mary
+ 🔴 Event student: Turner, Barbara – ADF301
+ 🔴 Event pilot: Morris, Mary
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF2 (2c10ce7e-eeae-49c7-a367-e7c4be746e34) - turnaround
+ 🔴 Event instructor: Roberts, Mark
+ 🔴 Event student: Brown, Charles – ADF301
+ 🔴 Event pilot: Roberts, Mark
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (34af4253-c9c5-4770-aa37-673e822d4f99) - turnaround
+ 🔴 Event instructor: Robinson, Jessica
+ 🔴 Event student: Hill, Liam – ADF301
+ 🔴 Event pilot: Robinson, Jessica
+ 🔴 Event personnel: Array(2)
+ 🔴 ❌ CONFLICT FOUND: BGF3 (35f3f1f9-aa98-4f43-a903-290ef8e030a8) - turnaround
+ 🔴 Event instructor: Scott, Steven
+ 🔴 Event student: Scott, Thomas – ADF301
