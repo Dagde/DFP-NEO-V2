@@ -21,6 +21,7 @@ interface SettingsViewWithMenuProps {
     onReplaceTrainees: (trainees: Trainee[]) => void;
     onUpdateSyllabus: (syllabus: SyllabusItemDetail[]) => void;
     onShowSuccess: (message: string) => void;
+        onNavigateToProfile?: (user: any) => void;
     eventLimits: EventLimits;
     onUpdateEventLimits: (limits: EventLimits) => void;
     phraseBank: PhraseBank;

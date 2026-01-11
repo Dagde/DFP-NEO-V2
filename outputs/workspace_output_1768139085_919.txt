@@ -1,0 +1,3 @@
+168:  const handleStaffSubMenuItemClick = (view: string) => {
+228:                        <button onClick={() => handleStaffSubMenuItemClick('Instructors')} className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'Instructors' ? 'active' : ''}`}>
+231:                        <button onClick={() => handleStaffSubMenuItemClick('InstructorSchedule')} className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'InstructorSchedule' ? 'active' : ''}`}>
