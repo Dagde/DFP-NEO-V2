@@ -1,0 +1,47 @@
+[feature/comprehensive-build-algorithm 1714eb0] fix: Replace onShowSuccess with setSuccessMessage in handleNavigateToProfile
+ 46 files changed, 2556 insertions(+), 13 deletions(-)
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CIuxQYha.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index-CIuxQYha.js.map
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-mPM0r70D.js
+ create mode 100644 dfp-neo-platform/public/flight-school-app/assets/index.es-mPM0r70D.js.map
+ create mode 100644 fix_handle_navigate.py
+ create mode 100644 fix_navigate_to_profile.py
+ create mode 100644 fix_onshow_success.py
+ create mode 100644 outputs/workspace_output_1768140326_3674.txt
+ create mode 100644 outputs/workspace_output_1768140336_4475.txt
+ create mode 100644 outputs/workspace_output_1768140341_7383.txt
+ create mode 100644 outputs/workspace_output_1768140345_1649.txt
+ create mode 100644 outputs/workspace_output_1768140351_5692.txt
+ create mode 100644 outputs/workspace_output_1768140359_9974.txt
+ create mode 100644 outputs/workspace_output_1768140363_8800.txt
+ create mode 100644 outputs/workspace_output_1768140395_6068.txt
+ create mode 100644 outputs/workspace_output_1768140400_7349.txt
+ create mode 100644 outputs/workspace_output_1768140412_1853.txt
+ create mode 100644 outputs/workspace_output_1768140416_3520.txt
+ create mode 100644 outputs/workspace_output_1768140420_7328.txt
+ create mode 100644 outputs/workspace_output_1768140438_551.txt
+ create mode 100644 outputs/workspace_output_1768140441_9458.txt
+ create mode 100644 outputs/workspace_output_1768140450_8768.txt
+ create mode 100644 outputs/workspace_output_1768140457_6714.txt
+ create mode 100644 outputs/workspace_output_1768140461_7460.txt
+ create mode 100644 outputs/workspace_output_1768140483_6093.txt
+ create mode 100644 outputs/workspace_output_1768140488_3398.txt
+ create mode 100644 outputs/workspace_output_1768140491_8015.txt
+ create mode 100644 outputs/workspace_output_1768140495_3406.txt
+ create mode 100644 outputs/workspace_output_1768140498_7606.txt
+ create mode 100644 outputs/workspace_output_1768140503_6080.txt
+ create mode 100644 outputs/workspace_output_1768140506_7599.txt
+ create mode 100644 outputs/workspace_output_1768140510_1547.txt
+ create mode 100644 outputs/workspace_output_1768140538_7134.txt
+ create mode 100644 outputs/workspace_output_1768140550_4784.txt
+ create mode 100644 outputs/workspace_output_1768140554_586.txt
+ create mode 100644 outputs/workspace_output_1768140567_7038.txt
+ create mode 100644 outputs/workspace_output_1768140581_6424.txt
+ create mode 100644 outputs/workspace_output_1768140589_1982.txt
+ create mode 100644 outputs/workspace_output_1768140593_6589.txt
+ create mode 100644 outputs/workspace_output_1768140597_9921.txt
+ create mode 100644 remove_if_wrappers.py
+ create mode 100644 rewrite_handle_navigate.py
+ create mode 100644 simple_replace.py
+To https://github.com/Dagde/DFP---NEO.git
+   e6f12c5..1714eb0  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

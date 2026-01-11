@@ -8813,6 +8813,8 @@ updates.forEach(update => {
 
     const handleNavigateToProfile = (user: any) => {
         console.log('Navigating to profile:', user);
+           console.log("user.name:", user.name);
+           console.log("user.pmkeysId:", user.pmkeysId);
         
         // Find the instructor or trainee in the data
         if (user.userType === 'STAFF') {
@@ -8835,6 +8837,9 @@ updates.forEach(update => {
                 t.name === user.name || t.idNumber === parseInt(user.pmkeysId || '0')
             );
             
+               console.log("First 3 trainees:", traineesData.slice(0, 3).map(t => ({name: t.name, idNumber: t.idNumber})));
+               console.log("Trainees count:", traineesData.length);
+               console.log("Trainee search result:", trainee);
             if (trainee) {
                 // Navigate to CourseRoster view and select the trainee
                 setSelectedTrainee(trainee);
