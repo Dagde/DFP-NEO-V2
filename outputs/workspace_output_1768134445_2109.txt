@@ -1,0 +1,13 @@
+    const handleEdit = (user: User) => {
+        setSelectedUser(user);
+        setEditFormData({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+        });
+        setShowEditModal(true);
+        setEditError(null);
+        setEditSuccess(false);
+    };
+

@@ -25,6 +25,10 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
     const [loading, setLoading] = useState(true);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [editFormData, setEditFormData] = useState<Partial<User>>({});
+    const [editError, setEditError] = useState<string | null>(null);
+    const [editSuccess, setEditSuccess] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteError, setDeleteError] = useState('');
@@ -83,7 +87,59 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
 
     const handleEdit = (user: User) => {
         setSelectedUser(user);
+        setEditFormData({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+        });
         setShowEditModal(true);
+        setEditError(null);
+        setEditSuccess(false);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!selectedUser) return;
+
+        try {
+            setIsSaving(true);
+            setEditError(null);
+
+            const response = await fetch(`/api/users/${selectedUser.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(editFormData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update user');
+            }
+
+            const updatedUser = await response.json();
+            
+            // Update the user in the list
+            setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+            setFilteredUsers(filteredUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
+            
+            setEditSuccess(true);
+            
+            // Auto-close after success
+            setTimeout(() => {
+                setShowEditModal(false);
+                setSelectedUser(null);
+                setEditFormData({});
+                setEditSuccess(false);
+            }, 1500);
+        } catch (error: any) {
+            console.error('Error updating user:', error);
+            setEditError(error.message || 'Failed to update user. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDelete = (user: User) => {
@@ -285,28 +341,100 @@ export const UserListSection: React.FC<UserListSectionProps> = ({
                 </div>
             )}
 
-            {/* Edit User Modal (Placeholder - to be implemented) */}
+            {/* Edit User Modal */}
             {showEditModal && selectedUser && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
                         <h3 className="text-lg font-semibold text-white mb-4">
-                            Edit User
+                            Edit User Profile
                         </h3>
-                        <p className="text-gray-300 mb-4">
-                            Editing: <span className="font-semibold text-white">{selectedUser.name}</span>
-                        </p>
-                        <p className="text-gray-400 text-sm mb-4">
-                            Edit functionality coming soon...
-                        </p>
-                        <div className="flex justify-end">
+                        
+                        {editError && (
+                            <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded-lg">
+                                <p className="text-sm text-red-200">{editError}</p>
+                            </div>
+                        )}
+
+                        {editSuccess && (
+                            <div className="mb-4 p-3 bg-green-900 border border-green-700 rounded-lg">
+                                <p className="text-sm text-green-200">User updated successfully!</p>
+                            </div>
+                        )}
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    First Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.firstName || ''}
+                                    onChange={(e) => setEditFormData({...editFormData, firstName: e.target.value})}
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Last Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editFormData.lastName || ''}
+                                    onChange={(e) => setEditFormData({...editFormData, lastName: e.target.value})}
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={editFormData.email || ''}
+                                    onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">
+                                    Role
+                                </label>
+                                <select
+                                    value={editFormData.role || 'USER'}
+                                    onChange={(e) => setEditFormData({...editFormData, role: e.target.value})}
+                                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                >
+                                    <option value="USER">User</option>
+                                    <option value="INSTRUCTOR">Instructor</option>
+                                    <option value="PILOT">Pilot</option>
+                                    <option value="ADMIN">Admin</option>
+                                    <option value="SUPER_ADMIN">Super Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div className="flex justify-end space-x-3 mt-6">
                             <button
                                 onClick={() => {
                                     setShowEditModal(false);
                                     setSelectedUser(null);
+                                    setEditFormData({});
+                                    setEditError(null);
+                                    setEditSuccess(false);
                                 }}
                                 className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                             >
-                                Close
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveEdit}
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSaving ? 'Saving...' : 'Save Changes'}
                             </button>
                         </div>
                     </div>
