@@ -1,0 +1,1 @@
+130:        if (selectedTrainee && !isCreatingNew) {

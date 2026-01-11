@@ -1,0 +1,11 @@
+        if (selectedTrainee && !isCreatingNew) {
+            const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
+
+            // Update the state only if the data has actually changed to avoid an infinite loop.
+            if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
+                setSelectedTrainee(updatedTrainee);
+            }
+        }
+    }, [traineesData, selectedTrainee, isCreatingNew]);
+
+    const activeCourseNumbers = Object.keys(courseColors).sort((a, b) => a.localeCompare(b));

@@ -1,0 +1,1 @@
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);$

@@ -1,0 +1,10 @@
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,
+             role: 'INSTRUCTOR'
+          } as Instructor);
+          setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
+--
+          setSelectedPersonForProfile({
+             name: user.name,
+             idNumber: user.pmkeysId,

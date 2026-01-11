@@ -1,0 +1,21 @@
+interface CourseRosterViewProps {
+    events: ScheduleEvent[];
+    traineesData: Trainee[];
+    courseColors: { [key: string]: string };
+    archivedCourses: { [key: string]: string };
+    personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+    onNavigateToHateSheet: (trainee: Trainee) => void;
+    onRestoreCourse: (courseNumber: string) => void;
+    onUpdateTrainee: (data: Trainee) => void;
+    onAddTrainee: (data: Trainee) => void;
+    school: 'ESL' | 'PEA';
+    scores: Map<string, Score[]>;
+    syllabusDetails: SyllabusItemDetail[];
+    onNavigateToSyllabus: (syllabusId: string) => void;
+    onNavigateToCurrency: (person: Instructor | Trainee) => void;
+    onViewIndividualLMP: (trainee: Trainee) => void;
+    onAddRemedialPackage: (trainee: Trainee) => void;
+    locations: string[];
+    units: string[];
+    selectedPersonForProfile?: Trainee | null;
+    onProfileOpened?: () => void;

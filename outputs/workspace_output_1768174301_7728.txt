@@ -1,0 +1,20 @@
+          } as Trainee);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
+--
+          } as Trainee);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
+--
+          } as Trainee);
+          handleNavigation('CourseRoster');
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
+       }
+--
+                                setSelectedPersonForProfile(selectedPersonForLogbook as Trainee);
+                                handleNavigation('CourseRoster');
+                            }
+                        }}
+--

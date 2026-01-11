@@ -1,0 +1,2 @@
+             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);$
+             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);$
