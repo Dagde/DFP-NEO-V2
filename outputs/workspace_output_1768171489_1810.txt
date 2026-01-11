@@ -1,0 +1,1 @@
+✅ Replaced all handleNavigateToProfile functions
