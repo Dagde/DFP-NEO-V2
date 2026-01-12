@@ -1,0 +1,17 @@
+3bb8de4 feat: Always merge database staff/trainees with mock data
+504eca4 rollback: Restore to stable version f1fcc03 (before Data Source changes)
+87a3a75 fix: Rebuild to resolve ReferenceError in Settings Data Source page
+93df24b build: Rebuild production with Data Source toggle UI (index-CUxjHfJw.js)
+51a813a feat: Add Data Source page to Settings with error tracking
+1db0c15 deploy: Update production build with Data Source page and error tracking
+9d33c41 fix: Rebuild and deploy with Data Source page visible in Settings menu
+7a43301 feat: Add Data Source page to Settings with error tracking
+e883aed fix: Rebuild and deploy with Data Source page visible in Settings menu
+4fcf9e1 deploy: Update production build with Data Source page and error tracking
+482e7d0 fix: Add Data Source page with error tracking to production
+4606ddf deploy: Add Data Source toggle UI to production
+f93f4f0 deploy: Update Railway build with Data Source toggle UI
+da135fc build: Update production build with Data Source menu item
+f7f4f5a fix: Add data-source to SettingsSection type definition
+2f761a6 feat: Add Data Source menu item to Settings
+6fe153e Phase 1: Add Data Source UI to Settings page (toggles for Staff, Trainees, Courses)
