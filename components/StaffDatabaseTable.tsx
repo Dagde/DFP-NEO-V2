@@ -51,12 +51,13 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
         console.log('📊 StaffDatabaseTable: API Response:', data);
       
       if (data.personnel && Array.isArray(data.personnel)) {
-          console.log();
+          console.log(`📊 StaffDatabaseTable: Total personnel in DB: ${data.personnel.length}`);
         // Filter to show ONLY real database staff (those with a userId)
         // Mockdata from migration doesn't have a userId
         const realStaff = data.personnel.filter((staff: DatabaseStaff) => 
           staff.userId !== null && staff.userId !== undefined && staff.userId !== ''
         );
+          console.log(`✅ StaffDatabaseTable: Real staff with userId: ${realStaff.length}`);
         setStaffData(realStaff);
       } else {
         setError('Invalid data format received from server');
