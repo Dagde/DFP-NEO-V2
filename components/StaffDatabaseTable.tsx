@@ -6,15 +6,18 @@ interface StaffDatabaseTableProps {
 }
 
 const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData }) => {
-  // Filter only active instructors (not archived)
-  const activeStaff = instructorsData.filter(instructor => instructor.category !== 'UnCat');
+  // Real database staff IDs from Postgres backend
+  const REAL_DATABASE_STAFF_IDS = [8207939, 4300401, 4300403];
+  
+  // Filter to show ONLY real database staff (not mockdata)
+  const realDatabaseStaff = instructorsData.filter(instructor => 
+    REAL_DATABASE_STAFF_IDS.includes(instructor.idNumber)
+  );
 
-  // Determine type based on category
-  const getType = (category: string): 'STAFF' | 'TRAINEE' => {
-    // Categories A, B, C, D are typically staff
-    // Check if the instructor has a role that indicates trainee status
-    const isTraineeCategory = ['UnCat', 'D', 'C'].includes(category);
-    return isTraineeCategory ? 'TRAINEE' : 'STAFF';
+  // Determine type based on role
+  const getType = (role: string): 'STAFF' | 'TRAINEE' => {
+    // For real database staff, all are STAFF (QFI or SIM IP)
+    return 'STAFF';
   };
 
   return (
@@ -42,8 +45,8 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData
             </tr>
           </thead>
           <tbody>
-            {activeStaff.map((instructor, index) => {
-              const type = getType(instructor.category);
+            {realDatabaseStaff.map((instructor, index) => {
+              const type = getType(instructor.role);
               const typeBadgeColor = type === 'TRAINEE' 
                 ? 'bg-green-600 text-white' 
                 : 'bg-blue-600 text-white';
@@ -76,10 +79,10 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData
                 </tr>
               );
             })}
-            {activeStaff.length === 0 && (
+            {realDatabaseStaff.length === 0 && (
               <tr className="bg-blue-950/30">
                 <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No staff records found in the database
+                  No real database staff records found
                 </td>
               </tr>
             )}
@@ -89,7 +92,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData
 
       {/* Record count */}
       <div className="mt-4 text-sm text-gray-400">
-        Total Records: {activeStaff.length}
+        Total Records: {realDatabaseStaff.length}
       </div>
     </div>
   );
