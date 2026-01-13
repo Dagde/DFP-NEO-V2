@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
-import { UserListSection } from './UserListSection';
+import StaffDatabaseTable from "./StaffDatabaseTable";
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -216,13 +216,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                            />
                        )}
                           {activeSection === 'staff-database' && (
-                              <div className="text-center py-12">
-                                  <div className="text-6xl mb-4">👥</div>
-                                  <h3 className="text-xl font-bold text-gray-300 mb-2">Staff Database</h3>
-                                  <p className="text-gray-400">This section is under construction.</p>
-                              </div>
-                          )}
-{activeSection === 'staff-mockdata' && (
+                                <StaffDatabaseTable instructorsData={props.instructorsData} />
+                            )}
+                            {activeSection === 'staff-mockdata' && (
                                  <div className="text-center py-12">
                                      <div className="text-6xl mb-4">📋</div>
                                      <h3 className="text-xl font-bold text-gray-300 mb-2">Staff MockData</h3>
