@@ -1,1 +1,0 @@
-504:          console.log('FlightTile onMouseDown called for event:', (event as any).id);

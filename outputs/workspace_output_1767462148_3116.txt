@@ -1,2 +1,0 @@
-To https://github.com/Dagde/DFP---NEO.git
-   d2fb017..d34a1b7  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

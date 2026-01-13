@@ -1,3 +1,0 @@
-❌ Could not find the exact function to replace
-Found handleNavigateToProfile in file, but format doesn't match exactly
-Found at line 2926:     const handleNavigateToProfile = (user: any) => {

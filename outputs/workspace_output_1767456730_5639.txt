@@ -1,8 +1,0 @@
-total 28
-drwxr-xr-x  2 root root 4096 Jan  3 16:04 .
-drwxr-xr-x 13 root root 4096 Jan  3 16:04 ..
--rw-r--r--  1 root root 1981 Jan  3 16:03 add-user.ts
--rw-r--r--  1 root root 2606 Jan  3 16:04 add-users-from-json.ts
--rw-r--r--  1 root root 3347 Jan  3 16:04 add-users-from-template.ts
--rw-r--r--  1 root root 1964 Jan  2 14:44 create-super-admin.js
--rw-r--r--  1 root root 1830 Jan  3 15:56 setup-production-users.ts

@@ -1,5 +1,0 @@
-9:  cancellationRecords: CancellationRecord[];
-14:  cancellationRecords,
-41:    cancellationRecords.forEach(record => {
-48:  }, [cancellationRecords]);
-104:        cancellationRecords={cancellationRecords}

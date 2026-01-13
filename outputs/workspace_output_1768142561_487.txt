@@ -1,7 +1,0 @@
-            const instructor = instructorsData.find(i => 
-                i.name === user.name && i.idNumber === user.pmkeysId
-            );
----
-            const trainee = traineesData.find(t => 
-                t.name === user.name && t.idNumber === user.pmkeysId
-            );

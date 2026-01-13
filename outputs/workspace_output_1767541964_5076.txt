@@ -1,3 +1,0 @@
-55:      where: { id: params.id },
-112:      where: { id: params.id },
-131:      where: { id: params.id },

@@ -1,6 +1,0 @@
-7220:    const handleToggleOracleMode = useCallback(() => {
-8022:                    onToggleRemedialRequest={(traineeId, eventCode) => {
-8027:                                // Toggle the forceSchedule property
-8700:                    onToggleOracleMode={handleToggleOracleMode}
-8702:                    onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
-8705:                       onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}

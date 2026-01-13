@@ -1,4 +1,0 @@
-250:        // Check for SOLO flights - applies to ALL event types
-254:                    SOLO
-264:        // FALLBACK: Detect SOLO flights by checking if pilot and student are the same person
-269:                    SOLO

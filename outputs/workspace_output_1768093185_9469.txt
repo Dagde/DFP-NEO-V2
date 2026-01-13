@@ -1,6 +1,0 @@
-                console.error('❌ Failed to load initial data:', error);
-            }
-        };
-        loadInitialData();
-    }, []);    
-    // User change handler

@@ -1,5 +1,0 @@
-dfp-neo-platform/lib/db/backup.ts
-dfp-neo-platform/app/select/page.tsx
-dfp-neo-platform/app/admin/users/page.tsx
-dfp-neo-platform/app/admin/page.tsx
-dfp-neo-platform/app/test-login/page.tsx

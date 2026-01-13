@@ -1,15 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  4549    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-HTTP/1.1 200 OK
-Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
-Accept-Ranges: bytes
-Last-Modified: Sun, 04 Jan 2026 12:24:47 GMT
-ETag: W/"11c5-19b88f79dc7"
-Content-Type: application/javascript; charset=UTF-8
-Content-Length: 4549
-Vary: Accept-Encoding
-Date: Sun, 04 Jan 2026 12:59:49 GMT
-Connection: keep-alive
-Keep-Alive: timeout=5
-

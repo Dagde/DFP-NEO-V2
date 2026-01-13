@@ -1,8 +1,0 @@
-        trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
-      }
-      
-    
-    // Fetch aircraft
-    console.log('✈️ Fetching aircraft from API...');
-    aircraft = await fetchAircraft();
-    console.log('✅ Aircraft loaded:', aircraft.length);

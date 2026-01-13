@@ -1,1 +1,0 @@
-✅ Fixed handleNavigateToProfile to use setSuccessMessage

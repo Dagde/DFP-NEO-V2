@@ -1,2 +1,0 @@
-  unavailability          Json?
-  unavailability      Json?

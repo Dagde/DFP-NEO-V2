@@ -1,3 +1,0 @@
-156:  const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
-322:                             <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
-325:                             {renderInstructorList(simIps)}

@@ -1,3 +1,0 @@
-860:            const flightTypeValue = value as 'Dual' | 'Solo';
-861:            memberToUpdate.flightType = flightTypeValue;
-1301:                <select value={crewMember.flightType} onChange={e => handleCrewChange(index, 'flightType', e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">

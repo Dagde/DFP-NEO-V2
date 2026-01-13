@@ -1,2 +1,0 @@
-Failed to compile.
-Type error: Object literal may only specify known properties, and 'permissionsRole' does not exist in type 'UserInclude<DefaultArgs>'.

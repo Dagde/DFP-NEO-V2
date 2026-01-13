@@ -1,18 +1,0 @@
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0 17190    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-HTTP/1.1 200 OK
-Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate
-Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
-x-nextjs-cache: HIT
-x-nextjs-prerender: 1
-x-nextjs-prerender: 1
-x-nextjs-stale-time: 300
-X-Powered-By: Next.js
-ETag: "11ysu5apdwgd9i"
-Content-Type: text/html; charset=utf-8
-Content-Length: 17190
-Date: Sun, 04 Jan 2026 12:59:53 GMT
-Connection: keep-alive
-Keep-Alive: timeout=5
-

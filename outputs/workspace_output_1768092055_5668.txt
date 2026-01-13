@@ -1,3 +1,0 @@
-bc2c699 fix: Add cache-busting timestamp to force browser to load new build
-74228c4 feat: Add PUT endpoint for personnel updates and fix instructor persistence
-2b2cb42 feat: Add comprehensive data tracking for instructor creation

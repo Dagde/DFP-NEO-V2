@@ -1,9 +1,0 @@
-[feature/comprehensive-build-algorithm a0d90d4] Fix Course model to match actual database columns (armyCount, navyCount, raafCount, totalStudents)
- 9 files changed, 94 insertions(+), 1 deletion(-)
- create mode 100644 Screen Shot 2026-01-10 at 2.35.15 pm.jpg
- create mode 100644 check_course_schema.js
- create mode 100644 outputs/workspace_output_1768015894_5098.txt
- create mode 100644 outputs/workspace_output_1768016180_1016.txt
- create mode 100644 outputs/workspace_output_1768016186_642.txt
- create mode 100644 outputs/workspace_output_1768016202_3205.txt
- create mode 100644 outputs/workspace_output_1768016207_284.txt

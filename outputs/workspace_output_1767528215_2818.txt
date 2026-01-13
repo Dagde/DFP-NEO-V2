@@ -1,4 +1,0 @@
-total 12
-drwxr-xr-x 2 root root 4096 Jan  4 12:02 .
-drwxr-xr-x 9 root root 4096 Jan  4 12:02 ..
--rw-r--r-- 1 root root  911 Jan  4 12:02 page-43a47b35d5864f47.js

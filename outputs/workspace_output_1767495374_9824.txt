@@ -1,4 +1,0 @@
-dfp-neo-platform/scripts/add-users-from-json.ts
-dfp-neo-platform/scripts/add-user.ts
-dfp-neo-platform/scripts/add-users-from-template.ts
-dfp-neo-platform/scripts/setup-production-users.ts

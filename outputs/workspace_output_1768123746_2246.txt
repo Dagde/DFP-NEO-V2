@@ -1,6 +1,0 @@
- buildResources - Current view: Instructors Current date: 2026-01-11
- Built all resources: Array(45) STBY lines: 4
- buildResources - Current view: Instructors Current date: 2026-01-11
- Built all resources: Array(45) STBY lines: 4
-App.tsx:3473 🔄 useEffect triggered - activeView: Instructors remedialRequests count: 0
-App.tsx:3478 ⏸️ Not syncing - activeView is: Instructors

@@ -1,3 +1,0 @@
-  187 public/flight-school-app/index.html
-  546 public/flight-school-app/index.html.backup
-  733 total

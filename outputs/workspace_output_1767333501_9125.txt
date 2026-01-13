@@ -1,9 +1,0 @@
-                    {callsign && <div className="font-mono text-gray-500 text-[10px]">{callsign}</div>}
-               </div>
-          </div>
-      );
-  };
-
-  return (
-      <div
-        data-is-flight-tile="true"

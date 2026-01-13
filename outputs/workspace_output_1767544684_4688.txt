@@ -1,5 +1,0 @@
-total 32
-drwxr-xr-x  2 root root  4096 Jan  4 15:09 .
-drwxr-xr-x 14 root root  4096 Jan  4 16:20 ..
--rw-r--r--  1 root root 11546 Jan  4 15:08 schema.prisma
--rw-r--r--  1 root root  9127 Jan  4 15:09 seed.ts

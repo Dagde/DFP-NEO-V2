@@ -1,3 +1,0 @@
-/workspace/components/InstructorProfileFlyout.tsx:                    <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Instructor' : 'Staff Profile'}</h2>
-/workspace/components/PermissionsManagerFlyout.tsx:        { windowId: 'instructor-profile', windowName: 'Staff Profile', parentPage: 'Instructors', permissions: { 'Super Admin': true, 'Admin': true, 'Staff': true, 'Trainee': false, 'Ops': true, 'Scheduler': true, 'Course Supervisor': true } },
-/workspace/components/Sidebar.tsx:                            Staff Profile

@@ -1,7 +1,0 @@
-dfp-neo-platform/app/flight-school/page.tsx
-dfp-neo-platform/app/select/page.tsx
-dfp-neo-platform/app/admin/users/page.tsx
-dfp-neo-platform/app/admin/page.tsx
-dfp-neo-platform/app/test-login/page.tsx
-dfp-neo-platform/app/page.tsx
-dfp-neo-platform/app/login/page.tsx

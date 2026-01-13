@@ -1,1 +1,0 @@
-92:    console.error('❌ Error stack:', error.stack);

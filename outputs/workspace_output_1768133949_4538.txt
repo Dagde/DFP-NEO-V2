@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/check_users.py", line 3, in <module>
-    from prisma import PrismaClient
-ImportError: cannot import name 'PrismaClient' from 'prisma' (unknown location)

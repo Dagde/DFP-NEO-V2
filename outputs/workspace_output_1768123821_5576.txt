@@ -1,3 +1,0 @@
-217:  const renderInstructorList = (instructors: Instructor[]) => (
-313:                                {renderInstructorList(qfisByUnit[unit])}
-325:                             {renderInstructorList(simIps)}

@@ -1,6 +1,0 @@
-1499:        const instructorsNeeded = bnfTraineeCount;
-2520:    const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
-2669:    const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
-5596:            const trainees: string[] = [];
-7149:        const instructorsAnalysis: OracleInstructorAnalysis[] = instructorsData.map(instructor => {
-7155:        const traineesAnalysis: OracleTraineeAnalysis[] = traineesData.map(trainee => {

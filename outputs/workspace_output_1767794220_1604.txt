@@ -1,3 +1,0 @@
-              <option key={role} value={role}>
-                {role.name}
-              </option>

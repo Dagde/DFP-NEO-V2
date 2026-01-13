@@ -1,3 +1,0 @@
-[feature/comprehensive-build-algorithm f2326d2] chore: Trigger Railway redeploy
-To https://github.com/Dagde/DFP---NEO.git
-   bc2c699..f2326d2  feature/comprehensive-build-algorithm -> feature/comprehensive-build-algorithm

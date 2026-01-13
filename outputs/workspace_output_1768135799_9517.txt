@@ -1,6 +1,0 @@
-4:interface User {
-13:interface UserListSectionProps {
-84:    const handleEditProfile = (user: User) => {
-226:                                            onClick={() => handleEdit(user)}
-300:            {/* Edit User Modal */}
-301:            {showEditModal && selectedUser && (

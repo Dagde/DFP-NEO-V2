@@ -1,9 +1,0 @@
-503:    function nukeInlineStyles() {
-534:    function fixSoloFlights() {
-614:      nukeInlineStyles();
-615:      fixSoloFlights();
-623:        fixSoloFlights();
-629:      fixSoloFlights();
-634:    setInterval(nukeInlineStyles, 100);
-638:      nukeInlineStyles();
-639:      fixSoloFlights();

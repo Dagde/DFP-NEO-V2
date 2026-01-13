@@ -1,4 +1,0 @@
-2930:        if (user.userType === 'STAFF') {
-3000:        if (user.userType === 'STAFF') {
-3615:        if (user.userType === 'STAFF') {
-8820:        if (user.userType === 'STAFF') {

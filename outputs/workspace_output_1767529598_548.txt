@@ -1,8 +1,0 @@
-Unstaged changes after reset:
-M	_superninja_startup.conf
-M	dfp-neo-platform/index.html
-M	dfp-neo-platform/public/flight-school-app/index.html
-M	dfp-neo-platform/public/flight-school-app/index.html.backup
-M	outputs/workspace_output_1767527910_9910.txt
-M	plate.png
-M	todo.md

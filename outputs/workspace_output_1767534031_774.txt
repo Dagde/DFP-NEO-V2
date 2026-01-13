@@ -1,6 +1,0 @@
-11:    <script src="https://cdn.tailwindcss.com"></script>
-12:    <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
-13:    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js" async></script>
-14:    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-15:    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-182:  <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>

@@ -1,3 +1,0 @@
- 📝 onUpdateInstructor called with data: Object
- 📝 Checking database ID for instructor...
- 🔧 === UPDATING EXISTING INSTRUCTOR ===

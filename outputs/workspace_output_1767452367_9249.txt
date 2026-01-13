@@ -1,1 +1,0 @@
--rw-r--r-- 1 root root 1265480 Jan  3 14:58 public/images/plate.png

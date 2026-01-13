@@ -1,5 +1,0 @@
-./node_modules/google-auth-library/build/src
-./node_modules/google-auth-library/build/src/util.js
-./node_modules/google-auth-library/build/src/shared.cjs
-./node_modules/google-auth-library/build/src/index.d.ts
-./node_modules/google-auth-library/build/src/util.d.ts

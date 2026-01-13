@@ -1,2 +1,0 @@
-86:import { SettingsViewWithMenu } from './components/SettingsViewWithMenu';
-8412:                return <SettingsViewWithMenu 

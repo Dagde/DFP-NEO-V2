@@ -1,5 +1,0 @@
-dfp-neo-platform/public/flight-school-app/assets/index.es-BIJ1rrCB.js
-dfp-neo-platform/public/flight-school-app/assets/index-BiUszwTI.js
-dfp-neo-platform/public/flight-school-app/assets/index-DfaaHY89.js
-dfp-neo-platform/public/flight-school-app/assets/html2canvas.esm-QH1iLAAe.js
-dfp-neo-platform/public/flight-school-app/assets/index-C-Gm8wkn.js

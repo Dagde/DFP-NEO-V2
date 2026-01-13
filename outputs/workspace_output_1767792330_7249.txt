@@ -1,6 +1,0 @@
-2026-01-07T13:22:07.959577499Z [inf]  Failed to compile.
-
-
-2026-01-07T13:22:07.960200035Z [inf]  ./app/admin/permissions/page.tsx:6:30
-Type error: Property 'permissionsRole' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
-

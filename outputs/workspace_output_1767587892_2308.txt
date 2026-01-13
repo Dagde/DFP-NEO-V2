@@ -1,2 +1,0 @@
-Switched to branch 'feature/comprehensive-build-algorithm'
-Your branch is up to date with 'origin/feature/comprehensive-build-algorithm'.

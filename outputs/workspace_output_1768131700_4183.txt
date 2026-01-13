@@ -1,3 +1,0 @@
-/workspace/types.ts:48:export type InstructorRank = 'WGCDR' | 'SQNLDR' | 'FLTLT' | 'FLGOFF' | 'PLTOFF' | 'Mr';
-/workspace/types.ts:51:export type InstructorCategory = 'UnCat' | 'D' | 'C' | 'B' | 'A';
-/workspace/types.ts:100:export interface Instructor {

@@ -1,2 +1,0 @@
-73:import InstructorListView from './components/InstructorListView';
-8305:                return <InstructorListView 

@@ -1,4 +1,0 @@
-    function nukeInlineStyles() {
-      nukeInlineStyles();
-    setInterval(nukeInlineStyles, 100);
-      nukeInlineStyles();

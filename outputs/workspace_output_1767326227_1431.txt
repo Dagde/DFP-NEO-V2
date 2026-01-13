@@ -1,5 +1,0 @@
-dc6d30f Add deployment checklist for new browser verification
-b85353d Add comprehensive AC History setup guide for new browser deployment
-fa58616 Fix: Replace require() with ES6 import for cancellationCodes to resolve browser error
-87307bb Implement comprehensive AC History system with cancellation codes management and analytics
-70b0a00 Fix PT051 double entry: use traineeFullName for save key consistency

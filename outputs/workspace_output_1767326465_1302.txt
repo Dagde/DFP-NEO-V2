@@ -1,3 +1,0 @@
-root        1912  0.0  0.0   2920   880 ?        Ss   04:01   0:00 timeout --preserve-status --signal=KILL 60s bash -lc { cd /workspace ; mkdir -p /workspace/outputs ; } { sleep 2 && ps aux | grep vite __ec=$? } >"/workspace/outputs/workspace_output_1767326465_1302.txt" 2>&1 head -c 80000 "/workspace/outputs/workspace_output_1767326465_1302.txt" ( exit "$__ec" )
-root        1913  0.0  0.0   4352  3144 ?        S    04:01   0:00 bash -lc { cd /workspace ; mkdir -p /workspace/outputs ; } { sleep 2 && ps aux | grep vite __ec=$? } >"/workspace/outputs/workspace_output_1767326465_1302.txt" 2>&1 head -c 80000 "/workspace/outputs/workspace_output_1767326465_1302.txt" ( exit "$__ec" )
-root        1919  0.0  0.0   3752  2020 ?        S    04:01   0:00 grep vite

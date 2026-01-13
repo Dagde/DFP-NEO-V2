@@ -1,2 +1,0 @@
-Error: Either --url or --schema must be provided.
-See `prisma db execute -h`

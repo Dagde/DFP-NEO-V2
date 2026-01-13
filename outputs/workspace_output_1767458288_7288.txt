@@ -1,4 +1,0 @@
-dfp-neo-platform/public/test.html
-dfp-neo-platform/public/flight-school-app/test-formation.html
-dfp-neo-platform/public/flight-school-app/index.html
-dfp-neo-platform/public/flight-school-app/priority-analysis.html

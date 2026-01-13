@@ -1,8 +1,0 @@
-app/api/mobile/auth/login/route.ts:40:    if (!user.passwordHash) {
-app/api/mobile/auth/login/route.ts:47:    const isValidPassword = await comparePassword(password, user.passwordHash);
-app/api/admin/users/route.ts:53:    const passwordHash = await bcrypt.hash(password, 12);
-app/api/admin/users/route.ts:62:        password: passwordHash,
-lib/password.ts:223:  const passwordHash = await hashPassword(newPassword);
-lib/password.ts:229:      passwordHash,
-lib/password.ts:268:  const passwordHash = await hashPassword(temporaryPassword);
-lib/password.ts:274:      passwordHash,

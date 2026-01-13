@@ -1,5 +1,0 @@
-❌ Could not find the target text
-Found: {activeSection === 'user-list' && 'User List'}
-                        </h2>
-                        {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
-                

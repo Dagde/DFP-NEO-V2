@@ -1,1 +1,0 @@
-Fixed handleNavigateToProfile with simple line-by-line approach

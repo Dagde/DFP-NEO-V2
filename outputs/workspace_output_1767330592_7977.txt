@@ -1,2 +1,0 @@
-./App.tsx:        const stored = localStorage.getItem('cancellationRecords');
-./components/ACHistoryPage.tsx:      const cancellationRecords = localStorage.getItem('cancellationRecords');

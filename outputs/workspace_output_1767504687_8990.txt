@@ -1,7 +1,0 @@
-./components/UnavailabilityReportModal.tsx
-./components/EventDetailModal.tsx
-./components/PostFlightModal.tsx
-./components/ConflictModal.tsx
-./components/DarkMessageModal.tsx
-./components/FlightDetailModal.tsx
-./components/VisualAdjustModal.tsx

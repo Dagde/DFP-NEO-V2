@@ -1,1 +1,0 @@
-tcp6       0      0 :::3001                 :::*                    LISTEN      27833/next-server ( 

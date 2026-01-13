@@ -1,5 +1,0 @@
--rw-r--r-- 1 root root 189765 Jan  4 12:02 framework-d7de93249215fb06.js
--rw-r--r-- 1 root root 127550 Jan  4 12:02 main-a4753544b5b73813.js
--rw-r--r-- 1 root root    557 Jan  4 12:02 main-app-c5d5af050ad54be3.js
--rw-r--r-- 1 root root 112594 Jan  4 12:02 polyfills-42372ed130431b0a.js
--rw-r--r-- 1 root root   3404 Jan  4 12:02 webpack-74c939c87fa0092a.js

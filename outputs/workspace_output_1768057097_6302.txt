@@ -1,1 +1,0 @@
-/usr/bin/bash: line 7507: function_calls: No such file or directory

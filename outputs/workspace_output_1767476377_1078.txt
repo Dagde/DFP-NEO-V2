@@ -1,5 +1,0 @@
-dfp-neo-platform/.next/static/chunks/main-app.js
-dfp-neo-platform/.next/static/chunks/app-pages-internals.js
-dfp-neo-platform/.next/static/chunks/app/layout.js
-dfp-neo-platform/.next/static/chunks/app/_not-found/page.js
-dfp-neo-platform/.next/static/chunks/app/flight-school/page.js

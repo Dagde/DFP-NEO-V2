@@ -1,4 +1,0 @@
-./package.json
-./dfp-neo-platform/.next/types/package.json
-./dfp-neo-platform/.next/package.json
-./dfp-neo-platform/package.json

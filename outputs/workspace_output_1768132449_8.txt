@@ -1,5 +1,0 @@
-57:type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone';
-62:    const menuItems = [
-120:        { id: 'permissions' as const, label: 'Permissions', icon: (
-136:                    {menuItems.map((item) => (
-176:                            {activeSection === 'permissions' && 'Permissions Manager'}

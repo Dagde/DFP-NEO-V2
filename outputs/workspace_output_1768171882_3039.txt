@@ -1,4 +1,0 @@
-✅ Replaced function starting at line 2925
-✅ Replaced function starting at line 2977
-✅ Replaced function starting at line 3574
-✅ All instances replaced

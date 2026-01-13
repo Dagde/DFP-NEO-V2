@@ -1,1 +1,0 @@
-dfp-neo-platform/.next/static/chunks/app/flight-school

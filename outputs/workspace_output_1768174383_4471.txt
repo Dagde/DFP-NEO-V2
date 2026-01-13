@@ -1,3 +1,0 @@
-          handleNavigation('Instructors');$
-             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);$
-       } else if (user.userType === 'TRAINEE') {$

@@ -1,5 +1,0 @@
-119:  const qfis = useMemo(() => {
-142:  const qfisByUnit = useMemo(() => {
-154:  const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
-310:                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} QFIs</span>
-313:                                {renderInstructorList(qfisByUnit[unit])}

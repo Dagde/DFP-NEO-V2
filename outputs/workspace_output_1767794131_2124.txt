@@ -1,4 +1,0 @@
-289:          <label htmlFor="permissionsRoleId" className="block text-sm font-medium text-gray-300 mb-2">
-293:            id="permissionsRoleId"
-294:            value={formData.permissionsRoleId}
-295:            onChange={(e) => setFormData({ ...formData, permissionsRoleId: e.target.value })}

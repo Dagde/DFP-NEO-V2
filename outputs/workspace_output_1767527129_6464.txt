@@ -1,3 +1,0 @@
-  const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
-  const studentName = event.flightType === 'Solo' ? '' : (isSctEvent ? event.student : event.student || '');
-  

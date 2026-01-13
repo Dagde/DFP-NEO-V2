@@ -1,2 +1,0 @@
-App.tsx:8350 🔧 updatePersonnel result: Object
-App.tsx:8351 ✅ === DATABASE UPDATE SUCCESSFUL ===

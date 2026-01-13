@@ -1,4 +1,0 @@
-5:import { initialCancellationCodes } from '../data/cancellationCodes';
-30:        setCancellationCodes(initialCancellationCodes);
-33:      setCancellationCodes(initialCancellationCodes);
-34:      localStorage.setItem('cancellationCodes', JSON.stringify(initialCancellationCodes));

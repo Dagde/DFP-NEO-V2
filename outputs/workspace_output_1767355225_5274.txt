@@ -1,3 +1,0 @@
-360:    const isShortFlight = effectiveDuration < 1.0;
-436:        const isShortFlight = effectiveDuration <= 1.1;
-473:    const isShortFlight = effectiveDuration <= 1.1;

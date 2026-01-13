@@ -1,6 +1,0 @@
-/workspace/components/SafeStaffTraineeScheduleView.tsx:interface SafeStaffTraineeScheduleViewProps {
-/workspace/components/SafeStaffTraineeScheduleView.tsx:const SafeStaffTraineeScheduleView: React.FC<SafeStaffTraineeScheduleViewProps> = ({ originalProps }) => {
-/workspace/components/SafeStaffTraineeScheduleView.tsx:export default SafeStaffTraineeScheduleView;
-/workspace/components/Sidebar.tsx:  const isStaffSectionActive = ['Instructors', 'InstructorSchedule'].includes(activeView);
-/workspace/components/Sidebar.tsx:                        <button onClick={() => handleStaffSubMenuItemClick('Instructors')} className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'Instructors' ? 'active' : ''}`}>
-/workspace/components/Sidebar.tsx:                        <button onClick={() => handleStaffSubMenuItemClick('InstructorSchedule')} className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'InstructorSchedule' ? 'active' : ''}`}>
