@@ -7,22 +7,42 @@ function getGitInfo() {
   let commitMessage = 'unknown';
   let branch = 'unknown';
 
-  try {
-    commitHash = execSync('git rev-parse --short HEAD').toString().trim();
-  } catch (error) {
-    console.error('Failed to get git commit hash:', error);
+  // Try to get git info from environment variables (Railway provides these)
+  if (process.env.RAILWAY_GIT_COMMIT_SHA) {
+    commitHash = process.env.RAILWAY_GIT_COMMIT_SHA.substring(0, 7);
+  }
+  
+  if (process.env.RAILWAY_GIT_BRANCH) {
+    branch = process.env.RAILWAY_GIT_BRANCH.replace('refs/heads/', '');
   }
 
-  try {
-    commitMessage = execSync('git log -1 --pretty=format:%s').toString().trim();
-  } catch (error) {
-    console.error('Failed to get git commit message:', error);
+  if (process.env.RAILWAY_GIT_COMMIT_MESSAGE) {
+    commitMessage = process.env.RAILWAY_GIT_COMMIT_MESSAGE;
   }
 
-  try {
-    branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-  } catch (error) {
-    console.error('Failed to get git branch:', error);
+  // If env vars are not available, try git commands
+  if (commitHash === 'unknown') {
+    try {
+      commitHash = execSync('git rev-parse --short HEAD').toString().trim();
+    } catch (error) {
+      console.log('Git not available, using placeholder values');
+    }
+  }
+
+  if (commitMessage === 'unknown') {
+    try {
+      commitMessage = execSync('git log -1 --pretty=format:%s').toString().trim();
+    } catch (error) {
+      console.log('Git not available, using placeholder values');
+    }
+  }
+
+  if (branch === 'unknown') {
+    try {
+      branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+    } catch (error) {
+      console.log('Git not available, using placeholder values');
+    }
   }
 
   return { commitHash, commitMessage, branch };
