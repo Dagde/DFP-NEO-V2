@@ -20,6 +20,7 @@ interface DatabaseStaff {
   isCFI?: boolean;
   isActive?: boolean;
   isAdminStaff?: boolean;
+  userId?: string; // This identifies real database staff (not mockdata)
   createdAt: string;
   updatedAt: string;
 }
@@ -47,7 +48,12 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
       const data = await response.json();
       
       if (data.personnel && Array.isArray(data.personnel)) {
-        setStaffData(data.personnel);
+        // Filter to show ONLY real database staff (those with a userId)
+        // Mockdata from migration doesn't have a userId
+        const realStaff = data.personnel.filter((staff: DatabaseStaff) => 
+          staff.userId !== null && staff.userId !== undefined && staff.userId !== ''
+        );
+        setStaffData(realStaff);
       } else {
         setError('Invalid data format received from server');
       }
@@ -103,7 +109,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     return (
       <div className="w-full flex items-center justify-center py-12">
         <div className="text-gray-400 text-sm">
-          No staff records found in database
+          No real database staff records found (staff with userId)
         </div>
       </div>
     );
@@ -184,7 +190,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
           Total Records: {staffData.length}
         </div>
         <div className="text-gray-500 text-xs">
-          Data from PostgreSQL database
+          Real database staff only (excluding mockdata)
         </div>
       </div>
     </div>
