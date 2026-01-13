@@ -12,7 +12,8 @@
     "db:generate": "prisma generate",
     "db:reset": "prisma migrate reset --force",
     "create-admin": "node scripts/create-super-admin.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "prebuild": "node scripts/inject-git-info.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
