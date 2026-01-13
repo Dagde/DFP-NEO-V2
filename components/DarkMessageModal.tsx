@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface DarkMessageModalProps {
@@ -10,6 +10,7 @@ export interface DarkMessageModalProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'error' | 'warning' | 'info' | 'success';
+  autoCloseDelay?: number; // Auto-close delay in milliseconds
 }
 
 const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
@@ -20,7 +21,8 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   onCancel,
   confirmText = 'OK',
   cancelText = 'Cancel',
-  variant = 'info'
+  variant = 'info',
+  autoCloseDelay
 }) => {
   const getVariantStyles = () => {
     switch (variant) {
@@ -93,6 +95,17 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   const handleConfirm = () => {
     onConfirm?.();
   };
+
+    // Auto-close functionality
+    useEffect(() => {
+      if (autoCloseDelay && autoCloseDelay > 0) {
+        const timer = setTimeout(() => {
+          handleConfirm();
+        }, autoCloseDelay);
+
+        return () => clearTimeout(timer);
+      }
+    }, [autoCloseDelay]);
 
   const handleCancel = () => {
     onCancel?.();

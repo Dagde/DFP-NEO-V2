@@ -3046,13 +3046,14 @@ const App: React.FC = () => {
     };
 
     // Dark Message Modal utility functions
-    const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info') => {
+    const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info', autoCloseDelay?: number) => {
         return new Promise<void>((resolve) => {
             setDarkMessageModal({
                 type: 'alert',
                 title,
                 message,
                 variant,
+                autoCloseDelay,
                 onConfirm: () => {
                     setDarkMessageModal(null);
                     resolve();
@@ -3106,6 +3107,7 @@ const App: React.FC = () => {
         onCancel?: () => void;
         confirmText?: string;
         cancelText?: string;
+        autoCloseDelay?: number;
     } | null>(null);
     
     // Visual Adjust state
@@ -3157,6 +3159,25 @@ const App: React.FC = () => {
         };
         loadInitialData();
     }, []);    
+
+       // Show commit alert on app mount
+       useEffect(() => {
+           const showCommitAlert = async () => {
+               await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+               const commitHash = '1038178';
+               const commitMessage = 'chore: Add outputs directory to gitignore';
+               const branch = 'feature/comprehensive-build-algorithm';
+               
+               showDarkAlert(
+                   `📦 App Started\n\nCommit: ${commitHash}\nMessage: ${commitMessage}\nBranch: ${branch}`,
+                   'Version Information',
+                   'info',
+                   5000 // 5 seconds auto-close
+               );
+           };
+           showCommitAlert();
+       }, []);
+
     // User change handler
     const handleUserChange = (userName: string) => {
         setCurrentUserName(userName);
@@ -9150,6 +9171,7 @@ updates.forEach(update => {
                     onCancel={darkMessageModal.onCancel}
                     confirmText={darkMessageModal.confirmText}
                     cancelText={darkMessageModal.cancelText}
+                      autoCloseDelay={darkMessageModal.autoCloseDelay}
                 />
             )}
         </div>
