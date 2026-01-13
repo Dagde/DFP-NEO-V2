@@ -7,7 +7,7 @@ interface StaffDatabaseTableProps {
 
 const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData }) => {
   // Real database staff IDs from Postgres backend
-  const REAL_DATABASE_STAFF_IDS = [8207939, 4300401, 4300403];
+  const REAL_DATABASE_STAFF_IDS = [8207939, 8207938, 8201111];
   
   // Filter to show ONLY real database staff (not mockdata)
   const realDatabaseStaff = instructorsData.filter(instructor => 
