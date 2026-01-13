@@ -57,7 +57,7 @@ interface SettingsViewWithMenuProps {
     cancellationCodes: CancellationCode[];
 }
 
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database';
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
@@ -189,6 +189,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             {activeSection === 'permissions' && 'Permissions Manager'}
                                {activeSection === 'user-list' && 'User List'}
                                   {activeSection === 'staff-database' && 'Staff Database'}
+                                     {activeSection === 'staff-mockdata' && 'Staff MockData'}
+                                     {activeSection === 'staff-combined-data' && 'Staff Combined Data'}
+                                     {activeSection === 'staff-mockdata' && 'Staff MockData'}
+                                     {activeSection === 'staff-combined-data' && 'Staff Combined Data'}
                         </h2>
                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
                             <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
@@ -208,6 +212,20 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                               <div className="text-center py-12">
                                   <div className="text-6xl mb-4">👥</div>
                                   <h3 className="text-xl font-bold text-gray-300 mb-2">Staff Database</h3>
+                             {activeSection === 'staff-mockdata' && (
+                                 <div className="text-center py-12">
+                                     <div className="text-6xl mb-4">🙅‍♂️</div>
+                                     <h3 className="text-xl font-bold text-gray-300 mb-2">Staff MockData</h3>
+                                     <p className="text-gray-400">This section is under construction.</p>
+                                 </div>
+                             )}
+                             {activeSection === 'staff-combined-data' && (
+                                 <div className="text-center py-12">
+                                     <div className="text-6xl mb-4">🙅‍♂️</div>
+                                     <h3 className="text-xl font-bold text-gray-300 mb-2">Staff Combined Data</h3>
+                                     <p className="text-gray-400">This section is under construction.</p>
+                                 </div>
+                             )}
                                   <p className="text-gray-400">This section is under construction.</p>
                               </div>
                           )}
