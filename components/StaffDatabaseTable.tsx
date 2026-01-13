@@ -1,24 +1,113 @@
-import React from 'react';
-import { Instructor } from '../types';
+import React, { useState, useEffect } from 'react';
 
 interface StaffDatabaseTableProps {
-  instructorsData: Instructor[];
+  // No props needed - fetches data from API
 }
 
-const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData }) => {
-  // Real database staff IDs from Postgres backend
-  const REAL_DATABASE_STAFF_IDS = [8207939, 8207938, 8201111];
-  
-  // Filter to show ONLY real database staff (not mockdata)
-  const realDatabaseStaff = instructorsData.filter(instructor => 
-    REAL_DATABASE_STAFF_IDS.includes(instructor.idNumber)
-  );
+interface DatabaseStaff {
+  id: string;
+  idNumber?: number;
+  name: string;
+  rank?: string;
+  role?: string;
+  category?: string;
+  flight?: string;
+  location?: string;
+  email?: string;
+  phoneNumber?: string;
+  isQFI?: boolean;
+  isOFI?: boolean;
+  isCFI?: boolean;
+  isActive?: boolean;
+  isAdminStaff?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  // Determine type based on role
-  const getType = (role: string): 'STAFF' | 'TRAINEE' => {
-    // For real database staff, all are STAFF (QFI or SIM IP)
+const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
+  const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDatabaseStaff();
+  }, []);
+
+  const fetchDatabaseStaff = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/personnel');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.personnel && Array.isArray(data.personnel)) {
+        setStaffData(data.personnel);
+      } else {
+        setError('Invalid data format received from server');
+      }
+    } catch (err) {
+      console.error('Error fetching database staff:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch data from database');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Determine type based on role and category
+  const getType = (staff: DatabaseStaff): 'STAFF' | 'TRAINEE' => {
+    // Trainees are typically in categories UnCat, D, C
+    if (staff.category && ['UnCat', 'D', 'C'].includes(staff.category)) {
+      return 'TRAINEE';
+    }
     return 'STAFF';
   };
+
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-gray-400 text-sm">
+          Loading database staff...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full">
+        <div className="bg-red-900/40 border border-red-700 rounded-lg p-4 mb-4">
+          <div className="text-red-300 text-sm font-semibold mb-2">
+            Error Loading Database
+          </div>
+          <div className="text-red-400 text-xs mb-3">
+            {error}
+          </div>
+          <button
+            onClick={fetchDatabaseStaff}
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-xs rounded transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (staffData.length === 0) {
+    return (
+      <div className="w-full flex items-center justify-center py-12">
+        <div className="text-gray-400 text-sm">
+          No staff records found in database
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -34,7 +123,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData
                 RANK/SERVICE
               </th>
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                UNIT
+                UNIT/FLIGHT
               </th>
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                 PMKEYS/ID
@@ -42,11 +131,14 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                 TYPE
               </th>
+              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
+                ROLE
+              </th>
             </tr>
           </thead>
           <tbody>
-            {realDatabaseStaff.map((instructor, index) => {
-              const type = getType(instructor.role);
+            {staffData.map((staff, index) => {
+              const type = getType(staff);
               const typeBadgeColor = type === 'TRAINEE' 
                 ? 'bg-green-600 text-white' 
                 : 'bg-blue-600 text-white';
@@ -56,43 +148,44 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ instructorsData
 
               return (
                 <tr 
-                  key={instructor.idNumber} 
+                  key={staff.id} 
                   className={rowBackgroundColor}
                 >
                   <td className="px-4 py-3 text-sm text-white">
-                    {instructor.name}
+                    {staff.name}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
-                    {instructor.rank} - {instructor.service || 'N/A'}
+                    {staff.rank || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
-                    {instructor.unit || 'N/A'}
+                    {staff.flight || staff.location || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
-                    {instructor.idNumber}
+                    {staff.idNumber || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${typeBadgeColor}`}>
                       {type}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-sm text-white">
+                    {staff.role || 'N/A'}
+                  </td>
                 </tr>
               );
             })}
-            {realDatabaseStaff.length === 0 && (
-              <tr className="bg-blue-950/30">
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No real database staff records found
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
 
-      {/* Record count */}
-      <div className="mt-4 text-sm text-gray-400">
-        Total Records: {realDatabaseStaff.length}
+      {/* Record count and metadata */}
+      <div className="mt-4 flex justify-between items-center text-sm">
+        <div className="text-gray-400">
+          Total Records: {staffData.length}
+        </div>
+        <div className="text-gray-500 text-xs">
+          Data from PostgreSQL database
+        </div>
       </div>
     </div>
   );
