@@ -187,10 +187,10 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
       {/* Record count and metadata */}
       <div className="mt-4 flex justify-between items-center text-sm">
         <div className="text-gray-400">
-          Total Records: {staffData.length}
+          Source: Database
         </div>
         <div className="text-gray-500 text-xs">
-          Real database staff only (excluding mockdata)
+          Count: {staffData.length}
         </div>
       </div>
     </div>
