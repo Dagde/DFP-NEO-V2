@@ -1,5 +1,0 @@
-root         662  0.0  1.5 1115876 62404 ?       Sl   11:25   0:00 /usr/lib/code-server/lib/node /usr/lib/code-server --bind-addr 127.0.0.1:4000 --auth none --user-data-dir /opt/code-server --extensions-dir /opt/code-server/extensions
-root         664  0.0  0.4  25860 18972 ?        S    11:25   0:00 python3 -m http.server 3000
-root         665  0.0  0.4  25860 18980 ?        S    11:25   0:00 python -m http.server 8081
-root         729  0.0  1.6 1051168 65076 ?       Sl   11:25   0:00 /usr/lib/code-server/lib/node /usr/lib/code-server/out/node/entry
-root         749  0.1  1.9 1452900 78180 ?       Sl   11:25   0:03 /usr/local/lib/python3.11/site-packages/playwright/driver/node /usr/local/lib/python3.11/site-packages/playwright/driver/package/cli.js run-driver

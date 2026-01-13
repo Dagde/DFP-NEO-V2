@@ -1,3 +1,0 @@
-56:type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone';
-62:        { id: 'validation' as const, label: 'AC History', icon: (
-164:                            {activeSection === 'validation' && 'AC History'}

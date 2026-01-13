@@ -1,4 +1,0 @@
-8653:        <div id="app-content" className="flex h-screen bg-gray-900 text-white">
-8654-            <Sidebar
-8655-                activeView={activeView}
-8656-                onNavigate={handleNavigation}

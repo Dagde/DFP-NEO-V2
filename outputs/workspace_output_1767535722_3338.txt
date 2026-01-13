@@ -1,5 +1,0 @@
-      background-color: #3b82f6 !important;
-    }
-  </style>
-  <script type="module" crossorigin src="./assets/index-uPhlgI5U.js"></script>
-</head>

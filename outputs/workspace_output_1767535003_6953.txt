@@ -1,2 +1,0 @@
-./app/admin/users/page.tsx
-./app/admin/page.tsx

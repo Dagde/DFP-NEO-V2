@@ -1,7 +1,0 @@
-                           <UserListSection
-                               currentUserPermission={props.currentUserPermission}
-                               onShowSuccess={props.onShowSuccess}
-                           />
-                       )}
-                </div>
-            </div>

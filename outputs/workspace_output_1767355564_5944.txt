@@ -1,3 +1,0 @@
-        // Check if this event is flagged by Validate mode
-        // If Validate mode is active and this event is flagged, emphasize the validation conflicts
-                errors.push("This event is marked RED because Validate mode found the following rule violations:");

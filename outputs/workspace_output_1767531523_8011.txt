@@ -1,6 +1,0 @@
- dfp-neo-platform/index.html                        |   1 +
- dfp-neo-platform/index.html.backup                 | 188 +++++++++++
- .../public/flight-school-app/index.html            |   1 +
- .../public/flight-school-app/index.html.backup     | 361 +--------------------
- dfp-neo-platform/public/purple-button-fix.js       | 152 +++++++++
- 5 files changed, 343 insertions(+), 360 deletions(-)

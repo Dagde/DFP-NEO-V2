@@ -1,1 +1,0 @@
-Saved working directory and index state WIP on feature/comprehensive-build-algorithm: 164b3f0 fix: Remove module-level console.log causing ReferenceError and restore data-source section

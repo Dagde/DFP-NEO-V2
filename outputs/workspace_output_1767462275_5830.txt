@@ -1,2 +1,0 @@
-* feature/comprehensive-build-algorithm d34a1b7 [origin/feature/comprehensive-build-algorithm] Fix: Visual Adjust modal persistence issue
-  main                                  8767307 [origin/main] Fix LMP bulk upload issue - filter events by LMP type

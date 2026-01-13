@@ -1,2 +1,0 @@
-59:type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list';
-62:    const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');

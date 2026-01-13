@@ -1,6 +1,0 @@
-
-      return (
-          <div style={flyoutStyle} className="flex items-center">
-                {/* Connector Line/Arrow could go here */}
-               <div className="bg-gray-800 border border-gray-600 rounded px-2 py-1 shadow-lg flex items-center space-x-3 text-xs">
-                    <div>

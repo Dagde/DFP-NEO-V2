@@ -1,8 +1,0 @@
-./lib/dataService.ts:11:    const dataSourceSettings = JSON.parse(localStorage.getItem('dataSourceSettings') || '{"staff":false,"trainee":false,"course":false}');
-./lib/dataService.ts:12:    console.log('🎛️ Data source settings:', dataSourceSettings);
-./lib/dataService.ts:28:        if (dataSourceSettings.staff) {
-./components/SettingsView.tsx:149:    const [dataSourceSettings, setDataSourceSettings] = useState(() => {
-./components/SettingsView.tsx:150:        const saved = localStorage.getItem('dataSourceSettings');
-./components/SettingsView.tsx:164:            localStorage.setItem('dataSourceSettings', JSON.stringify(newSettings));
-./components/SettingsView.tsx:1841:                                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 ${dataSourceSettings.staff ? 'bg-green-600' : 'bg-gray-600'}`}
-./components/SettingsView.tsx:1844:                                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${dataSourceSettings.staff ? 'translate-x-6' : 'translate-x-1'}`} 

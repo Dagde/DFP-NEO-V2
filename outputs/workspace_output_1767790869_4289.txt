@@ -1,9 +1,0 @@
-Clearing all Personnel userId values to prepare for migration...
-
-✓ Dropped constraints
-✓ Made userId nullable
-✓ Set all userId values to NULL
-
-✓ Updated 209 Personnel records
-
-Now you can run: npx prisma db push

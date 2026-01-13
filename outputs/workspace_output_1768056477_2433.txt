@@ -1,2 +1,0 @@
-6fe153e Phase 1: Add Data Source UI to Settings page (toggles for Staff, Trainees, Courses)
-f1fcc03 Fix login button size (scale-50 to scale-100) and remove Ninja script (purple buttons)

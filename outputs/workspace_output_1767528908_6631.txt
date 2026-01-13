@@ -1,5 +1,0 @@
-45:          src="/images/logo.png"
-60:            src="/images/username.png"
-72:              src="/images/plate.png"
-96:            src="/images/password.png"
-108:              src="/images/plate.png"

@@ -1,4 +1,0 @@
-163:                          <div>{log.actor.displayName || log.actor.userId}</div>
-164:                          {log.actor.displayName && (
-175:                          <div>{log.target.displayName || log.target.userId}</div>
-176:                          {log.target.displayName && (

@@ -1,5 +1,0 @@
-80:    let dataSourceSettings = { staff: false, trainee: false, course: false };
-82:      const settingsStr = localStorage.getItem('dataSourceSettings');
-84:        dataSourceSettings = JSON.parse(settingsStr);
-86:      console.log('🎛️ Data source settings:', dataSourceSettings);
-88:      console.log('⚠️ Could not read dataSourceSettings, using defaults');

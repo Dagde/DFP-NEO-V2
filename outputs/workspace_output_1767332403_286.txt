@@ -1,1 +1,0 @@
-523:                {console.log('❌ RENDERING RED X for event:', event.id, 'resourceId:', event.resourceId)}

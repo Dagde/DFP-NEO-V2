@@ -1,2 +1,0 @@
-55:import CourseRosterView from './components/CourseRosterView';
-7775:                return <CourseRosterView 

@@ -1,4 +1,0 @@
-  File "/tmp/fix_structure.py", line 9
-    if ')}` in lines[i] and ');' in lines[i+1]:
-                             ^
-SyntaxError: unmatched ')'

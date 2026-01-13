@@ -1,5 +1,0 @@
-2934:    const handleNavigateToProfile = (user: any) => {
-3012:    const handleNavigateToProfile = (user: any) => {
-3627:    const handleNavigateToProfile = (user: any) => {
-8624:                        onNavigateToProfile={handleNavigateToProfile}
-8830:    const handleNavigateToProfile = (user: any) => {

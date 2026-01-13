@@ -1,5 +1,0 @@
-total 2.5M
--rw-r--r-- 1 root root 886K Jan  4 12:14 logo.png.bak
--rw-r--r-- 1 root root 669K Jan  4 12:14 password.png.bak
--rw-r--r-- 1 root root 250K Jan  4 12:14 plate.png.bak
--rw-r--r-- 1 root root 747K Jan  4 12:14 username.png.bak

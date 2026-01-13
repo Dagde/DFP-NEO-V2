@@ -1,2 +1,0 @@
-./components/CancellationCodesTable.tsx
-./components/RecentCancellationsTable.tsx

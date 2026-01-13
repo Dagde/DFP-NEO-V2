@@ -1,6 +1,0 @@
-    // Run immediately on load
-    setTimeout(() => {
-      nukeInlineStyles();
-      fixSoloFlights();
-      fixGreyCourses();
-      console.log('DFP-NEO: Initial fixes applied');

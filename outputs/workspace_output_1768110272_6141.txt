@@ -1,2 +1,0 @@
-Updating files:  94% (3395/3593)Updating files:  95% (3414/3593)Updating files:  96% (3450/3593)Updating files:  97% (3486/3593)Updating files:  98% (3522/3593)Updating files:  99% (3558/3593)Updating files: 100% (3593/3593)Updating files: 100% (3593/3593), done.
-HEAD is now at 504eca4 rollback: Restore to stable version f1fcc03 (before Data Source changes)

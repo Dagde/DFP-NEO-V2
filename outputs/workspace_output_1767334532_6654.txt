@@ -1,7 +1,0 @@
-      onClick={onSelectEvent}
-      onMouseDown={(e) => {
-          console.log('FlightTile onMouseDown called for event:', (event as any).id);
-          e.stopPropagation(); // Prevent grid's handleMouseDown from being called
-          onMouseDown(e);
-      }}
-      onMouseEnter={onMouseEnter}

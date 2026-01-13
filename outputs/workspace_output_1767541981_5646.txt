@@ -1,1 +1,0 @@
-37:    const token = await createInviteToken(params.id, 72);

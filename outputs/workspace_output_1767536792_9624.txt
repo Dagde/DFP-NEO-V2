@@ -1,4 +1,0 @@
-dfp-neo-platform/node_modules/caniuse-lite/data/features/css-rebeccapurple.js
-dfp-neo-platform/public/hide-buttons.js
-dfp-neo-platform/public/flight-school-app/hide-buttons.js
-dfp-neo-platform/public/flight-school-app/_next/purple-fix-1767504792915

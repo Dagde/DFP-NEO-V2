@@ -1,7 +1,0 @@
-components/PT051View.tsx-763-                            // Enable editing mode - you could add state to track this
-components/PT051View.tsx-764-                            console.log('Editing mode enabled for PT-051:', initialAssessment.id);
-components/PT051View.tsx-765-                        }} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold shadow-md">
-components/PT051View.tsx:766:                            ✏️ Edit Assessment
-components/PT051View.tsx-767-                        </button>
-components/PT051View.tsx-768-                    )}
-components/PT051View.tsx-769-                    <button onClick={handleManualSaveAndExit} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md">

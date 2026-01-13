@@ -1,7 +1,0 @@
-5679-                if (needsUpdate) {
-5680-                    newAssessments.set(assessmentId, { ...assessment, ...updates });
-5681-                    updated++;
-5682:                    console.log('✏️ Updated PT-051 for', assessment.traineeFullName, 'on', assessment.flightNumber);
-5683-                }
-5684-            }
-5685-        });

@@ -1,4 +1,0 @@
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
-                            traineeLMPs={traineeLMPs}
-                            onViewLogbook={handleViewLogbook}
-                            onDeleteTrainee={(trainee) => {

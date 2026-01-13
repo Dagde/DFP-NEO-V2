@@ -1,1 +1,0 @@
-✅ Replaced profile navigation with setSelectedPersonForProfile

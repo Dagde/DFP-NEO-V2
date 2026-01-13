@@ -1,2 +1,0 @@
-components/PrioritiesView.tsx
-components/PrioritiesViewWithMenu.tsx

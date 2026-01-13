@@ -1,1 +1,0 @@
-             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);$

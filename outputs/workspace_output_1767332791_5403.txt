@@ -1,9 +1,0 @@
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    onMouseDown(e);
-  };
-
-  return (
-    <div
-      data-is-flight-tile="true"
-      style={style}

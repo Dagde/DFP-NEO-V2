@@ -1,1 +1,0 @@
-137:      <div className="absolute bottom-[30px] scale-50">

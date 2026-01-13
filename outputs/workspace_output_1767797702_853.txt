@@ -1,9 +1,0 @@
-app/api/auth/forgot-password/route.ts:3:import { createPasswordResetToken } from '@/lib/password';
-app/api/auth/forgot-password/route.ts:38:      const token = await createPasswordResetToken(user.id, 30); // 30 minutes
-app/api/admin/users/[id]/generate-invite/route.ts:5:import { createInviteToken } from '@/lib/password';
-app/api/admin/users/[id]/generate-invite/route.ts:37:    const token = await createInviteToken(id, 72);
-app/api/admin/users/[id]/force-password-reset/route.ts:6:import { revokeAllUserSessions } from '@/lib/password';
-app/api/admin/users/[id]/force-password-reset/route.ts:46:    await revokeAllUserSessions(id, session.user.id);
-app/api/admin/users/create/route.ts:5:import { createInviteToken, setTemporaryPassword } from '@/lib/password';
-app/api/admin/users/create/route.ts:112:      const token = await createInviteToken(user.id, 72);
-app/api/admin/users/create/route.ts:129:      const result = await setTemporaryPassword(user.id, temporaryPassword, session.user.id);

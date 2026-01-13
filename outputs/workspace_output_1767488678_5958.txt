@@ -1,2 +1,0 @@
-261:    // FIX 2: Solo flight display - replace duplicate names with SOLO
-334:    // FIX 3: Remove grey color from trainee courses (grey is reserved for SCT)

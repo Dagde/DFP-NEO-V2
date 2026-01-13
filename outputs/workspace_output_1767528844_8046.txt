@@ -1,6 +1,0 @@
--rw-r--r-- 1 root root 886K Jan  2 14:44 dfp-neo-platform/public/images/logo.png
--rw-r--r-- 1 root root 1.3M Jan  3 06:25 dfp-neo-platform/public/images/metal-plate-input.png
--rw-r--r-- 1 root root 1.3M Jan  2 14:44 dfp-neo-platform/public/images/metal-plate.png
--rw-r--r-- 1 root root 669K Jan  2 14:44 dfp-neo-platform/public/images/password.png
--rw-r--r-- 1 root root 250K Jan  3 15:03 dfp-neo-platform/public/images/plate.png
--rw-r--r-- 1 root root 747K Jan  2 14:44 dfp-neo-platform/public/images/username.png

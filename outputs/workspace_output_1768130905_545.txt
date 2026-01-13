@@ -1,5 +1,0 @@
-8422995 fix: Restore mock data loading with data source toggle v2.2
-504eca4 rollback: Restore to stable version f1fcc03 (before Data Source changes)
-f1fcc03 Fix login button size (scale-50 to scale-100) and remove Ninja script (purple buttons)
-73a6ea8 Fix scores API - use PrismaClient directly instead of @/lib/prisma
-59f3812 Add missing scores API endpoint

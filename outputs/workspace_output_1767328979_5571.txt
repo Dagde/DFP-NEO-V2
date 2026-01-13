@@ -1,2 +1,0 @@
-FlightTile.tsx
-OraclePreviewTile.tsx

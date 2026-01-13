@@ -1,2 +1,0 @@
-Added debug logs after line 8815
-✅ Added debug logs to handleNavigateToProfile

@@ -1,6 +1,0 @@
-app/(auth)/change-password/page.tsx
-app/(auth)/forgot-password/page.tsx
-app/(auth)/login/page.tsx
-app/(auth)/reset-password/page.tsx
-app/(auth)/set-password/page.tsx
-app/test-login/page.tsx

@@ -1,1 +1,0 @@
-178:                            {activeSection === 'permissions' && 'Permissions Manager'}

@@ -1,6 +1,0 @@
-498:        const notCancelled = !e.isCancelled;
-5108:    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
-5143:            isCancelled: true,
-5187:    const handleDeleteEvent = () => {
-8721:                    onDeleteRequest={handleDeleteEvent}
-8794:                    onCancelEvent={handleCancelEvent}

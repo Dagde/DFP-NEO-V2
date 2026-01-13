@@ -1,2 +1,0 @@
-Error resetting admin password: TypeError: bcrypt.hash is not a function
-    at resetAdminPassword (/workspace/reset-admin-password.ts:20:41)

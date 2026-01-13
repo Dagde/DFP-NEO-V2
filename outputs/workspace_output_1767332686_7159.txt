@@ -1,4 +1,0 @@
-$
-  return ($
-    <div$
-      data-is-flight-tile="true"$

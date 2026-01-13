@@ -1,3 +1,0 @@
-59:type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list';
-179:                               {activeSection === 'user-list' && 'User List'}
-188:                       {activeSection === 'user-list' && (

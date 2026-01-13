@@ -1,2 +1,0 @@
-5108:    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
-8830:                    onCancelEvent={handleCancelEvent}

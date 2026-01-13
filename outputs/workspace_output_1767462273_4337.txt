@@ -1,2 +1,0 @@
-origin	https://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@github.com/Dagde/DFP---NEO.git (fetch)
-origin	https://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@github.com/Dagde/DFP---NEO.git (push)

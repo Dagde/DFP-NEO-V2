@@ -1,6 +1,0 @@
-1b6b71c Add aggressive JavaScript button hiding script
-8dc20ec Remove NinjaTech AI watermark and hide Edit/Save buttons
-0829449 COMPREHENSIVE FIX: Visual Adjust + Solo Flights + Course Colors
-071829e FIX: Restore Visual Adjust button + Fix solo flight display
-907042d FIX: Restore Save button in Flight Details modal
-01472bc Fix archived courses management and create dedicated ArchivedCourses view

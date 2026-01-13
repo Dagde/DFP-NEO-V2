@@ -1,1 +1,0 @@
-63:    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {

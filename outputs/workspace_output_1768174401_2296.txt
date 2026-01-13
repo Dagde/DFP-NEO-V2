@@ -1,8 +1,0 @@
-2940:             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-2949:             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-2994:             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-3003:             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-3593:             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-3602:             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
-8780:             setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-8789:             setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);

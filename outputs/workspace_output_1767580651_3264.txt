@@ -1,4 +1,0 @@
-total 16
-drwxr-xr-x 2 root root 4096 Jan  4 16:30 .
-drwxr-xr-x 9 root root 4096 Jan  4 15:11 ..
--rw-r--r-- 1 root root 4560 Jan  4 16:30 page.tsx

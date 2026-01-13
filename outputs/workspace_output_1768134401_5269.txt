@@ -1,9 +1,0 @@
-interface User {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    pmkeysId?: string;
-    createdAt: string;
-}
-

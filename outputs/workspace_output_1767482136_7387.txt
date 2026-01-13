@@ -1,5 +1,0 @@
-dfp-neo-platform/.next/types/routes.d.ts
-dfp-neo-platform/.next/types/validator.ts
-dfp-neo-platform/.next/types/app/flight-school/page.ts
-dfp-neo-platform/lib/db/backup.ts
-dfp-neo-platform/app/layout.tsx

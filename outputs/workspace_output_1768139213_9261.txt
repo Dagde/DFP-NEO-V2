@@ -1,2 +1,0 @@
-8:interface SettingsViewWithMenuProps {
-61:export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
