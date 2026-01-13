@@ -39,15 +39,19 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/personnel');
+      console.log('🔍 StaffDatabaseTable: Fetching from /api/personnel');
+        console.log('🔍 StaffDatabaseTable: Fetching from /api/personnel');
+        const response = await fetch('/api/personnel');
       
       if (!response.ok) {
         throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
+        console.log('📊 StaffDatabaseTable: API Response:', data);
       
       if (data.personnel && Array.isArray(data.personnel)) {
+          console.log();
         // Filter to show ONLY real database staff (those with a userId)
         // Mockdata from migration doesn't have a userId
         const realStaff = data.personnel.filter((staff: DatabaseStaff) => 
