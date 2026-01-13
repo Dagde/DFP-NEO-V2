@@ -58,7 +58,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
         setError('Invalid data format received from server');
       }
     } catch (err) {
-      console.error('Error fetching database staff:', err);
+      console.error('❌ Error fetching database staff:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data from database');
     } finally {
       setLoading(false);
