@@ -216,7 +216,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                            />
                        )}
                           {activeSection === 'staff-database' && (
-                                <StaffDatabaseTable instructorsData={props.instructorsData} />
+                                <StaffDatabaseTable />
                             )}
                             {activeSection === 'staff-mockdata' && (
                                  <div className="text-center py-12">
