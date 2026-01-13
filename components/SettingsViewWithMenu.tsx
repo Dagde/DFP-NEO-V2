@@ -135,10 +135,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                       <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                   </svg>
               )},
-    ];
-
-    return (
-{ id: 'staff-mockdata' as const, label: 'Staff MockData', icon: (
+                 { id: 'staff-mockdata' as const, label: 'Staff MockData', icon: (
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
@@ -148,7 +145,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                          <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                      </svg>
-                 )},        <div className="flex-1 flex overflow-hidden bg-gray-900">
+                 )},
+    ];
+
+    return (
+        <div className="flex-1 flex overflow-hidden bg-gray-900">
             {/* Side Menu */}
             <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
                 <div className="p-6 border-b border-gray-700">
@@ -199,8 +200,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             {activeSection === 'permissions' && 'Permissions Manager'}
                                {activeSection === 'user-list' && 'User List'}
                                   {activeSection === 'staff-database' && 'Staff Database'}
-{activeSection === 'staff-mockdata' && 'Staff MockData'}
-                                     {activeSection === 'staff-combined-data' && 'Staff Combined Data'}                        </h2>
+                        </h2>
                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
                             <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
                                 <strong>Read-Only Mode</strong>
