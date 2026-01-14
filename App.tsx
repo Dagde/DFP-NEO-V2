@@ -3135,8 +3135,7 @@ useEffect(() => {
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
-    // Fetch current user from NextAuth session
-    // Session user info from NextAuth (real user, not mockdata)\n    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, userId: string} | null>(null);
+    // Session user info from NextAuth (real user, not mockdata)
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
