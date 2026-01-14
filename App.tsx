@@ -8422,7 +8422,7 @@ updates.forEach(update => {
                             archivedInstructorsData={archivedInstructorsData}
                             school={school}
                             personnelData={personnelData}
-                            onUpdateInstructor={(data) => {
+                            onUpdateInstructor={async (data) => {
                                 console.log('🔍 [DATA TRACKING] Instructor update/save called');
                                 console.log('🔍 [DATA TRACKING] Instructor data:', data);
                                 console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
@@ -8430,6 +8430,35 @@ updates.forEach(update => {
                                 console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
                                 console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
                                 console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
+
+                                try {
+                                    // Call API to save to database
+                                    console.log('🔍 [DATA TRACKING] Calling /api/personnel POST endpoint');
+                                    const response = await fetch('/api/personnel', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(data),
+                                    });
+
+                                    if (!response.ok) {
+                                        const errorData = await response.json();
+                                        console.error('❌ [DATA TRACKING] API call failed:', response.status, errorData);
+                                        throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
+                                    }
+
+                                    const result = await response.json();
+                                    console.log('✅ [DATA TRACKING] Saved to database successfully');
+                                    console.log('✅ [DATA TRACKING] API Response:', result);
+
+                                } catch (error) {
+                                    console.error('❌ [DATA TRACKING] Error saving to database:', error);
+                                    // Continue with local state update even if API fails
+                                    console.log('⚠️ [DATA TRACKING] Continuing with local state update');
+                                }
+
+                                // Update local state
                                 setInstructorsData(prev => {
                                     const exists = prev.some(i => i.idNumber === data.idNumber);
                                     if (exists) {

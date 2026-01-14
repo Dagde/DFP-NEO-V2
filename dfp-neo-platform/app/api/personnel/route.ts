@@ -63,3 +63,70 @@ return NextResponse.json({ personnel });
     );
   }
 }
+// POST /api/personnel - Create new personnel record
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+
+    if (!session?.user) {
+      console.log('❌ [API POST] Unauthorized - No session');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    console.log('🔍 [API POST] Creating new personnel record');
+    
+    const body = await request.json();
+    console.log('🔍 [API POST] Request body:', JSON.stringify(body, null, 2));
+
+    // Create new personnel record
+    const newPersonnel = await prisma.personnel.create({
+      data: {
+        name: body.name || '',
+        rank: body.rank || null,
+        role: body.role || null,
+        category: body.category || null,
+        unit: body.unit || null,
+        location: body.location || null,
+        idNumber: body.idNumber || null,
+        callsignNumber: body.callsignNumber || null,
+        email: body.email || null,
+        phoneNumber: body.phoneNumber || null,
+        seatConfig: body.seatConfig || null,
+        isQFI: body.isQFI || false,
+        isOFI: body.isOFI || false,
+        isCFI: body.isCFI || false,
+        isExecutive: body.isExecutive || false,
+        isFlyingSupervisor: body.isFlyingSupervisor || false,
+        isIRE: body.isIRE || false,
+        isCommandingOfficer: body.isCommandingOfficer || false,
+        isTestingOfficer: body.isTestingOfficer || false,
+        isContractor: body.isContractor || false,
+        isAdminStaff: body.isAdminStaff || false,
+        isActive: true,
+        // Link to user if provided, otherwise it's a real staff record without userId
+        userId: body.userId || null,
+      }
+    });
+
+    console.log('✅ [API POST] New personnel created successfully');
+    console.log('✅ [API POST] Personnel ID:', newPersonnel.id);
+    console.log('✅ [API POST] Personnel Name:', newPersonnel.name);
+    console.log('✅ [API POST] Personnel userId:', newPersonnel.userId);
+
+    return NextResponse.json({ 
+      success: true,
+      personnel: newPersonnel 
+    });
+  } catch (error) {
+    console.error('❌ [API POST] Error creating personnel:', error);
+    return NextResponse.json(
+      { error: 'Failed to create personnel', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}
