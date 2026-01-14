@@ -1,5 +1,102 @@
 # Pinned Solutions
 
+## Real Database Staff Access - Complete Solution
+
+**Date:** January 14, 2026  
+**Commit:** `dcb836b` - "fix: Set userId from authenticated session to identify real database staff"  
+**Issue:** Staff Database table showing 0 records despite adding staff through the app
+
+---
+
+### Problem Description
+
+When adding staff through the "Add Staff" button:
+1. **Staff appeared in Staff List** (showing local state updates worked)
+2. **Staff did NOT appear in Staff Database** (showing database query failed)
+3. **Console showed:** "Real staff with userId: 0" (all records filtered out)
+
+### Root Cause
+
+The POST endpoint at `/api/personnel` was creating personnel records with `userId: null`:
+```typescript
+// BEFORE (line 110 in route.ts):
+userId: body.userId || null,
+```
+
+This happened because:
+- The API expected `userId` in the request body
+- The client wasn't sending a `userId`
+- All new records were created without `userId`
+- The Staff Database table filters: `userId !== null`
+- Result: All new staff were filtered out as "mockdata"
+
+### Solution
+
+Modified `/workspace/dfp-neo-platform/app/api/personnel/route.ts` to **automatically set `userId` from the authenticated session**:
+
+```typescript
+// AFTER (line 110 in route.ts):
+// CRITICAL: Always set userId from authenticated session to identify as real database staff
+userId: session.user.id,
+```
+
+### What This Fixes
+
+✅ New staff records automatically linked to authenticated user  
+✅ `userId` field is populated (not `null`)  
+✅ Staff Database table displays new staff records  
+✅ Staff List continues to work (shows all staff)  
+✅ Real database staff are properly distinguished from mockdata  
+
+### Database Query Capability
+
+**Debug Endpoint Created:** `/api/debug/staff-database` (Commit `f42ed0b`)
+
+Access this endpoint to query and interrogate the Railway PostgreSQL database:
+```
+https://your-railway-app-url.com/api/debug/staff-database
+```
+
+Returns:
+- Summary statistics (total, real staff, mockdata counts)
+- Complete details of all real database staff
+- Sample mockdata for comparison
+
+### How Staff Records Are Identified
+
+**Real Database Staff:**
+- `userId` is populated (links to User table via NextAuth)
+- Added through "Add Staff" button by authenticated users
+- Visible in Staff Database tab
+
+**Mockdata:**
+- `userId` is `null`
+- Imported via migration scripts
+- NOT visible in Staff Database tab (filtered out)
+
+### Key Files Modified
+
+1. `/workspace/dfp-neo-platform/app/api/personnel/route.ts` - Line 110
+   - Changed from: `userId: body.userId || null`
+   - Changed to: `userId: session.user.id`
+
+2. `/workspace/dfp-neo-platform/app/api/debug/staff-database/route.ts` - Created
+   - New endpoint to query and return database information
+
+### Testing
+
+1. Add staff through "Add Staff" button
+2. Staff appears in Staff List ✅
+3. Staff appears in Staff Database ✅
+4. Console shows: `✅ [API POST] Personnel userId: [actual-user-id]` ✅
+5. Query `/api/debug/staff-database` to verify database contents ✅
+
+### Related Solutions
+
+- **Staff Database Tab Not Visible After Code Changes** (see below)
+
+---
+
 ## Staff Database Tab Not Visible After Code Changes
 
 **Date:** January 13, 2026  
