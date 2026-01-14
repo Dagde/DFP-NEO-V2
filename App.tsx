@@ -8423,12 +8423,24 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={(data) => {
+                                console.log('🔍 [DATA TRACKING] Instructor update/save called');
+                                console.log('🔍 [DATA TRACKING] Instructor data:', data);
+                                console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
+                                console.log('🔍 [DATA TRACKING] Instructor name:', data.name);
+                                console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
+                                console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
+                                console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
                                 setInstructorsData(prev => {
                                     const exists = prev.some(i => i.idNumber === data.idNumber);
                                     if (exists) {
+                                        console.log('🔍 [DATA TRACKING] Updating existing instructor');
                                         return prev.map(i => i.idNumber === data.idNumber ? data : i);
                                     }
-                                    return [...prev, data];
+                                    console.log('🔍 [DATA TRACKING] Adding new instructor to state');
+                                    console.log('🔍 [DATA TRACKING] Total instructors before:', prev.length);
+                                    const result = [...prev, data];
+                                    console.log('🔍 [DATA TRACKING] Total instructors after:', result.length);
+                                    return result;
                                 });
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}

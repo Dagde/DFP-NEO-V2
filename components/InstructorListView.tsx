@@ -194,10 +194,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }
 
   const handleAddIndividual = () => {
+    console.log('🔍 [DATA TRACKING] Add Staff button clicked');
+    console.log('🔍 [DATA TRACKING] Current instructors count:', instructorsData.length);
     setShowAddChoice(false);
     setIsArchiveMode(false);
     setSelectedInstructor(null);
-    setNewInstructorTemplate(generateNewInstructorTemplate());
+    const newTemplate = generateNewInstructorTemplate();
+    console.log('🔍 [DATA TRACKING] New instructor template created:', newTemplate);
+    setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
     setIsClosing(false);
     setOriginRect(null); // Center animation for new
