@@ -3136,6 +3136,7 @@ useEffect(() => {
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
     // Fetch current user from NextAuth session
+    // Session user info from NextAuth (real user, not mockdata)\n    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, userId: string} | null>(null);
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
@@ -3159,9 +3160,6 @@ useEffect(() => {
                         const rank = data.user.role || 'UNKNOWN';
                         const auditUserName = `${rank} ${formattedName}`;
                         setCurrentUser(auditUserName);
-                        
-                        console.log('🔍 [SESSION] Fetched current user:', formattedName);
-                        console.log('🔍 [SESSION] Audit user:', auditUserName);
                     }
                 }
             } catch (error) {
@@ -8298,8 +8296,8 @@ updates.forEach(update => {
                 });
                 
                 return <MyDashboard 
-                            userName={currentUser?.name ? currentUser.name.split(', ').reverse().join(' ') : 'Joe Bloggs'}
-                            userRank={currentUser?.rank || 'FLTLT'}
+                            userName={sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName}
+                            userRank={sessionUser?.role || 'FLTLT'}
                             events={eventsForDate.filter(e => e.instructor === currentUserName)}
                             onSelectEvent={handleOpenModal}
                             onNavigate={handleNavigation}
