@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
+import { setCurrentUser } from './utils/auditLogger';
 import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
@@ -3133,6 +3134,43 @@ useEffect(() => {
     // Default to Joe Bloggs (Super Admin) - in production this would come from authentication
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
+
+    // Fetch current user from NextAuth session
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                // Try to get session from mobile auth endpoint first
+                const response = await fetch('/api/mobile/auth/me', {
+                    credentials: 'include',
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.user) {
+                        // Format name: "First Last" -> "Last, First"
+                        const firstName = data.user.firstName || '';
+                        const lastName = data.user.lastName || '';
+                        const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : data.user.username || 'Bloggs, Joe';
+                        
+                        // Update app state
+                        setCurrentUserName(formattedName);
+                        
+                        // Update audit logger
+                        const rank = data.user.role || 'UNKNOWN';
+                        const auditUserName = `${rank} ${formattedName}`;
+                        setCurrentUser(auditUserName);
+                        
+                        console.log('🔍 [SESSION] Fetched current user:', formattedName);
+                        console.log('🔍 [SESSION] Audit user:', auditUserName);
+                    }
+                }
+            } catch (error) {
+                console.log('⚠️ [SESSION] Could not fetch user session, using default');
+            }
+        };
+
+        fetchCurrentUser();
+    }, []);
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
     // Set current user for audit logging

@@ -5,7 +5,11 @@ import { AuditLog, AuditAction } from '../types/audit';
 const AUDIT_STORAGE_KEY = 'dfp_audit_logs';
 
 // Current user - set by the application
-let currentUser: string = 'FLTLT Joe Bloggs';
+let currentUser: string = 'Unknown User';
+
+export const setCurrentUser = (user: string) => {
+    currentUser = user;
+};
 
 // Set current user (called by App.tsx on initialization)
 export const setCurrentUser = (user: string): void => {
