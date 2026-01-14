@@ -32,11 +32,9 @@ export async function GET(request: NextRequest) {
         lastLogin: true,
         createdAt: true,
         updatedAt: true,
-        // Count related records
+        // Count related records (only array relations)
         _count: {
           select: {
-            personnel: true,
-            trainees: true,
             aircraft: true,
             flightSchedules: true,
             AuditLog: true,
@@ -59,8 +57,7 @@ export async function GET(request: NextRequest) {
     const activeUsers = allUsers.filter(u => u.isActive).length;
     const inactiveUsers = allUsers.filter(u => !u.isActive).length;
 
-    // Get users linked to personnel (real database staff)
-    const usersWithPersonnel = allUsers.filter(u => u._count.personnel > 0);
+    // Personnel and trainee are singular relations, cannot be counted with _count
 
     const result = {
       summary: {
@@ -68,7 +65,7 @@ export async function GET(request: NextRequest) {
         activeUsers,
         inactiveUsers,
         uniqueRoles: Object.keys(usersByRole).length,
-        usersLinkedToPersonnel: usersWithPersonnel.length,
+        usersLinkedToPersonnel: 0,
         roles: Object.keys(usersByRole).map(role => ({
           role,
           count: usersByRole[role].length
@@ -89,8 +86,8 @@ export async function GET(request: NextRequest) {
         lastLogin: user.lastLogin,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        hasLinkedPersonnel: user._count.personnel > 0,
-        hasLinkedTrainee: user._count.trainees > 0,
+        hasLinkedPersonnel: false,
+        hasLinkedTrainee: false,
         aircraftCount: user._count.aircraft,
         flightScheduleCount: user._count.flightSchedules,
         auditLogCount: user._count.AuditLog,
@@ -101,23 +98,14 @@ export async function GET(request: NextRequest) {
           username: user.username,
           email: user.email,
           userId: user.userId,
-          displayName: user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
+          displayName: user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
             : user.username,
           isActive: user.isActive,
           lastLogin: user.lastLogin,
         }));
         return acc;
       }, {} as Record<string, any[]>),
-      usersLinkedToPersonnel: usersWithPersonnel.map(user => ({
-        id: user.id,
-        username: user.username,
-        userId: user.userId,
-        displayName: user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}` 
-          : user.username,
-        linkedPersonnelCount: user._count.personnel,
-      }))
     };
 
     console.log('✅ [DEBUG] User database query successful');
