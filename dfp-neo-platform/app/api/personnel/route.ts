@@ -106,8 +106,8 @@ export async function POST(request: NextRequest) {
         isContractor: body.isContractor || false,
         isAdminStaff: body.isAdminStaff || false,
         isActive: true,
-        // Link to user if provided, otherwise it's a real staff record without userId
-        userId: body.userId || null,
+          // CRITICAL: Always set userId from authenticated session to identify as real database staff
+          userId: session.user.id,
       }
     });
 
