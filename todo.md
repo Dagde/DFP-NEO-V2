@@ -1,28 +1,19 @@
-# Staff Database Enhancement - Complete
+# Fix Dashboard User Display and Event Filtering
 
-## Completed Tasks
-[x] Investigate API endpoints for real database staff data
-[x] Update StaffDatabaseTable to fetch from API instead of using props
-[x] Add proper data fetching logic with loading/error states
-[x] Filter out mockdata - show only real database staff (those with userId)
-[x] Build and commit changes
-[x] Push to Railway for deployment
+## Issues Identified
+1. Dashboard welcome message showing wrong user (James Anderson instead of Alexander Burns)
+2. Dashboard showing no events (loading wrong user's events)
+3. Alexander Burns not included in Staff Schedule (NEO Build function)
 
-## Summary
-Successfully updated StaffDatabaseTable.tsx to fetch REAL database data:
-- Removed hardcoded ID filtering
-- Component now fetches data from /api/personnel endpoint
-- Added loading, error, and empty states
-- **Critical Fix**: Filters by userId to show ONLY real database staff
-  - Mockdata from migration scripts: userId = null
-  - Real database staff (manually added): userId = has value
-- Displays all real database staff with full details (name, rank, role, category, etc.)
-- Added TYPE badge logic (TRAINEE for UnCat/D/C categories, STAFF for others)
-- Shows total record count and "Real database staff only" indicator
-- Updated SettingsViewWithMenu to pass StaffDatabaseTable without props
-- Rebuilt application with corrected filtering
-- Commit 1: 0205711 - Initial API integration
-- Commit 2: 99b966e - Filter by userId to exclude mockdata
-- Pushed to feature/comprehensive-build-algorithm branch
+## Root Cause
+MyDashboard component receives `userName` and `userRank` from `currentUser` which is looked up from mockdata instructors:
+```typescript
+const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
+userName={currentUser?.name ? currentUser.name.split(', ').reverse().join(' ') : 'Joe Bloggs'}
+```
 
-Railway should automatically deploy the changes.
+## Required Fixes
+- [ ] Store session user info in state (firstName, lastName, role, userId)
+- [ ] Pass real session user info to MyDashboard component
+- [ ] Filter events by session user ID (PMKEYS) instead of name
+- [ ] Ensure Alexander Burns is included in NEO Build function
