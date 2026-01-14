@@ -3117,6 +3117,14 @@ const App: React.FC = () => {
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
     const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+
+// DATA TRACKING: Initial data load
+useEffect(() => {
+  console.log('🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors');
+  console.log('🔍 [DATA TRACKING] Total instructors from mockdata:', instructorsData.length);
+  console.log('🔍 [DATA TRACKING] First 3 instructors:', instructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
+}, []);
+
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
     const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
        const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
