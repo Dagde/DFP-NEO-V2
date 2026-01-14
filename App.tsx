@@ -3173,13 +3173,13 @@ useEffect(() => {
     }, []);
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
-    // Set current user for audit logging
+    // Set current user for audit logging (fallback only if not already set by session)
     useEffect(() => {
-        if (currentUser) {
+        if (currentUser && currentUserName === 'Bloggs, Joe') {
             const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
             setCurrentUser(userString);
         }
-    }, [currentUser]);
+    }, [currentUser, currentUserName]);
 // Load data from API on mount
     useEffect(() => {
         const loadInitialData = async () => {
