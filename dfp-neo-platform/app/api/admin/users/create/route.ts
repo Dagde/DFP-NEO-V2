@@ -4,6 +4,7 @@ import { requireCapability } from '@/lib/permissions';
 import { PrismaClient } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
 import { hashPassword } from '@/lib/password';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, email, displayName, firstName, lastName, role, password, temporaryPassword } = body;
+    const { userId, email, displayName, firstName, lastName, role, password, temporaryPassword, method } = body;
 
     // Handle displayName - split into firstName and lastName if provided
     let fName = firstName;
@@ -46,11 +47,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If temporaryPassword is provided, use it as password
+    // Handle password methods
     const pwd = password || temporaryPassword;
+    const userMethod = method || 'temporary';
+    
+    // Handle invite link method - generate secure random password
+    let generatedPassword = null;
+    let finalPwd = pwd;
+    
+    if (userMethod === 'invite' && !pwd) {
+      // Generate a secure random temporary password
+      generatedPassword = crypto.randomBytes(16).toString('hex');
+      finalPwd = generatedPassword;
+      console.log('🔐 [CREATE USER] Generated temporary password for invite link');
+    }
     
     // Validate password is provided
-    if (!pwd) {
+    if (!finalPwd) {
       return NextResponse.json(
         { error: 'Password is required' },
         { status: 400 }
@@ -100,7 +113,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash password
-    const passwordHash = await hashPassword(pwd);
+    const passwordHash = await hashPassword(finalPwd);
+    console.log('🔐 [CREATE USER] Password hashed successfully');
+    console.log(`   Method: ${userMethod}`);
+    console.log(`   Generated Password: ${generatedPassword ? 'Yes (invite link)' : 'No (provided)'}`);
 
     // Create user
     const user = await prisma.user.create({
@@ -154,10 +170,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    // Prepare response
+    const responseData: any = {
       success: true,
       userId: user.id,
-    });
+      username: user.username,
+      userPmkeys: user.userId,
+    };
+
+    // If invite link method, return the generated password
+    if (userMethod === 'invite' && generatedPassword) {
+      responseData.invitePassword = generatedPassword;
+      responseData.message = 'User created with invite password. Share this securely with the user.';
+      console.log('📧 [CREATE USER] Invite link response prepared with generated password');
+    } else {
+      responseData.message = 'User created successfully';
+    }
+
+    return NextResponse.json(responseData);
   } catch (error: any) {
     console.error('Create user error:', error);
     

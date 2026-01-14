@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { requireCapability } from '@/lib/permissions';
 import { PrismaClient } from '@prisma/client';
 import { createAuditLog } from '@/lib/audit';
+import { hashPassword } from '@/lib/password';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -34,11 +36,17 @@ export async function POST(
       );
     }
 
-    // Reset password to force user to change it
+    // Generate a secure random temporary password
+    const tempPassword = crypto.randomBytes(16).toString('hex');
+    console.log('🔐 [FORCE RESET] Generated temporary password for user:', user.userId);
+    
+    // Hash and set the temporary password
+    const passwordHash = await hashPassword(tempPassword);
+    
     await prisma.user.update({
       where: { id: id },
       data: {
-        password: 'TEMP_PASSWORD_NEEDS_CHANGE', // This will trigger password reset
+        password: passwordHash,
       },
     });
 
@@ -57,7 +65,11 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+        success: true,
+        temporaryPassword: tempPassword,
+        message: 'Password reset successfully. Share the temporary password securely with the user.'
+      });
   } catch (error: any) {
     console.error('Force password reset error:', error);
     
