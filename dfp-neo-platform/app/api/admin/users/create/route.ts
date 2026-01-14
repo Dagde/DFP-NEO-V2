@@ -116,6 +116,31 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('🔗 [AUTO-LINK] Checking for existing Personnel record with matching PMKEYS...');
+    
+    // Auto-link to existing Personnel by PMKEYS/idNumber
+    const existingPersonnel = await prisma.personnel.findFirst({
+      where: { 
+        idNumber: parseInt(normalizedUserId) || 0
+      }
+    });
+
+    if (existingPersonnel) {
+      console.log('✅ [AUTO-LINK] Found Personnel record:', existingPersonnel.name);
+      console.log('🔗 [AUTO-LINK] Linking User to Personnel...');
+      
+      await prisma.personnel.update({
+        where: { id: existingPersonnel.id },
+        data: { userId: user.id }
+      });
+      
+      console.log('✅ [AUTO-LINK] Successfully linked User to Personnel');
+      console.log(`   User ID: ${user.id} (${normalizedUserId})`);
+      console.log(`   Personnel ID: ${existingPersonnel.id} (${existingPersonnel.name})`);
+    } else {
+      console.log('ℹ️  [AUTO-LINK] No existing Personnel record found for PMKEYS:', normalizedUserId);
+    }
+
     // Log user creation
     await createAuditLog({
       action: 'user_created',

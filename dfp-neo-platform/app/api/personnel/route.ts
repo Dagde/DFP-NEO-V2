@@ -80,6 +80,30 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     console.log('🔍 [API POST] Request body:', JSON.stringify(body, null, 2));
+      console.log('🔗 [AUTO-LINK] Checking for existing User record with matching PMKEYS...');
+      
+      // Auto-link to existing User by PMKEYS/userId
+      let linkedUserId = null;
+      if (body.idNumber) {
+        const existingUser = await prisma.user.findFirst({
+          where: { 
+            userId: body.idNumber.toString()
+          }
+        });
+
+        if (existingUser) {
+          console.log('✅ [AUTO-LINK] Found User record:', existingUser.username);
+          console.log('🔗 [AUTO-LINK] Linking Personnel to User...');
+          linkedUserId = existingUser.id;
+        } else {
+          console.log('ℹ️  [AUTO-LINK] No existing User record found for PMKEYS:', body.idNumber);
+        }
+      } else {
+        console.log('⚠️  [AUTO-LINK] No idNumber provided, cannot link to User');
+      }
+
+      // Create new personnel record
+      // IMPORTANT: Link to the User who matches the PMKEYS, not the creator
 
     // Create new personnel record
     const newPersonnel = await prisma.personnel.create({
@@ -107,7 +131,7 @@ export async function POST(request: NextRequest) {
         isAdminStaff: body.isAdminStaff || false,
         isActive: true,
           // CRITICAL: Always set userId from authenticated session to identify as real database staff
-          userId: session.user.id,
+          userId: linkedUserId,
       }
     });
 
@@ -115,6 +139,11 @@ export async function POST(request: NextRequest) {
     console.log('✅ [API POST] Personnel ID:', newPersonnel.id);
     console.log('✅ [API POST] Personnel Name:', newPersonnel.name);
     console.log('✅ [API POST] Personnel userId:', newPersonnel.userId);
+      if (linkedUserId) {
+        console.log("✅ [AUTO-LINK] Successfully linked Personnel to User");
+        console.log(`   User ID: ${linkedUserId}`);
+        console.log(`   Personnel ID: ${newPersonnel.id} (${newPersonnel.name})`);
+      }
 
     return NextResponse.json({ 
       success: true,
