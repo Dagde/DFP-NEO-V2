@@ -3140,7 +3140,7 @@ useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
                 // Try to get session from mobile auth endpoint first
-                const response = await fetch('/api/mobile/auth/me', {
+                const response = await fetch('/api/auth/session', {
                     credentials: 'include',
                 });
                 
