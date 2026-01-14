@@ -41,12 +41,20 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const personnel = await prisma.personnel.findMany({
+    
+      console.log('🔍 [API TRACKING] /api/personnel - Querying database');
+      console.log('🔍 [API TRACKING] Where clause:', where);
+
+const personnel = await prisma.personnel.findMany({
       where,
       orderBy: { name: 'asc' },
     });
 
-    return NextResponse.json({ personnel });
+    
+      console.log('🔍 [API TRACKING] /api/personnel - Returning', personnel.length, 'records');
+      console.log('🔍 [API TRACKING] Sample records:', personnel.slice(0, 3).map(p => ({ id: p.idNumber, name: p.name, userId: p.userId })));
+
+return NextResponse.json({ personnel });
   } catch (error) {
     console.error('Error fetching personnel:', error);
     return NextResponse.json(
