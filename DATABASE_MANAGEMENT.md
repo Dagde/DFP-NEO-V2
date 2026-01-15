@@ -52,9 +52,36 @@ railway link
 railway db
 ```
 
-### Option 3: Admin Endpoints (Coming Soon)
+### Option 3: Admin Dashboard (Recommended) ⭐
 
-I can create a secure admin interface for database management through the app UI.
+I've created a comprehensive admin dashboard accessible through the app!
+
+**Access:**
+1. Log in as an **ADMIN** user
+2. Go to: `https://dfp-neo.com/admin/database`
+
+**Features:**
+- **Overview Tab:**
+  - Database statistics (users, personnel, trainees, schedules, aircraft, scores)
+  - Count of unlinked Personnel records
+  - Recent users and Personnel records
+  - Duplicate record alerts
+
+- **SQL Query Tab:**
+  - Execute READ-ONLY SQL queries directly
+  - View query results in formatted JSON
+  - Perfect for quick data lookups
+
+- **Duplicates Tab:**
+  - View all duplicate Personnel records
+  - One-click cleanup button
+  - Detailed cleanup report
+  - Keeps properly linked records (with userId set)
+
+**Security:**
+- Only accessible to users with ADMIN or SUPER_ADMIN role
+- All SQL queries are READ-ONLY (only SELECT allowed)
+- All actions are logged for audit trail
 
 ---
 
@@ -236,14 +263,25 @@ This will show all Personnel records that have duplicates.
 
 ## API Endpoints Summary
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/personnel/[id]` | GET | Get specific personnel record |
-| `/api/personnel/[id]` | DELETE | Delete personnel record |
-| `/api/personnel/[id]` | PATCH | Update personnel record |
-| `/api/debug/cleanup-duplicates` | POST | Clean up duplicate Personnel records |
-| `/api/debug/database-connection` | GET | Check database connection and data |
-| `/api/debug/user-personnel-linkage` | GET | Check User-Personnel linkage |
+### Personnel Management
+| Endpoint | Method | Description | Access |
+|----------|--------|-------------|--------|
+| `/api/personnel/[id]` | GET | Get specific personnel record | Authenticated |
+| `/api/personnel/[id]` | DELETE | Delete personnel record | Authenticated |
+| `/api/personnel/[id]` | PATCH | Update personnel record | Authenticated |
+
+### Admin & Debug
+| Endpoint | Method | Description | Access |
+|----------|--------|-------------|--------|
+| `/api/admin/database` | GET | Get database stats and execute queries | ADMIN only |
+| `/api/debug/cleanup-duplicates` | POST | Clean up duplicate Personnel records | Authenticated |
+| `/api/debug/database-connection` | GET | Check database connection and data | Authenticated |
+| `/api/debug/user-personnel-linkage` | GET | Check User-Personnel linkage | Authenticated |
+
+### Admin Dashboard
+| Endpoint | Description | Access |
+|----------|-------------|--------|
+| `/admin/database` | Full database admin interface | ADMIN only |
 
 ---
 
