@@ -43,6 +43,27 @@ export async function GET(request: NextRequest) {
 
     
       console.log('🔍 [API TRACKING] /api/personnel - Querying database');
+        
+        // Check specifically for Alexander Burns
+        const alexanderBurns = await prisma.personnel.findFirst({
+            where: {
+                idNumber: 8201112
+            }
+        });
+        if (alexanderBurns) {
+            console.log("🎯 [API TRACKING] Found Alexander Burns in database:", {
+                id: alexanderBurns.id,
+                idNumber: alexanderBurns.idNumber,
+                name: alexanderBurns.name,
+                rank: alexanderBurns.rank,
+                role: alexanderBurns.role,
+                isQFI: alexanderBurns.isQFI,
+                isOFI: alexanderBurns.isOFI,
+                userId: alexanderBurns.userId
+            });
+        } else {
+            console.log("⚠️ [API TRACKING] Alexander Burns NOT found in database!");
+        }
       console.log('🔍 [API TRACKING] Where clause:', where);
 
 const personnel = await prisma.personnel.findMany({
