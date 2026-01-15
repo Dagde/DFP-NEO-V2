@@ -3137,7 +3137,7 @@ useEffect(() => {
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
     // Session user info from NextAuth (real user, not mockdata)
-    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, userId: string} | null>(null);
+    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string} | null>(null);
     useEffect(() => {
         const fetchCurrentUser = async () => {
            console.log('🔍 [SESSION DEBUG] useEffect hook running');
@@ -3184,7 +3184,8 @@ useEffect(() => {
                         setSessionUser({
                             firstName: data.user.firstName || null,
                             lastName: data.user.lastName || null,
-                            role: actualRank,
+                               role: data.user.role || 'INSTRUCTOR',
+                               militaryRank: actualRank,
                             userId: data.user.userId || ''
                         });
                     }
@@ -8324,7 +8325,7 @@ updates.forEach(update => {
                 
                 return <MyDashboard 
                             userName={sessionUser?.firstName && sessionUser.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : currentUserName}
-                            userRank={sessionUser?.role || 'FLTLT'}
+                            userRank={sessionUser?.militaryRank || sessionUser?.role || 'FLTLT'}
                             events={eventsForDate.filter(e => e.instructor === currentUserName)}
                             onSelectEvent={handleOpenModal}
                             onNavigate={handleNavigation}
@@ -8945,7 +8946,7 @@ updates.forEach(update => {
                 isSupervisor={true}
                 onPublish={handlePublish}
                 currentUserName={currentUserName}
-                currentUserRank={sessionUser?.role || currentUser?.rank || 'FLTLT'}
+                currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || 'FLTLT'}
                 instructorsList={instructorsData.map(inst => ({
                     name: inst.name,
                     rank: inst.rank,
@@ -9228,7 +9229,7 @@ updates.forEach(update => {
                     }}
                     instructorsList={instructorsData}
                     currentUserName={currentUserName}
-                    currentUserRank={sessionUser?.role || currentUser?.rank || ''}
+                    currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                     currentUserUnit={currentUser?.unit}
                 />
             }
