@@ -155,6 +155,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
 
+    const ofis = useMemo(() => instructorsData.filter(i => i.role === 'OFI' || i.isOFI === true).sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
+
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -329,6 +331,17 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                              {renderInstructorList(simIps)}
                         </div>
                     </div>
+
+                       {/* OFIs */}
+                       <div className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                           <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                               <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{ofis.length}</span>
+                           </div>
+                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                                {renderInstructorList(ofis)}
+                           </div>
+                       </div>
                  </div>
             </div>
       </div>
