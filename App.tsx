@@ -3139,6 +3139,8 @@ useEffect(() => {
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, userId: string} | null>(null);
     useEffect(() => {
         const fetchCurrentUser = async () => {
+           console.log('🔍 [SESSION DEBUG] useEffect hook running');
+           console.log('🔍 [SESSION DEBUG] fetchCurrentUser function called');
             try {
                 // Try to get session from mobile auth endpoint first
                 const response = await fetch('/api/auth/session', {
