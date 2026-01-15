@@ -1,3 +1,4 @@
+console.log("🔴🔴🔴 APP.TSX LOADED 🔴🔴🔴");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
