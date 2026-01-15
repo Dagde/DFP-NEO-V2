@@ -32,4 +32,5 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig# Force rebuild Thu Jan 15 09:51:24 UTC 2026
+module.exports = nextConfig;
+// Force rebuild Thu Jan 15 09:51:24 UTC 2026
