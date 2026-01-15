@@ -1,19 +1,27 @@
-# Fix Dashboard User Display and Event Filtering
+# Add OFI Staff to Staff Roster Page
 
-## Issues Identified
-1. Dashboard welcome message showing wrong user (James Anderson instead of Alexander Burns)
-2. Dashboard showing no events (loading wrong user's events)
-3. Alexander Burns not included in Staff Schedule (NEO Build function)
+## Problem
+- Alexander Burns (SQNLDR, PMKEYS 8201112) is in the database with role='OFI'
+- He is NOT showing in the Staff Roster page (InstructorListView)
+- Staff Roster only shows: QFI (role='QFI' || isQFI=true) and SIM IP (role='SIM IP')
+- Missing: OFI staff (role='OFI' || isOFI=true)
 
-## Root Cause
-MyDashboard component receives `userName` and `userRank` from `currentUser` which is looked up from mockdata instructors:
-```typescript
-const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
-userName={currentUser?.name ? currentUser.name.split(', ').reverse().join(' ') : 'Joe Bloggs'}
-```
+## Requirements
+- All Staff in the database that have QFI, SIM IP, or OFI role should be included in Staff Roster
+- Real database staff should be merged with mock data
 
-## Required Fixes
-- [ ] Store session user info in state (firstName, lastName, role, userId)
-- [ ] Pass real session user info to MyDashboard component
-- [ ] Filter events by session user ID (PMKEYS) instead of name
-- [ ] Ensure Alexander Burns is included in NEO Build function
+## Solution
+1. Add OFI column to Staff Roster page (similar to SIM IP column)
+2. Filter OFI staff: role='OFI' || isOFI=true
+3. Merge real database staff (from /api/personnel) with mock data
+4. Display OFI staff in their own column
+
+## Files to Modify
+- `/workspace/components/InstructorListView.tsx` - Add OFI column and filtering logic
+- `/workspace/App.tsx` - Ensure database staff are loaded into instructorsData state
+
+## Status
+- [x] Identified the issue
+- [ ] Modify InstructorListView.tsx to add OFI filtering
+- [ ] Add OFI column display
+- [ ] Test that Alexander Burns appears in Staff Roster

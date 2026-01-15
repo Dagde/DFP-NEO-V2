@@ -1,0 +1,61 @@
+// Fetch database staff and merge with mockdata
+    useEffect(() => {
+        const fetchDatabaseStaff = async () => {
+            try {
+                console.log('🔍 [DATABASE STAFF] Fetching database staff...');
+                const response = await fetch('/api/personnel', {
+                    credentials: 'include',
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.personnel && Array.isArray(data.personnel)) {
+                        console.log('📊 [DATABASE STAFF] Found', data.personnel.length, 'database staff records');
+                        
+                        // Convert database personnel to Instructor format
+                        const dbInstructors: Instructor[] = data.personnel
+                            .filter(p => p.idNumber) // Only include records with PMKEYS
+                            .map(p => ({
+                                idNumber: p.idNumber,
+                                name: p.name,
+                                rank: p.rank || 'UNKNOWN',
+                                role: p.role || 'STAFF',
+                                unit: p.unit || 'Unassigned',
+                                category: p.category || 'UnCat',
+                                isQFI: p.isQFI || false,
+                                isOFI: p.isOFI || false,
+                                isCFI: p.isCFI || false,
+                                flight: p.flight || '',
+                                location: p.location || '',
+                                email: p.email || '',
+                                phoneNumber: p.phoneNumber || '',
+                                callsignNumber: p.callsignNumber || 0,
+                                qualifications: p.qualifications || {},
+                                availability: p.availability || {},
+                                preferences: p.preferences || {},
+                                isAdminStaff: p.isAdminStaff || false,
+                                permissions: p.permissions || [],
+                                currencyStatus: {},
+                            }));
+                        
+                        console.log('📋 [DATABASE STAFF] Database instructors:', dbInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+                        
+                        // Merge with mockdata: Combine and remove duplicates by idNumber
+                        setInstructorsData(prevInstructors => {
+                            const existingIds = new Set(prevInstructors.map(i => i.idNumber));
+                            const newInstructors = dbInstructors.filter(db => !existingIds.has(db.idNumber));
+                            const merged = [...prevInstructors, ...newInstructors];
+                            console.log('✅ [DATABASE STAFF] Merged! Total instructors:', merged.length, '(mockdata:', prevInstructors.length, '+ database:', newInstructors.length, ')');
+                            return merged;
+                        });
+                    }
+                } else {
+                    console.log('⚠️ [DATABASE STAFF] Failed to fetch database staff, using mockdata only');
+                }
+            } catch (error) {
+                console.log('❌ [DATABASE STAFF] Error fetching database staff:', error);
+            }
+        };
+        
+        fetchDatabaseStaff();
+    }, []);
