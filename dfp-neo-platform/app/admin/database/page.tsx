@@ -29,6 +29,8 @@ interface RecentItem {
   firstName?: string;
   lastName?: string;
   rank?: string;
+  role?: string;
+  idNumber?: number;
   userId?: string | null;
   createdAt: string;
 }
