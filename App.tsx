@@ -3210,8 +3210,17 @@ useEffect(() => {
                     const data = await response.json();
                     if (data.personnel && Array.isArray(data.personnel)) {
                         console.log('📊 [DATABASE STAFF] Found', data.personnel.length, 'database staff records');
+                        console.log("📊 [DATABASE STAFF] Raw API response:", data);
                         
                         // Convert database personnel to Instructor format
+                        console.log("📊 [DATABASE STAFF] Raw personnel data sample:", data.personnel.slice(0, 3).map(p => ({
+                            idNumber: p.idNumber,
+                            name: p.name,
+                            rank: p.rank,
+                            role: p.role,
+                            isOFI: p.isOFI,
+                            isQFI: p.isQFI
+                        })));
                         const dbInstructors: Instructor[] = data.personnel
                             .filter(p => p.idNumber) // Only include records with PMKEYS
                             .map(p => ({

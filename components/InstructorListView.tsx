@@ -153,9 +153,36 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
 
-  const simIps = useMemo(() => instructorsData.filter(i => i.role === 'SIM IP').sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
+  const simIps = useMemo(() => {
+        console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
+        const simIpCandidates = instructorsData.filter(i => {
+            const isSimIp = i.role === 'SIM IP';
+            if (isSimIp) {
+                console.log(`🔍 [SIM IP FILTER] Found SIM IP: ${i.name} (${i.rank})`);
+            }
+            return isSimIp;
+        });
+        console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
+        return simIpCandidates.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
+    }, [instructorsData]);
 
-    const ofis = useMemo(() => instructorsData.filter(i => i.role === 'OFI' || i.isOFI === true).sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown')), [instructorsData]);
+    const ofis = useMemo(() => {
+        console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
+        console.log('🔍 [OFI FILTER] All instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
+        
+        const ofiCandidates = instructorsData.filter(i => {
+            const isOfi = i.role === 'OFI' || i.isOFI === true;
+            console.log(`🔍 [OFI FILTER] Checking ${i.name}: role="${i.role}", isOFI=${i.isOFI}, isOfi=${isOfi}`);
+            return isOfi;
+        });
+        
+        console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
+        console.log('🔍 [OFI FILTER] OFI candidates:', ofiCandidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
+        
+        const sorted = ofiCandidates.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
+        console.log('🔍 [OFI FILTER] Final OFI list:', sorted.map(i => ({ id: i.idNumber, name: i.name, rank: i.rank })));
+        return sorted;
+    }, [instructorsData]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 
