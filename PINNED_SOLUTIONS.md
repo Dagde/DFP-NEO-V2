@@ -180,3 +180,117 @@ git push
 4. Verify changes in bundled files: `grep "Staff Database" /workspace/dfp-neo-platform/public/flight-school-app/assets/*.js`
 5. Commit and push
 6. **Result:** Changes appear in deployed app ✅
+---
+
+## Database Page Not Working - User-Personnel Linkage Issue
+
+**Date:** January 16, 2026  
+**Status:** ⚠️ **IN PROGRESS** - Solutions implemented but not fully tested  
+**Latest Commit:** `d811b53` - "fix: Add missing properties to RecentItem interface"
+
+### Problem Description
+
+The Staff Database page is displaying incorrect data due to User-Personnel table linkage issues:
+
+1. **Rank Display Issue**: Alexander Burns shows as "INSTRUCTOR" (from User table) instead of "SQNLDR" (from Personnel table)
+2. **Missing Linkage**: User table has `userId = "8201112"` but Personnel table has `userId = null` for all records
+3. **Duplicate Records**: Alexander Burns has 5 duplicate Personnel records with different ranks
+4. **No Delete Functionality**: When users delete staff from UI, records remain in database causing duplicates
+
+### Root Cause
+
+The User table and Personnel table are not properly linked via `userId` field. The app needs to:
+- Link User records to Personnel records by PMKEYS/idNumber
+- Fetch military rank from Personnel table, not User table
+- Properly delete Personnel records when removed from UI
+- Clean up duplicate Personnel records
+
+### Solutions Implemented
+
+#### 1. Fixed Rank Display (`/api/user/personnel/route.ts`)
+**Commit**: `6ee9355`
+- Endpoint finds ALL Personnel records matching by idNumber (PMKEYS)
+- Prioritizes records with `userId` set (properly linked to User table)
+- Falls back to most recently created record if no linked record exists
+- Logs all duplicate records for debugging
+
+#### 2. Added CRUD Endpoints for Personnel (`/api/personnel/[id]/route.ts`)
+**Commit**: `f72a966`
+- **DELETE** endpoint: Fully deletes Personnel records from database
+- **PATCH** endpoint: Updates Personnel records
+- Both require authentication and log all actions for audit trail
+
+#### 3. Created Duplicate Cleanup Tool (`/api/debug/cleanup-duplicates`)
+**Commit**: `f72a966`
+- Automatically finds and removes duplicate Personnel records
+- Keeps records with `userId` set (properly linked)
+- Falls back to most recently created record
+- Provides detailed cleanup report
+
+#### 4. Created Admin Dashboard (`/admin/database`)
+**Commits**: `6107551`, `d811b53`
+- Only accessible to ADMIN/SUPER_ADMIN users
+- **Overview Tab**: Database statistics, recent activity, duplicate warnings
+- **SQL Query Tab**: Execute READ-ONLY SQL queries directly
+- **Duplicates Tab**: View and cleanup duplicate Personnel records
+- Modern UI with lucide-react icons
+
+### Debug Endpoints Created
+
+1. `/api/debug/user-personnel-linkage` - Shows User-Personnel linkage status
+2. `/api/debug/database-connection` - Shows database connection and Alexander Burns' data
+3. `/api/debug/cleanup-duplicates` - Cleans up duplicate Personnel records
+
+### Database Access Options
+
+1. **Railway Dashboard** (recommended): https://railway.app → PostgreSQL service
+2. **Railway CLI**: `railway db` command
+3. **Admin Dashboard**: `https://dfp-neo.com/admin/database` (ADMIN only)
+
+### Files Modified
+
+1. `/workspace/dfp-neo-platform/app/api/user/personnel/route.ts` - Fixed rank display logic
+2. `/workspace/dfp-neo-platform/app/api/personnel/[id]/route.ts` - Added DELETE and PATCH endpoints
+3. `/workspace/dfp-neo-platform/app/api/debug/cleanup-duplicates/route.ts` - New cleanup endpoint
+4. `/workspace/dfp-neo-platform/app/api/admin/database/route.ts` - New admin API endpoint
+5. `/workspace/dfp-neo-platform/app/admin/database/page.tsx` - New admin dashboard UI
+6. `/workspace/DATABASE_MANAGEMENT.md` - Comprehensive documentation
+
+### Deployment Status
+
+- **Latest commit**: `d811b53`
+- **Status**: Successfully pushed to GitHub, Railway deploying (5-10 minutes)
+- **Build errors encountered and fixed**:
+  - Missing lucide-react package → Installed
+  - TypeScript errors with RecentItem interface → Added `role` and `idNumber` properties
+
+### Testing Instructions (When Returning)
+
+1. Wait for Railway to deploy commit `d811b53`
+2. Log in as Alexander Burns
+3. Verify rank shows as "SQNLDR" (not "INSTRUCTOR" or "FLTLT")
+4. Check console logs for duplicate record warnings
+5. Log in as ADMIN and test the new `/admin/database` dashboard
+6. Use cleanup tool to remove duplicate Personnel records
+7. Verify duplicate Personnel records are removed from database
+8. Test DELETE endpoint functionality (deleting staff from UI removes from DB)
+
+### Known Issues
+
+- Duplicate Personnel records still exist in database (cleanup tool created but not run)
+- Rank display may still show incorrect values if Personnel record not properly linked
+- No automatic cleanup of duplicates - requires manual admin action
+
+### Next Steps (When Returning)
+
+1. Test that rank display now shows "SQNLDR" for Alexander Burns
+2. Access `/admin/database` dashboard as ADMIN
+3. Run duplicate cleanup tool to remove duplicate Personnel records
+4. Verify database now has only one record per staff member
+5. Test DELETE functionality removes records from database
+6. Verify User-Personnel linkage works for new staff creation
+
+### Documentation
+
+- `/workspace/DATABASE_MANAGEMENT.md` - Complete database management documentation
+
