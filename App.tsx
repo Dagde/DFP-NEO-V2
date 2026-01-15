@@ -3266,7 +3266,9 @@ useEffect(() => {
         };
         
         fetchDatabaseStaff();
-    }, []);    const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
+    }, []);
+
+    const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
     // Set current user for audit logging (fallback only if not already set by session)
     useEffect(() => {
