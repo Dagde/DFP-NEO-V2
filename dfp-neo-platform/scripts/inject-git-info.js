@@ -49,7 +49,7 @@ function getGitInfo() {
 }
 
 function injectGitInfo() {
-  const htmlPath = path.join(__dirname, '../public/flight-school-app/index.html');
+  const htmlPath = path.join(__dirname, '../public/flight-school-app/index-v2.html');
   const gitInfo = getGitInfo();
 
   console.log('📦 Injecting Git information into HTML:');
