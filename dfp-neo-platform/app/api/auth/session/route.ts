@@ -22,7 +22,7 @@ export async function GET() {
     try {
       const personnel = await prisma.personnel.findFirst({
         where: {
-          pmkeysId: session.user.userId
+          userId: session.user.userId
         },
         select: {
           rank: true
