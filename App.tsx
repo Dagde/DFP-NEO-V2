@@ -3157,7 +3157,7 @@ useEffect(() => {
                         const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : data.user.username || 'Bloggs, Joe';
                         
                         // Fetch actual rank from Personnel table (not the role from User table)
-                        let actualRank = data.user.rank || 'FLTLT';
+                        let actualRank = data.user.role || 'FLTLT';
                         try {
                             const personnelResponse = await fetch('/api/user/personnel', {
                                 credentials: 'include',
