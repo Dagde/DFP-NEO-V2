@@ -18,23 +18,40 @@ export async function GET() {
 
     console.log('🔍 [USER PERSONNEL] Fetching Personnel for current user:', session.user.userId);
 
-      // Get the Personnel record linked to current user
-      // Try to match by userId first (direct link), then by idNumber (PMKEYS)
-      let personnel = await prisma.personnel.findFirst({
+    // Get the Personnel record linked to current user
+    // Try to match by userId first (direct link), then by idNumber (PMKEYS)
+    let personnel = await prisma.personnel.findFirst({
+      where: {
+        userId: session.user.userId
+      }
+    });
+
+    // If not found by userId, try to match by idNumber (PMKEYS)
+    if (!personnel) {
+      console.log('🔍 [USER PERSONNEL] No Personnel found by userId, trying idNumber (PMKEYS)...');
+      
+      // Find ALL Personnel records matching idNumber (to handle duplicates)
+      const allMatches = await prisma.personnel.findMany({
         where: {
-          userId: session.user.userId
+          idNumber: parseInt(session.user.userId)
         }
       });
-
-      // If not found by userId, try to match by idNumber (PMKEYS)
-      if (!personnel) {
-        console.log('🔍 [USER PERSONNEL] No Personnel found by userId, trying idNumber (PMKEYS)...');
-        personnel = await prisma.personnel.findFirst({
-          where: {
-            idNumber: parseInt(session.user.userId)
-          }
+      
+      if (allMatches.length > 1) {
+        console.log(`⚠️  [USER PERSONNEL] Found ${allMatches.length} duplicate Personnel records for idNumber ${session.user.userId}`);
+        allMatches.forEach((p, i) => {
+          console.log(`  ${i + 1}. ${p.name} - Rank: ${p.rank}, userId: ${p.userId}, Created: ${p.createdAt}`);
         });
       }
+      
+      // Prioritize: 1) Records with userId set, 2) Most recently created
+      personnel = allMatches.find(p => p.userId !== null) || 
+                  allMatches.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+      
+      if (allMatches.length > 1) {
+        console.log(`✅ [USER PERSONNEL] Selected: ${personnel.name} - Rank: ${personnel.rank}, Created: ${personnel.createdAt}`);
+      }
+    }
 
     if (!personnel) {
       console.log('⚠️  [USER PERSONNEL] No linked Personnel record for User:', session.user.userId);
