@@ -12,6 +12,8 @@ export async function GET() {
       );
     }
 
+    console.log('[SESSION API] Session user role:', session.user.role);
+    console.log('[SESSION API] Session user:', session.user);
     return NextResponse.json({
       user: {
         id: session.user.id,
