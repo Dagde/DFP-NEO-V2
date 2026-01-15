@@ -3160,6 +3160,14 @@ useEffect(() => {
                         const rank = data.user.role || 'UNKNOWN';
                         const auditUserName = `${rank} ${formattedName}`;
                         setCurrentUser(auditUserName);
+                        
+                        // Update sessionUser for MyDashboard and other components
+                        setSessionUser({
+                            firstName: data.user.firstName || null,
+                            lastName: data.user.lastName || null,
+                            role: data.user.role || 'FLTLT',
+                            userId: data.user.userId || ''
+                        });
                     }
                 }
             } catch (error) {
