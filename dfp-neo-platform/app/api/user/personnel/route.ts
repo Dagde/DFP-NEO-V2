@@ -1,0 +1,58 @@
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { auth } from '@/lib/auth';
+
+const prisma = new PrismaClient();
+
+// GET /api/user/personnel - Get current user's Personnel record
+export async function GET() {
+  try {
+    const session = await auth();
+    
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    console.log('🔍 [USER PERSONNEL] Fetching Personnel for current user:', session.user.userId);
+
+    // Get the Personnel record linked to current user
+    const personnel = await prisma.personnel.findFirst({
+      where: {
+        userId: session.user.userId
+      }
+    });
+
+    if (!personnel) {
+      console.log('⚠️  [USER PERSONNEL] No linked Personnel record for User:', session.user.userId);
+      return NextResponse.json(
+        { 
+          error: 'Personnel record not linked',
+          userId: session.user.userId,
+          message: 'User exists but is not linked to any Personnel record'
+        },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ [USER PERSONNEL] Personnel record found:', personnel.name, 'Rank:', personnel.rank);
+
+    return NextResponse.json({
+      success: true,
+      rank: personnel.rank,
+      name: personnel.name,
+      idNumber: personnel.idNumber,
+      personnel: personnel
+    });
+  } catch (error) {
+    console.error('❌ [USER PERSONNEL] Error fetching personnel:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch personnel', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+}

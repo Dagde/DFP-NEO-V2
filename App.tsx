@@ -3153,19 +3153,35 @@ useEffect(() => {
                         const lastName = data.user.lastName || '';
                         const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : data.user.username || 'Bloggs, Joe';
                         
+                        // Fetch actual rank from Personnel table (not the role from User table)
+                        let actualRank = data.user.role || 'FLTLT';
+                        try {
+                            const personnelResponse = await fetch('/api/user/personnel', {
+                                credentials: 'include',
+                            });
+                            if (personnelResponse.ok) {
+                                const personnelData = await personnelResponse.json();
+                                if (personnelData.rank) {
+                                    actualRank = personnelData.rank;
+                                    console.log('✅ [SESSION] Fetched actual rank from Personnel:', actualRank);
+                                }
+                            }
+                        } catch (personnelError) {
+                            console.log('⚠️ [SESSION] Could not fetch Personnel, using role from session:', actualRank);
+                        }
+                        
                         // Update app state
                         setCurrentUserName(formattedName);
                         
-                        // Update audit logger
-                        const rank = data.user.role || 'UNKNOWN';
-                        const auditUserName = `${rank} ${formattedName}`;
+                        // Update audit logger with actual rank
+                        const auditUserName = `${actualRank} ${formattedName}`;
                         setCurrentUser(auditUserName);
                         
                         // Update sessionUser for MyDashboard and other components
                         setSessionUser({
                             firstName: data.user.firstName || null,
                             lastName: data.user.lastName || null,
-                            role: data.user.role || 'FLTLT',
+                            role: actualRank,
                             userId: data.user.userId || ''
                         });
                     }
