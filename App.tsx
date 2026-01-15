@@ -8918,7 +8918,7 @@ updates.forEach(update => {
                 isSupervisor={true}
                 onPublish={handlePublish}
                 currentUserName={currentUserName}
-                currentUserRank={currentUser?.rank || 'FLTLT'}
+                currentUserRank={sessionUser?.role || currentUser?.rank || 'FLTLT'}
                 instructorsList={instructorsData.map(inst => ({
                     name: inst.name,
                     rank: inst.rank,
@@ -9201,7 +9201,7 @@ updates.forEach(update => {
                     }}
                     instructorsList={instructorsData}
                     currentUserName={currentUserName}
-                    currentUserRank={currentUser?.rank || ''}
+                    currentUserRank={sessionUser?.role || currentUser?.rank || ''}
                     currentUserUnit={currentUser?.unit}
                 />
             }
