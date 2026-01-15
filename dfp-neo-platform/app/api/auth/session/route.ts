@@ -30,7 +30,7 @@ export async function GET() {
       });
       
       if (personnel && personnel.rank) {
-        userRole = personnel.rank;
+        userRole = personnel.rank as any;
         console.log('[SESSION API] Found rank from Personnel table:', userRole);
       } else {
         console.log('[SESSION API] Personnel record not found or has no rank, using User table role:', session.user.role);
