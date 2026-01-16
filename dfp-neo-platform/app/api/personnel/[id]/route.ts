@@ -61,26 +61,36 @@ export async function DELETE(
 
     const { id } = await params;
 
-    console.log(`🗑️ [DELETE] Attempting to delete personnel with ID: ${id}`);
+    console.log(`🔧 [DELETE] Attempting to delete personnel with ID/IDNumber: ${id}`);
 
-    // First, get the personnel record to see what we're deleting
-    const personnel = await prisma.personnel.findUnique({
+    // Try to find by id first (UUID), then by idNumber (PMKEYS)
+    let personnel = await prisma.personnel.findUnique({
       where: { id },
     });
 
+    // If not found by id, try idNumber (for backward compatibility)
     if (!personnel) {
-      console.log(`⚠️ [DELETE] Personnel not found with ID: ${id}`);
+      const idNumber = parseInt(id);
+      if (!isNaN(idNumber)) {
+        personnel = await prisma.personnel.findFirst({
+          where: { idNumber },
+        });
+      }
+    }
+
+    if (!personnel) {
+      console.log(`⚠️ [DELETE] Personnel not found with ID/IDNumber: ${id}`);
       return NextResponse.json(
         { error: 'Personnel not found' },
         { status: 404 }
       );
     }
 
-    console.log(`📋 [DELETE] Found personnel: ${personnel.name}, Rank: ${personnel.rank}, ID: ${id}`);
+    console.log(`📋 [DELETE] Found personnel: ${personnel.name}, Rank: ${personnel.rank}, ID: ${personnel.id}`);
 
     // Delete the personnel record
     const deletedPersonnel = await prisma.personnel.delete({
-      where: { id },
+      where: { id: personnel.id },
     });
 
     console.log(`✅ [DELETE] Successfully deleted personnel: ${deletedPersonnel.name}`);
@@ -124,7 +134,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    console.log(`✏️ [PATCH] Updating personnel with ID: ${id}`, body);
+    console.log(`📝 [PATCH] Updating personnel with ID: ${id}`, body);
 
     const updatedPersonnel = await prisma.personnel.update({
       where: { id },
