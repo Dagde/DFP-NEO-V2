@@ -1,3 +1,4 @@
+console.log("🚨🚨🚨 NEW BUILD V3 LOADED 🚨🚨🚨");
 console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
