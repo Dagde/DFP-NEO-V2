@@ -184,6 +184,30 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         return sorted;
     }, [instructorsData]);
 
+    // NEW: All other staff members who don't fit into QFI, SIM IP, or OFI categories
+    const otherStaff = useMemo(() => {
+        console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
+        
+        const otherStaffCandidates = instructorsData.filter(i => {
+            // Exclude QFIs, SIM IPs, and OFIs
+            const isQfi = i.role === 'QFI' || i.isQFI === true;
+            const isSimIp = i.role === 'SIM IP';
+            const isOfi = i.role === 'OFI' || i.isOFI === true;
+            
+            // Include everyone else
+            const isOther = !isQfi && !isSimIp && !isOfi;
+            
+            if (isOther) {
+                console.log(`🔍 [OTHER STAFF] Found other staff: ${i.name} (${i.rank}) - role: ${i.role}`);
+            }
+            
+            return isOther;
+        });
+        
+        console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
+        return otherStaffCandidates.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
+    }, [instructorsData]);
+
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -367,6 +391,17 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                            </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
                                 {renderInstructorList(ofis)}
+                           </div>
+                       </div>
+
+                       {/* Other Staff - All staff who don't fit into QFI, SIM IP, or OFI categories */}
+                       <div className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                           <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                               <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{otherStaff.length}</span>
+                           </div>
+                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                                {renderInstructorList(otherStaff)}
                            </div>
                        </div>
                  </div>
