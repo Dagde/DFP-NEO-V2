@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
 import StaffDatabaseTable from "./StaffDatabaseTable";
+import StaffMockDataTable from "./StaffMockDataTable";
+import StaffCombinedDataTable from "./StaffCombinedDataTable";
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -200,6 +202,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             {activeSection === 'permissions' && 'Permissions Manager'}
                                {activeSection === 'user-list' && 'User List'}
                                   {activeSection === 'staff-database' && 'Staff Database'}
+                                  {activeSection === 'staff-mockdata' && 'Staff MockData'}
+                                  {activeSection === 'staff-combined-data' && 'Staff Combined Data'}
                         </h2>
                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
                             <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
@@ -219,19 +223,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <StaffDatabaseTable />
                             )}
                             {activeSection === 'staff-mockdata' && (
-                                 <div className="text-center py-12">
-                                     <div className="text-6xl mb-4">📋</div>
-                                     <h3 className="text-xl font-bold text-gray-300 mb-2">Staff MockData</h3>
-                                     <p className="text-gray-400">This section is under construction.</p>
-                                 </div>
-                             )}
+                                <StaffMockDataTable instructorsData={props.instructorsData} />
+                            )}
                              {activeSection === 'staff-combined-data' && (
-                                 <div className="text-center py-12">
-                                     <div className="text-6xl mb-4">🔗</div>
-                                     <h3 className="text-xl font-bold text-gray-300 mb-2">Staff Combined Data</h3>
-                                     <p className="text-gray-400">This section is under construction.</p>
-                                 </div>
-                             )}                </div>
+                                <StaffCombinedDataTable instructorsData={props.instructorsData} />
+                            )}                </div>
             </div>
         </div>
     );
