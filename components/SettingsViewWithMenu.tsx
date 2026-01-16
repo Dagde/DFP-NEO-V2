@@ -57,6 +57,8 @@ interface SettingsViewWithMenuProps {
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
     cancellationRecords: CancellationRecord[];
     cancellationCodes: CancellationCode[];
+    showDepartureDensityOverlay: boolean;
+    onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
 }
 
 type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
