@@ -558,7 +558,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 className="w-full h-full bg-gray-900 shadow-2xl z-50 border-l border-gray-700 flex flex-col"
             >
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Instructor' : 'Staff Profile'}</h2>
+                    <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
                     <button onClick={onClose} className="text-white hover:text-gray-300">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -595,12 +595,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                 </Dropdown>
                                 <Dropdown label="Category" value={category || ''} onChange={e => setCategory(e.target.value as InstructorCategory)}>
                                     <option value="">Select Category</option>
-                                    <option value="A2">A2</option>
-                                    <option value="B1">B1</option>
-                                    <option value="B2">B2</option>
-                                    <option value="C1">C1</option>
-                                    <option value="C2">C2</option>
-                                    <option value="INSTRUCTOR">INSTRUCTOR</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                    <option value="D">D</option>
+                                    <option value="UnCat">U</option>
                                 </Dropdown>
                                  <Dropdown label="Role" value={role} onChange={e => handleRoleChange(e.target.value as 'QFI' | 'SIM IP')}>
                                     <option value="QFI">QFI</option><option value="SIM IP">SIM IP</option>
