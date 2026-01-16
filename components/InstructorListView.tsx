@@ -153,6 +153,48 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
 
+  const simIpsByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      simIps.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [simIps]);
+
+  const sortedSimIpUnits = useMemo(() => Object.keys(simIpsByUnit).sort(), [simIpsByUnit]);
+
+  const ofisByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      ofis.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [ofis]);
+
+  const sortedOfiUnits = useMemo(() => Object.keys(ofisByUnit).sort(), [ofisByUnit]);
+
+  const otherStaffByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      otherStaff.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [otherStaff]);
+
+  const sortedOtherStaffUnits = useMemo(() => Object.keys(otherStaffByUnit).sort(), [otherStaffByUnit]);
+
   const simIps = useMemo(() => {
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
         const simIpCandidates = instructorsData.filter(i => {
@@ -163,7 +205,32 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             return isSimIp;
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
-        return simIpCandidates.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
+        
+        const rankOrder: { [key: string]: number } = {
+            'WGCDR': 1,
+            'SQNLDR': 2,
+            'FLTLT': 3,
+            'FLGOFF': 4,
+            'PLTOFF': 5,
+            'Mr': 6
+        };
+        
+        return simIpCandidates.sort((a, b) => {
+            // First sort by Unit
+            const unitA = a.unit || 'Unassigned';
+            const unitB = b.unit || 'Unassigned';
+            if (unitA !== unitB) {
+                return unitA.localeCompare(unitB);
+            }
+            // Then by Rank
+            const rankA = rankOrder[a.rank] || 99;
+            const rankB = rankOrder[b.rank] || 99;
+            if (rankA !== rankB) {
+                return rankA - rankB;
+            }
+            // Finally by Name
+            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+        });
     }, [instructorsData]);
 
     const ofis = useMemo(() => {
@@ -179,7 +246,31 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
         console.log('🔍 [OFI FILTER] OFI candidates:', ofiCandidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
         
-        const sorted = ofiCandidates.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
+        const rankOrder: { [key: string]: number } = {
+            'WGCDR': 1,
+            'SQNLDR': 2,
+            'FLTLT': 3,
+            'FLGOFF': 4,
+            'PLTOFF': 5,
+            'Mr': 6
+        };
+        
+        const sorted = ofiCandidates.sort((a, b) => {
+            // First sort by Unit
+            const unitA = a.unit || 'Unassigned';
+            const unitB = b.unit || 'Unassigned';
+            if (unitA !== unitB) {
+                return unitA.localeCompare(unitB);
+            }
+            // Then by Rank
+            const rankA = rankOrder[a.rank] || 99;
+            const rankB = rankOrder[b.rank] || 99;
+            if (rankA !== rankB) {
+                return rankA - rankB;
+            }
+            // Finally by Name
+            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+        });
         console.log('🔍 [OFI FILTER] Final OFI list:', sorted.map(i => ({ id: i.idNumber, name: i.name, rank: i.rank })));
         return sorted;
     }, [instructorsData]);
@@ -205,7 +296,32 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         });
         
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
-        return otherStaffCandidates.sort((a, b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'));
+        
+        const rankOrder: { [key: string]: number } = {
+            'WGCDR': 1,
+            'SQNLDR': 2,
+            'FLTLT': 3,
+            'FLGOFF': 4,
+            'PLTOFF': 5,
+            'Mr': 6
+        };
+        
+        return otherStaffCandidates.sort((a, b) => {
+            // First sort by Unit
+            const unitA = a.unit || 'Unassigned';
+            const unitB = b.unit || 'Unassigned';
+            if (unitA !== unitB) {
+                return unitA.localeCompare(unitB);
+            }
+            // Then by Rank
+            const rankA = rankOrder[a.rank] || 99;
+            const rankB = rankOrder[b.rank] || 99;
+            if (rankA !== rankB) {
+                return rankA - rankB;
+            }
+            // Finally by Name
+            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+        });
     }, [instructorsData]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
@@ -373,37 +489,52 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     ))}
                     
                     {/* SIM IPs */}
-                    <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
-                        <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                            <h3 className="text-lg font-bold text-teal-400">SIM IPs</h3>
-                             <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
+                    {sortedSimIpUnits.map(unit => (
+                        <div key={`simip-${unit}`} className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                            <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
+                                <div>
+                                    <h3 className="text-lg font-bold text-teal-400">SIM IPs</h3>
+                                    <p className="text-xs text-gray-400">{unit}</p>
+                                </div>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIpsByUnit[unit].length}</span>
+                            </div>
+                            <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
+                                {renderInstructorList(simIpsByUnit[unit])}
+                            </div>
                         </div>
-                         <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                             {renderInstructorList(simIps)}
-                        </div>
-                    </div>
+                    ))}
 
                        {/* OFIs */}
-                       <div className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                       {sortedOfiUnits.map(unit => (
+                        <div key={`ofi-${unit}`} className="bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                            <div className="p-3 border-b border-purple-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                               <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{ofis.length}</span>
+                                <div>
+                                    <h3 className="text-lg font-bold text-purple-400">OFIs</h3>
+                                    <p className="text-xs text-gray-400">{unit}</p>
+                                </div>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{ofisByUnit[unit].length}</span>
                            </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(ofis)}
+                                {renderInstructorList(ofisByUnit[unit])}
                            </div>
                        </div>
+                       ))}
 
                        {/* Other Staff - All staff who don't fit into QFI, SIM IP, or OFI categories */}
-                       <div className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                       {sortedOtherStaffUnits.map(unit => (
+                        <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                            <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                               <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{otherStaff.length}</span>
+                                <div>
+                                    <h3 className="text-lg font-bold text-orange-400">Other Staff</h3>
+                                    <p className="text-xs text-gray-400">{unit}</p>
+                                </div>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{otherStaffByUnit[unit].length}</span>
                            </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(otherStaff)}
+                                {renderInstructorList(otherStaffByUnit[unit])}
                            </div>
                        </div>
+                       ))}
                  </div>
             </div>
       </div>
