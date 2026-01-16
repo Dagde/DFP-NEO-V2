@@ -153,48 +153,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
 
-  const simIpsByUnit = useMemo(() => {
-      const groups: { [key: string]: Instructor[] } = {};
-      simIps.forEach(instructor => {
-          const unit = instructor.unit || 'Unassigned';
-          if (!groups[unit]) {
-              groups[unit] = [];
-          }
-          groups[unit].push(instructor);
-      });
-      return groups;
-  }, [simIps]);
-
-  const sortedSimIpUnits = useMemo(() => Object.keys(simIpsByUnit).sort(), [simIpsByUnit]);
-
-  const ofisByUnit = useMemo(() => {
-      const groups: { [key: string]: Instructor[] } = {};
-      ofis.forEach(instructor => {
-          const unit = instructor.unit || 'Unassigned';
-          if (!groups[unit]) {
-              groups[unit] = [];
-          }
-          groups[unit].push(instructor);
-      });
-      return groups;
-  }, [ofis]);
-
-  const sortedOfiUnits = useMemo(() => Object.keys(ofisByUnit).sort(), [ofisByUnit]);
-
-  const otherStaffByUnit = useMemo(() => {
-      const groups: { [key: string]: Instructor[] } = {};
-      otherStaff.forEach(instructor => {
-          const unit = instructor.unit || 'Unassigned';
-          if (!groups[unit]) {
-              groups[unit] = [];
-          }
-          groups[unit].push(instructor);
-      });
-      return groups;
-  }, [otherStaff]);
-
-  const sortedOtherStaffUnits = useMemo(() => Object.keys(otherStaffByUnit).sort(), [otherStaffByUnit]);
-
   const simIps = useMemo(() => {
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
         const simIpCandidates = instructorsData.filter(i => {
@@ -323,6 +281,48 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
         });
     }, [instructorsData]);
+
+  const simIpsByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      simIps.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [simIps]);
+
+  const sortedSimIpUnits = useMemo(() => Object.keys(simIpsByUnit).sort(), [simIpsByUnit]);
+
+  const ofisByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      ofis.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [ofis]);
+
+  const sortedOfiUnits = useMemo(() => Object.keys(ofisByUnit).sort(), [ofisByUnit]);
+
+  const otherStaffByUnit = useMemo(() => {
+      const groups: { [key: string]: Instructor[] } = {};
+      otherStaff.forEach(instructor => {
+          const unit = instructor.unit || 'Unassigned';
+          if (!groups[unit]) {
+              groups[unit] = [];
+          }
+          groups[unit].push(instructor);
+      });
+      return groups;
+  }, [otherStaff]);
+
+  const sortedOtherStaffUnits = useMemo(() => Object.keys(otherStaffByUnit).sort(), [otherStaffByUnit]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 
