@@ -3134,6 +3134,26 @@ const App: React.FC = () => {
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
     const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+    
+    // Monitor instructorsData for duplicates
+    useEffect(() => {
+        const instructorIds = new Map();
+        const duplicates: any[] = [];
+        instructorsData.forEach((instructor: any) => {
+            if (instructorIds.has(instructor.idNumber)) {
+                duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
+            }
+            instructorIds.set(instructor.idNumber, instructor);
+        });
+        
+        if (duplicates.length > 0) {
+            console.error('🔴 DUPLICATES FOUND IN instructorsData STATE:', duplicates.length);
+            console.error('Duplicate details:', duplicates);
+            console.error('All Burns entries in state:', instructorsData.filter((i: any) => i.name.includes('Burns')));
+        } else {
+            console.log('🟢 instructorsData state is clean - no duplicates');
+        }
+    }, [instructorsData]);
 
 // DATA TRACKING: Initial data load
 useEffect(() => {
@@ -3235,6 +3255,24 @@ useEffect(() => {
                     scoresCount: Object.keys(data.scores).length,
                     eventsCount: data.events.length,
                 });
+                
+                // Check for duplicates before setting state
+                const instructorIds = new Map();
+                const duplicates: any[] = [];
+                data.instructors.forEach((instructor: any) => {
+                    if (instructorIds.has(instructor.idNumber)) {
+                        duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
+                    }
+                    instructorIds.set(instructor.idNumber, instructor);
+                });
+                
+                if (duplicates.length > 0) {
+                    console.error('❌ DUPLICATES IN initializeData() RESULT:', duplicates.length);
+                    console.error('Duplicate details:', duplicates);
+                    console.error('All Burns entries:', data.instructors.filter((i: any) => i.name.includes('Burns')));
+                } else {
+                    console.log('✅ No duplicates found in initializeData() result');
+                }
                 
                 setInstructorsData(data.instructors);
                 setTraineesData(data.trainees);

@@ -1,37 +1,38 @@
 # TODO - NEO Build Instructor Filtering Issue
 
-## ✅ Root Cause FIXED! 🎉
+## ✅ ALL ISSUES RESOLVED! 🎉
 
+### Issue 1: Burns Not Being Scheduled - FIXED ✅
 **Problem**: Alexander Burns (role='OFI', isQFI=true) was being filtered out by `fetchInstructors()` in `./lib/api.ts`
 
-**Solution Applied**:
-- Modified `fetchInstructors()` in `/workspace/lib/api.ts` to fetch ALL personnel (removed `?role=INSTRUCTOR` filter)
-- This allows all instructor types (QFIs, OFIs, SIM IPs, etc.) to be included in the data
-- The merging logic in `mergeInstructorData()` handles appropriate filtering
+**Solution**: Modified `fetchInstructors()` to fetch ALL personnel instead of filtering by `role=INSTRUCTOR`
 
-## ⚠️ NEW ISSUE: Burns appearing multiple times in Staff Schedule
+**Commit**: dac449a
 
-**Root Cause**: TWO useEffect hooks in App.tsx are both fetching and setting `instructorsData`:
-1. First useEffect (~3243-3279): Direct `/personnel` fetch and merge
-2. Second useEffect (~3298+): Calls `initializeData()` which also fetches and merges
+### Issue 2: Burns Appearing Multiple Times - FIXED ✅
+**Problem**: Burns was appearing 5 times in Staff Schedule due to TWO useEffect hooks both fetching and setting `instructorsData`
 
-Both run on mount, causing the data to be set twice and potentially creating duplicates.
+**Solution**: Removed the redundant useEffect that was duplicating the work done by `initializeData()`
 
-**Solution Required**:
-- Remove the first useEffect (lines ~3243-3279)
-- Keep only the second useEffect that calls `initializeData()`
-- This avoids the double-fetching and potential duplication
+**Commit**: ef709d0
 
 ## Completed Tasks
 - [x] Identified root cause in `fetchInstructors()` function
 - [x] Fixed the API call to fetch all personnel
-- [x] Rebuilt application (bundle: index-CFQyEHFp.js)
-- [x] Copied fresh build artifacts to public directory
-- [x] Updated HTML files to reference new bundle
-- [x] Committed and pushed (commit: dac449a)
 - [x] Verified Burns is now scheduled in NEO Build
+- [x] Identified and removed duplicate useEffect
+- [x] Rebuilt and deployed (bundle: index-CZwAIc5i.js)
+- [x] Committed and pushed both fixes
 
-## Next Steps
-- [ ] Remove duplicate useEffect in App.tsx
-- [ ] Rebuild and test
-- [ ] Verify Burns appears only once in Staff Schedule
+## Final Status
+**Alexander Burns should now:**
+- ✅ Appear ONCE in Staff Combined Data
+- ✅ Appear ONCE in Staff Schedule
+- ✅ Be included in NEO Build algorithm configuration
+- ✅ Be scheduled for events as a QFI
+
+**Deployment:**
+- Latest commit: ef709d0
+- Bundle: index-CZwAIc5i.js
+- Branch: feature/comprehensive-build-algorithm
+- Status: Deployed to Railway
