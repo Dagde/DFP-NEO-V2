@@ -3123,8 +3123,8 @@ const App: React.FC = () => {
 // DATA TRACKING: Initial data load
 useEffect(() => {
   console.log('🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors');
-  console.log('🔍 [DATA TRACKING] Total instructors from mockdata:', instructorsData.length);
-  console.log('🔍 [DATA TRACKING] First 3 instructors:', instructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
+  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', instructorsData.length);
+  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', instructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
 }, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
