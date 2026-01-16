@@ -166,6 +166,42 @@ git push
 - Changing Next.js configuration or middleware
 - Modifying already-bundled JavaScript files directly (not recommended)
 
+### Additional Fix - index-v2.html Reference Issue
+
+**Date:** January 16, 2026  
+**Issue:** App loads blank screen with 404 error for `as_index-CMs9IkCl.js`
+
+**Root Cause:** When copying new build artifacts, the old bundled JavaScript files are deleted. However, `index-v2.html` was still referencing an old bundle (`index-CMs9IkCl.js`) that no longer existed, causing a 404 error and blank screen.
+
+**Solution:**
+After copying new build artifacts, verify that `index-v2.html` references the correct current JavaScript bundle:
+
+```bash
+# Check available bundles in the assets directory
+ls /workspace/dfp-neo-platform/public/flight-school-app/assets/
+
+# Check what index-v2.html is referencing
+grep "script src" /workspace/dfp-neo-platform/public/flight-school-app/index-v2.html
+
+# If the hash doesn't match, update it manually
+# Example: Change from ./assets/index-CMs9IkCl.js to ./assets/index-BbQik6_5.js
+```
+
+**Verification:**
+```bash
+# Verify the referenced file exists
+ls -la /workspace/dfp-neo-platform/public/flight-school-app/assets/index-BbQik6_5.js
+
+# Verify it contains your latest code changes
+grep "DATA TRACKING v3" /workspace/dfp-neo-platform/public/flight-school-app/assets/index-BbQik6_5.js
+```
+
+**Important Notes:**
+- Always check both `index.html` and `index-v2.html` after copying new build artifacts
+- The hash in the filename (e.g., `index-BbQik6_5.js`) changes with each build
+- If the HTML references a file that doesn't exist, you'll get a 404 error and blank screen
+- Both HTML files should reference the same current bundle
+
 ### Example Scenario
 
 **Before (Wrong Way):**
