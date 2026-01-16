@@ -1,14 +1,18 @@
-# Staff Page Combined Data Integration
+# NEO Build Algorithm Staff List Alignment
 
-## Planning
-[x] Examine current Staff page (InstructorListView) implementation
-[x] Examine StaffCombinedDataTable to understand data fetching logic
-[x] Understand current organization structure (Unit → Rank → Alphabetical)
+## Current State
+- Staff Combined Data page shows ALL staff (QFIs, SIM IPs, OFIs, Other Staff)
+- NEO Build algorithm only uses QFIs and SIM IPs for scheduling
+- Alexander Burns appears in Staff Combined Data but is not scheduled
 
-## Implementation
-[x] Update InstructorListView to fetch combined data instead of ESL_DATA.instructors
-[x] Ensure combined data is organized by Unit, then Rank, then Alphabetical
-[x] Test the updated Staff page with combined data
-[x] Rebuild the application
-[x] Copy build artifacts to public directory
-[x] Commit and push changes
+## Previous Attempt - ROLLED BACK
+Tried to update NEO Build algorithm to check both `role === 'QFI'` AND `isQFI === true`, but this broke the Staff List (Alexander Burns disappeared from Staff List again).
+
+## Current Status
+- Rolled back to commit 4ad09ac (before the filtering changes)
+- Staff List is working correctly again
+- NEO Build algorithm still needs to be fixed to use the same data as Staff Combined Data
+
+## Next Steps
+[ ] Investigate why the filtering changes broke the Staff List
+[ ] Find a different approach to make NEO Build use the same data as Staff Combined Data without breaking the Staff List

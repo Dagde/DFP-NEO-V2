@@ -2447,6 +2447,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+        
         if (type === 'ftd') {
             const simIps = instructors.filter(i => i.role === 'SIM IP');
             const qfis = instructors.filter(i => i.role === 'QFI');
@@ -2454,6 +2456,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         } else {
             candidates = instructors.filter(i => i.role === 'QFI');
         }
+        
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Event type:', type);
         
         // Filter to only available instructors
         const available = candidates.filter(ip => 
@@ -6133,6 +6138,9 @@ useEffect(() => {
         
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
         
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] Creating config with instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] Total instructors in config:', instructorsData.length);
+        
         const config: DfpConfig = {
             instructors: instructorsData,
             trainees: traineesData,
@@ -6728,7 +6736,9 @@ updates.forEach(update => {
         console.log('🔍 generatePilotRemediesAtTime called for:', conflictedEvent.flightNumber, 'at time:', atTime);
         
         // Get all qualified pilots (instructors who can fly as PIC)
+        console.log('🔍 [PILOT REMEDIES DEBUG] Input instructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
         const qualifiedPilots = instructorsData.filter(i => i.role === 'QFI');
+        console.log('🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:', qualifiedPilots.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
         console.log('🔍 Total qualified pilots to check:', qualifiedPilots.length);
         
         let unavailabilityFailures = 0, overlapFailures = 0;
