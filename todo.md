@@ -8,7 +8,7 @@
 ## Implementation
 [x] Update InstructorListView to fetch combined data instead of ESL_DATA.instructors
 [x] Ensure combined data is organized by Unit, then Rank, then Alphabetical
-[ ] Test the updated Staff page with combined data
-[ ] Rebuild the application
-[ ] Copy build artifacts to public directory
-[ ] Commit and push changes
+[x] Test the updated Staff page with combined data
+[x] Rebuild the application
+[x] Copy build artifacts to public directory
+[x] Commit and push changes
