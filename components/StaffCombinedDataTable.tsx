@@ -22,6 +22,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
     const [databaseStaff, setDatabaseStaff] = useState<Instructor[]>([]);
     const [combinedData, setCombinedData] = useState<CombinedStaffRecord[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchDatabaseStaff = async () => {
@@ -109,6 +110,43 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
     const mockdataCount = combinedData.filter(s => s.dataSource === 'mockdata').length;
     const databaseCount = combinedData.filter(s => s.dataSource === 'database').length;
 
+    const handleDelete = async (staff: CombinedStaffRecord) => {
+        setDeletingId(staff.idNumber);
+        
+        try {
+            if (staff.dataSource === 'database') {
+                // Delete from real database
+                const response = await fetch(`/api/personnel/${staff.idNumber}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                });
+                
+                if (response.ok) {
+                    console.log(`✓ Deleted ${staff.name} from database`);
+                    // Update local state
+                    setDatabaseStaff(prev => prev.filter(s => s.idNumber !== staff.idNumber));
+                } else {
+                    const error = await response.json();
+                    console.error(`✗ Failed to delete ${staff.name} from database:`, error);
+                    alert(`Failed to delete ${staff.name} from database: ${error.error || 'Unknown error'}`);
+                }
+            } else {
+                // Delete from mockdata (this would need to update the mockdata source)
+                // For now, we'll just remove it from the display
+                console.log(`✓ Removed ${staff.name} from mockdata display`);
+                alert(`${staff.name} has been removed from the display. Note: Mockdata deletions are temporary and will reset on refresh.`);
+                
+                // Remove from combined data by filtering it out
+                setCombinedData(prev => prev.filter(s => s.idNumber !== staff.idNumber));
+            }
+        } catch (error) {
+            console.error('Error deleting staff:', error);
+            alert(`Error deleting ${staff.name}: ${error}`);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
@@ -166,6 +204,9 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     Source
                                 </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="bg-gray-800 divide-y divide-gray-700">
@@ -221,6 +262,23 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                                         }`}>
                                             {staff.dataSource === 'database' ? 'Database' : 'Mockdata'}
                                         </span>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`Are you sure you want to delete ${staff.name} (${staff.dataSource === 'database' ? 'from database' : 'from display'})?`)) {
+                                                    handleDelete(staff);
+                                                }
+                                            }}
+                                            disabled={deletingId === staff.idNumber}
+                                            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                                                deletingId === staff.idNumber
+                                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-red-700 text-white hover:bg-red-600'
+                                            }`}
+                                        >
+                                            {deletingId === staff.idNumber ? 'Deleting...' : 'Delete'}
+                                        </button>
                                     </td>
                                 </tr>
                             ))}

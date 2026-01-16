@@ -65,6 +65,17 @@ type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
+    const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
+
+    // Initialize filtered mockdata with instructorsData
+    React.useEffect(() => {
+        setFilteredMockdata(props.instructorsData);
+    }, [props.instructorsData]);
+
+    const handleDeleteFromMockdata = (idNumber: number) => {
+        setFilteredMockdata(prev => prev.filter(instructor => instructor.idNumber !== idNumber));
+        props.onShowSuccess(`Staff member removed from mockdata display`);
+    };
 
     const menuItems = [
         { id: 'validation' as const, label: 'AC History', icon: (
@@ -225,7 +236,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <StaffDatabaseTable />
                             )}
                             {activeSection === 'staff-mockdata' && (
-                                <StaffMockDataTable instructorsData={props.instructorsData} />
+                                <StaffMockDataTable 
+                                    instructorsData={filteredMockdata}
+                                    onDeleteFromMockdata={handleDeleteFromMockdata}
+                                />
                             )}
                              {activeSection === 'staff-combined-data' && (
                                 <StaffCombinedDataTable instructorsData={props.instructorsData} />

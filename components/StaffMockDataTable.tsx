@@ -1,11 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Instructor } from '../types';
 
 interface StaffMockDataTableProps {
     instructorsData: Instructor[];
+    onDeleteFromMockdata?: (idNumber: number) => void;
 }
 
-const StaffMockDataTable: React.FC<StaffMockDataTableProps> = ({ instructorsData }) => {
+const StaffMockDataTable: React.FC<StaffMockDataTableProps> = ({ instructorsData, onDeleteFromMockdata }) => {
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    const handleDelete = async (instructor: Instructor) => {
+        setDeletingId(instructor.idNumber);
+        
+        try {
+            // For mockdata, we call the parent handler to remove it from the display
+            if (onDeleteFromMockdata) {
+                console.log(`✓ Removed ${instructor.name} from mockdata display`);
+                onDeleteFromMockdata(instructor.idNumber);
+            }
+        } catch (error) {
+            console.error('Error deleting staff:', error);
+            alert(`Error deleting ${instructor.name}: ${error}`);
+        } finally {
+            setDeletingId(null);
+        }
+    };
     return (
         <div className="space-y-4">
             <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
@@ -51,6 +70,9 @@ const StaffMockDataTable: React.FC<StaffMockDataTableProps> = ({ instructorsData
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                                     OFI
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                                    Actions
                                 </th>
                             </tr>
                         </thead>
@@ -98,6 +120,23 @@ const StaffMockDataTable: React.FC<StaffMockDataTableProps> = ({ instructorsData
                                         ) : (
                                             <span className="text-gray-600">-</span>
                                         )}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`Are you sure you want to remove ${instructor.name} from mockdata display? Note: This is temporary and will reset on refresh.`)) {
+                                                    handleDelete(instructor);
+                                                }
+                                            }}
+                                            disabled={deletingId === instructor.idNumber}
+                                            className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                                                deletingId === instructor.idNumber
+                                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-red-700 text-white hover:bg-red-600'
+                                            }`}
+                                        >
+                                            {deletingId === instructor.idNumber ? 'Removing...' : 'Remove'}
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
