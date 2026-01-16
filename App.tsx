@@ -8785,6 +8785,8 @@ updates.forEach(update => {
                     onUpdateMaxDispatchPerHour={setMaxDispatchPerHour}
                     timezoneOffset={timezoneOffset}
                     onUpdateTimezoneOffset={setTimezoneOffset}
+                    showDepartureDensityOverlay={showDepartureDensityOverlay}
+                    onUpdateShowDepartureDensityOverlay={setShowDepartureDensityOverlay}
                     
                        formationCallsigns={formationCallsigns}
                           onUpdateFormationCallsigns={setFormationCallsigns}
