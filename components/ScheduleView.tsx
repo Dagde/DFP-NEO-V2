@@ -994,7 +994,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 traineesData={traineesData}
                                 personnelData={personnelData}
                                 seatConfigs={new Map()}
-                                currentTime={new Date()}
+                                currentTime={currentTime}
                             />
                             <div
                                 className="absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50"
