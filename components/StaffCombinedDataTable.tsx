@@ -23,6 +23,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
     const [combinedData, setCombinedData] = useState<CombinedStaffRecord[]>([]);
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         const fetchDatabaseStaff = async () => {
@@ -76,20 +77,24 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
         // Combine mockdata and database staff
         const allStaff = new Map<number, CombinedStaffRecord>();
         
-        // Add mockdata staff
+        // Add mockdata staff (skip deleted ones)
         instructorsData.forEach(instructor => {
-            allStaff.set(instructor.idNumber, {
-                ...instructor,
-                dataSource: 'mockdata'
-            });
+            if (!deletedIds.has(instructor.idNumber)) {
+                allStaff.set(instructor.idNumber, {
+                    ...instructor,
+                    dataSource: 'mockdata'
+                });
+            }
         });
         
-        // Add or update with database staff
+        // Add or update with database staff (skip deleted ones)
         databaseStaff.forEach(instructor => {
-            allStaff.set(instructor.idNumber, {
-                ...instructor,
-                dataSource: 'database'
-            });
+            if (!deletedIds.has(instructor.idNumber)) {
+                allStaff.set(instructor.idNumber, {
+                    ...instructor,
+                    dataSource: 'database'
+                });
+            }
         });
         
         // Convert to array and sort by name
@@ -97,7 +102,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
             .sort((a, b) => a.name.localeCompare(b.name));
         
         setCombinedData(combined);
-    }, [instructorsData, databaseStaff]);
+    }, [instructorsData, databaseStaff, deletedIds]);
 
     if (loading) {
         return (
@@ -123,21 +128,18 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                 
                 if (response.ok) {
                     console.log(`✓ Deleted ${staff.name} from database`);
-                    // Update local state
+                    // Update local state - remove from database, add to deletedIds
                     setDatabaseStaff(prev => prev.filter(s => s.idNumber !== staff.idNumber));
+                    setDeletedIds(prev => new Set(prev).add(staff.idNumber));
                 } else {
                     const error = await response.json();
                     console.error(`✗ Failed to delete ${staff.name} from database:`, error);
                     alert(`Failed to delete ${staff.name} from database: ${error.error || 'Unknown error'}`);
                 }
             } else {
-                // Delete from mockdata (this would need to update the mockdata source)
-                // For now, we'll just remove it from the display
-                console.log(`✓ Removed ${staff.name} from mockdata display`);
-                alert(`${staff.name} has been removed from the display. Note: Mockdata deletions are temporary and will reset on refresh.`);
-                
-                // Remove from combined data by filtering it out
-                setCombinedData(prev => prev.filter(s => s.idNumber !== staff.idNumber));
+                // Delete from mockdata - add to deletedIds to permanently remove from view
+                console.log(`✓ Removed ${staff.name} from mockdata`);
+                setDeletedIds(prev => new Set(prev).add(staff.idNumber));
             }
         } catch (error) {
             console.error('Error deleting staff:', error);
