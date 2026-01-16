@@ -970,6 +970,11 @@ function generateDfpInternal(
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Starting with config.instructors:', config.instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Total instructors in config:', config.instructors.length);
     
+    // Log each instructor individually to avoid array collapse in console
+    config.instructors.forEach((instructor, index) => {
+        console.log(`🚨🚨🚨 [INSTRUCTOR ${index}] ID: ${instructor.idNumber}, Name: ${instructor.name}, Role: ${instructor.role}`);
+    });
+    
     const { 
         instructors: originalInstructors, trainees, syllabus: syllabusDetails, scores, 
         coursePriorities, coursePercentages, availableAircraftCount, ftdCount, cptCount,
