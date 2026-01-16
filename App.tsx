@@ -3303,24 +3303,23 @@ useEffect(() => {
         loadInitialData();
     }, []);    
 
-       // Show commit alert on app mount
-       useEffect(() => {
-           const showCommitAlert = async () => {
-               await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
-               const commitHash = '1038178';
-               const commitMessage = 'chore: Add outputs directory to gitignore';
-               const branch = 'feature/comprehensive-build-algorithm';
-               
-               showDarkAlert(
-                   `📦 App Started\n\nCommit: ${commitHash}\nMessage: ${commitMessage}\nBranch: ${branch}`,
-                   'Version Information',
-                   'info',
-                   5000 // 5 seconds auto-close
-               );
-           };
-           showCommitAlert();
-       }, []);
-
+       // Show commit alert on app mount - DISABLED
+       // useEffect(() => {
+       //     const showCommitAlert = async () => {
+       //         await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+       //         const commitHash = '1038178';
+       //         const commitMessage = 'chore: Add outputs directory to gitignore';
+       //         const branch = 'feature/comprehensive-build-algorithm';
+       //         
+       //         showDarkAlert(
+       //             `🚀 App Started\n\nCommit: ${commitHash}\nMessage: ${commitMessage}\nBranch: ${branch}`,
+       //             'Version Information',
+       //             'info',
+       //             5000 // 5 seconds auto-close
+       //         );
+       //     };
+       //     showCommitAlert();
+       // }, []);
     // User change handler
     const handleUserChange = (userName: string) => {
         setCurrentUserName(userName);

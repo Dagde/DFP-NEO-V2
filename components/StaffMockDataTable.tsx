@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Instructor } from '../types';
+import { showDarkConfirm } from './DarkMessageModal';
 
 interface StaffMockDataTableProps {
     instructorsData: Instructor[];
@@ -123,8 +124,13 @@ const StaffMockDataTable: React.FC<StaffMockDataTableProps> = ({ instructorsData
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <button
-                                            onClick={() => {
-                                                if (confirm(`Are you sure you want to remove ${instructor.name} from mockdata display? Note: This is temporary and will reset on refresh.`)) {
+                                            onClick={async () => {
+                                                const confirmed = await showDarkConfirm(
+                                                    `Are you sure you want to remove ${instructor.name} from mockdata display? Note: This is temporary and will reset on refresh.`,
+                                                    'Confirm Removal',
+                                                    'warning'
+                                                );
+                                                if (confirmed) {
                                                     handleDelete(instructor);
                                                 }
                                             }}

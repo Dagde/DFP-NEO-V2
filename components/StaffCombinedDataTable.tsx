@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Instructor } from '../types';
+import { showDarkConfirm } from './DarkMessageModal';
 
 interface StaffCombinedDataTableProps {
     instructorsData: Instructor[];
@@ -267,8 +268,13 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <button
-                                            onClick={() => {
-                                                if (confirm(`Are you sure you want to delete ${staff.name} (${staff.dataSource === 'database' ? 'from database' : 'from display'})?`)) {
+                                            onClick={async () => {
+                                                const confirmed = await showDarkConfirm(
+                                                    `Are you sure you want to delete ${staff.name} (${staff.dataSource === 'database' ? 'from database' : 'from display'})?`,
+                                                    'Confirm Deletion',
+                                                    'warning'
+                                                );
+                                                if (confirmed) {
                                                     handleDelete(staff);
                                                 }
                                             }}
