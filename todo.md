@@ -1,18 +1,31 @@
-# NEO Build Algorithm Staff List Alignment
-
-## Current State
-- Staff Combined Data page shows ALL staff (QFIs, SIM IPs, OFIs, Other Staff)
-- NEO Build algorithm only uses QFIs and SIM IPs for scheduling
-- Alexander Burns appears in Staff Combined Data but is not scheduled
-
-## Previous Attempt - ROLLED BACK
-Tried to update NEO Build algorithm to check both `role === 'QFI'` AND `isQFI === true`, but this broke the Staff List (Alexander Burns disappeared from Staff List again).
+# TODO - NEO Build Instructor Filtering Issue
 
 ## Current Status
-- Rolled back to commit 4ad09ac (before the filtering changes)
-- Staff List is working correctly again
-- NEO Build algorithm still needs to be fixed to use the same data as Staff Combined Data
+- ✅ Debug logging deployed (commit 26e539f)
+- ⏳ Waiting for Railway redeployment
+- ⏳ Waiting for user to provide console logs
 
-## Next Steps
-[ ] Investigate why the filtering changes broke the Staff List
-[ ] Find a different approach to make NEO Build use the same data as Staff Combined Data without breaking the Staff List
+## Completed Tasks
+- [x] Fixed lexical declaration error in InstructorListView
+- [x] Added debug logging to track instructor filtering
+- [x] Rebuilt and deployed debug version
+- [x] Created explanation document
+
+## Pending Tasks
+- [ ] User runs NEO Build and collects console logs
+- [ ] Analyze console logs to identify where Burns is filtered out
+- [ ] Implement fix based on findings
+- [ ] Test fix thoroughly
+- [ ] Remove debug logging after fix confirmed
+
+## Investigation Notes
+- Alexander Burns shows as QFI in Staff Combined Data (role='QFI', isQFI=true per screenshot)
+- Burns is NOT being scheduled in NEO Build
+- Need to determine: Is he not in the data, or is he being filtered out?
+
+## Key Debug Log Messages to Look For
+1. `🔍 [NEO BUILD CONFIG DEBUG] Creating config with instructors:`
+2. `🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:`
+3. `🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:`
+4. `🔍 [PILOT REMEDIES DEBUG] Input instructorsData:`
+5. `🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:`
