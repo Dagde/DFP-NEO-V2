@@ -18,7 +18,8 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
   });
   
   // Merge mock instructors, skipping duplicates
-  const merged = [...dbInstructors];
+  // Also deduplicate database instructors by using only unique idNumbers from the map
+  const merged = Array.from(dbInstructorMap.values());
   mockInstructors.forEach((instructor: any) => {
     if (!dbInstructorMap.has(instructor.idNumber)) {
       merged.push(instructor);

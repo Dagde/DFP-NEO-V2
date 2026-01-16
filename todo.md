@@ -1,38 +1,40 @@
-# TODO - NEO Build Instructor Filtering Issue
+# TODO - Burns Duplication Issue Investigation
 
-## ✅ ALL ISSUES RESOLVED! 🎉
+## Current Status
+**Issue NOT RESOLVED** - Burns still appearing 5 times in Staff MockData table
 
-### Issue 1: Burns Not Being Scheduled - FIXED ✅
-**Problem**: Alexander Burns (role='OFI', isQFI=true) was being filtered out by `fetchInstructors()` in `./lib/api.ts`
+## Evidence from Screenshot
+- "128 Staff Members" in Staff MockData table
+- Alexander Burns (PMKEYS: 8281112) appears 5 times with different ranks
+- All entries show ROLE="OFI" and UNIT="1FTS"
 
-**Solution**: Modified `fetchInstructors()` to fetch ALL personnel instead of filtering by `role=INSTRUCTOR`
+## Previous Attempts (FAILED)
+1. **Commit dac449a**: Fixed Burns not being scheduled (removed role filter)
+2. **Commit ef709d0**: Removed duplicate useEffect (did NOT fix duplication)
 
-**Commit**: dac449a
+## Current Investigation Findings
+- Console showed: "DUPLICATES IN initializeData() RESULT: 4"
+- Console showed: "All Burns entries: Array(5)"
+- Console showed: "personnelCount: 128"
+- **Conclusion**: There are 5 duplicate Burns records in the DATABASE, not in mockdata
 
-### Issue 2: Burns Appearing Multiple Times - FIXED ✅
-**Problem**: Burns was appearing 5 times in Staff Schedule due to TWO useEffect hooks both fetching and setting `instructorsData`
+## Data Flow Analysis
+1. `initializeData()` calls `fetchInstructors()` 
+2. `fetchInstructors()` fetches from `/personnel` API
+3. API returns 128 personnel records
+4. Data is merged with mockdata (ESL_DATA.instructors)
+5. Deduplication happens by `idNumber`
+6. Result: Burns appears 5 times (all 5 have same idNumber but different ranks)
 
-**Solution**: Removed the redundant useEffect that was duplicating the work done by `initializeData()`
+## Root Cause
+**The deduplication logic in `mergeInstructorData()` is NOT working correctly for Burns**
+- It should skip mockdata entries if database has same idNumber
+- But Burns appears 5 times with SAME idNumber but DIFFERENT ranks
+- This suggests 5 separate database records with same idNumber
 
-**Commit**: ef709d0
-
-## Completed Tasks
-- [x] Identified root cause in `fetchInstructors()` function
-- [x] Fixed the API call to fetch all personnel
-- [x] Verified Burns is now scheduled in NEO Build
-- [x] Identified and removed duplicate useEffect
-- [x] Rebuilt and deployed (bundle: index-CZwAIc5i.js)
-- [x] Committed and pushed both fixes
-
-## Final Status
-**Alexander Burns should now:**
-- ✅ Appear ONCE in Staff Combined Data
-- ✅ Appear ONCE in Staff Schedule
-- ✅ Be included in NEO Build algorithm configuration
-- ✅ Be scheduled for events as a QFI
-
-**Deployment:**
-- Latest commit: ef709d0
-- Bundle: index-CZwAIc5i.js
-- Branch: feature/comprehensive-build-algorithm
-- Status: Deployed to Railway
+## Tasks
+- [ ] Verify Burns records in database via direct query
+- [ ] Identify why 5 database records have same idNumber
+- [ ] Remove duplicate Burns records from database
+- [ ] Verify deduplication logic works correctly
+- [ ] Test that Burns appears only once after cleanup
