@@ -36,9 +36,9 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<Fet
   }
 }
 
-// Fetch instructors from API
+// Fetch instructors from API (fetches ALL personnel, filtering happens in mergeInstructorData)
 export async function fetchInstructors(): Promise<any[]> {
-  const result = await fetchAPI<{ personnel: any[] }>('/personnel?role=INSTRUCTOR');
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel');
   if (result.success && result.data?.personnel) {
     return result.data.personnel;
   }

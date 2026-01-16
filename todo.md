@@ -1,31 +1,21 @@
 # TODO - NEO Build Instructor Filtering Issue
 
-## Current Status
-- ✅ Debug logging deployed (commit 26e539f)
-- ⏳ Waiting for Railway redeployment
-- ⏳ Waiting for user to provide console logs
+## Root Cause IDENTIFIED! 🎯
 
-## Completed Tasks
-- [x] Fixed lexical declaration error in InstructorListView
-- [x] Added debug logging to track instructor filtering
-- [x] Rebuilt and deployed debug version
-- [x] Created explanation document
+**Problem**: Alexander Burns (role='OFI', isQFI=true) is being filtered out by `fetchInstructors()` in `./lib/api.ts`
 
-## Pending Tasks
-- [ ] User runs NEO Build and collects console logs
-- [ ] Analyze console logs to identify where Burns is filtered out
-- [ ] Implement fix based on findings
-- [ ] Test fix thoroughly
-- [ ] Remove debug logging after fix confirmed
+**How it happens**:
+1. First useEffect (App.tsx ~3243): Fetches ALL personnel from `/personnel` endpoint - **Burns is included**
+2. Second useEffect (App.tsx ~3298): Calls `initializeData()` which calls `fetchInstructors()` from `./lib/api.ts`
+3. `fetchInstructors()` uses `/personnel?role=INSTRUCTOR` query - **Burns is FILTERED OUT** because his role is 'OFI'
+4. Second useEffect overwrites instructorsData, losing Burns
 
-## Investigation Notes
-- Alexander Burns shows as QFI in Staff Combined Data (role='QFI', isQFI=true per screenshot)
-- Burns is NOT being scheduled in NEO Build
-- Need to determine: Is he not in the data, or is he being filtered out?
+**Fix Required**:
+- Modify `fetchInstructors()` in `/workspace/lib/api.ts` to fetch ALL personnel
+- Remove the `?role=INSTRUCTOR` filter
+- Let the `mergeInstructorData()` function handle the filtering based on actual instructor types
 
-## Key Debug Log Messages to Look For
-1. `🔍 [NEO BUILD CONFIG DEBUG] Creating config with instructors:`
-2. `🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:`
-3. `🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:`
-4. `🔍 [PILOT REMEDIES DEBUG] Input instructorsData:`
-5. `🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:`
+## Next Steps
+- [ ] Fix `fetchInstructors()` function in lib/api.ts
+- [ ] Test that Burns appears in the build config
+- [ ] Rebuild and deploy
