@@ -112,16 +112,77 @@ Changed oracle preview to use the timezone-adjusted currentTime:
 - Tiles will turn red at the correct local time (15 minutes before takeoff)
 - All time-based calculations will respect the configured timezone
 
-### Deployment
-- **Commit**: 01d6b28
-- **Bundle**: index-BP6xveSc.js
-- **Branch**: feature/comprehensive-build-algorithm
-- **Status**: Pushed to Railway (deploying)
+---
+
+## Fix 3: Category Dropdown and Page Name Update - FIXED ✅
+**Commit**: fd7a900
+
+### Issue
+The Category dropdown in the New Instructor and Staff Profile pages was using outdated categories (A2, B1, B2, C1, C2, INSTRUCTOR) that didn't match the type definition. The page was also named "New Instructor" instead of "New Staff".
+
+### Root Cause
+The UI dropdown options were hardcoded with old category values that didn't align with the `InstructorCategory` type definition in `types.ts`.
+
+**Old Dropdown Options:**
+```typescript
+<Dropdown label="Category">
+    <option value="A2">A2</option>
+    <option value="B1">B1</option>
+    <option value="B2">B2</option>
+    <option value="C1">C1</option>
+    <option value="C2">C2</option>
+    <option value="INSTRUCTOR">INSTRUCTOR</option>
+</Dropdown>
+```
+
+**Type Definition (already correct in types.ts):**
+```typescript
+export type InstructorCategory = 'UnCat' | 'D' | 'C' | 'B' | 'A';
+```
+
+### Solution
+Updated the Category dropdown in `InstructorProfileFlyout.tsx` to use the correct options that match the type definition, and renamed the page title.
+
+**New Dropdown Options:**
+```typescript
+<Dropdown label="Category">
+    <option value="A">A</option>
+    <option value="B">B</option>
+    <option value="C">C</option>
+    <option value="D">D</option>
+    <option value="UnCat">U</option>
+</Dropdown>
+```
+
+**Page Title Change:**
+```typescript
+// Old
+<h2>{isCreating ? 'New Instructor' : 'Staff Profile'}</h2>
+
+// New
+<h2>{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
+```
+
+### Expected Results
+- Category dropdown now shows: A, B, C, D, U
+- Dropdown options align with the `InstructorCategory` type definition
+- Page title when creating new staff shows "New Staff" instead of "New Instructor"
 
 ---
+
+## Deployment Status
+All three fixes have been deployed to Railway:
+- **Latest Commit**: fd7a900
+- **Latest Bundle**: index-Da7TMiIi.js
+- **Branch**: feature/comprehensive-build-algorithm
+- **Status**: Pushed to Railway (deploying)
 
 ## Testing Instructions
 1. Wait for Railway to complete deployment
 2. Clear browser cache or use Incognito mode
-3. Test Burns fix: Navigate to Settings → Staff MockData, verify Burns appears only once
-4. Test tile color fix: Monitor flight tiles and verify they change colors at the correct local times based on your timezone setting
+3. **Test Burns fix**: Navigate to Settings → Staff MockData, verify Burns appears only once
+4. **Test tile color fix**: Monitor flight tiles and verify they change colors at the correct local times
+5. **Test Category dropdown**: 
+   - Navigate to Staff page and click "Add Staff" or open a Staff Profile
+   - Verify the Category dropdown shows: A, B, C, D, U
+   - Verify the page title shows "New Staff" when creating a new staff member
