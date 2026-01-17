@@ -29,6 +29,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Find schedule for the user and date
+    console.log('🔍 [MOBILE SCHEDULE] Querying with findUnique:', {
+      userId: user!.id,
+      date: dateParam,
+      version: "flight-school"
+    });
+    
     const schedule = await prisma.schedule.findUnique({
       where: {
         userId_date_version: {
