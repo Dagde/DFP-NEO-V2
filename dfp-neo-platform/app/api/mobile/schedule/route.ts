@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         schedule: null,
         message: `No schedule found for ${dateParam}`,
+        debugVersionQuery: true,
       });
     }
 
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
         events,
       },
       message: null,
+      debugVersionQuery: true,
     });
   } catch (error) {
     console.error('Get schedule error:', error);
