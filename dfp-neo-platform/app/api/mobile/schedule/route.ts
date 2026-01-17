@@ -29,10 +29,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Find schedule for the user and date
-    const schedule = await prisma.schedule.findFirst({
+    const schedule = await prisma.schedule.findUnique({
       where: {
-        userId: user!.id,
-        date: dateParam,
+        userId_date_version: {
+          userId: user!.id,
+          date: dateParam,
+          version: "flight-school",
+        },
       },
     });
 
