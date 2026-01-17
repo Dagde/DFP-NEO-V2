@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    let schedules;
+    let schedules: any[];
 
     if (range) {
       // Query for date range: 2026-01-17 through 2026-01-20
