@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           date: 'asc',
         },
       });
-    } else {
+    } else if (dateParam) {
       // Query for specific date
       schedules = await prisma.schedule.findMany({
         where: {
@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
           date: 'asc',
         },
       });
+    } else {
+      schedules = [];
     }
 
     return NextResponse.json({
