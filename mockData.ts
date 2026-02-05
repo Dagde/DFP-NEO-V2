@@ -574,9 +574,15 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     const isESL = targetLocation === 'ESL';
 
     // --- Generate Executives (WGCDR, SQNLDR) ---
-    // 6 Executives
+    // ESL: 4 for 1FTS, 2 for CFS | PEA: 6 for 2FTS
+    const num1FTSExecutives = isESL ? 4 : 0;
+    const numCFSExecutives = isESL ? 2 : 0;
+    const num2FTSExecutives = isESL ? 0 : 6;
+    
     const executiveRanks: InstructorRank[] = ['WGCDR', ...Array(5).fill('SQNLDR')];
-    for (const rank of executiveRanks) {
+    
+    for (let i = 0; i < executiveRanks.length; i++) {
+        const rank = executiveRanks[i];
         let service: 'RAAF' | 'RAN' | 'ARA' = 'RAAF';
         const randService = Math.random();
         if (randService > 0.95) service = 'ARA';
@@ -587,6 +593,15 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
         
         const isCommandingOfficer = rank === 'WGCDR';
         const isCFI = !isCommandingOfficer && Math.random() < 0.2;
+        
+        // Determine unit based on location and count
+        let unit: string;
+        if (isESL) {
+            // First 4 go to 1FTS, next 2 go to CFS
+            unit = i < num1FTSExecutives ? '1FTS' : 'CFS';
+        } else {
+            unit = '2FTS';
+        }
 
         qfis.push({
             idNumber: generateRandomIdNumber(),
@@ -604,7 +619,7 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isCommandingOfficer,
             isCFI,
             location: isESL ? 'East Sale' : 'Pearce',
-            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+            unit: unit,
             unavailability: [],
             email,
             permissions: ['Staff', 'Course Supervisor', 'Admin'],
@@ -613,7 +628,14 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     }
     
     // --- Generate FLTLTs ---
-    const numFltlts = isESL ? 30 : 31;
+    // ESL: 28 for 1FTS + 16 for CFS = 44 FLTLTs (Joe Bloggs will be added separately to 1FTS)
+    // Total ESL: 4 exec (1FTS) + 28 FLTLT (1FTS) + 1 Joe (1FTS) + 4 SimIP (1FTS) = 37 for 1FTS
+    //            2 exec (CFS) + 16 FLTLT (CFS) = 18 for CFS
+    // PEA: 31 for 2FTS
+    const num1FTSFltlts = isESL ? 28 : 0;
+    const numCFSFltlts = isESL ? 16 : 0;
+    const num2FTSFltlts = isESL ? 0 : 31;
+    const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
     
     for (let i = 0; i < numFltlts; i++) {
         let service: 'RAAF' | 'RAN' | 'ARA' = 'RAAF';
@@ -627,6 +649,15 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
         else if (randService > 0.9) service = 'RAN';
         
         const isExecutive = Math.random() < 0.1;
+        
+        // Determine unit based on location and count
+        let unit: string;
+        if (isESL) {
+            // First 32 go to 1FTS, next 15 go to CFS
+            unit = i < num1FTSFltlts ? '1FTS' : 'CFS';
+        } else {
+            unit = '2FTS';
+        }
 
         qfis.push({
             idNumber: generateRandomIdNumber(),
@@ -642,7 +673,7 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isTestingOfficer: false,
             isIRE: isExecutive && Math.random() < 0.2,
             location: isESL ? 'East Sale' : 'Pearce',
-            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+            unit: unit,
             flight: getRandomFlight(),
             phoneNumber,
             email,
@@ -669,6 +700,8 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     });
 
     // --- ADD JOE BLOGGS (ESL ONLY) ---
+    // Joe Bloggs is part of the 1FTS count (already included in the 32 FLTLTs for 1FTS)
+    // So we add him separately and he replaces one of the random 1FTS FLTLTs
     if (isESL) {
         const joeBloggs: Instructor = {
             idNumber: generateRandomIdNumber(),
@@ -684,7 +717,7 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isFlyingSupervisor: true,
             isIRE: true,
             location: 'East Sale',
-            unit: 'CFS',
+            unit: '1FTS',  // Changed from CFS to 1FTS
             flight: 'A',
             phoneNumber: '0412345678',
             email: 'joe.bloggs@flightschool.mil',
@@ -695,8 +728,10 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
         qfis.push(joeBloggs);
     }
 
-    // Generate SIM IPs (4)
-    for (let i = 0; i < 4; i++) {
+    // Generate SIM IPs
+    // ESL: 4 for 1FTS only (CFS has NO Sim IPs) | PEA: 4 for 2FTS
+    const numSimIps = 4;
+    for (let i = 0; i < numSimIps; i++) {
         const phoneNumber = `04${Math.floor(10000000 + Math.random() * 90000000)}`.substring(0, 10);
         const name = generateRandomName();
         const nameParts = name.split(', ');
@@ -716,7 +751,7 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isFlyingSupervisor: false,
             isIRE: false,
             location: isESL ? 'East Sale' : 'Pearce',
-            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+            unit: isESL ? '1FTS' : '2FTS',  // ESL: All Sim IPs go to 1FTS (CFS has NONE)
             phoneNumber,
             email,
             unavailability: [],
