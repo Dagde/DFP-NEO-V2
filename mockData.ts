@@ -574,12 +574,12 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     const isESL = targetLocation === 'ESL';
 
     // --- Generate Executives (WGCDR, SQNLDR) ---
-    // ESL: 4 for 1FTS, 2 for CFS | PEA: 6 for 2FTS
-    const num1FTSExecutives = isESL ? 4 : 0;
-    const numCFSExecutives = isESL ? 2 : 0;
+    // ESL: 0 for 1FTS (database has 37), 6 for CFS (database has 5, need 18 total) | PEA: 6 for 2FTS
+    const num1FTSExecutives = isESL ? 0 : 0;
+    const numCFSExecutives = isESL ? 6 : 0;  // Generate 6 executives for CFS
     const num2FTSExecutives = isESL ? 0 : 6;
     
-    const executiveRanks: InstructorRank[] = ['WGCDR', ...Array(5).fill('SQNLDR')];
+    const executiveRanks: InstructorRank[] = isESL ? Array(6).fill('SQNLDR') : ['WGCDR', ...Array(5).fill('SQNLDR')];
     
     for (let i = 0; i < executiveRanks.length; i++) {
         const rank = executiveRanks[i];
@@ -628,12 +628,13 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     }
     
     // --- Generate FLTLTs ---
-    // ESL: 28 for 1FTS + 16 for CFS = 44 FLTLTs (Joe Bloggs will be added separately to 1FTS)
-    // Total ESL: 4 exec (1FTS) + 28 FLTLT (1FTS) + 1 Joe (1FTS) + 4 SimIP (1FTS) = 37 for 1FTS
-    //            2 exec (CFS) + 16 FLTLT (CFS) = 18 for CFS
+    // ESL: 0 for 1FTS (database has 37 QFIs already) + 7 for CFS (database has 5, need 18 total, 6 execs + 7 FLTLTs = 13 mockdata)
+    // Database: 1FTS has 37 QFIs + 3 Sim IPs = 40, CFS has 5 QFIs + 1 Sim IP = 6
+    // Target: 1FTS = 37 staff + 4 Sim IPs = 41 total, CFS = 18 staff + 0 Sim IPs = 18 total
+    // Mockdata: 1FTS = 0 staff + 1 Sim IP, CFS = 13 staff (6 execs + 7 FLTLTs) + delete 1 Sim IP from DB
     // PEA: 31 for 2FTS
-    const num1FTSFltlts = isESL ? 28 : 0;
-    const numCFSFltlts = isESL ? 16 : 0;
+    const num1FTSFltlts = isESL ? 0 : 0;
+    const numCFSFltlts = isESL ? 7 : 0;
     const num2FTSFltlts = isESL ? 0 : 31;
     const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
     
@@ -699,38 +700,12 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
         }
     });
 
-    // --- ADD JOE BLOGGS (ESL ONLY) ---
-    // Joe Bloggs is part of the 1FTS count (already included in the 32 FLTLTs for 1FTS)
-    // So we add him separately and he replaces one of the random 1FTS FLTLTs
-    if (isESL) {
-        const joeBloggs: Instructor = {
-            idNumber: generateRandomIdNumber(),
-            name: 'Bloggs, Joe',
-            rank: 'FLTLT',
-            role: 'QFI',
-            callsignNumber: 99, 
-            service: 'RAAF',
-            category: 'A',
-            isTestingOfficer: true,
-            seatConfig: 'Normal',
-            isExecutive: true,
-            isFlyingSupervisor: true,
-            isIRE: true,
-            location: 'East Sale',
-            unit: '1FTS',  // Changed from CFS to 1FTS
-            flight: 'A',
-            phoneNumber: '0412345678',
-            email: 'joe.bloggs@flightschool.mil',
-            unavailability: [],
-            permissions: ['Staff', 'Ops', 'Course Supervisor', 'Admin', 'Super Admin'],
-        };
-        usedNames.add('Bloggs, Joe'); 
-        qfis.push(joeBloggs);
-    }
+    // --- JOE BLOGGS NOT NEEDED ---
+    // Database already has 37 QFIs for 1FTS, so we don't add Joe Bloggs via mockdata
 
     // Generate SIM IPs
-    // ESL: 4 for 1FTS only (CFS has NO Sim IPs) | PEA: 4 for 2FTS
-    const numSimIps = 4;
+    // ESL: 1 for 1FTS (database has 3, need 4 total) | PEA: 4 for 2FTS
+    const numSimIps = isESL ? 1 : 4;
     for (let i = 0; i < numSimIps; i++) {
         const phoneNumber = `04${Math.floor(10000000 + Math.random() * 90000000)}`.substring(0, 10);
         const name = generateRandomName();
