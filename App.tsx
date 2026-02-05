@@ -2461,10 +2461,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         
         if (type === 'ftd') {
             const simIps = instructors.filter(i => i.role === 'SIM IP');
-            const qfis = instructors.filter(i => i.role === 'QFI');
+            const qfis = instructors.filter(i => i.role === 'QFI' || i.isQFI === true);
             candidates = [...simIps, ...qfis];
         } else {
-            candidates = instructors.filter(i => i.role === 'QFI');
+            candidates = instructors.filter(i => i.role === 'QFI' || i.isQFI === true);
         }
         
         console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
@@ -6715,7 +6715,7 @@ updates.forEach(update => {
         
         // Get all qualified pilots (instructors who can fly as PIC)
         console.log('🔍 [PILOT REMEDIES DEBUG] Input instructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
-        const qualifiedPilots = instructorsData.filter(i => i.role === 'QFI');
+        const qualifiedPilots = instructorsData.filter(i => i.role === 'QFI' || i.isQFI === true);
         console.log('🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:', qualifiedPilots.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
         console.log('🔍 Total qualified pilots to check:', qualifiedPilots.length);
         
