@@ -2457,17 +2457,31 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:', config.school);
+        
+        // Filter instructors by location first
+        const locationFilteredInstructors = instructors.filter(i => {
+            if (config.school === 'ESL') {
+                // ESL: Only 1FTS and CFS staff (CFS has no Sim IPs)
+                return i.unit === '1FTS' || i.unit === 'CFS';
+            } else {
+                // PEA: Only 2FTS staff
+                return i.unit === '2FTS';
+            }
+        });
+        
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         
         if (type === 'ftd') {
-            const simIps = instructors.filter(i => i.role === 'SIM IP');
-            const qfis = instructors.filter(i => i.role === 'QFI' || i.isQFI === true);
+            const simIps = locationFilteredInstructors.filter(i => i.role === 'SIM IP');
+            const qfis = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
             candidates = [...simIps, ...qfis];
         } else {
-            candidates = instructors.filter(i => i.role === 'QFI' || i.isQFI === true);
+            candidates = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
         }
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Event type:', type);
         
         // Filter to only available instructors
@@ -6714,9 +6728,24 @@ updates.forEach(update => {
         console.log('🔍 generatePilotRemediesAtTime called for:', conflictedEvent.flightNumber, 'at time:', atTime);
         
         // Get all qualified pilots (instructors who can fly as PIC)
-        console.log('🔍 [PILOT REMEDIES DEBUG] Input instructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
-        const qualifiedPilots = instructorsData.filter(i => i.role === 'QFI' || i.isQFI === true);
-        console.log('🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:', qualifiedPilots.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
+        console.log('🔍 [PILOT REMEDIES DEBUG] Input instructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [PILOT REMEDIES DEBUG] School:', school);
+        
+        // Filter by location first
+        const locationFilteredInstructors = instructorsData.filter(i => {
+            if (school === 'ESL') {
+                // ESL: Only 1FTS and CFS staff
+                return i.unit === '1FTS' || i.unit === 'CFS';
+            } else {
+                // PEA: Only 2FTS staff
+                return i.unit === '2FTS';
+            }
+        });
+        
+        console.log('🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        
+        const qualifiedPilots = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
+        console.log('🔍 [PILOT REMEDIES DEBUG] Filtered qualifiedPilots:', qualifiedPilots.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         console.log('🔍 Total qualified pilots to check:', qualifiedPilots.length);
         
         let unavailabilityFailures = 0, overlapFailures = 0;

@@ -127,7 +127,20 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       };
 
       return instructorsData
-          .filter(i => i.role === 'QFI' || i.isQFI === true)
+          .filter(i => {
+              // Filter by role/flag
+              const isQFI = i.role === 'QFI' || i.isQFI === true;
+              if (!isQFI) return false;
+              
+              // Filter by location
+              if (school === 'ESL') {
+                  // ESL: Only 1FTS and CFS staff
+                  return i.unit === '1FTS' || i.unit === 'CFS';
+              } else {
+                  // PEA: Only 2FTS staff
+                  return i.unit === '2FTS';
+              }
+          })
           .sort((a, b) => {
               const rankA = rankOrder[a.rank] || 99;
               const rankB = rankOrder[b.rank] || 99;
@@ -137,7 +150,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               }
               return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
           });
-  }, [instructorsData]);
+  }, [instructorsData, school]);
 
   const qfisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
@@ -157,10 +170,24 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
         const simIpCandidates = instructorsData.filter(i => {
             const isSimIp = i.role === 'SIM IP';
-            if (isSimIp) {
-                console.log(`🔍 [SIM IP FILTER] Found SIM IP: ${i.name} (${i.rank})`);
+            if (!isSimIp) return false;
+            
+            // Filter by location
+            if (school === 'ESL') {
+                // ESL: Only 1FTS Sim IPs (CFS has NO Sim IPs)
+                const isValid = i.unit === '1FTS';
+                if (isSimIp && isValid) {
+                    console.log(`🔍 [SIM IP FILTER] Found ESL SIM IP: ${i.name} (${i.rank}) - Unit: ${i.unit}`);
+                }
+                return isValid;
+            } else {
+                // PEA: Only 2FTS Sim IPs
+                const isValid = i.unit === '2FTS';
+                if (isSimIp && isValid) {
+                    console.log(`🔍 [SIM IP FILTER] Found PEA SIM IP: ${i.name} (${i.rank}) - Unit: ${i.unit}`);
+                }
+                return isValid;
             }
-            return isSimIp;
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
         
@@ -189,7 +216,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             // Finally by Name
             return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
         });
-    }, [instructorsData]);
+    }, [instructorsData, school]);
 
     const ofis = useMemo(() => {
         console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
@@ -197,8 +224,20 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         
         const ofiCandidates = instructorsData.filter(i => {
             const isOfi = i.role === 'OFI' || i.isOFI === true;
-            console.log(`🔍 [OFI FILTER] Checking ${i.name}: role="${i.role}", isOFI=${i.isOFI}, isOfi=${isOfi}`);
-            return isOfi;
+            if (!isOfi) return false;
+            
+            // Filter by location
+            if (school === 'ESL') {
+                // ESL: Only 1FTS and CFS staff
+                const isValid = i.unit === '1FTS' || i.unit === 'CFS';
+                console.log(`🔍 [OFI FILTER] ESL - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, unit=${i.unit}, isValid=${isValid}`);
+                return isValid;
+            } else {
+                // PEA: Only 2FTS staff
+                const isValid = i.unit === '2FTS';
+                console.log(`🔍 [OFI FILTER] PEA - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, unit=${i.unit}, isValid=${isValid}`);
+                return isValid;
+            }
         });
         
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
@@ -231,7 +270,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         });
         console.log('🔍 [OFI FILTER] Final OFI list:', sorted.map(i => ({ id: i.idNumber, name: i.name, rank: i.rank })));
         return sorted;
-    }, [instructorsData]);
+    }, [instructorsData, school]);
 
     // NEW: All other staff members who don't fit into QFI, SIM IP, or OFI categories
     const otherStaff = useMemo(() => {
@@ -245,12 +284,24 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             
             // Include everyone else
             const isOther = !isQfi && !isSimIp && !isOfi;
+            if (!isOther) return false;
             
-            if (isOther) {
-                console.log(`🔍 [OTHER STAFF] Found other staff: ${i.name} (${i.rank}) - role: ${i.role}`);
+            // Filter by location
+            if (school === 'ESL') {
+                // ESL: Only 1FTS and CFS staff
+                const isValid = i.unit === '1FTS' || i.unit === 'CFS';
+                if (isOther && isValid) {
+                    console.log(`🔍 [OTHER STAFF] Found ESL other staff: ${i.name} (${i.rank}) - role: ${i.role}, unit: ${i.unit}`);
+                }
+                return isValid;
+            } else {
+                // PEA: Only 2FTS staff
+                const isValid = i.unit === '2FTS';
+                if (isOther && isValid) {
+                    console.log(`🔍 [OTHER STAFF] Found PEA other staff: ${i.name} (${i.rank}) - role: ${i.role}, unit: ${i.unit}`);
+                }
+                return isValid;
             }
-            
-            return isOther;
         });
         
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
@@ -280,7 +331,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             // Finally by Name
             return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
         });
-    }, [instructorsData]);
+    }, [instructorsData, school]);
 
   const simIpsByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
