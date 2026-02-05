@@ -7818,12 +7818,23 @@ updates.forEach(update => {
                                }
                            }}
                         />;
+                // Filter instructors by location for Staff Schedule
+                const locationFilteredInstructorsForSchedule = instructorsData.filter(i => {
+                    if (school === 'ESL') {
+                        // ESL: Only 1FTS and CFS staff
+                        return i.unit === '1FTS' || i.unit === 'CFS';
+                    } else {
+                        // PEA: Only 2FTS staff
+                        return i.unit === '2FTS';
+                    }
+                });
+                
                 return <InstructorScheduleView 
                             date={date}
                             onDateChange={handleDateChange}
                             events={eventsForStaffTraineeSchedule}
-                            instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank }))}
-                            instructorsData={instructorsData}
+                            instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank }))}
+                            instructorsData={locationFilteredInstructorsForSchedule}
                             traineesData={traineesData}
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
