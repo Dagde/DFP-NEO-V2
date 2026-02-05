@@ -7818,36 +7818,6 @@ updates.forEach(update => {
                                }
                            }}
                         />;
-                // Filter instructors by location for Staff Schedule
-                const locationFilteredInstructorsForSchedule = instructorsData.filter(i => {
-                    if (school === 'ESL') {
-                        // ESL: Only 1FTS and CFS staff
-                        return i.unit === '1FTS' || i.unit === 'CFS';
-                    } else {
-                        // PEA: Only 2FTS staff
-                        return i.unit === '2FTS';
-                    }
-                });
-                
-                return <InstructorScheduleView 
-                            date={date}
-                            onDateChange={handleDateChange}
-                            events={eventsForStaffTraineeSchedule}
-                            instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank }))}
-                            instructorsData={locationFilteredInstructorsForSchedule}
-                            traineesData={traineesData}
-                            onSelectEvent={handleOpenModal}
-                            onUpdateEvent={handleScheduleUpdate}
-                            zoomLevel={zoomLevel}
-                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
-                            personnelData={personnelData}
-                            seatConfigs={seatConfigs}
-                            syllabusDetails={syllabusDetails}
-                            conflictingEventIds={personnelAndResourceConflictIds}
-                            showValidation={showValidation}
-                            unavailabilityConflicts={unavailabilityConflicts}
-                            onSelectInstructor={handleSelectInstructorFromSchedule}
-                        />;
             case 'TraineeSchedule':
                 return <TraineeScheduleView
                             date={date}
@@ -7879,40 +7849,30 @@ updates.forEach(update => {
                             courseColors={courseColors}
                        />;
             case 'InstructorSchedule':
-                // DEBUG: Log all data being passed to InstructorScheduleView
-                console.log('🔍 STAFF SCHEDULE DEBUG - Case triggered');
-                console.log('🔍 date:', date);
-                console.log('🔍 handleDateChange:', typeof handleDateChange);
-                console.log('🔍 eventSegmentsForDate count:', eventSegmentsForDate?.length);
-                console.log('🔍 instructorsData count:', instructorsData?.length);
-                console.log('🔍 traineesData count:', traineesData?.length);
-                console.log('🔍 handleOpenModal:', typeof handleOpenModal);
-                console.log('🔍 handleScheduleUpdate:', typeof handleScheduleUpdate);
-                console.log('🔍 zoomLevel:', zoomLevel);
-                console.log('🔍 daylightTimes:', { firstLight: '06:30', lastLight: '18:30' });
-                console.log('🔍 personnelData size:', personnelData?.size);
-                console.log('🔍 seatConfigs size: N/A (removed direct access)');
-                console.log('🔍 syllabusDetails count:', syllabusDetails?.length);
-                console.log('🔍 personnelAndResourceConflictIds size:', personnelAndResourceConflictIds?.size);
-                console.log('🔍 showValidation:', showValidation);
-                console.log('🔍 unavailabilityConflicts size:', unavailabilityConflicts?.size);
-                console.log('🔍 handleSelectInstructorFromSchedule:', typeof handleSelectInstructorFromSchedule);
+                // Filter instructors by location for Staff Schedule
+                const locationFilteredInstructorsForSchedule = instructorsData.filter(i => {
+                    if (school === 'ESL') {
+                        // ESL: Only 1FTS and CFS staff
+                        return i.unit === '1FTS' || i.unit === 'CFS';
+                    } else {
+                        // PEA: Only 2FTS staff
+                        return i.unit === '2FTS';
+                    }
+                });
                 
-                // Sample the data to verify structure
-                if (eventSegmentsForDate?.length > 0) {
-                    console.log('🔍 Sample event:', eventSegmentsForDate[0]);
-                }
-                if (instructorsData?.length > 0) {
-                    console.log('🔍 Sample instructor:', instructorsData[0]);
-                }
+                console.log('🔍 STAFF SCHEDULE - Location filtering applied');
+                console.log('🔍 School:', school);
+                console.log('🔍 Total instructors:', instructorsData?.length);
+                console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
+                console.log('🔍 Filtered instructor units:', locationFilteredInstructorsForSchedule.map(i => i.unit));
                 
                 try {
                     return <InstructorScheduleView
                       date={date}
                       onDateChange={handleDateChange}
                       events={eventSegmentsForDate}
-                      instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
-                      instructorsData={instructorsData}
+                      instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+                      instructorsData={locationFilteredInstructorsForSchedule}
                       traineesData={traineesData}
                       onSelectEvent={handleOpenModal}
                       onUpdateEvent={handleScheduleUpdate}
