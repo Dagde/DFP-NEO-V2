@@ -21,8 +21,8 @@ const apps = [
     subtitle: 'Reconnaissance Edition',
     description: 'Advanced reconnaissance mission planning and execution',
     image: '/images/p8-aircraft.jpg',
-    status: 'coming-soon',
-    href: '#',
+    status: 'active',
+    href: 'https://dfp-neo-v2-production.up.railway.app',
   },
   {
     id: 'air-movements',
