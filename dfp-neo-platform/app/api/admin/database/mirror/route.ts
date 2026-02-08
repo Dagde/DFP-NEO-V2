@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
 
     // Railway services cannot connect to other Railway databases via proxy URL
     // Convert proxy URL to internal URL if both are on Railway
+    console.log('🔍 Original database URL type:', originalDatabaseUrl.includes('proxy.rlwy.net') ? 'PROXY' : 'INTERNAL');
+    
     if (originalDatabaseUrl.includes('proxy.rlwy.net')) {
       console.log('🔄 Converting proxy URL to internal Railway URL...');
       // Extract password from the URL
@@ -28,6 +30,8 @@ export async function POST(request: NextRequest) {
         originalDatabaseUrl = `postgresql://postgres:${password}@postgres.railway.internal:5432/railway`;
         console.log('✅ Using internal URL: postgres.railway.internal:5432');
       }
+    } else {
+      console.log('ℹ️ Already using internal or non-proxy URL');
     }
 
     // Create a separate Prisma client for the original database
