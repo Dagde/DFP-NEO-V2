@@ -3,6 +3,16 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
+// Use original database for authentication
+const authPrisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.ORIGINAL_DATABASE_URL,
+    },
+  },
+});
+
+// Use V2 database for other operations
 const prisma = new PrismaClient();
 
 // Extend the built-in session types
@@ -45,7 +55,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        // Authenticate against original database
+        const user = await authPrisma.user.findUnique({
           where: { userId: credentials.userId as string },
         });
 
