@@ -39,4 +39,4 @@ yarn-error.log*
 next-env.d.ts
 
 # Prisma
-prisma/migrations
+prisma/migrations# Force redeploy Mon Feb  9 13:18:41 UTC 2026
