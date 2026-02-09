@@ -9,10 +9,14 @@ export default function FlightSchoolPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('FlightSchool Page - Session status:', status);
+    console.log('FlightSchool Page - Session data:', session);
+    
     if (status === 'unauthenticated') {
+      console.log('User is unauthenticated, redirecting to login');
       router.push('/login');
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
   if (status === 'loading') {
     return (
@@ -23,9 +27,12 @@ export default function FlightSchoolPage() {
   }
 
   if (!session) {
+    console.log('No session data available');
     return null;
   }
 
+  console.log('User is authenticated, loading flight school app');
+  
   return (
     <div className="min-h-screen bg-black">
       <iframe

@@ -18,20 +18,31 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      console.log('Attempting to login with userId:', userId);
       const result = await signIn('credentials', {
         userId,
         password,
         redirect: false,
       });
 
+      console.log('Login result:', result);
+
       if (result?.error) {
+        console.error('Login error:', result.error);
         setError('Invalid User ID or password');
         setIsLoading(false);
         return;
       }
 
-      router.push('/select');
+      if (result?.ok) {
+        console.log('Login successful, redirecting to /select');
+        router.push('/select');
+      } else {
+        setError('Login failed');
+        setIsLoading(false);
+      }
     } catch (error) {
+      console.error('Login exception:', error);
       setError('An error occurred. Please try again.');
       setIsLoading(false);
     }

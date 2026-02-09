@@ -49,10 +49,14 @@ export default function SelectPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('Select Page - Session status:', status);
+    console.log('Select Page - Session data:', session);
+    
     if (status === 'unauthenticated') {
+      console.log('User is unauthenticated on select page, redirecting to login');
       router.push('/login');
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
   if (status === 'loading') {
     return (
