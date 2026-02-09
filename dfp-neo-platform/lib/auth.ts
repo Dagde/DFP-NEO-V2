@@ -43,6 +43,10 @@ declare module 'next-auth' {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Use Railway public domain for NextAuth URL to ensure cookies work correctly
+  ...(process.env.RAILWAY_PUBLIC_DOMAIN && {
+    trustHost: true,
+  }),
   providers: [
     CredentialsProvider({
       name: 'credentials',
