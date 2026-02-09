@@ -51,32 +51,45 @@ export async function POST(request: NextRequest) {
     ];
 
     // Mirror each table using upsert
+    const errors: Record<string, string[]> = {};
+    
     for (const table of tables) {
       console.log(`📋 Mirroring ${table.name}...`);
       
-      // Get all data from original database
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const originalData: any[] = await (originalPrisma as any)[table.model].findMany();
-      
-      let upsertCount = 0;
-      
-      // Upsert each record into V2 database
-      for (const record of originalData) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (prisma as any)[table.model].upsert({
-            where: { id: record.id },
-            update: record,
-            create: record,
-          });
-          upsertCount++;
-        } catch (error) {
-          console.error(`❌ Error upserting ${table.name} record ${record.id}:`, error);
+      try {
+        // Get all data from original database
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const originalData: any[] = await (originalPrisma as any)[table.model].findMany();
+        console.log(`📥 Found ${originalData.length} records in ${table.name}`);
+        
+        let upsertCount = 0;
+        
+        // Upsert each record into V2 database
+        for (const record of originalData) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (prisma as any)[table.model].upsert({
+              where: { id: record.id },
+              update: record,
+              create: record,
+            });
+            upsertCount++;
+          } catch (error: any) {
+            const errorMsg = error.message || String(error);
+            console.error(`❌ Error upserting ${table.name} record ${record.id}:`, errorMsg);
+            if (!errors[table.name]) errors[table.name] = [];
+            errors[table.name].push(`Record ${record.id}: ${errorMsg.substring(0, 100)}`);
+          }
         }
+        
+        results[table.name] = upsertCount;
+        console.log(`✅ ${table.name}: ${upsertCount} records mirrored`);
+      } catch (error: any) {
+        console.error(`❌ Error fetching ${table.name}:`, error.message);
+        results[table.name] = -1; // Error fetching
+        if (!errors[table.name]) errors[table.name] = [];
+        errors[table.name].push(`Fetch error: ${error.message}`);
       }
-      
-      results[table.name] = upsertCount;
-      console.log(`✅ ${table.name}: ${upsertCount} records mirrored`);
     }
 
     // Clean up
@@ -88,6 +101,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Database mirroring completed successfully',
       results,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
     });
   } catch (error) {
     console.error('❌ Error during database mirroring:', error);
