@@ -213,15 +213,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
         {/* Scrollable Main Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-          <button onClick={() => onNavigate('Program Schedule')} className={`w-full text-left px-4 py-1 text-sm font-medium flex items-center space-x-3 btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}>
+          <button onClick={() => onNavigate('Program Schedule')} className={`w-16 h-16 flex items-center justify-center text-sm font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}>
               <span>DFP</span>
           </button>
           
            {/* Staff Menu */}
            <div ref={staffMenuRef} onMouseLeave={handleStaffMenuLeave}>
-                <button onClick={handleStaffMenuClick} onMouseEnter={handleStaffMenuEnter} className={`w-full text-left px-4 py-1 text-sm font-medium flex items-center justify-between btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}>
+                <button onClick={handleStaffMenuClick} onMouseEnter={handleStaffMenuEnter} className={`w-16 h-16 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}>
                     <span>Staff</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transform transition-transform duration-200 ${showStaffMenu ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                 </button>
                 <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${showStaffMenu ? 'max-h-40' : 'max-h-0'}`}>
                      <div className="pl-4 pr-2 pt-1 space-y-1 bg-black/10">
@@ -237,9 +236,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
             {/* Trainee Menu */}
             <div ref={traineeMenuRef} onMouseLeave={handleTraineeMenuLeave}>
-                <button onClick={handleTraineeMenuClick} onMouseEnter={handleTraineeMenuEnter} className={`w-full text-left px-4 py-1 text-sm font-medium flex items-center justify-between btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}>
+                <button onClick={handleTraineeMenuClick} onMouseEnter={handleTraineeMenuEnter} className={`w-16 h-16 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}>
                     <span>Trainee</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 transform transition-transform duration-200 ${showTraineeMenu ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
                 </button>
                 <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${showTraineeMenu ? 'max-h-40' : 'max-h-0'}`}>
                      <div className="pl-4 pr-2 pt-1 space-y-1 bg-black/10">
