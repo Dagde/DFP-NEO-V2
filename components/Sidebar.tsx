@@ -212,7 +212,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         </div>
 
         {/* Scrollable Main Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-[2px]">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-[1px]">
           <button onClick={() => onNavigate('Program Schedule')} className={`w-[55px] h-[55px] flex items-center justify-center text-sm font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}>
               <span>DFP</span>
           </button>
