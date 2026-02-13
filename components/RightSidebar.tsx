@@ -36,9 +36,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const rightCourses = courses.slice(halfPoint);
 
   return (
-    <aside className="w-[12.71rem] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700">
-      {/* Supervisor Dashboard Button - Half Width */}
-      <div className="h-16 flex items-center justify-center flex-shrink-0 px-4 border-b border-gray-800">
+    <aside className="w-[75px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700">
+      {/* Duty Pilot Button - Half Width */}
+      <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
         <div className="flex justify-center w-full mt-2">
           <button
             onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
@@ -46,7 +46,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
             className={`w-[55px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <span className="leading-tight">Supervisor<br/>Dashboard</span>
+            <span className="leading-tight">Duty<br/>Pilot</span>
           </button>
         </div>
       </div>

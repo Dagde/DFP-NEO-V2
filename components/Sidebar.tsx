@@ -167,15 +167,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
   return (
     <>
-      <aside className="w-[12.71rem] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
-        {/* My Dashboard Button - Half Width at Top */}
-        <div className="h-16 flex items-center justify-center flex-shrink-0 px-4 border-b border-gray-800">
+      <aside className="w-[75px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
+        {/* My Home Button - Half Width at Top */}
+        <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
           <div className="flex justify-center w-full mt-2">
             <button
               onClick={() => onNavigate('MyDashboard')}
               className={`w-[55px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
             >
-              <span className="leading-tight">My<br/>Dashboard</span>
+              <span className="leading-tight">My<br/>Home</span>
             </button>
           </div>
         </div>
