@@ -15,10 +15,20 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Log build info on server side
+  if (typeof window === 'undefined') {
+    console.log("Build SHA:", process.env.NEXT_PUBLIC_GIT_SHA || 'not set');
+    console.log("Build Time:", process.env.NEXT_PUBLIC_BUILD_TIME || 'not set');
+  }
+  
   return (
     <html lang="en">
       <body>
         <Providers>{children}</Providers>
+        <script dangerouslySetInnerHTML={{
+          __html: `console.log("Build SHA:", "${process.env.NEXT_PUBLIC_GIT_SHA || 'not set'}");
+                   console.log("Build Time:", "${process.env.NEXT_PUBLIC_BUILD_TIME || 'not set'}");`
+        }} />
       </body>
     </html>
   );
