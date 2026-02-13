@@ -191,7 +191,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           </button>
           
           {/* Staff Menu */}
-          <div ref={staffMenuRef} onMouseLeave={handleStaffMenuLeave}>
+          <div ref={staffMenuRef} onMouseLeave={handleStaffMenuLeave} className="flex flex-col items-center">
             <button 
               onClick={handleStaffMenuClick} 
               onMouseEnter={handleStaffMenuEnter} 
@@ -218,7 +218,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           </div>
 
           {/* Trainee Menu */}
-          <div ref={traineeMenuRef} onMouseLeave={handleTraineeMenuLeave}>
+          <div ref={traineeMenuRef} onMouseLeave={handleTraineeMenuLeave} className="flex flex-col items-center">
             <button 
               onClick={handleTraineeMenuClick} 
               onMouseEnter={handleTraineeMenuEnter} 
