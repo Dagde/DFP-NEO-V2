@@ -52,6 +52,7 @@ import { NewCourseData } from './components/AddCourseFlyout';
 
 // Import components
 import Sidebar from './components/Sidebar';
+import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
 import ScheduleView from './components/ScheduleView';
 import InstructorScheduleView from './components/InstructorScheduleView';
@@ -3187,65 +3188,66 @@ useEffect(() => {
 
     // Session user info from NextAuth (real user, not mockdata)
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string} | null>(null);
-    useEffect(() => {
-        const fetchCurrentUser = async () => {
-           console.log('🔍 [SESSION DEBUG] useEffect hook running');
-           console.log('🔍 [SESSION DEBUG] fetchCurrentUser function called');
-            try {
-                // Try to get session from mobile auth endpoint first
-                const response = await fetch('/api/auth/session', {
-                    credentials: 'include',
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.user) {
-                        // Format name: "First Last" -> "Last, First"
-                        const firstName = data.user.firstName || '';
-                        const lastName = data.user.lastName || '';
-                        const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : data.user.username || 'Bloggs, Joe';
-                        
-                        // Fetch actual rank from Personnel table (not the role from User table)
-                        let actualRank = data.user.role || 'FLTLT';
-                        try {
-                            const personnelResponse = await fetch('/api/user/personnel', {
-                                credentials: 'include',
-                            });
-                            if (personnelResponse.ok) {
-                                const personnelData = await personnelResponse.json();
-                                if (personnelData.rank) {
-                                    actualRank = personnelData.rank;
-                                    console.log('✅ [SESSION] Fetched actual rank from Personnel:', actualRank);
-                                }
-                            }
-                        } catch (personnelError) {
-                            console.log('⚠️ [SESSION] Could not fetch Personnel, using role from session:', actualRank);
-                        }
-                        
-                        // Update app state
-                        setCurrentUserName(formattedName);
-                        
-                        // Update audit logger with actual rank
-                        const auditUserName = `${actualRank} ${formattedName}`;
-                        setCurrentUser(auditUserName);
-                        
-                        // Update sessionUser for MyDashboard and other components
-                        setSessionUser({
-                            firstName: data.user.firstName || null,
-                            lastName: data.user.lastName || null,
-                               role: data.user.role || 'INSTRUCTOR',
-                               militaryRank: actualRank,
-                            userId: data.user.userId || ''
-                        });
-                    }
-                }
-            } catch (error) {
-                console.log('⚠️ [SESSION] Could not fetch user session, using default');
-            }
-        };
-
-        fetchCurrentUser();
-    }, []);
+    // DISABLED: Authentication now handled by DFP-NEO-Website - app loads independently
+    console.log("✅ App loading independently - no authentication check required");
+//     useEffect(() => {
+//         const fetchCurrentUser = async () => {
+//            console.log('🔍 [SESSION DEBUG] useEffect hook running');
+//            console.log('🔍 [SESSION DEBUG] fetchCurrentUser function called');
+//             try {
+//                 // Try to get session from mobile auth endpoint first
+//                 const response = await fetch('/api/auth/session', {
+//                     credentials: 'include',
+//                 });
+//                 
+//                 if (response.ok) {
+//                     const data = await response.json();
+//                     if (data.user) {
+//                         // Format name: "First Last" -> "Last, First"
+//                         const firstName = data.user.firstName || '';
+//                         const lastName = data.user.lastName || '';
+//                         const formattedName = lastName && firstName ? `${lastName}, ${firstName}` : data.user.username || 'Bloggs, Joe';
+//                         
+//                         // Fetch actual rank from Personnel table (not the role from User table)
+//                         let actualRank = data.user.role || 'FLTLT';
+//                         try {
+//                             const personnelResponse = await fetch('/api/user/personnel', {
+//                                 credentials: 'include',
+//                             });
+//                             if (personnelResponse.ok) {
+//                                 const personnelData = await personnelResponse.json();
+//                                 if (personnelData.rank) {
+//                                     actualRank = personnelData.rank;
+//                                     console.log('✅ [SESSION] Fetched actual rank from Personnel:', actualRank);
+//                                 }
+//                             }
+//                         } catch (personnelError) {
+//                             console.log('⚠️ [SESSION] Could not fetch Personnel, using role from session:', actualRank);
+//                         }
+//                         
+//                         // Update app state
+//                         setCurrentUserName(formattedName);
+//                         
+//                         // Update audit logger with actual rank
+//                         const auditUserName = `${actualRank} ${formattedName}`;
+//                         setCurrentUser(auditUserName);
+//                         
+//                         // Update sessionUser for MyDashboard and other components
+//                         setSessionUser({
+//                             firstName: data.user.firstName || null,
+//                             lastName: data.user.lastName || null,
+//                                role: data.user.role || 'INSTRUCTOR',
+//                                militaryRank: actualRank,
+//                             userId: data.user.userId || ''
+//                         });
+//                     }
+//                 }
+//             } catch (error) {
+//                 console.log('⚠️ [SESSION] Could not fetch user session, using default');
+//             }
+//         };
+//         fetchCurrentUser();
+//     }, []);
 
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
@@ -9042,6 +9044,14 @@ updates.forEach(update => {
                 />}
                 {renderActiveView()}
             </div>
+            <RightSidebar
+                activeView={activeView}
+                onNavigate={handleNavigation}
+                courseColors={courseColors}
+                onBuildDfpClick={handleBuildDfp}
+                isSupervisor={true}
+                onPublish={handlePublish}
+            />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 
             {selectedEvent && (
