@@ -36,7 +36,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const rightCourses = courses.slice(halfPoint);
 
   return (
-    <aside className="w-[95px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700">
+    <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700">
       {/* Duty Pilot Button - Half Width */}
       <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
         <div className="flex justify-center w-full mt-2">
@@ -44,7 +44,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
             disabled={!isSupervisor}
             title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
-            className={`w-[55px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className="leading-tight">Duty<br/>Pilot</span>
           </button>
@@ -56,56 +56,56 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         {/* Next Day Build Buttons */}
         <button 
           onClick={() => onNavigate('NextDayBuild')} 
-          className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Program Schedule</span>
         </button>
 
         <button 
           onClick={() => onNavigate('NextDayInstructorSchedule')} 
-          className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Staff Schedule</span>
         </button>
 
         <button 
           onClick={() => onNavigate('NextDayTraineeSchedule')} 
-          className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Trainee Schedule</span>
         </button>
 
         <button 
           onClick={() => onNavigate('Priorities')} 
-          className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Priorities</span>
         </button>
 
         <button 
           onClick={() => onNavigate('ProgramData')} 
-          className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'ProgramData' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'ProgramData' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Program Data</span>
         </button>
 
         <button 
           onClick={() => onNavigate('BuildAnalysis')} 
-          className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildAnalysis' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildAnalysis' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Build Analysis</span>
         </button>
 
         <button 
           onClick={onBuildDfpClick} 
-          className="w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-orange-brushed rounded-md"
+          className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-orange-brushed rounded-md"
         >
           <span className="text-center leading-tight">NEO Build</span>
         </button>
 
         <button 
           onClick={onPublish} 
-          className="w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-green-brushed rounded-md"
+          className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-green-brushed rounded-md"
         >
           <span className="text-center leading-tight">Publish</span>
         </button>
@@ -121,7 +121,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             {rightCourses.map(([courseName, color]) => (
               <div key={courseName} className="py-1 flex items-center justify-center">
                 <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
-                <span className="text-xs text-gray-300 truncate">{formatCourseName(courseName)}</span>
+                <span className="text-xs text-gray-300">{formatCourseName(courseName)}</span>
               </div>
             ))}
           </div>

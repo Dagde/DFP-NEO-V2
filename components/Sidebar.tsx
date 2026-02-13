@@ -167,13 +167,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
   return (
     <>
-      <aside className="w-[95px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
+      <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
         {/* My Home Button - Half Width at Top */}
         <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
           <div className="flex justify-center w-full mt-2">
             <button
               onClick={() => onNavigate('MyDashboard')}
-              className={`w-[55px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
             >
               <span className="leading-tight">My<br/>Home</span>
             </button>
@@ -185,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* DFP Button */}
           <button 
             onClick={() => onNavigate('Program Schedule')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
           >
             <span>DFP</span>
           </button>
@@ -195,7 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <button 
               onClick={handleStaffMenuClick} 
               onMouseEnter={handleStaffMenuEnter} 
-              className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}
             >
               <span>Staff</span>
             </button>
@@ -222,7 +222,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <button 
               onClick={handleTraineeMenuClick} 
               onMouseEnter={handleTraineeMenuEnter} 
-              className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}
+              className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}
             >
               <span>Trainee</span>
             </button>
@@ -247,7 +247,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Syllabus - Square Button with Smaller Text */}
           <button 
             onClick={() => onNavigate('Syllabus')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''}`}
           >
             <span className="text-center leading-tight">Syllabus</span>
           </button>
@@ -255,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Course Progress - Square Button with Smaller Text */}
           <button 
             onClick={() => onNavigate('CourseProgress')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''}`}
           >
             <span className="text-center leading-tight">Course Progress</span>
           </button>
@@ -263,7 +263,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Training Records - Square Button with Smaller Text */}
           <button 
             onClick={() => onNavigate('TrainingRecords')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''}`}
           >
             <span className="text-center leading-tight">Training Records</span>
           </button>
@@ -271,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Settings - Square Button */}
           <button 
             onClick={() => onNavigate('Settings')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''}`}
           >
             <span className="text-center leading-tight">Settings</span>
           </button>
@@ -301,7 +301,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
                 {leftCourses.map(([courseName, color]) => (
                   <div key={courseName} className="py-1 flex items-center justify-center">
                     <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
-                    <span className="text-xs text-gray-300 truncate">{formatCourseName(courseName)}</span>
+                    <span className="text-xs text-gray-300">{formatCourseName(courseName)}</span>
                   </div>
                 ))}
               </div>
