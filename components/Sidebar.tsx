@@ -167,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
   return (
     <>
-      <aside className="w-[75px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
+      <aside className="w-[95px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
         {/* My Home Button - Half Width at Top */}
         <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
           <div className="flex justify-center w-full mt-2">
