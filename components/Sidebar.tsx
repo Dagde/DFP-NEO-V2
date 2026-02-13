@@ -168,14 +168,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   return (
     <>
       <aside className="w-[12.71rem] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
-        {/* My Dashboard Button - Full Width at Top */}
+        {/* My Dashboard Button - Half Width at Top */}
         <div className="h-16 flex items-center justify-center flex-shrink-0 px-4 border-b border-gray-800">
-          <div className="flex w-full mt-2">
+          <div className="flex justify-center w-full mt-2">
             <button
               onClick={() => onNavigate('MyDashboard')}
-              className={`w-full flex items-center justify-center text-center px-1 py-1 text-sm font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
+              className={`w-[55px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
             >
-              <span className="leading-tight">My Dashboard</span>
+              <span className="leading-tight">My<br/>Dashboard</span>
             </button>
           </div>
         </div>
@@ -185,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* DFP Button */}
           <button 
             onClick={() => onNavigate('Program Schedule')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-sm font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
+            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
           >
             <span>DFP</span>
           </button>
@@ -195,7 +195,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <button 
               onClick={handleStaffMenuClick} 
               onMouseEnter={handleStaffMenuEnter} 
-              className={`w-[55px] h-[55px] flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}
+              className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}
             >
               <span>Staff</span>
             </button>
@@ -222,7 +222,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <button 
               onClick={handleTraineeMenuClick} 
               onMouseEnter={handleTraineeMenuEnter} 
-              className={`w-[55px] h-[55px] flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}
+              className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}
             >
               <span>Trainee</span>
             </button>
@@ -271,7 +271,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Settings - Square Button */}
           <button 
             onClick={() => onNavigate('Settings')} 
-            className={`w-[55px] h-[55px] flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''}`}
+            className={`w-[55px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''}`}
           >
             <span className="text-center leading-tight">Settings</span>
           </button>
