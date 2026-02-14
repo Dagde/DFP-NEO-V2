@@ -169,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     <>
       <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
         {/* Scrollable Main Navigation - Centre Aligned */}
-        <nav className="flex-1 overflow-y-auto px-2 pt-2 space-y-[1px] flex flex-col items-center">
+        <nav className="flex-1 overflow-y-auto px-2 pt-[72px] space-y-[1px] flex flex-col items-center">
           {/* My Home Button */}
           <button
             onClick={() => onNavigate('MyDashboard')}
@@ -277,7 +277,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* Courses Legend */}
           <div className="border-t border-gray-700 flex-shrink-0">
             <div className="px-4 pt-4 mb-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
+              <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
             </div>
             <div className="px-4 pb-2 flex justify-center">
               <div className="flex-1 min-w-0">

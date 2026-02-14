@@ -52,7 +52,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       {/* Scrollable Main Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-[1px] flex flex-col items-center">
+      <nav className="flex-1 overflow-y-auto pt-[72px] pb-4 px-2 space-y-[1px] flex flex-col items-center">
         {/* Next Day Build Buttons */}
         <button 
           onClick={() => onNavigate('NextDayBuild')} 
@@ -107,7 +107,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       {/* Courses Section */}
       <div className="flex-shrink-0 border-t border-gray-700">
         <div className="px-4 pt-4 mb-2 flex justify-center items-center">
-          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
+          <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
         </div>
         <div className="px-4 pb-2 flex justify-center">
           <div className="flex-1 min-w-0">
