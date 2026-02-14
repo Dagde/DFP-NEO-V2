@@ -179,7 +179,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         </div>
         
         {/* Scrollable Main Navigation - Centre Aligned */}
-        <nav className="flex-1 overflow-y-auto px-2 pt-[47px] space-y-[1px] flex flex-col items-center">
+        <nav className="flex-1 overflow-y-auto px-2 pt-[27px] space-y-[1px] flex flex-col items-center">
           {/* DFP Button */}
           <button 
             onClick={() => onNavigate('Program Schedule')} 
