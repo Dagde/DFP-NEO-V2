@@ -114,7 +114,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             {rightCourses.map(([courseName, color]) => (
               <div key={courseName} className="py-1 flex items-center justify-center">
                 <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
-                <span className="text-xs text-gray-300">{formatCourseName(courseName)}</span>
+                <span className="text-[10px] text-gray-300">{formatCourseName(courseName)}</span>
               </div>
             ))}
           </div>

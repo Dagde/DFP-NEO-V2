@@ -168,20 +168,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   return (
     <>
       <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
-        {/* My Home Button - Half Width at Top */}
-        <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
-          <div className="flex justify-center w-full mt-2">
-            <button
-              onClick={() => onNavigate('MyDashboard')}
-              className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
-            >
-              <span className="leading-tight">My<br/>Home</span>
-            </button>
-          </div>
-        </div>
-
         {/* Scrollable Main Navigation - Centre Aligned */}
-        <nav className="flex-1 overflow-y-auto px-2 space-y-[1px] flex flex-col items-center">
+        <nav className="flex-1 overflow-y-auto px-2 pt-2 space-y-[1px] flex flex-col items-center">
+          {/* My Home Button */}
+          <button
+            onClick={() => onNavigate('MyDashboard')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
+          >
+            <span className="leading-tight">My<br/>Home</span>
+          </button>
           {/* DFP Button */}
           <button 
             onClick={() => onNavigate('Program Schedule')} 
@@ -289,7 +284,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
                 {leftCourses.map(([courseName, color]) => (
                   <div key={courseName} className="py-1 flex items-center justify-center">
                     <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
-                    <span className="text-xs text-gray-300">{formatCourseName(courseName)}</span>
+                    <span className="text-[10px] text-gray-300">{formatCourseName(courseName)}</span>
                   </div>
                 ))}
               </div>
@@ -297,9 +292,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           </div>
 
           {/* Footer */}
-          <div className="p-3 border-t border-gray-700 flex-shrink-0 flex justify-center items-center">
+          <div className="p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center">
             <span className="text-[10px] text-gray-500 font-light">
-              {currentUserRank} {currentUserName}
+              {currentUserRank} {currentUserName.split(',')[0]}
             </span>
           </div>
         </div>
