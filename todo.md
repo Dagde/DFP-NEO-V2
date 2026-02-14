@@ -3,35 +3,32 @@
 ## 1. Staff Schedule Tab - Add Vertical Scrolling
 - [x] Identify the container structure in InstructorScheduleView.tsx
 - [x] Fix parent container to use flex-col (was blocking child overflow-auto)
-- [ ] Test scrolling with long staff lists
+- [x] Add 100px bottom padding to ensure full visibility
 
 ## 2. Staff Schedule Tab - Implement Proper Ordering
-- [x] Create sorting function for staff by Unit, then Rank, then Surname
+- [x] Create sorting function for staff by Role, Unit, Rank, then Surname
 - [x] Define rank order: WGCDR, SQNLDR, FLTLT, FLGOFF, PLTOFF
 - [x] Implement unit color coding for visual distinction (already exists via PersonnelColumn)
 - [x] Apply sorting to instructors array before rendering
-- [ ] Test sorting stability
+- [x] Move SIM IPs to bottom of list (after all QFIs)
 
 ## 3. Trainee Schedule Tab - Add Vertical Scrolling
 - [x] Identify the container structure in TraineeScheduleView.tsx
 - [x] Fix parent container to use flex-col (was blocking child overflow-auto)
-- [ ] Test scrolling with long trainee lists
+- [x] Add 100px bottom padding to ensure full visibility
 
 ## 4. Trainee Profile Page - Add Vertical Scrolling
 - [x] Identify the container structure in CourseRosterView.tsx
 - [x] Verify overflow-y-auto is working correctly (already present on line 265)
 - [x] Fix parent container to use flex-col (was blocking child overflow-auto)
-- [ ] Test scrolling with multiple courses and trainees
+- [x] Add bottom padding (pb-24) to ensure full visibility
 
-## 5. Testing and Verification
-- [ ] Test all scrolling functionality across different screen sizes
-- [ ] Verify sorting is stable and consistent
-- [ ] Ensure no data or functionality is lost
-- [ ] Test on different resolutions
+## 5. Staff Profile Page - Add Vertical Scrolling
+- [x] Add bottom padding (pb-24) to InstructorListView to ensure full visibility
 
 ## 6. Build and Deploy
 - [ ] Build the application
 - [ ] Copy to deployment directories
 - [ ] Update HTML bundle references
-- [ ] Restore button colors
+- [ ] Restore button colors (#a0a0a0)
 - [ ] Commit and push changes

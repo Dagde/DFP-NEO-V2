@@ -519,7 +519,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
         // and acts as the grid container for its children.
         style={{
           width: `${PERSONNEL_COLUMN_WIDTH + timelineWidth}px`,
-          height: `${TIME_HEADER_HEIGHT + containerHeight}px`,
+          height: `${TIME_HEADER_HEIGHT + containerHeight + 100}px`, // Added 100px padding at bottom
           display: 'grid',
           gridTemplateColumns: `${PERSONNEL_COLUMN_WIDTH}px 1fr`,
           gridTemplateRows: `${TIME_HEADER_HEIGHT}px 1fr`,

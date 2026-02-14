@@ -57,7 +57,14 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
       }
     })
     .sort((a, b) => {
-      // First sort by Unit
+      // First sort by Role - QFIs before SIM IPs
+      const roleA = a.role === 'QFI' ? 0 : 1;
+      const roleB = b.role === 'QFI' ? 0 : 1;
+      if (roleA !== roleB) {
+        return roleA - roleB;
+      }
+      
+      // Then sort by Unit
       if (a.unit !== b.unit) {
         return a.unit.localeCompare(b.unit);
       }
