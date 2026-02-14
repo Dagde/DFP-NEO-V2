@@ -83,17 +83,10 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </button>
 
         <button 
-          onClick={() => onNavigate('ProgramData')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'ProgramData' ? 'active' : ''}`}
+          onClick={() => onNavigate('BuildIntelligence')} 
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''}`}
         >
-          <span className="text-center leading-tight">Program Data</span>
-        </button>
-
-        <button 
-          onClick={() => onNavigate('BuildAnalysis')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildAnalysis' ? 'active' : ''}`}
-        >
-          <span className="text-center leading-tight">Build Analysis</span>
+          <span className="text-center leading-tight">Build Intelligence</span>
         </button>
 
         <button 

@@ -68,8 +68,7 @@ import MyDashboard from './components/MyDashboard';
 import SupervisorDashboard from './components/SupervisorDashboard';
 import NextDayBuildView from './components/NextDayBuildView';
 import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
-import ProgramDataView from './components/ProgramDataView';
-import BuildAnalysisView from './components/BuildAnalysisView';
+import BuildIntelligenceView from './components/BuildIntelligenceView';
 import BuildDfpLoadingFlyout from './components/BuildDfpLoadingFlyout';
 import BuildDateWarningFlyout from './components/BuildDateWarningFlyout';
 import UnavailabilityConflictFlyout from './components/UnavailabilityConflictFlyout';
@@ -8352,8 +8351,8 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromArchivedView}
                     onNavigateBack={() => handleNavigation('TrainingRecords')}
                 />;
-            case 'ProgramData':
-                 return <ProgramDataView
+            case 'BuildIntelligence':
+                 return <BuildIntelligenceView
                             date={buildDfpDate}
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
                             instructorsData={instructorsData}
@@ -8370,9 +8369,7 @@ updates.forEach(update => {
                             syllabusDetails={syllabusDetails}
                             traineeLMPs={traineeLMPs}
                             courseColors={courseColors}
-                        />;
-            case 'BuildAnalysis':
-                return <BuildAnalysisView
+                        
                             buildDate={buildDfpDate}
                             analysis={lastBuildAnalysis}
                         />;
