@@ -60,10 +60,10 @@ const Header: React.FC<HeaderProps> = ({
                         </select>
                     </div>
                     
-                    {/* Audit Button - 55x55px */}
+                    {/* Audit Button - 75x55px to match sidebar */}
                     <button 
                         onClick={() => setShowAuditFlyout(true)}
-                        className="w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md"
+                        className="w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md"
                         title="View Audit Log"
                     >
                         <svg 
@@ -82,19 +82,19 @@ const Header: React.FC<HeaderProps> = ({
                         </svg>
                     </button>
                     
-                    {/* Multi Select Button - 55x55px */}
+                    {/* Multi Select Button - 75x55px to match sidebar */}
                     <button
                       onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
-                      className={`w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${isMultiSelectMode ? 'active' : ''}`}
+                      className={`w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${isMultiSelectMode ? 'active' : ''}`}
                       title="Toggle multi-select mode"
                     >
                         <img src="./multi-select-icon.png" alt="Multi-select mode" style={{ height: '24px', width: '24px', display: 'block' }} />
                     </button>
                     
-                    {/* Magnify Glass Button - 55x55px */}
+                    {/* Magnify Glass Button - 75x55px to match sidebar */}
                     <button
                       onClick={() => setIsMagnifierEnabled(!isMagnifierEnabled)}
-                      className={`w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${isMagnifierEnabled ? 'active' : ''}`}
+                      className={`w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${isMagnifierEnabled ? 'active' : ''}`}
                       aria-label="Toggle Magnifier"
                       title="Toggle Magnifier"
                     >
@@ -103,19 +103,19 @@ const Header: React.FC<HeaderProps> = ({
                       </svg>
                     </button>
                     
-                    {/* Toggle Validation Button - 55x55px */}
+                    {/* Toggle Validation Button - 75x55px to match sidebar */}
                     <button
                       onClick={() => setShowValidation(!showValidation)}
-                      className={`w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
+                      className={`w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
                       title="Toggle validation"
                     >
                         <img src="./warning-icon.png" alt="Validation mode" style={{ height: '24px', width: '24px', display: 'block' }} />
                     </button>
                     
-                    {/* 1 Hour Flight Counter (Departure Density Overlay) - 55x55px */}
+                    {/* 1 Hour Flight Counter (Departure Density Overlay) - 75x55px to match sidebar */}
                     <button
                       onClick={onToggleDepartureDensityOverlay}
-                      className={`w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
+                      className={`w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
                       title="1 Hour Flight Counter - Shows flight density in 1-hour window"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -124,11 +124,11 @@ const Header: React.FC<HeaderProps> = ({
                         </svg>
                     </button>
                     
-                    {/* Aircraft Availability Toggle Button - 55x55px */}
+                    {/* Aircraft Availability Toggle Button - 75x55px to match sidebar */}
                     {onToggleAircraftAvailability && (
                         <button
                           onClick={onToggleAircraftAvailability}
-                          className={`w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${showAircraftAvailability ? 'active' : ''}`}
+                          className={`w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md ${showAircraftAvailability ? 'active' : ''}`}
                           title="Toggle aircraft availability"
                         >
                             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -141,10 +141,10 @@ const Header: React.FC<HeaderProps> = ({
 
                 {/* RIGHT ALIGNED ITEMS */}
                 <div className="flex items-center space-x-[1px]">
-                    {/* Oracle Button - 55x55px */}
+                    {/* Oracle Button - 75x55px to match sidebar */}
                     <button
                         onClick={onToggleOracleMode}
-                        className={`w-[55px] h-[55px] flex items-center justify-center btn-gold-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
+                        className={`w-[75px] h-[55px] flex items-center justify-center btn-gold-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
                         title="Oracle"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
@@ -152,10 +152,10 @@ const Header: React.FC<HeaderProps> = ({
                         </svg>
                     </button>
                     
-                    {/* Add Ground Event Button - 55x55px */}
+                    {/* Add Ground Event Button - 75x55px to match sidebar */}
                     <button 
                         onClick={onAddGroundEvent}
-                        className="w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md"
+                        className="w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md"
                         title="Add Ground Event"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
@@ -163,10 +163,10 @@ const Header: React.FC<HeaderProps> = ({
                         </svg>
                     </button>
                     
-                    {/* Add Tile Button - 55x55px */}
+                    {/* Add Tile Button - 75x55px to match sidebar */}
                     <button 
                         onClick={onAddTile}
-                        className="w-[55px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md"
+                        className="w-[75px] h-[55px] flex items-center justify-center btn-aluminium-brushed rounded-md"
                         title="Add Tile"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
