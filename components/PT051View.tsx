@@ -196,7 +196,10 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
 };
 
 // FIX: Moved GoogleGenAI instance creation outside the component to prevent re-initialization on re-renders.
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+// Only initialize if API key is available
+const ai = import.meta.env.VITE_GEMINI_API_KEY 
+  ? new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY }) 
+  : null;
 
 const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
@@ -523,6 +526,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
             const processor = audioCtx.createScriptProcessor(4096, 1, 1);
             processorRef.current = processor;
+
+            if (!ai) {
+                console.error('Gemini API key not configured');
+                setIsRecording(false);
+                return;
+            }
 
             const sessionPromise = ai.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
