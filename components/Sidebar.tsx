@@ -37,33 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState('');
   
-  // --- Staff Menu State & Logic ---
-  const [isStaffMenuOpen, setIsStaffMenuOpen] = useState(false);
-  const [isStaffMenuPinned, setIsStaffMenuPinned] = useState(false);
-  const staffMenuRef = useRef<HTMLDivElement>(null);
-
-  // --- Trainee Menu State & Logic ---
-  const [isTraineeMenuOpen, setIsTraineeMenuOpen] = useState(false);
-  const [isTraineeMenuPinned, setIsTraineeMenuPinned] = useState(false);
-  const traineeMenuRef = useRef<HTMLDivElement>(null);
-
-  // This effect handles clicks outside the menus to un-pin them.
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (staffMenuRef.current && !staffMenuRef.current.contains(event.target as Node)) {
-        setIsStaffMenuPinned(false);
-        setIsStaffMenuOpen(false);
-      }
-      if (traineeMenuRef.current && !traineeMenuRef.current.contains(event.target as Node)) {
-        setIsTraineeMenuPinned(false);
-        setIsTraineeMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  
   
   const handleSaveCourse = (data: NewCourseData) => {
     onAddCourse(data);
@@ -131,38 +105,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
-  
-  // --- Staff Menu ---
-  const isStaffSectionActive = ['Instructors', 'InstructorSchedule'].includes(activeView);
-  const handleStaffMenuEnter = () => setIsStaffMenuOpen(true);
-  const handleStaffMenuLeave = () => { if (!isStaffMenuPinned) setIsStaffMenuOpen(false); };
-  const handleStaffMenuClick = () => {
-    const newPinnedState = !isStaffMenuPinned;
-    setIsStaffMenuPinned(newPinnedState);
-    if (newPinnedState) setIsStaffMenuOpen(true);
-  };
-  const handleStaffSubMenuItemClick = (view: string) => {
-    onNavigate(view);
-    setIsStaffMenuPinned(false);
-    setIsStaffMenuOpen(false);
-  };
-  const showStaffMenu = isStaffMenuOpen || isStaffMenuPinned;
-
-  // --- Trainee Menu ---
-  const isTraineeSectionActive = ['CourseRoster', 'TraineeSchedule'].includes(activeView);
-  const handleTraineeMenuEnter = () => setIsTraineeMenuOpen(true);
-  const handleTraineeMenuLeave = () => { if (!isTraineeMenuPinned) setIsTraineeMenuOpen(false); };
-  const handleTraineeMenuClick = () => {
-    const newPinnedState = !isTraineeMenuPinned;
-    setIsTraineeMenuPinned(newPinnedState);
-    if (newPinnedState) setIsTraineeMenuOpen(true);
-  };
-  const handleTraineeSubMenuItemClick = (view: string) => {
-    onNavigate(view);
-    setIsTraineeMenuPinned(false);
-    setIsTraineeMenuOpen(false);
-  };
-  const showTraineeMenu = isTraineeMenuOpen || isTraineeMenuPinned;
 
 
   return (
@@ -188,59 +130,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <span>DFP</span>
           </button>
           
-          {/* Staff Menu */}
-          <div ref={staffMenuRef} onMouseLeave={handleStaffMenuLeave} className="flex flex-col items-center">
-            <button 
-              onClick={handleStaffMenuClick} 
-              onMouseEnter={handleStaffMenuEnter} 
-              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${(isStaffSectionActive || showStaffMenu) && !isAnyDashboardActive ? 'active' : ''}`}
-            >
-              <span>Staff</span>
-            </button>
-            <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${showStaffMenu ? 'max-h-40' : 'max-h-0'}`}>
-              <div className="pl-4 pr-2 pt-1 space-y-1 bg-black/10">
-                <button 
-                  onClick={() => handleStaffSubMenuItemClick('Instructors')} 
-                  className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'Instructors' ? 'active' : ''}`}
-                >
-                  Staff Profile
-                </button>
-                <button 
-                  onClick={() => handleStaffSubMenuItemClick('InstructorSchedule')} 
-                  className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'InstructorSchedule' ? 'active' : ''}`}
-                >
-                  Staff Schedule
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Staff Button */}
+          <button 
+            onClick={() => onNavigate('Staff')} 
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''}`}
+          >
+            <span>Staff</span>
+          </button>
 
-          {/* Trainee Menu */}
-          <div ref={traineeMenuRef} onMouseLeave={handleTraineeMenuLeave} className="flex flex-col items-center">
-            <button 
-              onClick={handleTraineeMenuClick} 
-              onMouseEnter={handleTraineeMenuEnter} 
-              className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${(isTraineeSectionActive || showTraineeMenu) && !isAnyDashboardActive ? 'active' : ''}`}
-            >
-              <span>Trainee</span>
-            </button>
-            <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${showTraineeMenu ? 'max-h-40' : 'max-h-0'}`}>
-              <div className="pl-4 pr-2 pt-1 space-y-1 bg-black/10">
-                <button 
-                  onClick={() => handleTraineeSubMenuItemClick('CourseRoster')} 
-                  className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'CourseRoster' ? 'active' : ''}`}
-                >
-                  Trainee Profile
-                </button>
-                <button 
-                  onClick={() => handleTraineeSubMenuItemClick('TraineeSchedule')} 
-                  className={`w-full text-left px-4 py-1 text-sm font-medium btn-aluminium-brushed rounded-md ${activeView === 'TraineeSchedule' ? 'active' : ''}`}
-                >
-                  Trainee Schedule
-                </button>
-              </div>
-            </div>
-          </div>
+          {/* Trainee Button */}
+          <button 
+            onClick={() => onNavigate('Trainee')} 
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''}`}
+          >
+            <span>Trainee</span>
+          </button>
           
           {/* Syllabus - Square Button with Smaller Text */}
           <button 

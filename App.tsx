@@ -75,6 +75,8 @@ import UnavailabilityConflictFlyout from './components/UnavailabilityConflictFly
 import Magnifier from './components/Magnifier';
 import SuccessNotification from './components/SuccessNotification';
 import InstructorListView from './components/InstructorListView';
+import StaffView from './components/StaffView';
+import TraineeView from './components/TraineeView';
 import TraineeListView from './components/TraineeListView';
 import SyllabusView from './components/SyllabusView';
 import { InstructorProfileFlyout } from './components/InstructorProfileFlyout';
@@ -7929,6 +7931,86 @@ updates.forEach(update => {
                     onDateChange={handleBuildDateChange}
                     courseColors={courseColors}
                 />;
+            case 'Trainee':
+                return <TraineeView
+                            events={events}
+                            traineesData={traineesData}
+                            courseColors={courseColors}
+                            archivedCourses={archivedCourses}
+                            personnelData={personnelData}
+                            onNavigateToHateSheet={(trainee) => {
+                                setSelectedTraineeForHateSheet(trainee);
+                                handleNavigation('HateSheet');
+                            }}
+                            onRestoreCourse={() => {}}
+                            onUpdateTrainee={(data) => {
+                                const isNewTrainee = !traineesData.find(t => t.idNumber === data.idNumber);
+                                
+                                if (isNewTrainee) {
+                                    // Initialize Individual LMP for new trainee
+                                    const lmpType = data.lmpType || 'BPC+IPC';
+                                    const masterLMP = syllabusDetails.filter(item => {
+                                        if (lmpType === 'BPC+IPC') {
+                                            return !item.lmpType || item.lmpType === 'Master LMP';
+                                        }
+                                        return item.courses.includes(lmpType);
+                                    });
+                                    
+                                    if (masterLMP.length > 0) {
+                                        setTraineeLMPs(prev => {
+                                            const newLMPs = new Map(prev);
+                                            newLMPs.set(data.fullName, [...masterLMP]);
+                                            console.log(`[Individual LMP] Initialized ${data.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
+                                            return newLMPs;
+                                        });
+                                    }
+                                }
+                                
+                                setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
+                            }}
+                            onAddTrainee={handleAddTrainee}
+                            school={school}
+                            scores={scores}
+                            syllabusDetails={syllabusDetails}
+                            onNavigateToSyllabus={onNavigateToSyllabus}
+                            onNavigateToCurrency={handleNavigateToCurrency}
+                            onViewIndividualLMP={handleViewTraineeLMP}
+                            onAddRemedialPackage={handleOpenAddRemedialPackage}
+                            locations={locations}
+                            units={units}
+                            selectedPersonForProfile={selectedPersonForProfile as any}
+                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            traineeLMPs={traineeLMPs}
+                            onViewLogbook={handleViewLogbook}
+                            onDeleteTrainee={(trainee) => {
+                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
+                                // Remove from trainee LMPs if exists
+                                setTraineeLMPs(prev => {
+                                    const newLMPs = new Map(prev);
+                                    newLMPs.delete(trainee.fullName);
+                                    return newLMPs;
+                                });
+                                // Log audit for deletion
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'delete',
+                                    description: `Deleted trainee from roster`,
+                                    changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+                                });
+                            }}
+                            date={date}
+                            onDateChange={handleDateChange}
+                            eventsForStaffTraineeSchedule={eventsForStaffTraineeSchedule}
+                            zoomLevel={zoomLevel}
+                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                            seatConfigs={seatConfigs}
+                            conflictingEventIds={personnelAndResourceConflictIds}
+                            showValidation={showValidation}
+                            unavailabilityConflicts={unavailabilityConflicts}
+                            onSelectEvent={handleOpenModal}
+                            onUpdateEvent={handleScheduleUpdate}
+                            onSelectTrainee={handleSelectTraineeFromSchedule}
+                        />;
             case 'CourseRoster':
                 return <CourseRosterView 
                             events={events}
@@ -8532,6 +8614,95 @@ updates.forEach(update => {
                                 setEventForAuth(latestEvent); 
                                 setShowAuthFlyout(true); 
                             }}
+                        />;
+            case 'Staff':
+                return <StaffView
+                            onClose={() => handleNavigation('Program Schedule')}
+                            events={events}
+                            traineesData={traineesData}
+                            instructorsData={instructorsData}
+                            archivedInstructorsData={archivedInstructorsData}
+                            school={school}
+                            personnelData={personnelData}
+                            onUpdateInstructor={async (data) => {
+                                console.log('🔍 [DATA TRACKING] Instructor update/save called');
+                                console.log('🔍 [DATA TRACKING] Instructor data:', data);
+                                console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
+                                console.log('🔍 [DATA TRACKING] Instructor name:', data.name);
+                                console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
+                                console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
+                                console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
+
+                                try {
+                                    // Call API to save to database
+                                    console.log('🔍 [DATA TRACKING] Calling /api/personnel POST endpoint');
+                                    const response = await fetch('/api/personnel', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(data),
+                                    });
+
+                                    if (!response.ok) {
+                                        const errorData = await response.json();
+                                        console.error('❌ [DATA TRACKING] API call failed:', response.status, errorData);
+                                        throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
+                                    }
+
+                                    const result = await response.json();
+                                    console.log('✅ [DATA TRACKING] Saved to database successfully');
+                                    console.log('✅ [DATA TRACKING] API Response:', result);
+
+                                } catch (error) {
+                                    console.error('❌ [DATA TRACKING] Error saving to database:', error);
+                                    // Continue with local state update even if API fails
+                                    console.log('⚠️ [DATA TRACKING] Continuing with local state update');
+                                }
+
+                                // Update local state
+                                setInstructorsData(prev => {
+                                    const exists = prev.some(i => i.idNumber === data.idNumber);
+                                    if (exists) {
+                                        console.log('🔍 [DATA TRACKING] Updating existing instructor');
+                                        return prev.map(i => i.idNumber === data.idNumber ? data : i);
+                                    }
+                                    console.log('🔍 [DATA TRACKING] Adding new instructor to state');
+                                    console.log('🔍 [DATA TRACKING] Total instructors before:', prev.length);
+                                    const result = [...prev, data];
+                                    console.log('🔍 [DATA TRACKING] Total instructors after:', result.length);
+                                    return result;
+                                });
+                            }}
+                            onNavigateToCurrency={handleNavigateToCurrency}
+                            onBulkUpdateInstructors={handleBulkUpdateInstructors}
+                            onArchiveInstructor={(id) => {
+                                const instructorToArchive = instructorsData.find(i => i.idNumber === id);
+                                if (instructorToArchive) {
+                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+                                    setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
+                                }
+                            }}
+                            onRestoreInstructor={(id) => {
+                                const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
+                                if (instructorToRestore) {
+                                    setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+                                    setInstructorsData(prev => [...prev, instructorToRestore]);
+                                }
+                            }}
+                            date={date}
+                            onDateChange={handleDateChange}
+                            eventSegmentsForDate={eventSegmentsForDate}
+                            zoomLevel={zoomLevel}
+                            daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
+                            seatConfigs={seatConfigs}
+                            syllabusDetails={syllabusDetails}
+                            conflictingEventIds={personnelAndResourceConflictIds}
+                            showValidation={showValidation}
+                            unavailabilityConflicts={unavailabilityConflicts}
+                            onSelectEvent={handleOpenModal}
+                            onUpdateEvent={handleScheduleUpdate}
+                            onSelectInstructor={handleSelectInstructorFromSchedule}
                         />;
             case 'Instructors':
                 return <InstructorListView 
