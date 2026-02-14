@@ -97,7 +97,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
   }
 
   return (
-    <div className="w-36 bg-gray-800 flex-shrink-0 h-full">
+    <div className="w-[116px] bg-gray-800 flex-shrink-0 h-full">
       <ul>
         {displayResources.map((resource, index) => {
             // Resource is already the display text (PC-21 1-24, Duty Sup, STBY, FTD, CPT, Ground)
