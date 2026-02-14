@@ -168,15 +168,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   return (
     <>
       <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700">
-        {/* Scrollable Main Navigation - Centre Aligned */}
-        <nav className="flex-1 overflow-y-auto px-2 pt-[72px] space-y-[1px] flex flex-col items-center">
-          {/* My Home Button */}
+        {/* My Home Button - Top Level */}
+        <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-2">
           <button
             onClick={() => onNavigate('MyDashboard')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
           >
             <span className="leading-tight">My<br/>Home</span>
           </button>
+        </div>
+        
+        {/* Scrollable Main Navigation - Centre Aligned */}
+        <nav className="flex-1 overflow-y-auto px-2 pt-[47px] space-y-[1px] flex flex-col items-center">
           {/* DFP Button */}
           <button 
             onClick={() => onNavigate('Program Schedule')} 
