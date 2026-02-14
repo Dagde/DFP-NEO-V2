@@ -44,7 +44,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
             onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
             disabled={!isSupervisor}
             title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className="leading-tight">Duty<br/>Pilot</span>
           </button>
@@ -56,49 +56,49 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         {/* Next Day Build Buttons */}
         <button 
           onClick={() => onNavigate('NextDayBuild')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Program Schedule</span>
         </button>
 
         <button 
           onClick={() => onNavigate('NextDayInstructorSchedule')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Staff Schedule</span>
         </button>
 
         <button 
           onClick={() => onNavigate('NextDayTraineeSchedule')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Trainee Schedule</span>
         </button>
 
         <button 
           onClick={() => onNavigate('Priorities')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Priorities</span>
         </button>
 
         <button 
           onClick={() => onNavigate('BuildIntelligence')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''}`}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Build Intelligence</span>
         </button>
 
         <button 
           onClick={onBuildDfpClick} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-orange-brushed rounded-md"
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
         >
           <span className="text-center leading-tight">NEO Build</span>
         </button>
 
         <button 
           onClick={onPublish} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-green-brushed rounded-md"
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
         >
           <span className="text-center leading-tight">Publish</span>
         </button>
