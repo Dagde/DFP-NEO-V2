@@ -16,6 +16,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<Fet
     
     const response = await fetch(url, {
       ...options,
+      credentials: 'include', // Include cookies for authentication
       headers: {
         'Content-Type': 'application/json',
         ...options?.headers,
