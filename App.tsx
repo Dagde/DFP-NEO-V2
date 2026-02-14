@@ -8369,7 +8369,6 @@ updates.forEach(update => {
                             syllabusDetails={syllabusDetails}
                             traineeLMPs={traineeLMPs}
                             courseColors={courseColors}
-                        
                             buildDate={buildDfpDate}
                             analysis={lastBuildAnalysis}
                         />;
