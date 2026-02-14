@@ -36,16 +36,45 @@ interface StaffViewProps {
 const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
 
-  // Filter instructors by location for Staff Schedule
-  const locationFilteredInstructorsForSchedule = props.instructorsData.filter(i => {
-    if (props.school === 'ESL') {
-      // ESL: Only 1FTS and CFS staff
-      return i.unit === '1FTS' || i.unit === 'CFS';
-    } else {
-      // PEA: Only 2FTS staff
-      return i.unit === '2FTS';
-    }
-  });
+  // Define rank order for sorting
+  const rankOrder: { [key: string]: number } = {
+    'WGCDR': 1,
+    'SQNLDR': 2,
+    'FLTLT': 3,
+    'FLGOFF': 4,
+    'PLTOFF': 5
+  };
+
+  // Filter and sort instructors by location for Staff Schedule
+  const locationFilteredInstructorsForSchedule = props.instructorsData
+    .filter(i => {
+      if (props.school === 'ESL') {
+        // ESL: Only 1FTS and CFS staff
+        return i.unit === '1FTS' || i.unit === 'CFS';
+      } else {
+        // PEA: Only 2FTS staff
+        return i.unit === '2FTS';
+      }
+    })
+    .sort((a, b) => {
+      // First sort by Unit
+      if (a.unit !== b.unit) {
+        return a.unit.localeCompare(b.unit);
+      }
+      
+      // Then sort by Rank using defined order
+      const rankA = rankOrder[a.rank] || 999;
+      const rankB = rankOrder[b.rank] || 999;
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+      
+      // Finally sort alphabetically by surname
+      // Extract surname (last word in name)
+      const surnameA = a.name.split(' ').pop() || '';
+      const surnameB = b.name.split(' ').pop() || '';
+      return surnameA.localeCompare(surnameB);
+    });
 
   return (
     <div className="flex flex-col h-full bg-gray-900">
@@ -76,7 +105,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'profile' && (
           <InstructorListView
             onClose={props.onClose}

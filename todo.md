@@ -1,47 +1,37 @@
-# Staff and Trainee Section Restructuring
+# Fix Scrolling and Ordering Issues on Staff and Trainee Pages
 
-## Analysis Complete
-- [x] Identified current structure
-- [x] Located view components
-- [x] Understood routing logic
+## 1. Staff Schedule Tab - Add Vertical Scrolling
+- [x] Identify the container structure in InstructorScheduleView.tsx
+- [x] Fix parent container to use flex-col (was blocking child overflow-auto)
+- [ ] Test scrolling with long staff lists
 
-## Implementation Plan
+## 2. Staff Schedule Tab - Implement Proper Ordering
+- [x] Create sorting function for staff by Unit, then Rank, then Surname
+- [x] Define rank order: WGCDR, SQNLDR, FLTLT, FLGOFF, PLTOFF
+- [x] Implement unit color coding for visual distinction (already exists via PersonnelColumn)
+- [x] Apply sorting to instructors array before rendering
+- [ ] Test sorting stability
 
-### 1. Create New Tabbed Components
-- [ ] Create StaffView.tsx with tabs (Staff Profile + Staff Schedule)
-- [ ] Create TraineeView.tsx with tabs (Trainee Profile + Trainee Schedule)
-- [ ] Implement tab switching logic
-- [ ] Preserve all existing functionality
+## 3. Trainee Schedule Tab - Add Vertical Scrolling
+- [x] Identify the container structure in TraineeScheduleView.tsx
+- [x] Fix parent container to use flex-col (was blocking child overflow-auto)
+- [ ] Test scrolling with long trainee lists
 
-### 2. Update Sidebar Navigation
-- [ ] Remove Staff Profile and Staff Schedule sub-buttons
-- [ ] Remove Trainee Profile and Trainee Schedule sub-buttons
-- [ ] Update Staff button to navigate to new StaffView
-- [ ] Update Trainee button to navigate to new TraineeView
+## 4. Trainee Profile Page - Add Vertical Scrolling
+- [x] Identify the container structure in CourseRosterView.tsx
+- [x] Verify overflow-y-auto is working correctly (already present on line 265)
+- [x] Fix parent container to use flex-col (was blocking child overflow-auto)
+- [ ] Test scrolling with multiple courses and trainees
 
-### 3. Update App.tsx Routing
-- [ ] Add cases for 'Staff' and 'Trainee' views
-- [ ] Keep existing 'Instructors', 'InstructorSchedule', 'CourseRoster', 'TraineeSchedule' for compatibility
-- [ ] Update navigation handlers
+## 5. Testing and Verification
+- [ ] Test all scrolling functionality across different screen sizes
+- [ ] Verify sorting is stable and consistent
+- [ ] Ensure no data or functionality is lost
+- [ ] Test on different resolutions
 
-### 4. Testing & Verification
-- [ ] Test Staff Profile tab functionality
-- [ ] Test Staff Schedule tab functionality
-- [ ] Test Trainee Profile tab functionality
-- [ ] Test Trainee Schedule tab functionality
-- [ ] Verify all filters work
-- [ ] Verify all data displays correctly
-- [ ] Test navigation between tabs
-- [ ] Test state persistence
-
-### 5. Build and Deploy
-- [ ] Build application
-- [ ] Deploy to both repositories
-- [ ] Update HTML files
+## 6. Build and Deploy
+- [ ] Build the application
+- [ ] Copy to deployment directories
+- [ ] Update HTML bundle references
+- [ ] Restore button colors
 - [ ] Commit and push changes
-
-## Current View Mapping
-- Staff Profile → InstructorListView (case 'Instructors')
-- Staff Schedule → InstructorScheduleView (case 'InstructorSchedule')
-- Trainee Profile → CourseRosterView (case 'CourseRoster')
-- Trainee Schedule → TraineeScheduleView (case 'TraineeSchedule')

@@ -87,7 +87,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'profile' && (
           <CourseRosterView
             events={props.events}
