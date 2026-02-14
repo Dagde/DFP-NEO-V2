@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
-import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface PT051ViewProps {
@@ -87,15 +86,7 @@ const parseComments = (raw: string | undefined) => {
     return result;
 };
 
-// Base64 encoder for AudioBuffer
-function encode(bytes: Uint8Array) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
+
 
 interface PhraseSelectorProps {
     element: string;
@@ -195,11 +186,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
     );
 };
 
-// FIX: Moved GoogleGenAI instance creation outside the component to prevent re-initialization on re-renders.
-// Only initialize if API key is available
-const ai = import.meta.env.VITE_GEMINI_API_KEY 
-  ? new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY }) 
-  : null;
+
 
 const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
@@ -527,53 +514,8 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             const processor = audioCtx.createScriptProcessor(4096, 1, 1);
             processorRef.current = processor;
 
-            if (!ai) {
-                console.error('Gemini API key not configured');
-                setIsRecording(false);
-                return;
-            }
-
-            const sessionPromise = ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-                config: {
-                    responseModalities: [Modality.AUDIO], 
-                    inputAudioTranscription: {},
-                },
-                callbacks: {
-                    onopen: () => console.log('Gemini Live Connected'),
-                    onmessage: (message: LiveServerMessage) => {
-                        if (message.serverContent?.inputTranscription) {
-                            const text = message.serverContent.inputTranscription.text;
-                            if (text) {
-                                if (type === 'section') {
-                                    const sectionKey = target as typeof COMMENT_SECTIONS[number];
-                                    setCommentFields(prev => ({
-                                        ...prev,
-                                        [sectionKey]: (prev[sectionKey] || '') + text
-                                    }));
-                                } else {
-                                    handleCommentChange(target, (assessment.scores.find(s => s.element === target)?.comment || '') + text);
-                                }
-                            }
-                        }
-                    },
-                    onclose: () => { if (listeningField === target) stopVoiceInput(); },
-                    onerror: () => stopVoiceInput()
-                }
-            });
-            sessionPromiseRef.current = sessionPromise;
-
             processor.onaudioprocess = (e) => {
-                const inputData = e.inputBuffer.getChannelData(0);
-                const pcmBlob = createBlob(inputData);
-                // FIX: Use sessionPromise.then() within the audio process callback to ensure the session is ready and to prevent stale closures.
-                if (sessionPromiseRef.current) {
-                    sessionPromiseRef.current.then(session => {
-                        if (session) {
-                             session.sendRealtimeInput({ media: pcmBlob });
-                        }
-                    });
-                }
+                // Voice input functionality removed - no transcription service available
             };
 
             source.connect(processor);
@@ -585,17 +527,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }
     };
 
-    function createBlob(data: Float32Array) {
-        const l = data.length;
-        const int16 = new Int16Array(l);
-        for (let i = 0; i < l; i++) {
-            int16[i] = data[i] * 32768;
-        }
-        return {
-            data: encode(new Uint8Array(int16.buffer)),
-            mimeType: 'audio/pcm;rate=16000',
-        };
-    }
+    
 
     useEffect(() => {
         return () => {
