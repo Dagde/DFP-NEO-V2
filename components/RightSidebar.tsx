@@ -52,7 +52,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       {/* NEO Build and Publish Buttons - Aligned with DFP button */}
-      <div className="px-2 pt-[27px] space-y-[1px] flex flex-col items-center">
+      <div className="px-2 pt-[42px] space-y-[1px] flex flex-col items-center">
         <button 
           onClick={onBuildDfpClick} 
           className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
