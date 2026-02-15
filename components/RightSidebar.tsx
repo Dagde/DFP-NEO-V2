@@ -51,7 +51,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
       </div>
 
-      {/* NEO Build and Publish Buttons - Aligned with DFP button */}
+      {/* NEO Build and Program Schedule Buttons - Aligned with DFP button */}
       <div className="px-2 pt-[39px] space-y-[1px] flex flex-col items-center">
         <button 
           onClick={onBuildDfpClick} 
@@ -65,13 +65,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Program Schedule</span>
-        </button>
-
-        <button 
-          onClick={onPublish} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
-        >
-          <span className="text-center leading-tight">Publish</span>
         </button>
       </div>
 
@@ -91,6 +84,13 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Trainee Schedule</span>
+        </button>
+
+        <button 
+          onClick={onPublish} 
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
+        >
+          <span className="text-center leading-tight">Publish</span>
         </button>
 
         <button 
