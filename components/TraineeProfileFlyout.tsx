@@ -706,7 +706,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         return timeString.replace(':', '');
     };
 
-    const buttonClasses = "w-full px-4 py-2 rounded-md transition-colors text-sm font-semibold shadow-md text-center";
+    const buttonClasses = "w-[40px] h-[40px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
 
     const permissionsWindow = (
         <fieldset className="p-3 border border-gray-600 rounded-lg">
@@ -990,7 +990,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                         <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
                              {!isEditing && (
                                 <>
-                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} bg-amber-600 text-white hover:bg-amber-700`}>Unavailability</button>
+                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed`}>Unavailability</button>
                                     <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
                                     <button onClick={handleHateSheetClick} className={`${buttonClasses} btn-aluminium-brushed`}>PT-051</button>
                                     <button onClick={handleIndividualLMPClick} className={`${buttonClasses} btn-aluminium-brushed`}>View Individual LMP</button>
