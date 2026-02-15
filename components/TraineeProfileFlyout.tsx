@@ -706,7 +706,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         return timeString.replace(':', '');
     };
 
-    const buttonClasses = "w-[40px] h-[40px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
+    const buttonClasses = "w-[55px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
 
     const permissionsWindow = (
         <fieldset className="p-3 border border-gray-600 rounded-lg">
@@ -987,7 +987,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                         </div>
 
                         {/* RIGHT: Button Panel */}
-                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
+                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
                              {!isEditing && (
                                 <>
                                     <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed`}>Unavailability</button>
