@@ -61,6 +61,13 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </button>
 
         <button 
+          onClick={() => onNavigate('NextDayBuild')} 
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
+        >
+          <span className="text-center leading-tight">Program Schedule</span>
+        </button>
+
+        <button 
           onClick={onPublish} 
           className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
         >
@@ -71,12 +78,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       {/* Scrollable Main Navigation */}
       <nav className="flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center">
         {/* Next Day Build Buttons */}
-        <button 
-          onClick={() => onNavigate('NextDayBuild')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
-        >
-          <span className="text-center leading-tight">Program Schedule</span>
-        </button>
 
         <button 
           onClick={() => onNavigate('NextDayInstructorSchedule')} 

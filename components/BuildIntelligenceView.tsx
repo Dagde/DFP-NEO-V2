@@ -120,10 +120,10 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    px-6 py-3 text-sm font-medium rounded-t-lg transition-all duration-200
+                    px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
                     ${activeTab === tab.id
-                      ? 'bg-gray-800 text-sky-400 border-t-2 border-x-2 border-sky-400 border-b-0'
-                      : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800/50'
+                      ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
+                      : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
                     }
                   `}
                 >
