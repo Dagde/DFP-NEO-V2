@@ -990,14 +990,14 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                         <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
                              {!isEditing && (
                                 <>
-                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed`}>Unavailable</button>
+                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed text-[10px]`}>Unavailable</button>
                                     <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
                                     <button onClick={handleHateSheetClick} className={`${buttonClasses} btn-aluminium-brushed`}>PT-051</button>
                                     <button onClick={handleIndividualLMPClick} className={`${buttonClasses} btn-aluminium-brushed`}>View Individual LMP</button>
                                     <button onClick={() => onAddRemedialPackage(trainee)} className={`${buttonClasses} btn-aluminium-brushed`}>Add Remedial Package</button>
                                     <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
                                     <button onClick={() => setIsEditing(true)} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
-                                    <button onClick={onClose} className={`${buttonClasses} bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white`}>Close</button>
+                                    <button onClick={onClose} className={`${buttonClasses} btn-aluminium-brushed`}>Close</button>
                                 </>
                             )}
                             {isEditing && (
