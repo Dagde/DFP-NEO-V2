@@ -85,25 +85,25 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
 
   return (
     <div className="flex flex-col h-full bg-gray-900">
-      {/* Tab Header */}
-      <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700">
-        <div className="flex">
+      {/* Tab Header - More obvious tabs */}
+      <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 px-4 pt-3">
+        <div className="flex space-x-2">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`px-6 py-3 text-sm font-semibold transition-colors ${
+            className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
               activeTab === 'profile'
-                ? 'bg-gray-900 text-white border-b-2 border-sky-500'
-                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
+                : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
             }`}
           >
             Staff Profile
           </button>
           <button
             onClick={() => setActiveTab('schedule')}
-            className={`px-6 py-3 text-sm font-semibold transition-colors ${
+            className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${
               activeTab === 'schedule'
-                ? 'bg-gray-900 text-white border-b-2 border-sky-500'
-                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-700'
+                ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
+                : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
             }`}
           >
             Staff Schedule
