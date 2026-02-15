@@ -51,8 +51,25 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
       </div>
 
+      {/* NEO Build and Publish Buttons */}
+      <div className="px-2 pt-2 space-y-[1px] flex flex-col items-center">
+        <button 
+          onClick={onBuildDfpClick} 
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
+        >
+          <span className="text-center leading-tight">NEO Build</span>
+        </button>
+
+        <button 
+          onClick={onPublish} 
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
+        >
+          <span className="text-center leading-tight">Publish</span>
+        </button>
+      </div>
+
       {/* Scrollable Main Navigation */}
-      <nav className="flex-1 overflow-y-auto pt-[39px] pb-4 px-2 space-y-[1px] flex flex-col items-center">
+      <nav className="flex-1 overflow-y-auto pt-2 pb-4 px-2 space-y-[1px] flex flex-col items-center">
         {/* Next Day Build Buttons */}
         <button 
           onClick={() => onNavigate('NextDayBuild')} 
@@ -87,20 +104,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''}`}
         >
           <span className="text-center leading-tight">Build Intelligence</span>
-        </button>
-
-        <button 
-          onClick={onBuildDfpClick} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
-        >
-          <span className="text-center leading-tight">NEO Build</span>
-        </button>
-
-        <button 
-          onClick={onPublish} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
-        >
-          <span className="text-center leading-tight">Publish</span>
         </button>
       </nav>
 

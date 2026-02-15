@@ -60,14 +60,16 @@ const Header: React.FC<HeaderProps> = ({
                         </select>
                     </div>
                     
-                    {/* Audit Log Button */}
-                    <button 
-                        onClick={() => setShowAuditFlyout(true)}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
-                        title="View Audit Log"
-                    >
-                        <span className="text-center leading-tight">Audit Log</span>
-                    </button>
+                    <div style={{ marginLeft: '15px' }}>
+                        {/* Audit Log Button */}
+                        <button 
+                            onClick={() => setShowAuditFlyout(true)}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                            title="View Audit Log"
+                        >
+                            <span className="text-center leading-tight">Audit Log</span>
+                        </button>
+                    </div>
                     
                     {/* Multi Select Button */}
                     <button
@@ -97,13 +99,13 @@ const Header: React.FC<HeaderProps> = ({
                         <span className="text-center leading-tight">Validation Check</span>
                     </button>
                     
-                    {/* Timing Window Button */}
+                    {/* Hourly Event Rate Button */}
                     <button
                       onClick={onToggleDepartureDensityOverlay}
                       className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
-                      title="Timing Window - Shows flight density in 1-hour window"
+                      title="Hourly Event Rate - Shows flight density in 1-hour window"
                     >
-                        <span className="text-center leading-tight">Timing Window</span>
+                        <span className="text-center leading-tight">Hourly Event Rate</span>
                     </button>
                     
                     {/* Aircraft Available Button */}
@@ -116,15 +118,6 @@ const Header: React.FC<HeaderProps> = ({
                             <span className="text-center leading-tight">Aircraft Available</span>
                         </button>
                     )}
-                    
-                    {/* NEO - Tile Button */}
-                    <button
-                        onClick={onToggleOracleMode}
-                        className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-gold-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
-                        title="NEO - Tile"
-                    >
-                        <span className="text-center leading-tight">NEO - Tile</span>
-                    </button>
                     
                     {/* Add Ground Tile Button */}
                     <button 
@@ -142,6 +135,15 @@ const Header: React.FC<HeaderProps> = ({
                         title="Add Flight Tile"
                     >
                         <span className="text-center leading-tight">Add Flight Tile</span>
+                    </button>
+                    
+                    {/* NEO - Tile Button */}
+                    <button
+                        onClick={onToggleOracleMode}
+                        className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-gold-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
+                        title="NEO - Tile"
+                    >
+                        <span className="text-center leading-tight">NEO - Tile</span>
                     </button>
                 </div>
             </header>
