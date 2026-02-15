@@ -60,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({
                         </select>
                     </div>
                     
-                    <div style={{ marginLeft: '15px' }}>
+                    <div style={{ marginLeft: '10px' }}>
                         {/* Audit Log Button */}
                         <button 
                             onClick={() => setShowAuditFlyout(true)}
