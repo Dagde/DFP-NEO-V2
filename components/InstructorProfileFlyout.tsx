@@ -548,7 +548,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         </fieldset>
     );
 
-    const buttonClasses = "w-[55px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
+    const buttonClasses = "w-[60px] h-[60px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
 
     return (
         <>
@@ -764,22 +764,18 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
                         {!isEditing && !isCreating && (
                             <>
-                                <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed`}>Unavailability</button>
+                                <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed`}>Unavailable</button>
                                 <button onClick={() => onNavigateToCurrency(instructor)} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
                                 <button onClick={() => { if(onViewLogbook) onViewLogbook(instructor); }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
                                 <button onClick={onRequestSct} className={`${buttonClasses} btn-aluminium-brushed`}>Request SCT</button>
+                                <button onClick={handleEdit} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
+                                <button onClick={onClose} className={`${buttonClasses} bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white`}>Close</button>
                             </>
                         )}
-                        <div className="flex-grow"></div>
-                        {isEditing ? (
+                        {isEditing && (
                             <>
                                 <button onClick={handleSave} className={`${buttonClasses} btn-aluminium-brushed`}>Save</button>
                                 <button onClick={handleCancel} className={`${buttonClasses} btn-aluminium-brushed`}>Cancel</button>
-                            </>
-                        ) : (
-                            <>
-                                <button onClick={handleEdit} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
-                                <button onClick={onClose} className={`${buttonClasses} bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white`}>Close</button>
                             </>
                         )}
                     </div>
