@@ -51,8 +51,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </div>
       </div>
 
-      {/* NEO Build and Publish Buttons */}
-      <div className="px-2 pt-2 space-y-[1px] flex flex-col items-center">
+      {/* NEO Build and Publish Buttons - Aligned with DFP button */}
+      <div className="px-2 pt-[27px] space-y-[1px] flex flex-col items-center">
         <button 
           onClick={onBuildDfpClick} 
           className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
@@ -69,7 +69,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       {/* Scrollable Main Navigation */}
-      <nav className="flex-1 overflow-y-auto pt-2 pb-4 px-2 space-y-[1px] flex flex-col items-center">
+      <nav className="flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center">
         {/* Next Day Build Buttons */}
         <button 
           onClick={() => onNavigate('NextDayBuild')} 
