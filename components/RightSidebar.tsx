@@ -55,7 +55,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       <div className="px-2 pt-[39px] space-y-[1px] flex flex-col items-center">
         <button 
           onClick={onBuildDfpClick} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-gold-brushed rounded-md"
         >
           <span className="text-center leading-tight">NEO Build</span>
         </button>
