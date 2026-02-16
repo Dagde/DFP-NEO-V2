@@ -500,14 +500,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         <>
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600"
                 onClick={onClose}
             />
             
             {/* Bottom Sheet */}
             <div
                 ref={panelRef}
-                className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-300 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
+                className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
                     isClosing ? 'translate-y-full' : 'translate-y-0'
                 }`}
             >
