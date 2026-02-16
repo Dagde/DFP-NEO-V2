@@ -405,7 +405,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       setSelectedInstructor(null);
       setIsAddingNew(false);
       setNewInstructorTemplate(null);
-    }, 300); 
+    }, 600); 
   };
 
   const handleShowAddChoice = () => {
