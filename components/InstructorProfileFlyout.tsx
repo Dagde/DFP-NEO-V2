@@ -552,14 +552,32 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
     return (
         <>
+            {/* Backdrop */}
+            <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
+                onClick={onClose}
+            />
+            
+            {/* Bottom Sheet */}
             <div
                 ref={panelRef}
+                className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-300 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
+                    isClosing ? 'translate-y-full' : 'translate-y-0'
+                }`}
                 style={style}
-                className="w-full h-full bg-gray-900 shadow-2xl z-50 border-l border-gray-700 flex flex-col"
             >
-                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
-                    <button onClick={onClose} className="text-white hover:text-gray-300">
+                {/* Drag Handle */}
+                <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+                    <div className="w-16 h-1.5 bg-gray-600 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" />
+                </div>
+
+                {/* Header */}
+                <div className="px-6 pb-4 flex justify-between items-center bg-gray-900/95 flex-shrink-0 border-b border-gray-700">
+                    <h2 className="text-2xl font-bold text-sky-400">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
+                    <button 
+                        onClick={onClose} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
+                    >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -567,7 +585,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 </div>
 
                 <div className="flex-1 flex flex-row overflow-hidden">
-                    <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+                    <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {isEditing ? (
                                 <>
