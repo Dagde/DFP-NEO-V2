@@ -741,20 +741,37 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col border border-gray-700" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 flex-shrink-0">
-                        <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
-                        <button onClick={onClose} className="text-white hover:text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+            {/* Backdrop */}
+            <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
+                onClick={onClose}
+            ></div>
+            
+            {/* Bottom Sheet */}
+            <div
+                className="fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-300 ease-out flex flex-col max-h-[calc(100vh-180px)]"
+            >
+                {/* Drag Handle */}
+                <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+                    <div className="w-16 h-1.5 bg-gray-600 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" />
+                </div>
 
-                    <div className="flex-1 flex flex-row overflow-hidden">
-                        {/* LEFT: Content Panel */}
-                        <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+                {/* Header */}
+                <div className="px-6 pb-4 flex justify-between items-center bg-gray-900/95 flex-shrink-0 border-b border-gray-700">
+                    <h2 className="text-2xl font-bold text-sky-400">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
+                    <button 
+                        onClick={onClose} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="flex-1 flex flex-row overflow-hidden">
+                    {/* LEFT: Content Panel */}
+                    <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar">
                             <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {isEditing ? (
                                     <>
@@ -1009,7 +1026,6 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                         </div>
                     </div>
                 </div>
-            </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
