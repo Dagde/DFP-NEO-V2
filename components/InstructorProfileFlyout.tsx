@@ -100,6 +100,7 @@ const initialExperience: LogbookExperience = {
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({ instructor, onClose, school, personnelData, onUpdateInstructor, onNavigateToCurrency, originRect, isClosing, isOpening = false, isCreating = false, locations, units, traineesData, onViewLogbook, onRequestSct }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
+    const [isAnimatingOpen, setIsAnimatingOpen] = useState(isOpening);
     const panelRef = useRef<HTMLDivElement>(null);
 
     // State for editable fields
@@ -196,7 +197,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     useEffect(() => {
         if (isOpening) {
             const timer = setTimeout(() => {
-                setIsOpening(false);
+                setIsAnimatingOpen(false);
             }, 600);
             return () => clearTimeout(timer);
         }
@@ -510,7 +511,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             {/* Backdrop */}
             <div 
                 className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
-                    isOpening ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
+                    isAnimatingOpen ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
                 }`}
                 onClick={onClose}
             />
@@ -519,7 +520,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             <div
                 ref={panelRef}
                 className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
-                    isOpening ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
+                    isAnimatingOpen ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
                 {/* Drag Handle */}

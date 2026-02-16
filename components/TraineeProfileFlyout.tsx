@@ -220,6 +220,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
+    const [isAnimatingOpen, setIsAnimatingOpen] = useState(isOpening);
     
     // Editable state
     const [name, setName] = useState(trainee.name);
@@ -375,7 +376,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     useEffect(() => {
         if (isOpening) {
             const timer = setTimeout(() => {
-                setIsOpening(false);
+                setIsAnimatingOpen(false);
             }, 600);
             return () => clearTimeout(timer);
         }
@@ -758,7 +759,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             {/* Backdrop */}
             <div 
                 className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
-                    isOpening ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
+                    isAnimatingOpen ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
                 }`}
                 onClick={onClose}
             ></div>
@@ -766,7 +767,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             {/* Bottom Sheet */}
             <div
                 className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
-                    isOpening ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
+                    isAnimatingOpen ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
                 {/* Drag Handle */}
