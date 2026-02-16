@@ -32,6 +32,7 @@ interface TraineeProfileFlyoutProps {
   onViewLogbook?: (person: Trainee) => void;
   isCreating?: boolean;
   activeCourses?: string[];
+  isClosing?: boolean;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -210,7 +211,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   individualLmp,
   onViewLogbook,
   isCreating = false,
-  activeCourses = []
+  activeCourses = [],
+  isClosing = false
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -743,13 +745,17 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         <>
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600"
+                className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
+                    isClosing ? 'opacity-0' : 'opacity-100'
+                }`}
                 onClick={onClose}
             ></div>
             
             {/* Bottom Sheet */}
             <div
-                className="fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)]"
+                className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
+                    isClosing ? 'translate-y-full' : 'translate-y-0'
+                }`}
             >
                 {/* Drag Handle */}
                 <div className="flex justify-center pt-3 pb-2 flex-shrink-0">

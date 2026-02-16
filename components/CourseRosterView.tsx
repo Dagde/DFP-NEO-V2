@@ -85,6 +85,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 }) => {
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
+    const [isClosing, setIsClosing] = useState(false);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
     const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
@@ -152,6 +153,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         setNewTraineeTemplate(generateNewTraineeTemplate());
         setIsCreatingNew(true);
         setSelectedTrainee(null);
+        setIsClosing(false);
     };
 
     const handleDeleteTrainee = (trainee: Trainee) => {
@@ -303,7 +305,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                             >
                                                                 <span className="font-mono text-gray-500 w-16 flex-shrink-0">{trainee.rank}</span>
                                                                 <button 
-                                                                    onClick={() => setSelectedTrainee(trainee)}
+                                                                    onClick={() => {
+                                                                        setSelectedTrainee(trainee);
+                                                                        setIsClosing(false);
+                                                                    }}
                                                                     className={`truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1`}
                                                                 >
                                                                     {trainee.name}
@@ -343,9 +348,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 <TraineeProfileFlyout
                     trainee={isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!}
                     onClose={() => {
-                        setSelectedTrainee(null);
-                        setIsCreatingNew(false);
-                        setNewTraineeTemplate(null);
+                        setIsClosing(true);
+                        setTimeout(() => {
+                            setSelectedTrainee(null);
+                            setIsCreatingNew(false);
+                            setNewTraineeTemplate(null);
+                            setIsClosing(false);
+                        }, 600);
                     }}
                     onUpdateTrainee={isCreatingNew ? onAddTrainee : onUpdateTrainee}
                     events={events}
@@ -354,6 +363,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onViewIndividualLMP={onViewIndividualLMP}
                     onAddRemedialPackage={onAddRemedialPackage}
                     personnelData={personnelData}
+                    isClosing={isClosing}
                     courseColors={courseColors}
                     scores={scores}
                     syllabusDetails={syllabusDetails}

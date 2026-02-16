@@ -500,7 +500,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         <>
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600"
+                className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
+                    isClosing ? 'opacity-0' : 'opacity-100'
+                }`}
                 onClick={onClose}
             />
             

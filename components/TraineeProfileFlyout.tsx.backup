@@ -224,6 +224,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
+    const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -337,6 +338,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setService(trainee.service || '');
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || 'BPC+IPC');
+        setTraineeCallsign(trainee.traineeCallsign || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -443,7 +445,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-    
+const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
+        const oldTraineeCallsign = traineeCallsign;
+        setTraineeCallsign(newTraineeCallsign);
+        if (oldTraineeCallsign !== newTraineeCallsign) {
+            debouncedAuditLog(
+                `trainee-${trainee.idNumber}-callsign`,
+                'Edit',
+                `Updated trainee callsign`,
+                `Trainee Callsign: ${oldTraineeCallsign} → ${newTraineeCallsign}`,
+                'Trainee Roster'
+            );
+        }
+    };    
     const handleUnitChange = (newUnit: string) => {
         const oldUnit = unit;
         setUnit(newUnit);
@@ -485,6 +499,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             fullName,
             course,
             lmpType,
+               traineeCallsign,
             rank,
             seatConfig,
             isPaused,
@@ -516,6 +531,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
             if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
             if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || 'BPC+IPC'} → ${lmpType}`);
+               if (trainee.traineeCallsign !== traineeCallsign) changes.push(`Trainee Callsign: ${trainee.traineeCallsign || 'N/A'} → ${traineeCallsign}`);
             if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
             if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
             if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
@@ -690,7 +706,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         return timeString.replace(':', '');
     };
 
-    const buttonClasses = "w-full px-4 py-2 rounded-md transition-colors text-sm font-semibold shadow-md text-center";
+    const buttonClasses = "w-[75px] h-[60px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
 
     const permissionsWindow = (
         <fieldset className="p-3 border border-gray-600 rounded-lg">
@@ -725,21 +741,42 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col border border-gray-700" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 flex-shrink-0">
-                        <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
-                        <button onClick={onClose} className="text-white hover:text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+            {/* Backdrop */}
+            <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300"
+                onClick={onClose}
+            ></div>
+            
+            {/* Bottom Sheet */}
+            <div
+                ref={panelRef}
+                className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-300 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
+                    isClosing ? 'translate-y-full' : 'translate-y-0'
+                }`}
+                style={style}
+            >
+                {/* Drag Handle */}
+                <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+                    <div className="w-16 h-1.5 bg-gray-600 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" />
+                </div>
 
-                    <div className="flex-1 flex flex-row overflow-hidden">
-                        {/* LEFT: Content Panel */}
-                        <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Header */}
+                <div className="px-6 pb-4 flex justify-between items-center bg-gray-900/95 flex-shrink-0 border-b border-gray-700">
+                    <h2 className="text-2xl font-bold text-sky-400">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
+                    <button 
+                        onClick={onClose} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="flex-1 flex flex-row overflow-hidden">
+                    {/* LEFT: Content Panel */}
+                    <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {isEditing ? (
                                     <>
                                         <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
@@ -754,6 +791,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
                                             {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                                         </Dropdown>
+                                           <InputField label="Trainee Callsign" value={traineeCallsign} onChange={e => handleTraineeCallsignChange(e.target.value)} />
                                     </>
                                 ) : (
                                     <>
@@ -761,6 +799,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         <InfoRow label="ID Number" value={trainee.idNumber} />
                                         <InfoRow label="Course" value={<span className={`px-2 py-1 rounded-md text-white font-semibold ${courseColors[trainee.course] || 'bg-gray-500'}`}>{trainee.course}</span>} />
                                         <InfoRow label="LMP" value={<span className="px-2 py-1 rounded-md text-sky-400 font-semibold bg-sky-900/30">{trainee.lmpType || 'BPC+IPC'}</span>} />
+                                        <InfoRow label="Trainee Callsign" value={<span className="px-2 py-1 rounded-md text-green-400 font-semibold bg-green-900/30">{trainee.traineeCallsign || 'N/A'}</span>} />
                                     </>
                                 )}
                             </div>
@@ -773,6 +812,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                             <option value="SBLT">SBLT</option><option value="2LT">2LT</option><option value="FLTLT">FLTLT</option>
                                         </Dropdown>
                                         {!isCreating && <InfoRow label="Callsign" value={`${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}/>}
+                                        <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}><option value="">Select...</option><option value="Air Force">Air Force</option><option value="Navy">Navy</option><option value="Army">Army</option></Dropdown>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <Dropdown label="Unit" value={unit} onChange={(e) => handleUnitChange(e.target.value)}>{units.map(u => <option key={u} value={u}>{u}</option>)}</Dropdown>
@@ -854,7 +894,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Rank" value={rank} /><InfoRow label="Callsign" value={`${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`} /><InfoRow label="Service" value={service || 'N/A'} /></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Rank" value={rank} /><InfoRow label="Trainee Callsign" value={<span className="px-2 py-1 rounded-md text-green-400 font-semibold bg-green-900/30">{trainee.traineeCallsign || 'N/A'}</span>} /><InfoRow label="Service" value={service || 'N/A'} /></div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Unit" value={unit} /><InfoRow label="Flight" value={flight || 'N/A'} /><InfoRow label="Seat Config" value={seatConfig} /></div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Location" value={location} /><InfoRow label="Phone Number" value={phoneNumber} /><InfoRow label="Email" value={email} /></div>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Primary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.primaryInstructor || 'Not Assigned'} /></div></fieldset><fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Secondary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.secondaryInstructor || 'Not Assigned'} /></div></fieldset></div>
@@ -968,27 +1008,23 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         </div>
 
                         {/* RIGHT: Button Panel */}
-                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
+                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
                              {!isEditing && (
                                 <>
-                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} bg-amber-600 text-white hover:bg-amber-700`}>Unavailability</button>
+                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} btn-orange-brushed text-[12px]`}>Unavailable</button>
                                     <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
                                     <button onClick={handleHateSheetClick} className={`${buttonClasses} btn-aluminium-brushed`}>PT-051</button>
                                     <button onClick={handleIndividualLMPClick} className={`${buttonClasses} btn-aluminium-brushed`}>View Individual LMP</button>
                                     <button onClick={() => onAddRemedialPackage(trainee)} className={`${buttonClasses} btn-aluminium-brushed`}>Add Remedial Package</button>
                                     <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
+                                    <button onClick={() => setIsEditing(true)} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
+                                    <button onClick={onClose} className={`${buttonClasses} btn-aluminium-brushed`}>Close</button>
                                 </>
                             )}
-                            <div className="flex-grow"></div> {/* Spacer */}
-                            {isEditing ? (
+                            {isEditing && (
                                 <>
                                     <button onClick={handleSave} className={`${buttonClasses} btn-aluminium-brushed`}>Save</button>
                                     <button onClick={handleCancel} className={`${buttonClasses} btn-aluminium-brushed`}>Cancel</button>
-                                </>
-                            ) : (
-                                <>
-                                    <button onClick={() => setIsEditing(true)} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
-                                    <button onClick={onClose} className={`${buttonClasses} bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white`}>Close</button>
                                 </>
                             )}
                         </div>
