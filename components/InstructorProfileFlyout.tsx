@@ -100,7 +100,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
-    const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, transform: 'scale(0.1)' });
 
     // State for editable fields
     const [idNumber, setIdNumber] = useState(instructor.idNumber);
@@ -192,60 +191,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         }
     }, []);
 
-    useEffect(() => {
-        const panelElement = panelRef.current;
-        if (!panelElement) return;
-    
-        // If no originRect (e.g., when creating new instructor), use center animation
-        if (!originRect) {
-            setStyle({
-                opacity: 0,
-                transform: 'scale(0.95)',
-            });
-        
-            const timeoutId = setTimeout(() => {
-                setStyle({
-                    opacity: 1,
-                    transform: 'scale(1)',
-                    transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease-out',
-                });
-            }, 10);
-        
-            return () => clearTimeout(timeoutId);
-        }
-    
-        const panelRect = panelElement.getBoundingClientRect();
-        const originX = originRect.left + originRect.width / 2 - panelRect.left;
-        const originY = originRect.top + originRect.height / 2 - panelRect.top;
-        const transformOrigin = `${originX}px ${originY}px`;
-    
-        setStyle({
-            transformOrigin,
-            opacity: 0,
-            transform: 'scale(0.1)',
-        });
-    
-        const timeoutId = setTimeout(() => {
-            setStyle({
-                transformOrigin,
-                opacity: 1,
-                transform: 'scale(1)',
-                transition: 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease-out',
-            });
-        }, 10);
-    
-        return () => clearTimeout(timeoutId);
-    }, [instructor, originRect, isCreating]);
-    
-    useEffect(() => {
-        if (isClosing && style.transformOrigin) {
-            setStyle(prev => ({
-                ...prev,
-                opacity: 0,
-                transform: 'scale(0.1)',
-            }));
-        }
-    }, [isClosing, style.transformOrigin]);
+    // No animation effects needed - CSS handles the slide-up animation
 
     const handleEdit = () => setIsEditing(true);
 
@@ -564,7 +510,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-300 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
                     isClosing ? 'translate-y-full' : 'translate-y-0'
                 }`}
-                style={style}
             >
                 {/* Drag Handle */}
                 <div className="flex justify-center pt-3 pb-2 flex-shrink-0">

@@ -102,39 +102,39 @@ const Header: React.FC<HeaderProps> = ({
                     {/* Hourly Event Rate Button */}
                     <button
                       onClick={onToggleDepartureDensityOverlay}
-                      className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
+                      className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
                       title="Hourly Event Rate - Shows flight density in 1-hour window"
                     >
-                        <span className="text-center leading-tight">Hourly Event Rate</span>
+                        <span className="text-center leading-tight">Hourly<br/>Event Rate</span>
                     </button>
                     
                     {/* Aircraft Available Button */}
                     {onToggleAircraftAvailability && (
                         <button
                           onClick={onToggleAircraftAvailability}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${showAircraftAvailability ? 'active' : ''}`}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showAircraftAvailability ? 'active' : ''}`}
                           title="Toggle aircraft availability"
                         >
-                            <span className="text-center leading-tight">Aircraft Available</span>
+                            <span className="text-center leading-tight">Aircraft<br/>Available</span>
                         </button>
                     )}
                     
                     {/* Add Ground Tile Button */}
                     <button 
                         onClick={onAddGroundEvent}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                        className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                         title="Add Ground Tile"
                     >
-                        <span className="text-center leading-tight">Add Ground Tile</span>
+                        <span className="text-center leading-tight">Add Ground<br/>Tile</span>
                     </button>
                     
                     {/* Add Flight Tile Button */}
                     <button 
                         onClick={onAddTile}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                        className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                         title="Add Flight Tile"
                     >
-                        <span className="text-center leading-tight">Add Flight Tile</span>
+                        <span className="text-center leading-tight">Add Flight<br/>Tile</span>
                     </button>
                     
                     {/* NEO - Tile Button */}
