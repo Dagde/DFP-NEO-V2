@@ -15,6 +15,7 @@ interface InstructorProfileFlyoutProps {
   onNavigateToCurrency: (person: Instructor) => void;
   originRect: DOMRect | null;
   isClosing: boolean;
+  isOpening?: boolean;
   isCreating?: boolean;
   locations: string[];
   units: string[];
@@ -96,7 +97,7 @@ const initialExperience: LogbookExperience = {
 
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({ instructor, onClose, school, personnelData, onUpdateInstructor, onNavigateToCurrency, originRect, isClosing, isCreating = false, locations, units, traineesData, onViewLogbook, onRequestSct }) => {
+export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({ instructor, onClose, school, personnelData, onUpdateInstructor, onNavigateToCurrency, originRect, isClosing, isOpening = false, isCreating = false, locations, units, traineesData, onViewLogbook, onRequestSct }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
@@ -191,7 +192,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         }
     }, []);
 
-    // No animation effects needed - CSS handles the slide-up animation
+    // Handle opening animation
+    useEffect(() => {
+        if (isOpening) {
+            const timer = setTimeout(() => {
+                setIsOpening(false);
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpening]);
 
     const handleEdit = () => setIsEditing(true);
 
@@ -501,7 +510,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             {/* Backdrop */}
             <div 
                 className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
-                    isClosing ? 'opacity-0' : 'opacity-100'
+                    isOpening ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
                 }`}
                 onClick={onClose}
             />
@@ -510,7 +519,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             <div
                 ref={panelRef}
                 className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
-                    isClosing ? 'translate-y-full' : 'translate-y-0'
+                    isOpening ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
                 {/* Drag Handle */}

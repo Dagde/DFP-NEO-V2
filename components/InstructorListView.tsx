@@ -80,6 +80,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
   const [originRect, setOriginRect] = useState<DOMRect | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   
   // State for adding new instructors
   const [showAddChoice, setShowAddChoice] = useState(false);
@@ -394,6 +395,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         setIsArchiveMode(false);
         setIsAddingNew(false);
         setOriginRect(e.currentTarget.getBoundingClientRect());
+        setIsOpening(true);
         setSelectedInstructor(instructor);
         setIsClosing(false);
     }
@@ -401,6 +403,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   const handleCloseProfile = () => {
     setIsClosing(true);
+    setIsOpening(false);
     setTimeout(() => {
       setSelectedInstructor(null);
       setIsAddingNew(false);
@@ -424,6 +427,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setNewInstructorTemplate(newTemplate);
     setIsAddingNew(true);
     setIsClosing(false);
+    setIsOpening(true);
     setOriginRect(null); // Center animation for new
   };
   
@@ -601,6 +605,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     onNavigateToCurrency={onNavigateToCurrency}
                     originRect={originRect}
                     isClosing={isClosing}
+                    isOpening={isOpening}
                     isCreating={isAddingNew}
                     locations={locations}
                     units={units}

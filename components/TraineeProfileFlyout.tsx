@@ -33,6 +33,7 @@ interface TraineeProfileFlyoutProps {
   isCreating?: boolean;
   activeCourses?: string[];
   isClosing?: boolean;
+  isOpening?: boolean;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -212,7 +213,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onViewLogbook,
   isCreating = false,
   activeCourses = [],
-  isClosing = false
+  isClosing = false,
+  isOpening = false
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -368,6 +370,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             });
         }
     }, []);
+
+    // Handle opening animation
+    useEffect(() => {
+        if (isOpening) {
+            const timer = setTimeout(() => {
+                setIsOpening(false);
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpening]);
 
 
     const traineeHasEventsToday = useMemo(() => {
@@ -746,7 +758,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             {/* Backdrop */}
             <div 
                 className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
-                    isClosing ? 'opacity-0' : 'opacity-100'
+                    isOpening ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
                 }`}
                 onClick={onClose}
             ></div>
@@ -754,7 +766,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             {/* Bottom Sheet */}
             <div
                 className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
-                    isClosing ? 'translate-y-full' : 'translate-y-0'
+                    isOpening ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
                 {/* Drag Handle */}

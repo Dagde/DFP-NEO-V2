@@ -86,6 +86,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [isClosing, setIsClosing] = useState(false);
+    const [isOpening, setIsOpening] = useState(false);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
     const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
@@ -154,6 +155,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         setIsCreatingNew(true);
         setSelectedTrainee(null);
         setIsClosing(false);
+        setIsOpening(true);
     };
 
     const handleDeleteTrainee = (trainee: Trainee) => {
@@ -308,6 +310,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                                     onClick={() => {
                                                                         setSelectedTrainee(trainee);
                                                                         setIsClosing(false);
+                                                                        setIsOpening(true);
                                                                     }}
                                                                     className={`truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1`}
                                                                 >
@@ -349,6 +352,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     trainee={isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!}
                     onClose={() => {
                         setIsClosing(true);
+                        setIsOpening(false);
                         setTimeout(() => {
                             setSelectedTrainee(null);
                             setIsCreatingNew(false);
@@ -364,6 +368,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onAddRemedialPackage={onAddRemedialPackage}
                     personnelData={personnelData}
                     isClosing={isClosing}
+                    isOpening={isOpening}
                     courseColors={courseColors}
                     scores={scores}
                     syllabusDetails={syllabusDetails}
