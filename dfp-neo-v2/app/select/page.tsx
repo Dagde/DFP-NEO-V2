@@ -1,8 +1,7 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+// Authentication removed - handled by DFP-NEO-Website
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import Image from 'next/image';
 
 const apps = [
@@ -45,22 +44,9 @@ const apps = [
 ];
 
 export default function SelectPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
-
-  if (status === 'loading') {
-    return (
-      <div className="h-screen w-screen bg-black flex items-center justify-center">
-        <div className="text-neutral-300 text-xl">Loading...</div>
-      </div>
-    );
-  }
+  
+  // No authentication check - handled by parent website
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden flex flex-col">
@@ -77,24 +63,7 @@ export default function SelectPage() {
           />
         </div>
         <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-neutral-400 text-sm">Welcome back,</p>
-            <p className="text-neutral-200 font-semibold">{session?.user?.firstName && session?.user?.lastName ? `${session.user.firstName} ${session.user.lastName}` : session?.user?.userId}</p>
-          </div>
-          {session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'ADMIN' ? (
-            <button
-              onClick={() => router.push('/admin')}
-              className="bg-gray-800/80 border border-gray-600 text-neutral-200 px-4 py-2 rounded text-sm hover:bg-gray-700/80 transition"
-            >
-              Admin Panel
-            </button>
-          ) : null}
-          <button
-            onClick={() => router.push('/api/auth/signout')}
-            className="text-neutral-400 hover:text-neutral-200 transition-colors text-sm"
-          >
-            Sign Out
-          </button>
+          {/* User info removed - handled by parent website */}
         </div>
       </div>
 
