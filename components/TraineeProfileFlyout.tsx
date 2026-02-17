@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience } from '../types';
@@ -36,151 +35,16 @@ interface TraineeProfileFlyoutProps {
   isOpening?: boolean;
 }
 
-const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-400">{label}</label>
-        <div className={`mt-1 text-white p-2 bg-gray-700/50 rounded-md min-h-[38px] flex items-center ${className}`}>
-            {value}
-        </div>
-    </div>
-);
-
-const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean }> = ({ label, value, onChange, readOnly }) => (
-     <div>
-        <label className="block text-sm font-medium text-gray-400">{label}</label>
-        <input
-            type="text"
-            value={value}
-            onChange={onChange}
-            readOnly={readOnly}
-            className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${readOnly ? 'bg-gray-700/50 cursor-not-allowed' : ''}`}
-        />
-    </div>
-);
-
-const Dropdown: React.FC<{ label: string; value: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; children: React.ReactNode; }> = ({ label, value, onChange, children }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-400">{label}</label>
-        <select
-            value={value}
-            onChange={onChange}
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-        >
-            {children}
-        </select>
-    </div>
-);
-
-// Reused Experience Components
-const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: number) => void }> = ({ label, value, onChange }) => (
-    <div className="flex flex-col items-center">
-        <label className="text-xs text-gray-400 mb-1">{label}</label>
-        <input
-            type="number"
-            min="0"
-            step="0.1"
-            value={value}
-            onFocus={(e) => e.target.select()}
-            onChange={e => onChange(parseFloat(e.target.value) || 0)}
-            className="w-20 bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
-    </div>
-);
-
-const ExperienceDisplay: React.FC<{ label: string; value: number }> = ({ label, value }) => (
-    <div className="flex flex-col items-center">
-        <label className="text-xs text-gray-500 mb-1">{label}</label>
-        <div className="w-20 bg-gray-800/50 rounded-md py-1 px-2 text-white text-sm text-center font-mono border border-gray-700">
-            {value.toFixed(1)}
-        </div>
-    </div>
-);
-
-const EventDetailCard: React.FC<{
-  event: SyllabusItemDetail | null;
-  title: string;
-  onNavigate: (syllabusId: string) => void;
-  onCloseFlyout: () => void;
-  reason?: string;
-}> = ({ event, title, onNavigate, onCloseFlyout, reason }) => {
-
-  const handleNavigate = () => {
-    if (event) {
-      onNavigate(event.id);
-      onCloseFlyout();
-    }
-  };
-
-  return (
-    <fieldset className="p-3 border border-gray-600 rounded-lg">
-      <legend className="px-2 text-sm font-semibold text-gray-300">{title}</legend>
-      {event ? (
-        <div className="mt-2 space-y-2 text-sm">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Event:</span>
-            <button onClick={handleNavigate} className="font-semibold text-sky-400 hover:underline focus:outline-none">
-              {event.id}
-            </button>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Type:</span>
-            <span className="text-white font-medium">{event.type}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Duration:</span>
-            <span className="text-white font-medium">{event.duration.toFixed(1)} hrs</span>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-2 flex items-center justify-center text-center italic text-gray-500 h-[80px]">
-            <div>
-                <p>No {title.toLowerCase()} found.</p>
-                {reason && <p className="text-xs mt-1">{reason}</p>}
-            </div>
-        </div>
-      )}
-    </fieldset>
-  );
-};
-
 const formatDate = (dateString: string): string => {
     if (!dateString) return '';
     const date = new Date(`${dateString}T00:00:00Z`);
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
 };
 
-const LastEventCard: React.FC<{
-  title: string;
-  date: string | undefined;
-  daysSince: number | null;
-  eventCode?: string | null;
-}> = ({ title, date, daysSince, eventCode }) => (
-    <fieldset className="p-3 border border-gray-600 rounded-lg">
-      <legend className="px-2 text-sm font-semibold text-gray-300">{title}</legend>
-      {date && daysSince !== null ? (
-        <div className="mt-2 space-y-2 text-sm">
-          {eventCode && (
-              <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Event:</span>
-                  <span className="font-semibold text-white">{eventCode}</span>
-              </div>
-          )}
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Date:</span>
-            <span className="font-semibold text-white">{formatDate(date)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Days Since:</span>
-            <span className="text-white font-bold text-lg">{daysSince}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-2 flex items-center justify-center text-center italic text-gray-500 h-[78px]">
-            <p>No event recorded.</p>
-        </div>
-      )}
-    </fieldset>
-);
+const formatMilitaryTime = (timeString: string | undefined): string => {
+    if (!timeString) return '';
+    return timeString.replace(':', '');
+};
 
 const initialExperience: LogbookExperience = {
     day: { p1: 0, p2: 0, dual: 0 },
@@ -228,8 +92,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [rank, setRank] = useState<TraineeRank>(trainee.rank);
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
-  const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
+    const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
     const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
+    const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -344,6 +209,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || 'BPC+IPC');
         setTraineeCallsign(trainee.traineeCallsign || '');
+        setSecondaryCallsign(trainee.secondaryCallsign || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -360,7 +226,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         resetState();
         setIsEditing(isCreating);
     }, [trainee, isCreating]);
-    // Log view on component mount (only if not creating)
+
     useEffect(() => {
         if (!isCreating) {
             logAudit({
@@ -372,7 +238,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     }, []);
 
-    // Handle opening animation
     useEffect(() => {
         if (isOpening) {
             const timer = setTimeout(() => {
@@ -404,7 +269,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setShowPauseConfirm(false);
     };
 
-    // Debounced field change handlers
     const handleNameChange = (newName: string) => {
         const oldName = name;
         setName(newName);
@@ -460,7 +324,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
+
+    const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         const oldTraineeCallsign = traineeCallsign;
         setTraineeCallsign(newTraineeCallsign);
         if (oldTraineeCallsign !== newTraineeCallsign) {
@@ -472,7 +337,22 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                 'Trainee Roster'
             );
         }
-    };    
+    };
+
+    const handleSecondaryCallsignChange = (newSecondaryCallsign: string) => {
+        const oldSecondaryCallsign = secondaryCallsign;
+        setSecondaryCallsign(newSecondaryCallsign);
+        if (oldSecondaryCallsign !== newSecondaryCallsign) {
+            debouncedAuditLog(
+                `trainee-${trainee.idNumber}-secondary-callsign`,
+                'Edit',
+                `Updated secondary callsign`,
+                `Secondary Callsign: ${oldSecondaryCallsign} → ${newSecondaryCallsign}`,
+                'Trainee Roster'
+            );
+        }
+    };
+
     const handleUnitChange = (newUnit: string) => {
         const oldUnit = unit;
         setUnit(newUnit);
@@ -514,7 +394,8 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             fullName,
             course,
             lmpType,
-               traineeCallsign,
+            traineeCallsign,
+            secondaryCallsign,
             rank,
             seatConfig,
             isPaused,
@@ -528,10 +409,8 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             priorExperience
         };
         
-        // Flush any pending debounced logs before saving
         flushPendingAudits();
         
-        // Log the save action
         if (isCreating) {
             logAudit({
                 action: 'Add',
@@ -540,13 +419,13 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                 page: 'Trainee Roster'
             });
         } else {
-            // Detect changes for edit
             const changes: string[] = [];
             if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
             if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
             if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
             if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || 'BPC+IPC'} → ${lmpType}`);
-               if (trainee.traineeCallsign !== traineeCallsign) changes.push(`Trainee Callsign: ${trainee.traineeCallsign || 'N/A'} → ${traineeCallsign}`);
+            if (trainee.traineeCallsign !== traineeCallsign) changes.push(`Trainee Callsign: ${trainee.traineeCallsign || 'N/A'} → ${traineeCallsign}`);
+            if (trainee.secondaryCallsign !== secondaryCallsign) changes.push(`Secondary Callsign: ${trainee.secondaryCallsign || 'N/A'} → ${secondaryCallsign}`);
             if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
             if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
             if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
@@ -564,13 +443,11 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         
         onUpdateTrainee(updatedTrainee);
         
-        // Persist Logbook Data to Storage
         try {
             const cleanName = name.replace(/,\s/g, '_');
             const fileName = `Logbook_${cleanName}_${idNumber}.json`;
             const fileContent = JSON.stringify(priorExperience, null, 2);
             const file = new File([fileContent], fileName, { type: "application/json" });
-            // 'trainee_logbook' is the ID for the Trainee Data -> Logbook folder
             await addFile(file, 'trainee_logbook', fileName);
         } catch (error) {
             console.error("Failed to save logbook data to storage:", error);
@@ -661,8 +538,6 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
     };
 
     const handleSaveCustomUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
-        console.log('handleSaveCustomUnavailability called', { periodData, isCreating, traineeName: trainee.name });
-        
         const newPeriod = {
             ...periodData,
             id: uuidv4(),
@@ -670,13 +545,9 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             endTime: periodData.allDay ? undefined : periodData.endTime,
         };
         
-        console.log('Created new period', newPeriod);
-        
         if (isCreating) {
-            console.log('Adding to creating trainee unavailability');
             setUnavailability(prev => [...prev, newPeriod]);
         } else {
-            console.log('Updating existing trainee unavailability');
             const dateRange = periodData.startDate === periodData.endDate 
                 ? periodData.startDate 
                 : `${periodData.startDate} to ${periodData.endDate}`;
@@ -689,7 +560,6 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                 page: 'Trainee Roster'
             });
             const updatedUnavailability = [...(trainee.unavailability || []), newPeriod];
-            console.log('Calling onUpdateTrainee with updated unavailability', updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
     };
@@ -716,43 +586,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         }
     };
 
-    const formatMilitaryTime = (timeString: string | undefined): string => {
-        if (!timeString) return '';
-        return timeString.replace(':', '');
-    };
-
     const buttonClasses = "w-[75px] h-[60px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
-
-    const permissionsWindow = (
-        <fieldset className="p-3 border border-gray-600 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
-            <div className="mt-1 min-h-[10rem] p-2">
-                {isEditing ? (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                        {allPermissions.map(perm => (
-                            <label key={perm} className="flex items-center space-x-3 cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={permissions.includes(perm)} 
-                                    onChange={e => handlePermissionChange(perm, e.target.checked)} 
-                                    className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
-                                />
-                                <span className="text-white">{perm}</span>
-                            </label>
-                        ))}
-                    </div>
-                ) : (
-                    <ul className="space-y-2 text-white list-disc list-inside">
-                        {(trainee.permissions && trainee.permissions.length > 0) ? (
-                            trainee.permissions.map(perm => <li key={perm}>{perm}</li>)
-                        ) : (
-                            <li className="list-none italic text-gray-500">No permissions assigned.</li>
-                        )}
-                    </ul>
-                )}
-            </div>
-        </fieldset>
-    );
 
     return (
         <>
@@ -775,276 +609,837 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
                     <div className="w-16 h-1.5 bg-gray-600 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" />
                 </div>
 
-                {/* Header */}
-                <div className="px-6 pb-4 flex justify-between items-center bg-gray-900/95 flex-shrink-0 border-b border-gray-700">
-                    <h2 className="text-2xl font-bold text-sky-400">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
-                    <button 
-                        onClick={onClose} 
-                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
                 <div className="flex-1 flex flex-row overflow-hidden">
                     {/* LEFT: Content Panel */}
-                    <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar">
-                            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {isEditing ? (
-                                    <>
-                                        <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
-                                        <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
-                                        <Dropdown label="Course" value={course} onChange={e => handleCourseChange(e.target.value)}>
+                    <div className="flex-1 p-8 space-y-8 overflow-y-auto custom-scrollbar">
+                        {/* Header Section */}
+                        <div className="flex items-start justify-between">
+                            <div className="flex items-center space-x-6">
+                                <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center text-gray-600">
+                                    <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h1 className="text-3xl font-bold text-white">{isEditing ? name : trainee.name}</h1>
+                                    <div className="mt-2">
+                                        {(isEditing ? isPaused : trainee.isPaused) ? (
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400">
+                                                Paused
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-500/20 text-green-400">
+                                                Active
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={onClose} 
+                                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Identity Block */}
+                        <div className="grid grid-cols-4 gap-6">
+                            {isEditing ? (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">ID Number</label>
+                                        <input
+                                            type="text"
+                                            value={idNumber}
+                                            onChange={e => setIdNumber(parseInt(e.target.value) || 0)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Course</label>
+                                        <select
+                                            value={course}
+                                            onChange={e => handleCourseChange(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
                                             {activeCourses.length > 0 ? (
                                                 activeCourses.map(c => <option key={c} value={c}>{c}</option>)
                                             ) : (
                                                 <option disabled>No courses</option>
                                             )}
-                                        </Dropdown>
-                                        <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">LMP</label>
+                                        <select
+                                            value={lmpType}
+                                            onChange={e => handleLmpTypeChange(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
                                             {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
-                                        </Dropdown>
-                                           <InputField label="Trainee Callsign" value={traineeCallsign} onChange={e => handleTraineeCallsignChange(e.target.value)} />
-                                    </>
-                                ) : (
-                                    <>
-                                        <InfoRow label="Name" value={trainee.name} />
-                                        <InfoRow label="ID Number" value={trainee.idNumber} />
-                                        <InfoRow label="Course" value={<span className={`px-2 py-1 rounded-md text-white font-semibold ${courseColors[trainee.course] || 'bg-gray-500'}`}>{trainee.course}</span>} />
-                                        <InfoRow label="LMP" value={<span className="px-2 py-1 rounded-md text-sky-400 font-semibold bg-sky-900/30">{trainee.lmpType || 'BPC+IPC'}</span>} />
-                                        <InfoRow label="Trainee Callsign" value={<span className="px-2 py-1 rounded-md text-green-400 font-semibold bg-green-900/30">{trainee.traineeCallsign || 'N/A'}</span>} />
-                                    </>
-                                )}
-                            </div>
-
-                            {isEditing ? (
-                                <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <Dropdown label="Rank" value={rank} onChange={e => handleRankChange(e.target.value as TraineeRank)}>
-                                            <option value="OCDT">OCDT</option><option value="MIDN">MIDN</option><option value="PLTOFF">PLTOFF</option><option value="FLGOFF">FLGOFF</option>
-                                            <option value="SBLT">SBLT</option><option value="2LT">2LT</option><option value="FLTLT">FLTLT</option>
-                                        </Dropdown>
-                                        {!isCreating && <InfoRow label="Callsign" value={`${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}/>}
-                                        <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}><option value="">Select...</option><option value="Air Force">Air Force</option><option value="Navy">Navy</option><option value="Army">Army</option></Dropdown>
+                                        </select>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <Dropdown label="Unit" value={unit} onChange={(e) => handleUnitChange(e.target.value)}>{units.map(u => <option key={u} value={u}>{u}</option>)}</Dropdown>
-                                        <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
-                                        <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}><option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option></Dropdown>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Trainee Callsign</label>
+                                        <input
+                                            type="text"
+                                            value={traineeCallsign}
+                                            onChange={e => handleTraineeCallsignChange(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <Dropdown label="Location" value={location} onChange={(e) => handleLocationChange(e.target.value)}>{locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}</Dropdown>
-                                        <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
-                                        <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Rank</label>
+                                        <select
+                                            value={rank}
+                                            onChange={e => handleRankChange(e.target.value as TraineeRank)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
+                                            <option value="OCDT">OCDT</option>
+                                            <option value="MIDN">MIDN</option>
+                                            <option value="PLTOFF">PLTOFF</option>
+                                            <option value="FLGOFF">FLGOFF</option>
+                                            <option value="SBLT">SBLT</option>
+                                            <option value="2LT">2LT</option>
+                                            <option value="FLTLT">FLTLT</option>
+                                        </select>
                                     </div>
-                                    {!isCreating && (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Primary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.primaryInstructor || 'Not Assigned'} /></div></fieldset>
-                                            <fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Secondary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.secondaryInstructor || 'Not Assigned'} /></div></fieldset>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Service</label>
+                                        <select
+                                            value={service}
+                                            onChange={e => setService(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
+                                            <option value="">Select...</option>
+                                            <option value="RAAF">RAAF</option>
+                                            <option value="Navy">Navy</option>
+                                            <option value="Army">Army</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Unit</label>
+                                        <select
+                                            value={unit}
+                                            onChange={e => handleUnitChange(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
+                                            {units.map(u => <option key={u} value={u}>{u}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Seat Config</label>
+                                        <select
+                                            value={seatConfig}
+                                            onChange={e => setSeatConfig(e.target.value as SeatConfig)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
+                                            <option value="Normal">Normal</option>
+                                            <option value="FWD/SHORT">FWD/SHORT</option>
+                                            <option value="REAR/SHORT">REAR/SHORT</option>
+                                            <option value="FWD/LONG">FWD/LONG</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Location</label>
+                                        <select
+                                            value={location}
+                                            onChange={e => handleLocationChange(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        >
+                                            {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Phone Number</label>
+                                        <input
+                                            type="text"
+                                            value={phoneNumber}
+                                            onChange={e => setPhoneNumber(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Email</label>
+                                        <input
+                                            type="text"
+                                            value={email}
+                                            onChange={e => setEmail(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Flight</label>
+                                        <input
+                                            type="text"
+                                            value={flight}
+                                            onChange={e => setFlight(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Secondary Callsign</label>
+                                        <input
+                                            type="text"
+                                            value={secondaryCallsign}
+                                            onChange={e => handleSecondaryCallsignChange(e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </div>
+                                    <div className="col-span-4">
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
+                                        <div className="flex flex-wrap gap-3">
+                                            {allPermissions.map(perm => (
+                                                <label key={perm} className="flex items-center space-x-2 cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={permissions.includes(perm)} 
+                                                        onChange={e => handlePermissionChange(perm, e.target.checked)} 
+                                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                                    />
+                                                    <span className="text-white text-sm">{perm}</span>
+                                                </label>
+                                            ))}
                                         </div>
-                                    )}
-                                    {permissionsWindow}
-                                    {!isCreating && (
-                                        <div className="p-3 border border-gray-600 rounded-lg">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-semibold text-gray-300">Pause Trainee (NTSC)</span>
-                                                <button onClick={handlePauseToggle} className={`relative inline-flex items-center h-6 rounded-full w-12 transition-colors ${isPaused ? 'bg-amber-500' : 'bg-gray-600'}`}><span className={`transform transition-transform inline-block w-5 h-5 bg-white rounded-full ${isPaused ? 'translate-x-6' : 'translate-x-1'}`}/></button>
-                                            </div>
-                                        </div>
-                                    )}
-                                     <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-sky-400">Logbook - Prior Experience (PC-21 only)</legend>
-                                        <div className="space-y-4 mt-2">
-                                            {/* Row 1: Day & Night */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Day Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="P1" value={priorExperience.day.p1} onChange={v => handleExperienceChange('day', 'p1', v)} />
-                                                        <ExperienceInput label="P2" value={priorExperience.day.p2} onChange={v => handleExperienceChange('day', 'p2', v)} />
-                                                        <ExperienceInput label="Dual" value={priorExperience.day.dual} onChange={v => handleExperienceChange('day', 'dual', v)} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Night Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="P1" value={priorExperience.night.p1} onChange={v => handleExperienceChange('night', 'p1', v)} />
-                                                        <ExperienceInput label="P2" value={priorExperience.night.p2} onChange={v => handleExperienceChange('night', 'p2', v)} />
-                                                        <ExperienceInput label="Dual" value={priorExperience.night.dual} onChange={v => handleExperienceChange('night', 'dual', v)} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 2: Totals & Instrument */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Totals</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="TOTAL" value={priorExperience.total} onChange={v => handleExperienceChange('total', null, v)} />
-                                                        <ExperienceInput label="Captain" value={priorExperience.captain} onChange={v => handleExperienceChange('captain', null, v)} />
-                                                        <ExperienceInput label="Instructor" value={priorExperience.instructor} onChange={v => handleExperienceChange('instructor', null, v)} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Instrument</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="Sim" value={priorExperience.instrument.sim} onChange={v => handleExperienceChange('instrument', 'sim', v)} />
-                                                        <ExperienceInput label="Actual" value={priorExperience.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 3: Simulator */}
-                                            <div>
-                                                <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Simulator</span>
-                                                <div className="flex justify-center space-x-4">
-                                                    <ExperienceInput label="P1" value={priorExperience.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} />
-                                                    <ExperienceInput label="P2" value={priorExperience.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} />
-                                                    <ExperienceInput label="Dual" value={priorExperience.simulator.dual} onChange={v => handleExperienceChange('simulator', 'dual', v)} />
-                                                    <ExperienceInput label="Total" value={priorExperience.simulator.total} onChange={v => handleExperienceChange('simulator', 'total', v)} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </fieldset>
+                                    </div>
                                 </>
                             ) : (
                                 <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Rank" value={rank} /><InfoRow label="Trainee Callsign" value={<span className="px-2 py-1 rounded-md text-green-400 font-semibold bg-green-900/30">{trainee.traineeCallsign || 'N/A'}</span>} /><InfoRow label="Service" value={service || 'N/A'} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Unit" value={unit} /><InfoRow label="Flight" value={flight || 'N/A'} /><InfoRow label="Seat Config" value={seatConfig} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Location" value={location} /><InfoRow label="Phone Number" value={phoneNumber} /><InfoRow label="Email" value={email} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Primary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.primaryInstructor || 'Not Assigned'} /></div></fieldset><fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Secondary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.secondaryInstructor || 'Not Assigned'} /></div></fieldset></div>
-                                    <InfoRow label="Status" value={trainee.isPaused ? <span className="font-semibold text-amber-400">Paused / NTSC</span> : <span className="font-semibold text-green-400">Active</span>} />
-                                    {permissionsWindow}
-                                     <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-sky-400">Logbook - Prior Experience (PC-21 only)</legend>
-                                        <div className="space-y-4 mt-2">
-                                            {/* Row 1: Day & Night */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Day Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="P1" value={priorExperience.day.p1} />
-                                                        <ExperienceDisplay label="P2" value={priorExperience.day.p2} />
-                                                        <ExperienceDisplay label="Dual" value={priorExperience.day.dual} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Night Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="P1" value={priorExperience.night.p1} />
-                                                        <ExperienceDisplay label="P2" value={priorExperience.night.p2} />
-                                                        <ExperienceDisplay label="Dual" value={priorExperience.night.dual} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 2: Totals & Instrument */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Totals</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="TOTAL" value={priorExperience.total} />
-                                                        <ExperienceDisplay label="Captain" value={priorExperience.captain} />
-                                                        <ExperienceDisplay label="Instructor" value={priorExperience.instructor} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Instrument</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="Sim" value={priorExperience.instrument.sim} />
-                                                        <ExperienceDisplay label="Actual" value={priorExperience.instrument.actual} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 3: Simulator */}
-                                            <div>
-                                                <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Simulator</span>
-                                                <div className="flex justify-center space-x-4">
-                                                    <ExperienceDisplay label="P1" value={priorExperience.simulator.p1} />
-                                                    <ExperienceDisplay label="P2" value={priorExperience.simulator.p2} />
-                                                    <ExperienceDisplay label="Dual" value={priorExperience.simulator.dual} />
-                                                    <ExperienceDisplay label="Total" value={priorExperience.simulator.total} />
-                                                </div>
-                                            </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">ID Number</label>
+                                        <div className="text-white font-medium">{trainee.idNumber}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Course</label>
+                                        <span className={`inline-block px-3 py-1 rounded-md text-white font-semibold text-sm ${courseColors[trainee.course] || 'bg-gray-500'}`}>
+                                            {trainee.course}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">LMP</label>
+                                        <span className="inline-block px-3 py-1 rounded-md text-sky-400 font-semibold text-sm bg-sky-900/30">
+                                            {trainee.lmpType || 'BPC+IPC'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Trainee Callsign</label>
+                                        <span className="inline-block px-3 py-1 rounded-md text-green-400 font-semibold text-sm bg-green-900/30">
+                                            {trainee.traineeCallsign || 'N/A'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Rank</label>
+                                        <div className="text-white font-medium">{trainee.rank}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Service</label>
+                                        <div className="text-white font-medium">{trainee.service || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Unit</label>
+                                        <div className="text-white font-medium">{trainee.unit}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Seat Config</label>
+                                        <div className="text-white font-medium">{trainee.seatConfig}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Location</label>
+                                        <div className="text-white font-medium">{trainee.location}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Phone Number</label>
+                                        <div className="text-white font-medium">{trainee.phoneNumber}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Email</label>
+                                        <div className="text-white font-medium">{trainee.email}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Flight</label>
+                                        <div className="text-white font-medium">{trainee.flight || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Trainee Callsign</label>
+                                        <span className="inline-block px-3 py-1 rounded-md text-green-400 font-semibold text-sm bg-green-900/30">
+                                            {trainee.traineeCallsign || 'N/A'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Secondary Callsign</label>
+                                        <div className="text-white font-medium">{trainee.secondaryCallsign || '[None]'}</div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(trainee.permissions && trainee.permissions.length > 0) ? (
+                                                trainee.permissions.map(perm => (
+                                                    <span key={perm} className="inline-block px-3 py-1 rounded-md bg-gray-800 text-white text-sm">
+                                                        {perm}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span className="text-gray-500 italic text-sm">No permissions assigned</span>
+                                            )}
                                         </div>
-                                    </fieldset>
-                                </>
-                            )}
-                            {!isCreating && (
-                                <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><EventDetailCard event={nextEvent} title="Next Event" onNavigate={onNavigateToSyllabus} onCloseFlyout={onClose} reason={nextEventReason} /><EventDetailCard event={subsequentEvent} title="Next Event +1" onNavigate={onNavigateToSyllabus} onCloseFlyout={onClose} reason={!nextEvent ? 'Requires a valid Next Event.' : 'End of syllabus.'} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <LastEventCard title="Last Flight" date={lastFlight?.date} daysSince={daysSinceLastFlight} eventCode={lastFlight?.event} />
-                                        <LastEventCard title="Last Event" date={lastEvent?.date} daysSince={daysSinceLastEvent} eventCode={lastEvent?.event} />
                                     </div>
                                 </>
                             )}
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Unavailability</legend>
-                                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto pr-2">
-                                    {unavailability.length > 0 ? (
-                                        unavailability.map(p => {
-                                            let displayString = '';
-                                            const startDisplayDate = formatDate(p.startDate);
-                                            
-                                            if (p.allDay) {
-                                                const lastDayOfUnavailability = new Date(`${p.endDate}T00:00:00Z`);
-                                                lastDayOfUnavailability.setUTCDate(lastDayOfUnavailability.getUTCDate() - 1);
-                                                const lastDayStr = lastDayOfUnavailability.toISOString().split('T')[0];
-                                                const lastDayDisplay = formatDate(lastDayStr);
-                                                const dateRange = p.startDate === lastDayStr ? startDisplayDate : `${startDisplayDate} to ${lastDayDisplay}`;
-                                                displayString = `${dateRange} @ All Day`;
-                                            } else {
-                                                const endDisplayDate = formatDate(p.endDate);
-                                                const startTimeDisplay = formatMilitaryTime(p.startTime);
-                                                const endTimeDisplay = formatMilitaryTime(p.endTime);
-                                                if (p.startDate === p.endDate) {
-                                                    displayString = `${startTimeDisplay} ${startDisplayDate} - ${endTimeDisplay} ${endDisplayDate}`;
-                                                } else {
-                                                    displayString = `${startTimeDisplay} ${startDisplayDate} to ${endTimeDisplay} ${endDisplayDate}`;
-                                                }
-                                            }
-                                            
-                                            return (
-                                                <div key={p.id} className="p-2 bg-gray-700/50 rounded-md text-sm">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <span className="font-semibold text-white">{p.reason}</span>
-                                                            <div className="text-xs text-gray-300 mt-1 font-mono">{displayString}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <p className="text-sm text-gray-500 text-center italic">No unavailability periods scheduled.</p>
-                                    )}
-                                </div>
-                            </fieldset>
                         </div>
 
-                        {/* RIGHT: Button Panel */}
-                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
-                             {!isEditing && (
-                                <>
-                                    <button onClick={() => setShowAddUnavailability(true)} className="w-[75px] h-[60px] flex items-center justify-center text-[12px] btn-aluminium-brushed rounded-md transition-all duration-200">Unavailable</button>
-                                    <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
-                                    <button onClick={handleHateSheetClick} className={`${buttonClasses} btn-aluminium-brushed`}>PT-051</button>
-                                    <button onClick={handleIndividualLMPClick} className={`${buttonClasses} btn-aluminium-brushed`}>View Individual LMP</button>
-                                    <button onClick={() => onAddRemedialPackage(trainee)} className={`${buttonClasses} btn-aluminium-brushed`}>Add Remedial Package</button>
-                                    <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
-                                    <button onClick={() => setIsEditing(true)} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
-                                    <button onClick={onClose} className={`${buttonClasses} btn-aluminium-brushed`}>Close</button>
-                                </>
-                            )}
-                            {isEditing && (
-                                <>
-                                    <button onClick={handleSave} className={`${buttonClasses} btn-aluminium-brushed`}>Save</button>
-                                    <button onClick={handleCancel} className={`${buttonClasses} btn-aluminium-brushed`}>Cancel</button>
-                                </>
-                            )}
+                        {/* Instructor Section */}
+                        {!isCreating && (
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Primary Instructor</label>
+                                    <div className="flex items-center space-x-4 bg-gray-800/30 rounded-lg p-4">
+                                        <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center text-gray-600">
+                                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div className="text-white font-medium">{trainee.primaryInstructor || 'Not Assigned'}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Secondary Instructor</label>
+                                    <div className="flex items-center space-x-4 bg-gray-800/30 rounded-lg p-4">
+                                        <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center text-gray-600">
+                                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <div className="text-white font-medium">{trainee.secondaryInstructor || 'Not Assigned'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Logbook Section */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-300 mb-4">Logbook - Prior Experience (PC-21 only)</h3>
+                            <div className="grid grid-cols-5 gap-6">
+                                {/* Day Flying */}
+                                <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Day Flying</div>
+                                    <div className="space-y-2">
+                                        {isEditing ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">P1</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.day.p1}
+                                                        onChange={e => handleExperienceChange('day', 'p1', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">P2</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.day.p2}
+                                                        onChange={e => handleExperienceChange('day', 'p2', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Dual</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.day.dual}
+                                                        onChange={e => handleExperienceChange('day', 'dual', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">P1</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.day.p1.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">P2</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.day.p2.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Dual</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.day.dual.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-2 border-t border-gray-700">
+                                                    <span className="text-xs text-gray-400 font-semibold">Total</span>
+                                                    <span className="text-white font-mono text-sm font-semibold">
+                                                        {(priorExperience.day.p1 + priorExperience.day.p2 + priorExperience.day.dual).toFixed(1)}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Night Flying */}
+                                <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Night Flying</div>
+                                    <div className="space-y-2">
+                                        {isEditing ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">P1</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.night.p1}
+                                                        onChange={e => handleExperienceChange('night', 'p1', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">P2</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.night.p2}
+                                                        onChange={e => handleExperienceChange('night', 'p2', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Dual</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.night.dual}
+                                                        onChange={e => handleExperienceChange('night', 'dual', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">P1</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.night.p1.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">P2</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.night.p2.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Dual</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.night.dual.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-2 border-t border-gray-700">
+                                                    <span className="text-xs text-gray-400 font-semibold">Total</span>
+                                                    <span className="text-white font-mono text-sm font-semibold">
+                                                        {(priorExperience.night.p1 + priorExperience.night.p2 + priorExperience.night.dual).toFixed(1)}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Totals */}
+                                <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Totals</div>
+                                    <div className="space-y-2">
+                                        {isEditing ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">TOTAL</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.total}
+                                                        onChange={e => handleExperienceChange('total', null, parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Captain</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.captain}
+                                                        onChange={e => handleExperienceChange('captain', null, parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Instructor</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.instructor}
+                                                        onChange={e => handleExperienceChange('instructor', null, parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">TOTAL</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.total.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Captain</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.captain.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Instructor</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.instructor.toFixed(1)}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Instrument */}
+                                <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Instrument</div>
+                                    <div className="space-y-2">
+                                        {isEditing ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Sim</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.instrument.sim}
+                                                        onChange={e => handleExperienceChange('instrument', 'sim', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Actual</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.instrument.actual}
+                                                        onChange={e => handleExperienceChange('instrument', 'actual', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Sim</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.instrument.sim.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Actual</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.instrument.actual.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between pt-2 border-t border-gray-700">
+                                                    <span className="text-xs text-gray-400 font-semibold">Total</span>
+                                                    <span className="text-white font-mono text-sm font-semibold">
+                                                        {(priorExperience.instrument.sim + priorExperience.instrument.actual).toFixed(1)}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Simulator */}
+                                <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Simulator</div>
+                                    <div className="space-y-2">
+                                        {isEditing ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">P1</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.simulator.p1}
+                                                        onChange={e => handleExperienceChange('simulator', 'p1', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">P2</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.simulator.p2}
+                                                        onChange={e => handleExperienceChange('simulator', 'p2', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Dual</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.simulator.dual}
+                                                        onChange={e => handleExperienceChange('simulator', 'dual', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-gray-500 mb-1">Total</label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.1"
+                                                        value={priorExperience.simulator.total}
+                                                        onChange={e => handleExperienceChange('simulator', 'total', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm text-center"
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">P1</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.simulator.p1.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">P2</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.simulator.p2.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Dual</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.simulator.dual.toFixed(1)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-xs text-gray-500">Total</span>
+                                                    <span className="text-white font-mono text-sm">{priorExperience.simulator.total.toFixed(1)}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Events Section */}
+                        {!isCreating && (
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-300 mb-4">Events</h3>
+                                <div className="grid grid-cols-4 gap-6">
+                                    {/* Next Event */}
+                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                        <div className="text-sm font-semibold text-gray-400 mb-3">Next Event</div>
+                                        {nextEvent ? (
+                                            <div className="space-y-2">
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Event</span>
+                                                    <button 
+                                                        onClick={() => { onNavigateToSyllabus(nextEvent.id); onClose(); }}
+                                                        className="block text-sky-400 font-semibold hover:underline mt-1"
+                                                    >
+                                                        {nextEvent.id}
+                                                    </button>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Type</span>
+                                                    <div className="text-white font-medium mt-1">{nextEvent.type}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Duration</span>
+                                                    <div className="text-white font-medium mt-1">{nextEvent.duration.toFixed(1)} hrs</div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-500 italic text-sm text-center py-4">
+                                                {nextEventReason || 'No event found'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Next Event +1 */}
+                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                        <div className="text-sm font-semibold text-gray-400 mb-3">Next Event +1</div>
+                                        {subsequentEvent ? (
+                                            <div className="space-y-2">
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Event</span>
+                                                    <button 
+                                                        onClick={() => { onNavigateToSyllabus(subsequentEvent.id); onClose(); }}
+                                                        className="block text-sky-400 font-semibold hover:underline mt-1"
+                                                    >
+                                                        {subsequentEvent.id}
+                                                    </button>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Type</span>
+                                                    <div className="text-white font-medium mt-1">{subsequentEvent.type}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Duration</span>
+                                                    <div className="text-white font-medium mt-1">{subsequentEvent.duration.toFixed(1)} hrs</div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-500 italic text-sm text-center py-4">
+                                                {!nextEvent ? 'Requires a valid Next Event' : 'End of syllabus'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Last Flight */}
+                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                        <div className="text-sm font-semibold text-gray-400 mb-3">Last Flight</div>
+                                        {lastFlight && daysSinceLastFlight !== null ? (
+                                            <div className="space-y-2">
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Event</span>
+                                                    <div className="text-white font-semibold mt-1">{lastFlight.event}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Date</span>
+                                                    <div className="text-white font-medium mt-1">{formatDate(lastFlight.date)}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Days Since</span>
+                                                    <div className="text-white font-bold text-lg mt-1">{daysSinceLastFlight}</div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-500 italic text-sm text-center py-4">
+                                                No event recorded
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Last Event */}
+                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                        <div className="text-sm font-semibold text-gray-400 mb-3">Last Event</div>
+                                        {lastEvent && daysSinceLastEvent !== null ? (
+                                            <div className="space-y-2">
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Event</span>
+                                                    <div className="text-white font-semibold mt-1">{lastEvent.event}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Date</span>
+                                                    <div className="text-white font-medium mt-1">{formatDate(lastEvent.date)}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs text-gray-500">Days Since</span>
+                                                    <div className="text-white font-bold text-lg mt-1">{daysSinceLastEvent}</div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-gray-500 italic text-sm text-center py-4">
+                                                No event recorded
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Unavailability Section */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-300 mb-4">Unavailability</h3>
+                            <div className="space-y-3">
+                                {unavailability.length > 0 ? (
+                                    unavailability.map(p => {
+                                        let displayString = '';
+                                        const startDisplayDate = formatDate(p.startDate);
+                                        
+                                        if (p.allDay) {
+                                            const lastDayOfUnavailability = new Date(`${p.endDate}T00:00:00Z`);
+                                            lastDayOfUnavailability.setUTCDate(lastDayOfUnavailability.getUTCDate() - 1);
+                                            const lastDayStr = lastDayOfUnavailability.toISOString().split('T')[0];
+                                            const lastDayDisplay = formatDate(lastDayStr);
+                                            const dateRange = p.startDate === lastDayStr ? startDisplayDate : `${startDisplayDate} to ${lastDayDisplay}`;
+                                            displayString = `${dateRange} @ All Day`;
+                                        } else {
+                                            const endDisplayDate = formatDate(p.endDate);
+                                            const startTimeDisplay = formatMilitaryTime(p.startTime);
+                                            const endTimeDisplay = formatMilitaryTime(p.endTime);
+                                            if (p.startDate === p.endDate) {
+                                                displayString = `${startTimeDisplay} ${startDisplayDate} - ${endTimeDisplay} ${endDisplayDate}`;
+                                            } else {
+                                                displayString = `${startTimeDisplay} ${startDisplayDate} to ${endTimeDisplay} ${endDisplayDate}`;
+                                            }
+                                        }
+                                        
+                                        return (
+                                            <div key={p.id} className="bg-gray-800/30 rounded-lg p-4">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <div className="font-semibold text-white">{p.reason}</div>
+                                                        <div className="text-xs text-gray-400 mt-1 font-mono">{displayString}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="bg-gray-800/30 rounded-lg p-6 text-center">
+                                        <p className="text-gray-500 italic">No unavailability periods scheduled</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Pause Toggle (Edit Mode Only) */}
+                        {isEditing && !isCreating && (
+                            <div className="bg-gray-800/30 rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-gray-300">Pause Trainee (NTSC)</span>
+                                    <button 
+                                        onClick={handlePauseToggle} 
+                                        className={`relative inline-flex items-center h-6 rounded-full w-12 transition-colors ${isPaused ? 'bg-amber-500' : 'bg-gray-600'}`}
+                                    >
+                                        <span className={`transform transition-transform inline-block w-5 h-5 bg-white rounded-full ${isPaused ? 'translate-x-6' : 'translate-x-1'}`}/>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* RIGHT: Button Panel */}
+                    <div className="w-32 flex-shrink-0 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
+                        {!isEditing && (
+                            <>
+                                <button onClick={() => setShowAddUnavailability(true)} className="w-[75px] h-[60px] flex items-center justify-center text-[12px] btn-aluminium-brushed rounded-md transition-all duration-200">Unavailable</button>
+                                <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
+                                <button onClick={handleHateSheetClick} className={`${buttonClasses} btn-aluminium-brushed`}>PT-051</button>
+                                <button onClick={handleIndividualLMPClick} className={`${buttonClasses} btn-aluminium-brushed`}>View Individual LMP</button>
+                                <button onClick={() => onAddRemedialPackage(trainee)} className={`${buttonClasses} btn-aluminium-brushed`}>Add Remedial Package</button>
+                                <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
+                                <button onClick={() => setIsEditing(true)} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
+                                <button onClick={onClose} className={`${buttonClasses} btn-aluminium-brushed`}>Close</button>
+                            </>
+                        )}
+                        {isEditing && (
+                            <>
+                                <button onClick={handleSave} className={`${buttonClasses} btn-aluminium-brushed`}>Save</button>
+                                <button onClick={handleCancel} className={`${buttonClasses} btn-aluminium-brushed`}>Cancel</button>
+                            </>
+                        )}
                     </div>
                 </div>
+            </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}

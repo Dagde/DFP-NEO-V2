@@ -254,8 +254,8 @@ export interface Trainee {
   primaryInstructor?: string;
   secondaryInstructor?: string;
   lmpType?: string;
-  
-     traineeCallsign?: string;
+  traineeCallsign?: string;
+  secondaryCallsign?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
 }
