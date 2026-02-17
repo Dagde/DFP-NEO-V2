@@ -600,7 +600,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             
             {/* Bottom Sheet */}
             <div
-                className={`fixed top-[80px] bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
+                className={`fixed top-[80px] bottom-0 left-[95px] right-[95px] bg-[#1a1f2e] shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
                     isAnimatingOpen ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
@@ -611,320 +611,308 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 <div className="flex-1 flex flex-row overflow-hidden">
                     {/* LEFT: Content Panel */}
-                    <div className="flex-1 p-8 space-y-8 overflow-y-auto custom-scrollbar">
-                        {/* Header Section */}
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center space-x-6">
-                                <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center text-gray-600">
-                                    <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h1 className="text-3xl font-bold text-white">{isEditing ? name : trainee.name}</h1>
-                                    <div className="mt-2">
-                                        {(isEditing ? isPaused : trainee.isPaused) ? (
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400">
-                                                Paused
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-500/20 text-green-400">
-                                                Active
-                                            </span>
-                                        )}
+                    <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                        {/* Main Content Card */}
+                        <div className="bg-[#252b3d] rounded-lg p-6 mb-6">
+                            {/* Header Section */}
+                            <div className="flex items-start justify-between mb-6">
+                                <div className="flex items-center space-x-4">
+                                    <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center text-gray-500 flex-shrink-0">
+                                        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-white">{isEditing ? name : trainee.name}</h1>
+                                        <div className="mt-1">
+                                            {(isEditing ? isPaused : trainee.isPaused) ? (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/20 text-amber-400">
+                                                    Paused
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-500/20 text-green-400">
+                                                    Active
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
+                                <button 
+                                    onClick={onClose} 
+                                    className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all duration-200"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
-                            <button 
-                                onClick={onClose} 
-                                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+
+                        {/* Identity Block - Compact Grid */}
+                            <div className="grid grid-cols-6 gap-x-8 gap-y-3 text-sm">
+                            {isEditing ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">ID Number</label>
+                                            <input
+                                                type="text"
+                                                value={idNumber}
+                                                onChange={e => setIdNumber(parseInt(e.target.value) || 0)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Course</label>
+                                            <select
+                                                value={course}
+                                                onChange={e => handleCourseChange(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                {activeCourses.length > 0 ? (
+                                                    activeCourses.map(c => <option key={c} value={c}>{c}</option>)
+                                                ) : (
+                                                    <option disabled>No courses</option>
+                                                )}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">LMP</label>
+                                            <select
+                                                value={lmpType}
+                                                onChange={e => handleLmpTypeChange(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Callsign</label>
+                                            <input
+                                                type="text"
+                                                value={traineeCallsign}
+                                                onChange={e => handleTraineeCallsignChange(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Secondary Callsign</label>
+                                            <input
+                                                type="text"
+                                                value={secondaryCallsign}
+                                                onChange={e => handleSecondaryCallsignChange(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Flight</label>
+                                            <input
+                                                type="text"
+                                                value={flight}
+                                                onChange={e => setFlight(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Rank</label>
+                                            <select
+                                                value={rank}
+                                                onChange={e => handleRankChange(e.target.value as TraineeRank)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                <option value="OCDT">OCDT</option>
+                                                <option value="MIDN">MIDN</option>
+                                                <option value="PLTOFF">PLTOFF</option>
+                                                <option value="FLGOFF">FLGOFF</option>
+                                                <option value="SBLT">SBLT</option>
+                                                <option value="2LT">2LT</option>
+                                                <option value="FLTLT">FLTLT</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Service</label>
+                                            <select
+                                                value={service}
+                                                onChange={e => setService(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                <option value="">Select...</option>
+                                                <option value="RAAF">RAAF</option>
+                                                <option value="Navy">Navy</option>
+                                                <option value="Army">Army</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Unit</label>
+                                            <select
+                                                value={unit}
+                                                onChange={e => handleUnitChange(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                {units.map(u => <option key={u} value={u}>{u}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
+                                            <select
+                                                value={seatConfig}
+                                                onChange={e => setSeatConfig(e.target.value as SeatConfig)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                <option value="Normal">Normal</option>
+                                                <option value="FWD/SHORT">FWD/SHORT</option>
+                                                <option value="REAR/SHORT">REAR/SHORT</option>
+                                                <option value="FWD/LONG">FWD/LONG</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Location</label>
+                                            <select
+                                                value={location}
+                                                onChange={e => handleLocationChange(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            >
+                                                {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-400 mb-1">Phone Number</label>
+                                            <input
+                                                type="text"
+                                                value={phoneNumber}
+                                                onChange={e => setPhoneNumber(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs text-gray-400 mb-1">Email</label>
+                                            <input
+                                                type="text"
+                                                value={email}
+                                                onChange={e => setEmail(e.target.value)}
+                                                className="w-full bg-[#1a1f2e] border border-gray-700 rounded px-2 py-1 text-white text-xs"
+                                            />
+                                        </div>
+                                        <div className="col-span-4">
+                                            <label className="block text-xs text-gray-400 mb-1">Permissions</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {allPermissions.map(perm => (
+                                                    <label key={perm} className="flex items-center space-x-1 cursor-pointer">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={permissions.includes(perm)} 
+                                                            onChange={e => handlePermissionChange(perm, e.target.checked)} 
+                                                            className="h-3 w-3 accent-sky-500 bg-gray-600 rounded" 
+                                                        />
+                                                        <span className="text-white text-xs">{perm}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">ID Number</label>
+                                            <div className="text-white text-sm">{trainee.idNumber}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Course</label>
+                                            <div className="text-white text-sm">{trainee.course}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">LMP</label>
+                                            <div className="text-white text-sm">{trainee.lmpType || 'BPC+IPC'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Callsign</label>
+                                            <div className="text-white text-sm">{trainee.traineeCallsign || 'N/A'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Secondary Callsign</label>
+                                            <div className="text-white text-sm">{trainee.secondaryCallsign || '[None]'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Flight</label>
+                                            <div className="text-white text-sm">{trainee.flight || 'N/A'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Rank</label>
+                                            <div className="text-white text-sm">{trainee.rank}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Service</label>
+                                            <div className="text-white text-sm">{trainee.service || 'N/A'}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Unit</label>
+                                            <div className="text-white text-sm">{trainee.unit}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Seat Config</label>
+                                            <div className="text-white text-sm">{trainee.seatConfig}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Location</label>
+                                            <div className="text-white text-sm">{trainee.location}</div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-0.5">Phone Number</label>
+                                            <div className="text-white text-sm">{trainee.phoneNumber}</div>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs text-gray-500 mb-0.5">Email</label>
+                                            <div className="text-white text-sm">{trainee.email}</div>
+                                        </div>
+                                        <div className="col-span-4">
+                                            <label className="block text-xs text-gray-500 mb-0.5">Permissions</label>
+                                            <div className="text-white text-sm">
+                                                {(trainee.permissions && trainee.permissions.length > 0) ? (
+                                                    <span>• {trainee.permissions.join(' • ')}</span>
+                                                ) : (
+                                                    <span className="text-gray-500 italic">No permissions assigned</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                         </div>
 
-                        {/* Identity Block */}
-                        <div className="grid grid-cols-4 gap-6">
-                            {isEditing ? (
-                                <>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">ID Number</label>
-                                        <input
-                                            type="text"
-                                            value={idNumber}
-                                            onChange={e => setIdNumber(parseInt(e.target.value) || 0)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Course</label>
-                                        <select
-                                            value={course}
-                                            onChange={e => handleCourseChange(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            {activeCourses.length > 0 ? (
-                                                activeCourses.map(c => <option key={c} value={c}>{c}</option>)
-                                            ) : (
-                                                <option disabled>No courses</option>
-                                            )}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">LMP</label>
-                                        <select
-                                            value={lmpType}
-                                            onChange={e => handleLmpTypeChange(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Trainee Callsign</label>
-                                        <input
-                                            type="text"
-                                            value={traineeCallsign}
-                                            onChange={e => handleTraineeCallsignChange(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Rank</label>
-                                        <select
-                                            value={rank}
-                                            onChange={e => handleRankChange(e.target.value as TraineeRank)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            <option value="OCDT">OCDT</option>
-                                            <option value="MIDN">MIDN</option>
-                                            <option value="PLTOFF">PLTOFF</option>
-                                            <option value="FLGOFF">FLGOFF</option>
-                                            <option value="SBLT">SBLT</option>
-                                            <option value="2LT">2LT</option>
-                                            <option value="FLTLT">FLTLT</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Service</label>
-                                        <select
-                                            value={service}
-                                            onChange={e => setService(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            <option value="">Select...</option>
-                                            <option value="RAAF">RAAF</option>
-                                            <option value="Navy">Navy</option>
-                                            <option value="Army">Army</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Unit</label>
-                                        <select
-                                            value={unit}
-                                            onChange={e => handleUnitChange(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            {units.map(u => <option key={u} value={u}>{u}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Seat Config</label>
-                                        <select
-                                            value={seatConfig}
-                                            onChange={e => setSeatConfig(e.target.value as SeatConfig)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            <option value="Normal">Normal</option>
-                                            <option value="FWD/SHORT">FWD/SHORT</option>
-                                            <option value="REAR/SHORT">REAR/SHORT</option>
-                                            <option value="FWD/LONG">FWD/LONG</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Location</label>
-                                        <select
-                                            value={location}
-                                            onChange={e => handleLocationChange(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        >
-                                            {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Phone Number</label>
-                                        <input
-                                            type="text"
-                                            value={phoneNumber}
-                                            onChange={e => setPhoneNumber(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Email</label>
-                                        <input
-                                            type="text"
-                                            value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Flight</label>
-                                        <input
-                                            type="text"
-                                            value={flight}
-                                            onChange={e => setFlight(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Secondary Callsign</label>
-                                        <input
-                                            type="text"
-                                            value={secondaryCallsign}
-                                            onChange={e => handleSecondaryCallsignChange(e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        />
-                                    </div>
-                                    <div className="col-span-4">
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                                        <div className="flex flex-wrap gap-3">
-                                            {allPermissions.map(perm => (
-                                                <label key={perm} className="flex items-center space-x-2 cursor-pointer">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={permissions.includes(perm)} 
-                                                        onChange={e => handlePermissionChange(perm, e.target.checked)} 
-                                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
-                                                    />
-                                                    <span className="text-white text-sm">{perm}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">ID Number</label>
-                                        <div className="text-white font-medium">{trainee.idNumber}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Course</label>
-                                        <span className={`inline-block px-3 py-1 rounded-md text-white font-semibold text-sm ${courseColors[trainee.course] || 'bg-gray-500'}`}>
-                                            {trainee.course}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">LMP</label>
-                                        <span className="inline-block px-3 py-1 rounded-md text-sky-400 font-semibold text-sm bg-sky-900/30">
-                                            {trainee.lmpType || 'BPC+IPC'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Trainee Callsign</label>
-                                        <span className="inline-block px-3 py-1 rounded-md text-green-400 font-semibold text-sm bg-green-900/30">
-                                            {trainee.traineeCallsign || 'N/A'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Rank</label>
-                                        <div className="text-white font-medium">{trainee.rank}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Service</label>
-                                        <div className="text-white font-medium">{trainee.service || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Unit</label>
-                                        <div className="text-white font-medium">{trainee.unit}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Seat Config</label>
-                                        <div className="text-white font-medium">{trainee.seatConfig}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Location</label>
-                                        <div className="text-white font-medium">{trainee.location}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Phone Number</label>
-                                        <div className="text-white font-medium">{trainee.phoneNumber}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Email</label>
-                                        <div className="text-white font-medium">{trainee.email}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Flight</label>
-                                        <div className="text-white font-medium">{trainee.flight || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Trainee Callsign</label>
-                                        <span className="inline-block px-3 py-1 rounded-md text-green-400 font-semibold text-sm bg-green-900/30">
-                                            {trainee.traineeCallsign || 'N/A'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Secondary Callsign</label>
-                                        <div className="text-white font-medium">{trainee.secondaryCallsign || '[None]'}</div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {(trainee.permissions && trainee.permissions.length > 0) ? (
-                                                trainee.permissions.map(perm => (
-                                                    <span key={perm} className="inline-block px-3 py-1 rounded-md bg-gray-800 text-white text-sm">
-                                                        {perm}
-                                                    </span>
-                                                ))
-                                            ) : (
-                                                <span className="text-gray-500 italic text-sm">No permissions assigned</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </>
-                            )}
                         </div>
 
                         {/* Instructor Section */}
                         {!isCreating && (
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Primary Instructor</label>
-                                    <div className="flex items-center space-x-4 bg-gray-800/30 rounded-lg p-4">
-                                        <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center text-gray-600">
-                                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                                <div className="bg-[#252b3d] rounded-lg p-4">
+                                    <label className="block text-xs text-gray-400 mb-3">Primary Instructor</label>
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-gray-500 flex-shrink-0">
+                                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                             </svg>
                                         </div>
-                                        <div className="text-white font-medium">{trainee.primaryInstructor || 'Not Assigned'}</div>
+                                        <div className="text-white text-sm">{trainee.primaryInstructor || 'Not Assigned'}</div>
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-300 mb-3">Secondary Instructor</label>
-                                    <div className="flex items-center space-x-4 bg-gray-800/30 rounded-lg p-4">
-                                        <div className="w-16 h-16 bg-gray-700 rounded-lg flex items-center justify-center text-gray-600">
-                                            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <div className="bg-[#252b3d] rounded-lg p-4">
+                                    <label className="block text-xs text-gray-400 mb-3">Secondary Instructor</label>
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center text-gray-500 flex-shrink-0">
+                                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                             </svg>
                                         </div>
-                                        <div className="text-white font-medium">{trainee.secondaryInstructor || 'Not Assigned'}</div>
+                                        <div className="text-white text-sm">{trainee.secondaryInstructor || 'Not Assigned'}</div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {/* Logbook Section */}
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-300 mb-4">Logbook - Prior Experience (PC-21 only)</h3>
-                            <div className="grid grid-cols-5 gap-6">
+                        <div className="bg-[#1a1f2e] rounded-lg p-4 mb-6">
+                            <h3 className="text-sm font-semibold text-gray-300 mb-4">Logbook - Prior Experience (PC-21 only)</h3>
+                            <div className="grid grid-cols-5 gap-4">
                                 {/* Day Flying */}
-                                <div className="bg-gray-800/30 rounded-lg p-4">
-                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Day Flying</div>
+                                <div className="bg-[#252b3d] rounded-lg p-3">
+                                    <div className="text-xs font-semibold text-gray-400 mb-2 text-center">Day Flying</div>
                                     <div className="space-y-2">
                                         {isEditing ? (
                                             <>
@@ -988,8 +976,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </div>
 
                                 {/* Night Flying */}
-                                <div className="bg-gray-800/30 rounded-lg p-4">
-                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Night Flying</div>
+                                <div className="bg-[#252b3d] rounded-lg p-3">
+                                    <div className="text-xs font-semibold text-gray-400 mb-2 text-center">Night Flying</div>
                                     <div className="space-y-2">
                                         {isEditing ? (
                                             <>
@@ -1053,8 +1041,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </div>
 
                                 {/* Totals */}
-                                <div className="bg-gray-800/30 rounded-lg p-4">
-                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Totals</div>
+                                <div className="bg-[#252b3d] rounded-lg p-3">
+                                    <div className="text-xs font-semibold text-gray-400 mb-2 text-center">Totals</div>
                                     <div className="space-y-2">
                                         {isEditing ? (
                                             <>
@@ -1112,8 +1100,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </div>
 
                                 {/* Instrument */}
-                                <div className="bg-gray-800/30 rounded-lg p-4">
-                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Instrument</div>
+                                <div className="bg-[#252b3d] rounded-lg p-3">
+                                    <div className="text-xs font-semibold text-gray-400 mb-2 text-center">Instrument</div>
                                     <div className="space-y-2">
                                         {isEditing ? (
                                             <>
@@ -1162,8 +1150,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </div>
 
                                 {/* Simulator */}
-                                <div className="bg-gray-800/30 rounded-lg p-4">
-                                    <div className="text-sm font-semibold text-gray-400 mb-3 text-center">Simulator</div>
+                                <div className="bg-[#252b3d] rounded-lg p-3">
+                                    <div className="text-xs font-semibold text-gray-400 mb-2 text-center">Simulator</div>
                                     <div className="space-y-2">
                                         {isEditing ? (
                                             <>
@@ -1239,11 +1227,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                         {/* Events Section */}
                         {!isCreating && (
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-300 mb-4">Events</h3>
-                                <div className="grid grid-cols-4 gap-6">
+                            <div className="grid grid-cols-4 gap-4 mb-6">
                                     {/* Next Event */}
-                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="bg-[#252b3d] rounded-lg p-4">
                                         <div className="text-sm font-semibold text-gray-400 mb-3">Next Event</div>
                                         {nextEvent ? (
                                             <div className="space-y-2">
@@ -1273,7 +1259,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     </div>
 
                                     {/* Next Event +1 */}
-                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="bg-[#252b3d] rounded-lg p-4">
                                         <div className="text-sm font-semibold text-gray-400 mb-3">Next Event +1</div>
                                         {subsequentEvent ? (
                                             <div className="space-y-2">
@@ -1303,7 +1289,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     </div>
 
                                     {/* Last Flight */}
-                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="bg-[#252b3d] rounded-lg p-4">
                                         <div className="text-sm font-semibold text-gray-400 mb-3">Last Flight</div>
                                         {lastFlight && daysSinceLastFlight !== null ? (
                                             <div className="space-y-2">
@@ -1328,7 +1314,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     </div>
 
                                     {/* Last Event */}
-                                    <div className="bg-gray-800/30 rounded-lg p-4">
+                                    <div className="bg-[#252b3d] rounded-lg p-4">
                                         <div className="text-sm font-semibold text-gray-400 mb-3">Last Event</div>
                                         {lastEvent && daysSinceLastEvent !== null ? (
                                             <div className="space-y-2">
@@ -1352,13 +1338,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         )}
                                     </div>
                                 </div>
-                            </div>
                         )}
 
                         {/* Unavailability Section */}
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-300 mb-4">Unavailability</h3>
-                            <div className="space-y-3">
+                        <div className="bg-[#1a1f2e] rounded-lg p-4">
+                            <h3 className="text-sm font-semibold text-gray-300 mb-3">Unavailability</h3>
+                            <div className="space-y-2">
                                 {unavailability.length > 0 ? (
                                     unavailability.map(p => {
                                         let displayString = '';
@@ -1383,19 +1368,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         }
                                         
                                         return (
-                                            <div key={p.id} className="bg-gray-800/30 rounded-lg p-4">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <div className="font-semibold text-white">{p.reason}</div>
-                                                        <div className="text-xs text-gray-400 mt-1 font-mono">{displayString}</div>
-                                                    </div>
-                                                </div>
+                                            <div key={p.id} className="text-sm">
+                                                <div className="text-white">{p.reason}: {displayString}</div>
                                             </div>
                                         );
                                     })
                                 ) : (
-                                    <div className="bg-gray-800/30 rounded-lg p-6 text-center">
-                                        <p className="text-gray-500 italic">No unavailability periods scheduled</p>
+                                    <div className="text-center py-2">
+                                        <p className="text-gray-500 italic text-sm">No unavailability periods scheduled.</p>
                                     </div>
                                 )}
                             </div>
@@ -1403,9 +1383,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                         {/* Pause Toggle (Edit Mode Only) */}
                         {isEditing && !isCreating && (
-                            <div className="bg-gray-800/30 rounded-lg p-4">
+                            <div className="bg-[#252b3d] rounded-lg p-4 mt-6">
                                 <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-gray-300">Pause Trainee (NTSC)</span>
+                                    <span className="text-sm font-semibold text-gray-300">Pause Trainee (NTSC)</span>
                                     <button 
                                         onClick={handlePauseToggle} 
                                         className={`relative inline-flex items-center h-6 rounded-full w-12 transition-colors ${isPaused ? 'bg-amber-500' : 'bg-gray-600'}`}
@@ -1418,7 +1398,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     </div>
 
                     {/* RIGHT: Button Panel */}
-                    <div className="w-32 flex-shrink-0 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
+                    <div className="w-32 flex-shrink-0 bg-[#252b3d] p-4 flex flex-col space-y-[1px]">
                         {!isEditing && (
                             <>
                                 <button onClick={() => setShowAddUnavailability(true)} className="w-[75px] h-[60px] flex items-center justify-center text-[12px] btn-aluminium-brushed rounded-md transition-all duration-200">Unavailable</button>
