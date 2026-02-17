@@ -228,6 +228,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     }, [trainee, isCreating]);
 
     useEffect(() => {
+        console.log('🎯 TRAINEE PROFILE REDESIGNED VERSION LOADED - Commit f9ab2f5');
         if (!isCreating) {
             logAudit({
                 action: 'View',
