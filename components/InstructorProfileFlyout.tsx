@@ -739,7 +739,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
                         {!isEditing && !isCreating && (
                             <>
-                                <button onClick={() => setShowAddUnavailability(true)} className="w-[75px] h-[60px] flex items-center justify-center text-[12px] btn-orange-brushed rounded-md transition-all duration-200">Unavailable</button>
+                                <button onClick={() => setShowAddUnavailability(true)} className="w-[75px] h-[60px] flex items-center justify-center text-[12px] btn-aluminium-brushed rounded-md transition-all duration-200">Unavailable</button>
                                 <button onClick={() => onNavigateToCurrency(instructor)} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
                                 <button onClick={() => { if(onViewLogbook) onViewLogbook(instructor); }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
                                 <button onClick={onRequestSct} className={`${buttonClasses} btn-aluminium-brushed`}>Request SCT</button>
