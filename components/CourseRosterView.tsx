@@ -358,7 +358,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             setIsCreatingNew(false);
                             setNewTraineeTemplate(null);
                             setIsClosing(false);
-                        }, 600);
+                        }, 300);
                     }}
                     onUpdateTrainee={isCreatingNew ? onAddTrainee : onUpdateTrainee}
                     events={events}

@@ -377,7 +377,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (isOpening) {
             const timer = setTimeout(() => {
                 setIsAnimatingOpen(false);
-            }, 600);
+            }, 300);
             return () => clearTimeout(timer);
         }
     }, [isOpening]);
@@ -758,7 +758,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
         <>
             {/* Backdrop */}
             <div 
-                className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-600 ${
+                className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300 ${
                     isAnimatingOpen ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
                 }`}
                 onClick={onClose}
@@ -766,7 +766,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             
             {/* Bottom Sheet */}
             <div
-                className={`fixed top-[80px] bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 transform transition-transform duration-600 ease-out flex flex-col ${
+                className={`fixed top-[80px] bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
                     isAnimatingOpen ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
