@@ -1,7 +1,8 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
+// SessionProvider removed - authentication handled by DFP-NEO-Website
+// App loads independently without session management
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return <>{children}</>;
 }
