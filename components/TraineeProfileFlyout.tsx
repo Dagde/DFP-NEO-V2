@@ -766,7 +766,7 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             
             {/* Bottom Sheet */}
             <div
-                className={`fixed bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 rounded-t-2xl transform transition-transform duration-600 ease-out flex flex-col max-h-[calc(100vh-180px)] ${
+                className={`fixed top-[80px] bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 transform transition-transform duration-600 ease-out flex flex-col ${
                     isAnimatingOpen ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
                 }`}
             >
