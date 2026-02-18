@@ -900,52 +900,52 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         </div>
 
                         {/* RIGHT COLUMN: Action Buttons */}
-                        <div className="w-[72px] space-y-[1px] flex-shrink-0 flex flex-col items-center">
+                        <div className="w-[77px] space-y-[1px] flex-shrink-0 flex flex-col items-center">
                             <button
                                 onClick={() => setShowUnavailabilityFlyout(true)}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Unavailable
                             </button>
                             <button
                                 onClick={() => { onNavigateToCurrency(trainee); onClose(); }}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Currency
                             </button>
                             <button
                                 onClick={handleViewIndividualLMP}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 PT-051
                             </button>
                             <button
                                 onClick={handleViewIndividualLMP}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 View LMP
                             </button>
                             <button
                                 onClick={() => { onAddRemedialPackage(trainee); onClose(); }}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Remedial
                             </button>
                             <button
                                 onClick={() => { if (onViewLogbook) onViewLogbook(trainee); onClose(); }}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Logbook
                             </button>
                             <button
                                 onClick={() => setIsEditing(!isEditing)}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 {isEditing ? 'Cancel' : 'Edit'}
                             </button>
                             <button
                                 onClick={onClose}
-                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Close
                             </button>
