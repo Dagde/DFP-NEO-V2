@@ -502,22 +502,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             {/* Profile Card */}
                             <div className="bg-[#2a3441] rounded-lg p-6">
                                 <div className="flex gap-8">
-                                    {/* Left Column: Avatar and Name */}
+                                    {/* Left Column: Name, Status, Avatar */}
                                     <div className="flex flex-col items-center flex-shrink-0">
-                                        {/* Large Profile Photo */}
-                                        <div className="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 mb-4">
-                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                            </svg>
-                                        </div>
-
-                                        {/* Name */}
+                                        {/* Name - AT TOP */}
                                         <h2 className="text-2xl font-bold text-white mb-2 text-center">
                                             {isEditing ? name : trainee.name}
                                         </h2>
 
-                                        {/* Status Badge */}
-                                        <div>
+                                        {/* Status Badge - BELOW NAME, ABOVE AVATAR */}
+                                        <div className="mb-4">
                                             {(isEditing ? isPaused : trainee.isPaused) ? (
                                                 <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50">
                                                     Paused
@@ -528,11 +521,18 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 </span>
                                             )}
                                         </div>
+
+                                        {/* Large Profile Photo - AT BOTTOM */}
+                                        <div className="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
+                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
                                     </div>
 
-                                    {/* Right Section: Two Columns of Data */}
-                                    <div className="flex-1 grid grid-cols-2 gap-x-12 gap-y-4">
-                                        {/* Center Column */}
+                                    {/* Right Section: Three Columns of Data */}
+                                    <div className="flex-1 grid grid-cols-3 gap-x-8 gap-y-4">
+                                        {/* Column 1 */}
                                         <div className="space-y-4">
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">ID Number</label>
@@ -547,16 +547,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 <div className="text-white font-medium">{trainee.service || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
-                                                <div className="text-white font-medium">{trainee.seatConfig}</div>
-                                            </div>
-                                            <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Email</label>
                                                 <div className="text-white font-medium text-sm">{trainee.email}</div>
                                             </div>
                                         </div>
 
-                                        {/* Right Column */}
+                                        {/* Column 2 */}
                                         <div className="space-y-4">
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Course</label>
@@ -574,16 +570,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 <label className="block text-xs text-gray-400 mb-1">Location</label>
                                                 <div className="text-white font-medium">{trainee.location}</div>
                                             </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Permissions</label>
-                                                <div className="text-white font-medium text-sm">
-                                                    {trainee.permissions && trainee.permissions.length > 0 ? (
-                                                        <span>• {trainee.permissions.join(' • ')}</span>
-                                                    ) : (
-                                                        <span className="text-gray-500 italic">No permissions assigned</span>
-                                                    )}
-                                                </div>
-                                            </div>
+                                        </div>
+
+                                        {/* Column 3 */}
+                                        <div className="space-y-4">
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">LMP</label>
                                                 <div className="text-white font-medium">{trainee.lmpType || 'BPC+IPC'}</div>
@@ -597,8 +587,22 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 <div className="text-white font-medium">{trainee.flight || 'D'}</div>
                                             </div>
                                             <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
+                                                <div className="text-white font-medium">{trainee.seatConfig}</div>
+                                            </div>
+                                            <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Phone Number</label>
                                                 <div className="text-white font-medium">{trainee.phoneNumber}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Permissions</label>
+                                                <div className="text-white font-medium text-sm">
+                                                    {trainee.permissions && trainee.permissions.length > 0 ? (
+                                                        <span>• {trainee.permissions.join(' • ')}</span>
+                                                    ) : (
+                                                        <span className="text-gray-500 italic">No permissions assigned</span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
