@@ -531,7 +531,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     </div>
 
                                     {/* Right Section: Four Columns of Data */}
-                                    <div className="flex-1 grid grid-cols-4 gap-x-6 gap-y-4">
+                                    <div className="flex-1 grid grid-cols-4 gap-x-4 gap-y-4">
                                         {/* Column 1 */}
                                         <div className="space-y-4">
                                             <div>
