@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
+import CircularGauge from './CircularGauge';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
@@ -24,66 +25,16 @@ interface InstructorProfileFlyoutProps {
   onRequestSct: () => void;
 }
 
-const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
-    <div className={className}>
-        <label className="block text-sm font-medium text-gray-400">{label}</label>
-        <div className={`mt-1 text-white p-2 bg-gray-700/50 rounded-md min-h-[38px] flex items-center`}>
-            {value}
-        </div>
-    </div>
-);
+const formatDate = (dateString: string): string => {
+    if (!dateString) return '';
+    const date = new Date(`${dateString}T00:00:00Z`);
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+};
 
-const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
-     <div>
-        <label className="block text-sm font-medium text-gray-400">{label}</label>
-        <input
-            type={type}
-            value={value}
-            onChange={onChange}
-            readOnly={readOnly}
-            className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${readOnly ? 'bg-gray-700/50 cursor-not-allowed' : ''}`}
-        />
-    </div>
-);
-
-
-const Dropdown: React.FC<{ label: string; value: string; onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void; children: React.ReactNode; }> = ({ label, value, onChange, children }) => (
-    <div>
-        <label className="block text-sm font-medium text-gray-400">{label}</label>
-        <select
-            value={value}
-            onChange={onChange}
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-        >
-            {children}
-        </select>
-    </div>
-);
-
-// Reusable Components for Experience fields
-const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: number) => void }> = ({ label, value, onChange }) => (
-    <div className="flex flex-col items-center">
-        <label className="text-xs text-gray-400 mb-1">{label}</label>
-        <input
-            type="number"
-            min="0"
-            step="0.1"
-            value={value}
-            onFocus={(e) => e.target.select()}
-            onChange={e => onChange(parseFloat(e.target.value) || 0)}
-            className="w-20 bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
-    </div>
-);
-
-const ExperienceDisplay: React.FC<{ label: string; value: number }> = ({ label, value }) => (
-    <div className="flex flex-col items-center">
-        <label className="text-xs text-gray-500 mb-1">{label}</label>
-        <div className="w-20 bg-gray-800/50 rounded-md py-1 px-2 text-white text-sm text-center font-mono border border-gray-700">
-            {value.toFixed(1)}
-        </div>
-    </div>
-);
+const formatMilitaryTime = (timeString: string | undefined): string => {
+    if (!timeString) return '';
+    return timeString.replace(':', '');
+};
 
 const initialExperience: LogbookExperience = {
     day: { p1: 0, p2: 0, dual: 0 },
@@ -95,9 +46,23 @@ const initialExperience: LogbookExperience = {
     simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
 
-
-// FIX: Changed to a named export to resolve module resolution errors.
-export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({ instructor, onClose, school, personnelData, onUpdateInstructor, onNavigateToCurrency, originRect, isClosing, isOpening = false, isCreating = false, locations, units, traineesData, onViewLogbook, onRequestSct }) => {
+export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
+    instructor,
+    onClose,
+    school,
+    personnelData,
+    onUpdateInstructor,
+    onNavigateToCurrency,
+    originRect,
+    isClosing,
+    isOpening = false,
+    isCreating = false,
+    locations,
+    units,
+    traineesData,
+    onViewLogbook,
+    onRequestSct
+}) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
     const [isAnimatingOpen, setIsAnimatingOpen] = useState(isOpening);
@@ -109,7 +74,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const [rank, setRank] = useState<InstructorRank>(instructor.rank);
     const [role, setRole] = useState<'QFI' | 'SIM IP'>(instructor.role);
     const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
-    const [service, setService] = useState< 'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
+    const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
     const [category, setCategory] = useState<InstructorCategory>(instructor.category);
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(instructor.seatConfig);
     const [unavailabilityPeriods, setUnavailabilityPeriods] = useState<UnavailabilityPeriod[]>(instructor.unavailability || []);
@@ -119,7 +84,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const [phoneNumber, setPhoneNumber] = useState(instructor.phoneNumber || '');
     const [email, setEmail] = useState(instructor.email || '');
     const [permissions, setPermissions] = useState<string[]>(instructor.permissions || []);
-    
     const [priorExperience, setPriorExperience] = useState<LogbookExperience>(instructor.priorExperience || initialExperience);
     
     // Boolean states for roles
@@ -136,6 +100,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const [isOFI, setIsOFI] = useState(instructor.isOFI || false);
 
     const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Scheduler', 'Course Supervisor', 'Admin', 'Super Admin'], []);
+    const callsignPrefix = school === 'ESL' ? 'ROLR' : 'VIPR';
+    const callsignNumbers = useMemo(() => Array.from({ length: 99 }, (_, i) => i + 1), []);
 
     const { primaryTrainees, secondaryTrainees } = useMemo(() => {
         if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
@@ -145,6 +111,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     }, [traineesData, instructor.name]);
 
     const hasAssignedTrainees = primaryTrainees.length > 0 || secondaryTrainees.length > 0;
+
+    // Calculate logbook totals
+    const dayTotal = priorExperience.day.p1 + priorExperience.day.p2 + priorExperience.day.dual;
+    const nightTotal = priorExperience.night.p1 + priorExperience.night.p2 + priorExperience.night.dual;
+    const instrumentTotal = priorExperience.instrument.sim + priorExperience.instrument.actual;
+    const simulatorTotal = priorExperience.simulator.p1 + priorExperience.simulator.p2 + priorExperience.simulator.dual;
 
     const resetState = () => {
         setIdNumber(instructor.idNumber);
@@ -181,7 +153,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         setIsEditing(isCreating);
     }, [instructor, isCreating]);
 
-    // Log view on component mount (only if not creating)
     useEffect(() => {
         if (!isCreating) {
             logAudit({
@@ -193,7 +164,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         }
     }, []);
 
-    // Handle opening animation
     useEffect(() => {
         if (isOpening) {
             const timer = setTimeout(() => {
@@ -206,18 +176,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const handleEdit = () => setIsEditing(true);
 
     const handleCancel = () => {
-      if (isCreating) {
-        onClose();
-      } else {
-        resetState();
-        setIsEditing(false);
-      }
+        if (isCreating) {
+            onClose();
+        } else {
+            resetState();
+            setIsEditing(false);
+        }
     };
-    
-    const callsignPrefix = school === 'ESL' ? 'ROLR' : 'VIPR';
-    const callsignNumbers = useMemo(() => Array.from({ length: 99 }, (_, i) => i + 1), []);
-    
-    // Debounced field change handlers
+
     const handleNameChange = (newName: string) => {
         const oldName = name;
         setName(newName);
@@ -231,7 +197,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             );
         }
     };
-    
+
     const handleRankChange = (newRank: InstructorRank) => {
         const oldRank = rank;
         setRank(newRank);
@@ -245,7 +211,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             );
         }
     };
-    
+
     const handleRoleChange = (newRole: 'QFI' | 'SIM IP') => {
         const oldRole = role;
         setRole(newRole);
@@ -259,7 +225,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             );
         }
     };
-    
+
     const handleCategoryChange = (newCategory: InstructorCategory) => {
         const oldCategory = category;
         setCategory(newCategory);
@@ -311,10 +277,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             priorExperience
         };
         
-        // Flush any pending debounced logs before saving
         flushPendingAudits();
         
-        // Log the save action
         if (isCreating) {
             logAudit({
                 action: 'Add',
@@ -323,7 +287,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 page: 'Staff'
             });
         } else {
-            // Detect changes for edit
             const changes: string[] = [];
             if (instructor.name !== name) changes.push(`Name: ${instructor.name} → ${name}`);
             if (instructor.rank !== rank) changes.push(`Rank: ${instructor.rank} → ${rank}`);
@@ -344,12 +307,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         
         onUpdateInstructor(updatedInstructor);
 
-        // Persist Logbook Data to Storage
         try {
             const fileName = `Logbook_${name.replace(/,\s/g, '_')}_${updatedInstructor.idNumber}.json`;
             const fileContent = JSON.stringify(priorExperience, null, 2);
             const file = new File([fileContent], fileName, { type: "application/json" });
-            // 'staff_logbook' is the ID for the Staff Data -> Logbook folder
             await addFile(file, 'staff_logbook', fileName);
         } catch (error) {
             console.error("Failed to save logbook data to storage:", error);
@@ -391,7 +352,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         });
     };
 
-    // --- Unavailability Handlers ---
     const handleAddTodayOnly = () => {
         const today = new Date();
         const formatForInput = (date: Date) => date.toISOString().split('T')[0];
@@ -408,18 +368,17 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             notes: 'Today Only',
         };
 
-           // Log audit entry for Today Only unavailability
-           logAudit({
-               action: "Add",
-               description: `Added unavailability for ${instructor.rank} ${instructor.name}`,
-               changes: `Date: ${todayStr}, Time: 0001-2359, Reason: Other (Today Only)`,
-               page: "Staff"
-           });
+        logAudit({
+            action: "Add",
+            description: `Added unavailability for ${instructor.rank} ${instructor.name}`,
+            changes: `Date: ${todayStr}, Time: 0001-2359, Reason: Other (Today Only)`,
+            page: "Staff"
+        });
 
-           onUpdateInstructor({
-               ...instructor,
-               unavailability: [...(instructor.unavailability || []), newPeriod]
-           });
+        onUpdateInstructor({
+            ...instructor,
+            unavailability: [...(instructor.unavailability || []), newPeriod]
+        });
     };
 
     const handleSaveUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
@@ -469,293 +428,417 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         });
     };
 
-    const assignedTraineesWindow = (
-        <fieldset className="p-3 border border-gray-600 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Assigned Trainees</legend>
-            <div className="mt-1 h-24 overflow-y-auto p-2 space-y-1 text-sm scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                {hasAssignedTrainees ? (
-                    <>
-                        {primaryTrainees.map(t => <div key={t.idNumber} className="text-white truncate"><span className="font-semibold text-sky-400">Primary:</span> {t.name}</div>)}
-                        {secondaryTrainees.map(t => <div key={t.idNumber} className="text-gray-300 truncate"><span className="font-semibold text-sky-500">Secondary:</span> {t.name}</div>)}
-                    </>
-                ) : (
-                    <p className="text-gray-500 italic text-center">No trainees assigned.</p>
-                )}
-            </div>
-        </fieldset>
-    );
-
-    const permissionsWindow = (
-        <fieldset className="p-3 border border-gray-600 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
-            <div className="mt-1 min-h-[4rem] p-2">
-                {permissions && permissions.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                        {permissions.map(perm => (
-                            <span key={perm} className="px-3 py-1 bg-sky-600 text-white text-sm rounded-full">
-                                {perm}
-                            </span>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-500 italic text-center">No permissions assigned.</p>
-                )}
-            </div>
-        </fieldset>
-    );
-
-    const buttonClasses = "w-[75px] h-[60px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all duration-200";
-
     return (
         <>
-            {/* Backdrop */}
+            {/* Full Screen Overlay */}
             <div 
-                className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-50 transition-opacity duration-300 ${
-                    isAnimatingOpen ? 'opacity-0' : (isClosing ? 'opacity-0' : 'opacity-100')
+                className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity duration-300 ${
+                    isAnimatingOpen || isClosing ? 'opacity-0' : 'opacity-100'
                 }`}
                 onClick={onClose}
             />
             
-            {/* Bottom Sheet */}
+            {/* Main Profile Panel - Scaled Down */}
             <div
                 ref={panelRef}
-                className={`fixed top-[80px] bottom-0 left-[95px] right-[95px] bg-gray-900 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${
-                    isAnimatingOpen ? 'translate-y-full' : (isClosing ? 'translate-y-full' : 'translate-y-0')
+                className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#1e2433] z-50 transition-all duration-300 ease-out flex flex-col shadow-2xl rounded-lg overflow-hidden ${
+                    isAnimatingOpen || isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
                 }`}
+                style={{ width: '85vw', height: '85vh' }}
             >
-                {/* Drag Handle */}
-                <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
-                    <div className="w-16 h-1.5 bg-gray-600 rounded-full cursor-pointer hover:bg-gray-500 transition-colors" />
-                </div>
-
-                {/* Header */}
-                <div className="px-6 pb-4 flex justify-between items-center bg-gray-900/95 flex-shrink-0 border-b border-gray-700">
-                    <h2 className="text-2xl font-bold text-sky-400">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
-                    <button 
-                        onClick={onClose} 
-                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-white hover:text-gray-300 transition-all duration-200"
+                {/* Header with Title and Close Button */}
+                <div className="flex items-center justify-between px-6 py-3 bg-[#252d3d] border-b border-gray-700 flex-shrink-0">
+                    <h1 className="text-xl font-bold text-white">{isCreating ? 'New Staff' : 'Staff Profile'}</h1>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <div className="flex-1 flex flex-row overflow-hidden">
-                    <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {isEditing ? (
+                {/* Main Content Area */}
+                <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex gap-5">
+                        {/* LEFT COLUMN: Profile Info */}
+                        <div className="flex-1 space-y-6">
+                            {/* Profile Card */}
+                            <div className="bg-[#2a3441] rounded-lg p-5">
+                                <div className="flex gap-6">
+                                    {/* Left Column: Name, Status, Avatar */}
+                                    <div className="flex flex-col items-center flex-shrink-0">
+                                        {/* Name - AT TOP */}
+                                        <h2 className="text-xl font-bold text-white mb-1.5 text-center">
+                                            {isEditing ? name : instructor.name}
+                                        </h2>
+
+                                        {/* Status Badge - BELOW NAME, ABOVE AVATAR */}
+                                        <div className="mb-3.5">
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/50">
+                                                Active
+                                            </span>
+                                        </div>
+
+                                        {/* Large Profile Photo - AT BOTTOM */}
+                                        <div className="w-28 h-28 bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
+                                            <svg className="w-14 h-14" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Section: Four Columns of Data */}
+                                    <div className="flex-1 grid grid-cols-4 gap-x-3 gap-y-3">
+                                        {/* Column 1 */}
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">ID Number</label>
+                                                <div className="text-white font-medium text-sm">{instructor.idNumber}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Rank</label>
+                                                <div className="text-white font-medium text-sm">{instructor.rank}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
+                                                <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 2 */}
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Role</label>
+                                                <div className="text-white font-medium text-sm">{instructor.role}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Category</label>
+                                                <div className="text-white font-medium text-sm">{instructor.category || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Unit</label>
+                                                <div className="text-white font-medium text-sm">{instructor.unit}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 3 */}
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Callsign</label>
+                                                <div className="text-white font-medium text-sm">
+                                                    {instructor.callsignNumber > 0 ? `${callsignPrefix} ${String(instructor.callsignNumber).padStart(3, '0')}` : 'N/A'}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Flight</label>
+                                                <div className="text-white font-medium text-sm">{instructor.flight || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
+                                                <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
+                                                <div className="text-white font-medium text-sm">{instructor.phoneNumber}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 4 */}
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
+                                                <div className="text-white font-medium text-sm">{instructor.location}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Email</label>
+                                                <div className="text-white font-medium text-xs">{instructor.email}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Permissions</label>
+                                                <div className="text-white font-medium text-xs">
+                                                    {instructor.permissions && instructor.permissions.length > 0 ? (
+                                                        <span>• {instructor.permissions.join(' • ')}</span>
+                                                    ) : (
+                                                        <span className="text-gray-500 italic">No permissions assigned</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Qualifications & Roles Section */}
+                            <div className="bg-[#2a3441] rounded-lg p-3">
+                                <h4 className="text-xs font-semibold text-gray-300 mb-3">Qualifications & Roles</h4>
+                                <div className="grid grid-cols-4 gap-2 text-[10px]">
+                                    <div className={instructor.isExecutive ? 'text-white' : 'text-gray-500'}>Executive</div>
+                                    <div className={instructor.isFlyingSupervisor ? 'text-white' : 'text-gray-500'}>Flying Supervisor</div>
+                                    <div className={instructor.isTestingOfficer ? 'text-white' : 'text-gray-500'}>Testing Officer</div>
+                                    <div className={instructor.isIRE ? 'text-white' : 'text-gray-500'}>IRE</div>
+                                    <div className={instructor.isCommandingOfficer ? 'text-white' : 'text-gray-500'}>CO</div>
+                                    <div className={instructor.isCFI ? 'text-white' : 'text-gray-500'}>CFI</div>
+                                    <div className={instructor.isDeputyFlightCommander ? 'text-white' : 'text-gray-500'}>DFC</div>
+                                    <div className={instructor.isContractor ? 'text-white' : 'text-gray-500'}>Contractor</div>
+                                    <div className={instructor.isAdminStaff ? 'text-white' : 'text-gray-500'}>Admin Staff</div>
+                                    <div className={instructor.isQFI ? 'text-white' : 'text-gray-500'}>QFI</div>
+                                    <div className={instructor.isOFI ? 'text-white' : 'text-gray-500'}>OFI</div>
+                                </div>
+                            </div>
+
+                            {/* Assigned Trainees Section */}
+                            {!isCreating && (
+                                <div className="bg-[#2a3441] rounded-lg p-3">
+                                    <h4 className="text-xs font-semibold text-gray-300 mb-2">Assigned Trainees</h4>
+                                    <div className="h-24 overflow-y-auto space-y-1 text-xs scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                                        {hasAssignedTrainees ? (
+                                            <>
+                                                {primaryTrainees.map(t => (
+                                                    <div key={t.idNumber} className="text-white truncate">
+                                                        <span className="font-semibold text-sky-400">Primary:</span> {t.name}
+                                                    </div>
+                                                ))}
+                                                {secondaryTrainees.map(t => (
+                                                    <div key={t.idNumber} className="text-gray-300 truncate">
+                                                        <span className="font-semibold text-sky-500">Secondary:</span> {t.name}
+                                                    </div>
+                                                ))}
+                                            </>
+                                        ) : (
+                                            <p className="text-gray-500 italic text-center">No trainees assigned.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Logbook Section with Circular Gauges */}
+                            <div className="bg-[#252d3d] rounded-lg p-5">
+                                <h3 className="text-sm font-semibold text-white mb-5">Logbook - Prior Experience (PC-21 only)</h3>
+                                <div className="grid grid-cols-5 gap-4">
+                                    {/* Day Flying Gauge */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Day Flying</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={dayTotal} maxValue={100} size={64} />
+                                        </div>
+                                        <div className="space-y-0.5 text-[10px]">
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>P1</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.p1.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>P2</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.p2.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Dual</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.dual.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Night Flying Gauge */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Night Flying</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={nightTotal} maxValue={100} size={64} />
+                                        </div>
+                                        <div className="space-y-0.5 text-[10px]">
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>P1</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.p1.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>P2</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.p2.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Dual</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.dual.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Totals Gauge */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Totals</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={priorExperience.total} maxValue={500} size={64} />
+                                        </div>
+                                        <div className="space-y-0.5 text-[10px]">
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>TOTAL</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.total.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Captain</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.captain.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Instructor</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.instructor.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Instrument Gauge */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Instrument</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={instrumentTotal} maxValue={100} size={64} />
+                                        </div>
+                                        <div className="space-y-0.5 text-[10px]">
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Sim</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.instrument.sim.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Actual</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.instrument.actual.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Simulator Gauge */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Simulator</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={simulatorTotal} maxValue={100} size={64} />
+                                        </div>
+                                        <div className="space-y-0.5 text-[10px]">
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>P1</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p1.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>P2</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p2.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400">
+                                                <span>Dual</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.dual.toFixed(1)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-400 pt-0.5 border-t border-gray-600">
+                                                <span>Total</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.total.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Unavailability Section */}
+                            <div className="bg-[#252d3d] rounded-lg p-5">
+                                <h3 className="text-sm font-semibold text-white mb-3">Unavailability</h3>
+                                {(instructor.unavailability || []).length > 0 ? (
+                                    <div className="space-y-2">
+                                        {(instructor.unavailability || [])
+                                            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+                                            .map(period => {
+                                                let displayText = '';
+                                                const startDateFormatted = formatDate(period.startDate);
+                                                
+                                                if (period.allDay) {
+                                                    const endDate = new Date(`${period.endDate}T00:00:00Z`);
+                                                    endDate.setUTCDate(endDate.getUTCDate() - 1);
+                                                    const adjustedEndDate = endDate.toISOString().split('T')[0];
+                                                    const endDateFormatted = formatDate(adjustedEndDate);
+                                                    displayText = `${period.startDate === adjustedEndDate ? startDateFormatted : `${startDateFormatted} to ${endDateFormatted}`} @ All Day`;
+                                                } else {
+                                                    const endDateFormatted = formatDate(period.endDate);
+                                                    const startTime = formatMilitaryTime(period.startTime);
+                                                    const endTime = formatMilitaryTime(period.endTime);
+                                                    if (period.startDate === period.endDate) {
+                                                        displayText = `${startTime} ${startDateFormatted} - ${endTime} ${endDateFormatted}`;
+                                                    } else {
+                                                        displayText = `${startTime} ${startDateFormatted} to ${endTime} ${endDateFormatted}`;
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div key={period.id} className="flex items-center justify-between p-2.5 bg-[#2a3441] rounded-lg">
+                                                        <div>
+                                                            <div className="text-white font-medium text-xs">{period.reason}</div>
+                                                            <div className="text-gray-400 text-[10px] font-mono mt-0.5">{displayText}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                ) : (
+                                    <div className="text-gray-500 italic text-center py-3 text-xs">
+                                        No unavailability periods scheduled.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: Action Buttons */}
+                        <div className="w-[77px] space-y-[1px] flex-shrink-0 flex flex-col items-center">
+                            {!isEditing && !isCreating && (
                                 <>
-                                    <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
-                                    <InputField label="PMKeys/ID" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value, 10) || 0)} />
+                                    <button
+                                        onClick={() => setShowAddUnavailability(true)}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Unavailable
+                                    </button>
+                                    <button
+                                        onClick={() => onNavigateToCurrency(instructor)}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Currency
+                                    </button>
+                                    <button
+                                        onClick={() => { if(onViewLogbook) onViewLogbook(instructor); }}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Logbook
+                                    </button>
+                                    <button
+                                        onClick={onRequestSct}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Request SCT
+                                    </button>
+                                    <button
+                                        onClick={handleEdit}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        onClick={onClose}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Close
+                                    </button>
                                 </>
-                            ) : (
+                            )}
+                            {isEditing && (
                                 <>
-                                    <InfoRow label="Name" value={instructor.name} className="lg:col-span-2" />
-                                    <InfoRow label="PMKeys/ID" value={instructor.idNumber} />
+                                    <button
+                                        onClick={handleSave}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        onClick={handleCancel}
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        Cancel
+                                    </button>
                                 </>
                             )}
                         </div>
-                        
-                        {isEditing ? (
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <Dropdown label="Rank" value={rank} onChange={e => handleRankChange(e.target.value as InstructorRank)}>
-                                    <option value="WGCDR">WGCDR</option><option value="SQNLDR">SQNLDR</option><option value="FLTLT">FLTLT</option><option value="FLGOFF">FLGOFF</option><option value="PLTOFF">PLTOFF</option><option value="Mr">Mr</option>
-                                </Dropdown>
-                                <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value as 'RAAF' | 'RAN' | 'ARA')}>
-                                    <option value="">Select Service</option>
-                                    <option value="RAAF">RAAF</option>
-                                    <option value="RAN">RAN</option>
-                                    <option value="ARA">ARA</option>
-                                </Dropdown>
-                                <Dropdown label="Category" value={category || ''} onChange={e => setCategory(e.target.value as InstructorCategory)}>
-                                    <option value="">Select Category</option>
-                                    <option value="A">A</option>
-                                    <option value="B">B</option>
-                                    <option value="C">C</option>
-                                    <option value="D">D</option>
-                                    <option value="UnCat">U</option>
-                                </Dropdown>
-                                 <Dropdown label="Role" value={role} onChange={e => handleRoleChange(e.target.value as 'QFI' | 'SIM IP')}>
-                                    <option value="QFI">QFI</option><option value="SIM IP">SIM IP</option>
-                                </Dropdown>
-                                {role === 'QFI' && (
-                                     <Dropdown label="Callsign" value={String(callsignNumber)} onChange={e => setCallsignNumber(parseInt(e.target.value, 10) || 0)}>
-                                        <option value="0">None</option>
-                                        {callsignNumbers.map(num => <option key={num} value={num}>{callsignPrefix} {String(num).padStart(3, '0')}</option>)}
-                                    </Dropdown>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <InfoRow label="Rank" value={instructor.rank} />
-                                <InfoRow label="Service" value={instructor.service || 'N/A'} />
-                                <InfoRow label="Category" value={instructor.category || 'N/A'} />
-                                <InfoRow label="Role" value={instructor.role} />
-                                <InfoRow label="Callsign" value={instructor.callsignNumber > 0 ? `${callsignPrefix} ${String(instructor.callsignNumber).padStart(3, '0')}` : 'N/A'}/>
-                            </div>
-                        )}
-
-                        <fieldset className="p-3 border border-gray-600 rounded-lg">
-                            <legend className="px-2 text-sm font-semibold text-gray-300">Qualifications & Roles</legend>
-                            <div className="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {isEditing ? (
-                                    <>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isExecutive} onChange={e => setIsExecutive(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>Executive</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isFlyingSupervisor} onChange={e => setIsFlyingSupervisor(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>Flying Supervisor</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isTestingOfficer} onChange={e => setIsTestingOfficer(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>Testing Officer</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isIRE} onChange={e => setIsIRE(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>IRE</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isCommandingOfficer} onChange={e => setIsCommandingOfficer(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>CO</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isCFI} onChange={e => setIsCFI(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>CFI</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isDeputyFlightCommander} onChange={e => setIsDeputyFlightCommander(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>DFC</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isContractor} onChange={e => setIsContractor(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>Contractor</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isAdminStaff} onChange={e => setIsAdminStaff(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>Admin Staff</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isQFI} onChange={e => setIsQFI(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>QFI</span></label>
-                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="checkbox" checked={isOFI} onChange={e => setIsOFI(e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600" /><span>OFI</span></label>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className={`text-sm ${instructor.isExecutive ? 'text-white' : 'text-gray-500'}`}>Executive</div>
-                                        <div className={`text-sm ${instructor.isFlyingSupervisor ? 'text-white' : 'text-gray-500'}`}>Flying Supervisor</div>
-                                        <div className={`text-sm ${instructor.isTestingOfficer ? 'text-white' : 'text-gray-500'}`}>Testing Officer</div>
-                                        <div className={`text-sm ${instructor.isIRE ? 'text-white' : 'text-gray-500'}`}>IRE</div>
-                                        <div className={`text-sm ${instructor.isCommandingOfficer ? 'text-white' : 'text-gray-500'}`}>CO</div>
-                                        <div className={`text-sm ${instructor.isCFI ? 'text-white' : 'text-gray-500'}`}>CFI</div>
-                                        <div className={`text-sm ${instructor.isDeputyFlightCommander ? 'text-white' : 'text-gray-500'}`}>DFC</div>
-                                        <div className={`text-sm ${instructor.isContractor ? 'text-white' : 'text-gray-500'}`}>Contractor</div>
-                                        <div className={`text-sm ${instructor.isAdminStaff ? 'text-white' : 'text-gray-500'}`}>Admin Staff</div>
-                                        <div className={`text-sm ${instructor.isQFI ? 'text-white' : 'text-gray-500'}`}>QFI</div>
-                                        <div className={`text-sm ${instructor.isOFI ? 'text-white' : 'text-gray-500'}`}>OFI</div>
-                                    </>
-                                )}
-                            </div>
-                        </fieldset>
-
-                        {isEditing ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <Dropdown label="Location" value={location} onChange={(e) => setLocation(e.target.value)}>{locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}</Dropdown>
-                                <Dropdown label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)}>{units.map(u => <option key={u} value={u}>{u}</option>)}</Dropdown>
-                                <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
-                                <Dropdown label="Seat Config" value={seatConfig || ''} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
-                                    <option value="Normal">Normal</option>
-                                    <option value="FWD/SHORT">FWD/SHORT</option>
-                                    <option value="REAR/SHORT">REAR/SHORT</option>
-                                    <option value="FWD/LONG">FWD/LONG</option>
-                                </Dropdown>
-                            </div>
-                        ) : (
-                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <InfoRow label="Location" value={location} />
-                                <InfoRow label="Unit" value={unit} />
-                                <InfoRow label="Flight" value={flight || 'N/A'}/>
-                                <InfoRow label="Seat Config" value={instructor.seatConfig || 'N/A'}/>
-                            </div>
-                        )}
-                        
-                        {isEditing ? (
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
-                                <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
-                            </div>
-                        ) : (
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <InfoRow label="Phone Number" value={phoneNumber} />
-                                <InfoRow label="Email" value={email} />
-                            </div>
-                        )}
-                        
-                        {isEditing && (
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
-                                <div className="mt-1 min-h-[4rem] p-2 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
-                                    {allPermissions.map(perm => (
-                                        <label key={perm} className="flex items-center space-x-3 cursor-pointer">
-                                            <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" />
-                                            <span className="text-white">{perm}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </fieldset>
-                        )}
-                        
-                        {!isCreating && assignedTraineesWindow}
-                        {!isCreating && permissionsWindow}
-
-                         <fieldset className="p-3 border border-gray-600 rounded-lg">
-                            <legend className="px-2 text-sm font-semibold text-sky-400">Logbook - Prior Experience (PC-21 only)</legend>
-                            <div className="space-y-4 mt-2">
-                                {/* Row 1: Day & Night */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                    <div>
-                                        <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Day Flying</span>
-                                        <div className="flex justify-center space-x-2">
-                                            {isEditing ? <ExperienceInput label="P1" value={priorExperience.day.p1} onChange={v => handleExperienceChange('day', 'p1', v)} /> : <ExperienceDisplay label="P1" value={priorExperience.day.p1} />}
-                                            {isEditing ? <ExperienceInput label="P2" value={priorExperience.day.p2} onChange={v => handleExperienceChange('day', 'p2', v)} /> : <ExperienceDisplay label="P2" value={priorExperience.day.p2} />}
-                                            {isEditing ? <ExperienceInput label="Dual" value={priorExperience.day.dual} onChange={v => handleExperienceChange('day', 'dual', v)} /> : <ExperienceDisplay label="Dual" value={priorExperience.day.dual} />}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Night Flying</span>
-                                        <div className="flex justify-center space-x-2">
-                                            {isEditing ? <ExperienceInput label="P1" value={priorExperience.night.p1} onChange={v => handleExperienceChange('night', 'p1', v)} /> : <ExperienceDisplay label="P1" value={priorExperience.night.p1} />}
-                                            {isEditing ? <ExperienceInput label="P2" value={priorExperience.night.p2} onChange={v => handleExperienceChange('night', 'p2', v)} /> : <ExperienceDisplay label="P2" value={priorExperience.night.p2} />}
-                                            {isEditing ? <ExperienceInput label="Dual" value={priorExperience.night.dual} onChange={v => handleExperienceChange('night', 'dual', v)} /> : <ExperienceDisplay label="Dual" value={priorExperience.night.dual} />}
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* Row 2: Totals & Instrument */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                    <div>
-                                        <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Totals</span>
-                                        <div className="flex justify-center space-x-2">
-                                            {isEditing ? <ExperienceInput label="TOTAL" value={priorExperience.total} onChange={v => handleExperienceChange('total', null, v)} /> : <ExperienceDisplay label="TOTAL" value={priorExperience.total} />}
-                                            {isEditing ? <ExperienceInput label="Captain" value={priorExperience.captain} onChange={v => handleExperienceChange('captain', null, v)} /> : <ExperienceDisplay label="Captain" value={priorExperience.captain} />}
-                                            {isEditing ? <ExperienceInput label="Instructor" value={priorExperience.instructor} onChange={v => handleExperienceChange('instructor', null, v)} /> : <ExperienceDisplay label="Instructor" value={priorExperience.instructor} />}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Instrument</span>
-                                        <div className="flex justify-center space-x-2">
-                                            {isEditing ? <ExperienceInput label="Sim" value={priorExperience.instrument.sim} onChange={v => handleExperienceChange('instrument', 'sim', v)} /> : <ExperienceDisplay label="Sim" value={priorExperience.instrument.sim} />}
-                                            {isEditing ? <ExperienceInput label="Actual" value={priorExperience.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} /> : <ExperienceDisplay label="Actual" value={priorExperience.instrument.actual} />}
-                                        </div>
-                                    </div>
-                                </div>
-                                {/* Row 3: Simulator */}
-                                <div>
-                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Simulator</span>
-                                    <div className="flex justify-center space-x-4">
-                                        {isEditing ? <ExperienceInput label="P1" value={priorExperience.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} /> : <ExperienceDisplay label="P1" value={priorExperience.simulator.p1} />}
-                                        {isEditing ? <ExperienceInput label="P2" value={priorExperience.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} /> : <ExperienceDisplay label="P2" value={priorExperience.simulator.p2} />}
-                                        {isEditing ? <ExperienceInput label="Dual" value={priorExperience.simulator.dual} onChange={v => handleExperienceChange('simulator', 'dual', v)} /> : <ExperienceDisplay label="Dual" value={priorExperience.simulator.dual} />}
-                                        {isEditing ? <ExperienceInput label="Total" value={priorExperience.simulator.total} onChange={v => handleExperienceChange('simulator', 'total', v)} /> : <ExperienceDisplay label="Total" value={priorExperience.simulator.total} />}
-                                    </div>
-                                </div>
-                            </div>
-                        </fieldset>
-
-                    </div>
-                    {/* RIGHT: Button Panel */}
-                    <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-[1px]">
-                        {!isEditing && !isCreating && (
-                            <>
-                                <button onClick={() => setShowAddUnavailability(true)} className="w-[75px] h-[60px] flex items-center justify-center text-[12px] btn-aluminium-brushed rounded-md transition-all duration-200">Unavailable</button>
-                                <button onClick={() => onNavigateToCurrency(instructor)} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
-                                <button onClick={() => { if(onViewLogbook) onViewLogbook(instructor); }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
-                                <button onClick={onRequestSct} className={`${buttonClasses} btn-aluminium-brushed`}>Request SCT</button>
-                                <button onClick={handleEdit} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
-                                <button onClick={onClose} className={`${buttonClasses} btn-aluminium-brushed`}>Close</button>
-                            </>
-                        )}
-                        {isEditing && (
-                            <>
-                                <button onClick={handleSave} className={`${buttonClasses} btn-aluminium-brushed`}>Save</button>
-                                <button onClick={handleCancel} className={`${buttonClasses} btn-aluminium-brushed`}>Cancel</button>
-                            </>
-                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Flyouts */}
             {showAddUnavailability && !isCreating && (
                 <AddUnavailabilityFlyout
                     onClose={() => setShowAddUnavailability(false)}
