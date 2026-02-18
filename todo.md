@@ -46,9 +46,10 @@ All changes deployed and pushed to GitHub
   - Font: `text-[12px] font-semibold`
   - Style: `btn-aluminium-brushed` (matching RightSidebar)
   - Border radius: `rounded-md`
-- Spacing between buttons: `space-y-[1px]` (1px maximum)
+- Spacing between ALL buttons: `space-y-[1px]` (consistent 1px spacing throughout)
 - Reduced right menu column width: `w-[85px]` (just wide enough for buttons)
 - Buttons now centered in the column using `flex flex-col items-center`
+- Removed extra padding between Logbook and Edit buttons - all buttons now have uniform 1px spacing
 
 ## Build & Deploy
 - ✅ Built Vite app successfully
