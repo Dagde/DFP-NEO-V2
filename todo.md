@@ -37,7 +37,7 @@ All changes deployed and pushed to GitHub
 ### 3. Styling Improvements
 - **Labels**: Small gray text (text-xs text-gray-400)
 - **Values**: Medium white text with bold font (text-white font-medium)
-- **Spacing**: Consistent 6px gap between columns (gap-x-6)
+- **Spacing**: Consistent 4px gap between columns (gap-x-4) to prevent overflow
 - **Alignment**: Clean vertical stacking with equal spacing (space-y-4)
 
 ### 4. Right Menu Buttons
