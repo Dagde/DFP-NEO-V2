@@ -475,132 +475,133 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 onClick={onClose}
             />
             
-            {/* Main Profile Panel - Full Width */}
+            {/* Main Profile Panel - Scaled Down */}
             <div
-                className={`fixed inset-0 bg-[#1e2433] z-50 transform transition-transform duration-300 ease-out flex flex-col ${
-                    isAnimatingOpen || isClosing ? 'translate-y-full' : 'translate-y-0'
+                className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#1e2433] z-50 transition-all duration-300 ease-out flex flex-col shadow-2xl rounded-lg overflow-hidden ${
+                    isAnimatingOpen || isClosing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
                 }`}
+                style={{ width: '85vw', height: '85vh' }}
             >
                 {/* Header with Title and Close Button */}
-                <div className="flex items-center justify-between px-8 py-4 bg-[#252d3d] border-b border-gray-700">
-                    <h1 className="text-2xl font-bold text-white">Trainee Profile</h1>
+                <div className="flex items-center justify-between px-6 py-3 bg-[#252d3d] border-b border-gray-700 flex-shrink-0">
+                    <h1 className="text-xl font-bold text-white">Trainee Profile</h1>
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all"
+                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 overflow-y-auto p-8">
-                    <div className="flex gap-6">
+                <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex gap-5">
                         {/* LEFT COLUMN: Profile Info */}
                         <div className="flex-1 space-y-6">
                             {/* Profile Card */}
-                            <div className="bg-[#2a3441] rounded-lg p-6">
-                                <div className="flex gap-8">
+                            <div className="bg-[#2a3441] rounded-lg p-5">
+                                <div className="flex gap-6">
                                     {/* Left Column: Name, Status, Avatar */}
                                     <div className="flex flex-col items-center flex-shrink-0">
                                         {/* Name - AT TOP */}
-                                        <h2 className="text-2xl font-bold text-white mb-2 text-center">
+                                        <h2 className="text-xl font-bold text-white mb-1.5 text-center">
                                             {isEditing ? name : trainee.name}
                                         </h2>
 
                                         {/* Status Badge - BELOW NAME, ABOVE AVATAR */}
-                                        <div className="mb-4">
+                                        <div className="mb-3.5">
                                             {(isEditing ? isPaused : trainee.isPaused) ? (
-                                                <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50">
                                                     Paused
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-green-500/20 text-green-400 border border-green-500/50">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/50">
                                                     Active
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Large Profile Photo - AT BOTTOM */}
-                                        <div className="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
-                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+                                        <div className="w-28 h-28 bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
+                                            <svg className="w-14 h-14" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                             </svg>
                                         </div>
                                     </div>
 
                                     {/* Right Section: Four Columns of Data */}
-                                    <div className="flex-1 grid grid-cols-4 gap-x-4 gap-y-4">
+                                    <div className="flex-1 grid grid-cols-4 gap-x-3 gap-y-3">
                                         {/* Column 1 */}
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">ID Number</label>
-                                                <div className="text-white font-medium">{trainee.idNumber}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">ID Number</label>
+                                                <div className="text-white font-medium text-sm">{trainee.idNumber}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Rank</label>
-                                                <div className="text-white font-medium">{trainee.rank}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Rank</label>
+                                                <div className="text-white font-medium text-sm">{trainee.rank}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Service</label>
-                                                <div className="text-white font-medium">{trainee.service || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
+                                                <div className="text-white font-medium text-sm">{trainee.service || 'N/A'}</div>
                                             </div>
                                         </div>
 
                                         {/* Column 2 */}
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Course</label>
-                                                <div className="text-white font-medium">{trainee.course}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Course</label>
+                                                <div className="text-white font-medium text-sm">{trainee.course}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Unit</label>
-                                                <div className="text-white font-medium">{trainee.unit}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Unit</label>
+                                                <div className="text-white font-medium text-sm">{trainee.unit}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Flight</label>
-                                                <div className="text-white font-medium">{trainee.flight || 'D'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Flight</label>
+                                                <div className="text-white font-medium text-sm">{trainee.flight || 'D'}</div>
                                             </div>
                                         </div>
 
                                         {/* Column 3 */}
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Callsign</label>
-                                                <div className="text-white font-medium">{trainee.traineeCallsign || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Callsign</label>
+                                                <div className="text-white font-medium text-sm">{trainee.traineeCallsign || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Secondary Callsign</label>
-                                                <div className="text-white font-medium">{trainee.secondaryCallsign || '[None]'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Secondary Callsign</label>
+                                                <div className="text-white font-medium text-sm">{trainee.secondaryCallsign || '[None]'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
-                                                <div className="text-white font-medium">{trainee.seatConfig}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
+                                                <div className="text-white font-medium text-sm">{trainee.seatConfig}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Phone Number</label>
-                                                <div className="text-white font-medium">{trainee.phoneNumber}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
+                                                <div className="text-white font-medium text-sm">{trainee.phoneNumber}</div>
                                             </div>
                                         </div>
 
                                         {/* Column 4 */}
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">LMP</label>
-                                                <div className="text-white font-medium">{trainee.lmpType || 'BPC+IPC'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">LMP</label>
+                                                <div className="text-white font-medium text-sm">{trainee.lmpType || 'BPC+IPC'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Location</label>
-                                                <div className="text-white font-medium">{trainee.location}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
+                                                <div className="text-white font-medium text-sm">{trainee.location}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Email</label>
-                                                <div className="text-white font-medium text-sm">{trainee.email}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Email</label>
+                                                <div className="text-white font-medium text-xs">{trainee.email}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Permissions</label>
-                                                <div className="text-white font-medium text-sm">
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Permissions</label>
+                                                <div className="text-white font-medium text-xs">
                                                     {trainee.permissions && trainee.permissions.length > 0 ? (
                                                         <span>• {trainee.permissions.join(' • ')}</span>
                                                     ) : (
@@ -615,29 +616,29 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                             {/* Instructors Section */}
                             {!isCreating && (
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <label className="block text-sm text-gray-400 mb-3">Primary Instructor</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
-                                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <label className="block text-xs text-gray-400 mb-2">Primary Instructor</label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                                 </svg>
                                             </div>
-                                            <div className="text-white text-sm font-medium">
+                                            <div className="text-white text-xs font-medium">
                                                 {trainee.primaryInstructor || 'Not Assigned'}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <label className="block text-sm text-gray-400 mb-3">Secondary Instructor</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
-                                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <label className="block text-xs text-gray-400 mb-2">Secondary Instructor</label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                                 </svg>
                                             </div>
-                                            <div className="text-white text-sm font-medium">
+                                            <div className="text-white text-xs font-medium">
                                                 {trainee.secondaryInstructor || 'Not Assigned'}
                                             </div>
                                         </div>
@@ -646,115 +647,115 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             )}
 
                             {/* Logbook Section with Circular Gauges */}
-                            <div className="bg-[#252d3d] rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-white mb-6">Logbook - Prior Experience (PC-21 only)</h3>
-                                <div className="grid grid-cols-5 gap-6">
+                            <div className="bg-[#252d3d] rounded-lg p-5">
+                                <h3 className="text-sm font-semibold text-white mb-5">Logbook - Prior Experience (PC-21 only)</h3>
+                                <div className="grid grid-cols-5 gap-4">
                                     {/* Day Flying Gauge */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-4 text-center">Day Flying</h4>
-                                        <div className="flex justify-center mb-4">
-                                            <CircularGauge value={dayTotal} maxValue={100} size={80} />
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Day Flying</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={dayTotal} maxValue={100} size={64} />
                                         </div>
-                                        <div className="space-y-1 text-xs">
+                                        <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P1</span>
-                                                <span className="text-white font-mono">{priorExperience.day.p1.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.p1.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P2</span>
-                                                <span className="text-white font-mono">{priorExperience.day.p2.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.p2.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Dual</span>
-                                                <span className="text-white font-mono">{priorExperience.day.dual.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.dual.toFixed(1)}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Night Flying Gauge */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-4 text-center">Night Flying</h4>
-                                        <div className="flex justify-center mb-4">
-                                            <CircularGauge value={nightTotal} maxValue={100} size={80} />
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Night Flying</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={nightTotal} maxValue={100} size={64} />
                                         </div>
-                                        <div className="space-y-1 text-xs">
+                                        <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P1</span>
-                                                <span className="text-white font-mono">{priorExperience.night.p1.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.p1.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P2</span>
-                                                <span className="text-white font-mono">{priorExperience.night.p2.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.p2.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Dual</span>
-                                                <span className="text-white font-mono">{priorExperience.night.dual.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.dual.toFixed(1)}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Totals Gauge */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-4 text-center">Totals</h4>
-                                        <div className="flex justify-center mb-4">
-                                            <CircularGauge value={priorExperience.total} maxValue={500} size={80} />
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Totals</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={priorExperience.total} maxValue={500} size={64} />
                                         </div>
-                                        <div className="space-y-1 text-xs">
+                                        <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>TOTAL</span>
-                                                <span className="text-white font-mono">{priorExperience.total.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.total.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Captain</span>
-                                                <span className="text-white font-mono">{priorExperience.captain.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.captain.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Instructor</span>
-                                                <span className="text-white font-mono">{priorExperience.instructor.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.instructor.toFixed(1)}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Instrument Gauge */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-4 text-center">Instrument</h4>
-                                        <div className="flex justify-center mb-4">
-                                            <CircularGauge value={instrumentTotal} maxValue={100} size={80} />
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Instrument</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={instrumentTotal} maxValue={100} size={64} />
                                         </div>
-                                        <div className="space-y-1 text-xs">
+                                        <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Sim</span>
-                                                <span className="text-white font-mono">{priorExperience.instrument.sim.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.instrument.sim.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Actual</span>
-                                                <span className="text-white font-mono">{priorExperience.instrument.actual.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.instrument.actual.toFixed(1)}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Simulator Gauge */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-300 mb-4 text-center">Simulator</h4>
-                                        <div className="flex justify-center mb-4">
-                                            <CircularGauge value={simulatorTotal} maxValue={100} size={80} />
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-300 mb-3 text-center">Simulator</h4>
+                                        <div className="flex justify-center mb-3">
+                                            <CircularGauge value={simulatorTotal} maxValue={100} size={64} />
                                         </div>
-                                        <div className="space-y-1 text-xs">
+                                        <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P1</span>
-                                                <span className="text-white font-mono">{priorExperience.simulator.p1.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p1.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P2</span>
-                                                <span className="text-white font-mono">{priorExperience.simulator.p2.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p2.toFixed(1)}</span>
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Dual</span>
-                                                <span className="text-white font-mono">{priorExperience.simulator.dual.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.dual.toFixed(1)}</span>
                                             </div>
-                                            <div className="flex justify-between text-gray-400 pt-1 border-t border-gray-600">
+                                            <div className="flex justify-between text-gray-400 pt-0.5 border-t border-gray-600">
                                                 <span>Total</span>
-                                                <span className="text-white font-mono">{priorExperience.simulator.total.toFixed(1)}</span>
+                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.total.toFixed(1)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -763,88 +764,88 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                             {/* Events Section */}
                             {!isCreating && (
-                                <div className="grid grid-cols-4 gap-4">
+                                <div className="grid grid-cols-4 gap-3">
                                     {/* Next Event */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-400 mb-3">Next Event</h4>
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Next Event</h4>
                                         {nextEvent ? (
-                                            <div className="space-y-2">
+                                            <div className="space-y-1.5">
                                                 <button
                                                     onClick={() => { onNavigateToSyllabus(nextEvent.id); onClose(); }}
-                                                    className="text-sky-400 font-bold text-lg hover:underline"
+                                                    className="text-sky-400 font-bold text-sm hover:underline"
                                                 >
                                                     {nextEvent.id}
                                                 </button>
-                                                <div className="text-white text-sm">{nextEvent.type}</div>
-                                                <div className="text-gray-400 text-sm">{nextEvent.duration.toFixed(1)} hrs</div>
+                                                <div className="text-white text-xs">{nextEvent.type}</div>
+                                                <div className="text-gray-400 text-xs">{nextEvent.duration.toFixed(1)} hrs</div>
                                             </div>
                                         ) : (
-                                            <div className="text-gray-500 italic text-sm">{nextEventReason || 'No event found'}</div>
+                                            <div className="text-gray-500 italic text-xs">{nextEventReason || 'No event found'}</div>
                                         )}
                                     </div>
 
                                     {/* Next Event +1 */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-400 mb-3">Next Event +1</h4>
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Next Event +1</h4>
                                         {subsequentEvent ? (
-                                            <div className="space-y-2">
+                                            <div className="space-y-1.5">
                                                 <button
                                                     onClick={() => { onNavigateToSyllabus(subsequentEvent.id); onClose(); }}
-                                                    className="text-sky-400 font-bold text-lg hover:underline"
+                                                    className="text-sky-400 font-bold text-sm hover:underline"
                                                 >
                                                     {subsequentEvent.id}
                                                 </button>
-                                                <div className="text-white text-sm">{subsequentEvent.type}</div>
-                                                <div className="text-gray-400 text-sm">{subsequentEvent.duration.toFixed(1)} hrs</div>
+                                                <div className="text-white text-xs">{subsequentEvent.type}</div>
+                                                <div className="text-gray-400 text-xs">{subsequentEvent.duration.toFixed(1)} hrs</div>
                                             </div>
                                         ) : (
-                                            <div className="text-gray-500 italic text-sm">No subsequent event</div>
+                                            <div className="text-gray-500 italic text-xs">No subsequent event</div>
                                         )}
                                     </div>
 
                                     {/* Last Flight */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-400 mb-3">Last Flight</h4>
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Last Flight</h4>
                                         {lastFlight ? (
-                                            <div className="space-y-2">
+                                            <div className="space-y-1.5">
                                                 <button
                                                     onClick={() => { onNavigateToSyllabus(lastFlight.event); onClose(); }}
-                                                    className="text-sky-400 font-bold text-lg hover:underline"
+                                                    className="text-sky-400 font-bold text-sm hover:underline"
                                                 >
                                                     {lastFlight.event}
                                                 </button>
-                                                <div className="text-white text-sm">{formatDate(lastFlight.date)}</div>
-                                                <div className="text-gray-400 text-sm">{daysSinceLastFlight} days since</div>
+                                                <div className="text-white text-xs">{formatDate(lastFlight.date)}</div>
+                                                <div className="text-gray-400 text-xs">{daysSinceLastFlight} days since</div>
                                             </div>
                                         ) : (
-                                            <div className="text-gray-500 italic text-sm">No flights recorded</div>
+                                            <div className="text-gray-500 italic text-xs">No flights recorded</div>
                                         )}
                                     </div>
 
                                     {/* Last Event */}
-                                    <div className="bg-[#2a3441] rounded-lg p-4">
-                                        <h4 className="text-sm font-semibold text-gray-400 mb-3">Last Event</h4>
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Last Event</h4>
                                         {lastEvent ? (
-                                            <div className="space-y-2">
+                                            <div className="space-y-1.5">
                                                 <button
                                                     onClick={() => { onNavigateToSyllabus(lastEvent.event); onClose(); }}
-                                                    className="text-sky-400 font-bold text-lg hover:underline"
+                                                    className="text-sky-400 font-bold text-sm hover:underline"
                                                 >
                                                     {lastEvent.event}
                                                 </button>
-                                                <div className="text-white text-sm">{formatDate(lastEvent.date)}</div>
-                                                <div className="text-gray-400 text-sm">{daysSinceLastEvent} days since</div>
+                                                <div className="text-white text-xs">{formatDate(lastEvent.date)}</div>
+                                                <div className="text-gray-400 text-xs">{daysSinceLastEvent} days since</div>
                                             </div>
                                         ) : (
-                                            <div className="text-gray-500 italic text-sm">No events recorded</div>
+                                            <div className="text-gray-500 italic text-xs">No events recorded</div>
                                         )}
                                     </div>
                                 </div>
                             )}
 
                             {/* Unavailability Section */}
-                            <div className="bg-[#252d3d] rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4">Unavailability</h3>
+                            <div className="bg-[#252d3d] rounded-lg p-5">
+                                <h3 className="text-sm font-semibold text-white mb-3">Unavailability</h3>
                                 {(isEditing ? unavailability : trainee.unavailability || []).length > 0 ? (
                                     <div className="space-y-2">
                                         {(isEditing ? unavailability : trainee.unavailability || [])
@@ -871,17 +872,17 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 }
 
                                                 return (
-                                                    <div key={period.id} className="flex items-center justify-between p-3 bg-[#2a3441] rounded-lg">
+                                                    <div key={period.id} className="flex items-center justify-between p-2.5 bg-[#2a3441] rounded-lg">
                                                         <div>
-                                                            <div className="text-white font-medium">{period.reason}</div>
-                                                            <div className="text-gray-400 text-xs font-mono mt-1">{displayText}</div>
+                                                            <div className="text-white font-medium text-xs">{period.reason}</div>
+                                                            <div className="text-gray-400 text-[10px] font-mono mt-0.5">{displayText}</div>
                                                         </div>
                                                         {isEditing && (
                                                             <button
                                                                 onClick={() => handleRemoveUnavailability(period.id)}
                                                                 className="text-gray-400 hover:text-red-400 transition-colors"
                                                             >
-                                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                                     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
                                                                 </svg>
                                                             </button>
@@ -891,7 +892,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                             })}
                                     </div>
                                 ) : (
-                                    <div className="text-gray-500 italic text-center py-4">
+                                    <div className="text-gray-500 italic text-center py-3 text-xs">
                                         No unavailability periods scheduled.
                                     </div>
                                 )}
@@ -899,52 +900,52 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         </div>
 
                         {/* RIGHT COLUMN: Action Buttons */}
-                        <div className="w-[85px] space-y-[1px] flex-shrink-0 flex flex-col items-center">
+                        <div className="w-[72px] space-y-[1px] flex-shrink-0 flex flex-col items-center">
                             <button
                                 onClick={() => setShowUnavailabilityFlyout(true)}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Unavailable
                             </button>
                             <button
                                 onClick={() => { onNavigateToCurrency(trainee); onClose(); }}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Currency
                             </button>
                             <button
                                 onClick={handleViewIndividualLMP}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 PT-051
                             </button>
                             <button
                                 onClick={handleViewIndividualLMP}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 View LMP
                             </button>
                             <button
                                 onClick={() => { onAddRemedialPackage(trainee); onClose(); }}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Remedial
                             </button>
                             <button
                                 onClick={() => { if (onViewLogbook) onViewLogbook(trainee); onClose(); }}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Logbook
                             </button>
                             <button
                                 onClick={() => setIsEditing(!isEditing)}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 {isEditing ? 'Cancel' : 'Edit'}
                             </button>
                             <button
                                 onClick={onClose}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[64px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Close
                             </button>
