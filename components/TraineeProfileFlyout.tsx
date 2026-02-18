@@ -501,95 +501,105 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className="flex-1 space-y-6">
                             {/* Profile Card */}
                             <div className="bg-[#2a3441] rounded-lg p-6">
-                                <div className="flex items-start gap-6">
-                                    {/* Profile Photo - Moved down slightly */}
-                                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0 mt-4">
-                                        <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
+                                <div className="flex gap-8">
+                                    {/* Left Column: Avatar and Name */}
+                                    <div className="flex flex-col items-center flex-shrink-0">
+                                        {/* Large Profile Photo */}
+                                        <div className="w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 mb-4">
+                                            <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
 
-                                    {/* Name and Status - Moved above profile photo */}
-                                    <div className="flex-1 -mt-12">
-                                        <h2 className="text-3xl font-bold text-white mb-2">
+                                        {/* Name */}
+                                        <h2 className="text-2xl font-bold text-white mb-2 text-center">
                                             {isEditing ? name : trainee.name}
                                         </h2>
+
+                                        {/* Status Badge */}
                                         <div>
                                             {(isEditing ? isPaused : trainee.isPaused) ? (
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50">
+                                                <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/50">
                                                     Paused
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-500/20 text-green-400 border border-green-500/50">
+                                                <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold bg-green-500/20 text-green-400 border border-green-500/50">
                                                     Active
                                                 </span>
                                             )}
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Identity Grid - Moved to right of profile photo */}
-                                <div className="grid grid-cols-3 gap-x-8 gap-y-4">
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">ID Number</label>
-                                        <div className="text-white text-sm">{trainee.idNumber}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Course</label>
-                                        <div className="text-white text-sm">{trainee.course}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">LMP</label>
-                                        <div className="text-white text-sm">{trainee.lmpType || 'BPC+IPC'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Callsign</label>
-                                        <div className="text-white text-sm">{trainee.traineeCallsign || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Secondary Callsign</label>
-                                        <div className="text-white text-sm">{trainee.secondaryCallsign || '[None]'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Rank</label>
-                                        <div className="text-white text-sm">{trainee.rank}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Service</label>
-                                        <div className="text-white text-sm">{trainee.service || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Unit</label>
-                                        <div className="text-white text-sm">{trainee.unit}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Flight</label>
-                                        <div className="text-white text-sm">{trainee.flight || 'D'}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
-                                        <div className="text-white text-sm">{trainee.seatConfig}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Location</label>
-                                        <div className="text-white text-sm">{trainee.location}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-gray-400 mb-1">Phone Number</label>
-                                        <div className="text-white text-sm">{trainee.phoneNumber}</div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="block text-xs text-gray-400 mb-1">Email</label>
-                                        <div className="text-white text-sm">{trainee.email}</div>
-                                    </div>
-                                    <div className="col-span-3">
-                                        <label className="block text-xs text-gray-400 mb-1">Permissions</label>
-                                        <div className="text-white text-sm">
-                                            {trainee.permissions && trainee.permissions.length > 0 ? (
-                                                <span>• {trainee.permissions.join(' • ')}</span>
-                                            ) : (
-                                                <span className="text-gray-500 italic">No permissions assigned</span>
-                                            )}
+                                    {/* Right Section: Two Columns of Data */}
+                                    <div className="flex-1 grid grid-cols-2 gap-x-12 gap-y-4">
+                                        {/* Center Column */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">ID Number</label>
+                                                <div className="text-white font-medium">{trainee.idNumber}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Callsign</label>
+                                                <div className="text-white font-medium">{trainee.traineeCallsign || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Service</label>
+                                                <div className="text-white font-medium">{trainee.service || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
+                                                <div className="text-white font-medium">{trainee.seatConfig}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Email</label>
+                                                <div className="text-white font-medium text-sm">{trainee.email}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Column */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Course</label>
+                                                <div className="text-white font-medium">{trainee.course}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Secondary Callsign</label>
+                                                <div className="text-white font-medium">{trainee.secondaryCallsign || '[None]'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Unit</label>
+                                                <div className="text-white font-medium">{trainee.unit}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Location</label>
+                                                <div className="text-white font-medium">{trainee.location}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Permissions</label>
+                                                <div className="text-white font-medium text-sm">
+                                                    {trainee.permissions && trainee.permissions.length > 0 ? (
+                                                        <span>• {trainee.permissions.join(' • ')}</span>
+                                                    ) : (
+                                                        <span className="text-gray-500 italic">No permissions assigned</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">LMP</label>
+                                                <div className="text-white font-medium">{trainee.lmpType || 'BPC+IPC'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Rank</label>
+                                                <div className="text-white font-medium">{trainee.rank}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Flight</label>
+                                                <div className="text-white font-medium">{trainee.flight || 'D'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Phone Number</label>
+                                                <div className="text-white font-medium">{trainee.phoneNumber}</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
