@@ -1,27 +1,27 @@
-# Trainee Profile Redesign - Match Reference Image Exactly
+# CLARIFICATION NEEDED - Which Profile to Redesign?
 
-## Analysis
-- [ ] Analyze reference image layout structure
-- [ ] Document all sections and their positions
-- [ ] Identify all visual elements needed
+## Current Situation
+We have successfully redesigned the **Trainee Profile** component, but the screenshot you provided shows the **Staff/Instructor Profile** component, which is a completely different component.
 
-## Implementation
-- [ ] Create new TraineeProfileFlyout with full-width layout
-- [ ] Add "Trainee Profile" header with X close button
-- [ ] Implement profile photo placeholder (circular)
-- [ ] Create identity grid section (left side)
-- [ ] Add Primary/Secondary Instructor section with photos
-- [ ] Add right-side button panel (Unavailable, Currency, PT-051, etc.)
-- [ ] Implement circular gauge components for logbook
-- [ ] Create event cards section (Next Event, Last Flight, etc.)
-- [ ] Add unavailability section at bottom
-- [ ] Add Edit and Close buttons at bottom right
+## Two Different Components:
+1. **TraineeProfileFlyout.tsx** - Shows student/trainee information (ALREADY REDESIGNED ✅)
+2. **InstructorProfileFlyout.tsx** - Shows instructor/staff information (NOT YET REDESIGNED ❌)
 
-## Build & Deploy
-- [ ] Build Vite app with new design
-- [ ] Copy to deployment directories
-- [ ] Force new bundle name to avoid caching
-- [ ] Commit bundle files to git
-- [ ] Update HTML references
-- [ ] Commit and push changes
-- [ ] Verify deployment
+## Question for User:
+Which profile did you want redesigned to match the reference image?
+
+### Option A: Trainee Profile (Already Done)
+- Shows student information
+- Has circular gauges for logbook hours
+- Has event cards (Next Event, Last Flight)
+- Full-page overlay design ✅
+
+### Option B: Staff/Instructor Profile (Screenshot You Showed)
+- Shows instructor/staff information
+- Has qualifications & roles section
+- Has buttons: Unavailable, Currency, Logbook, Request SCT, Edit, Close
+- Currently uses a different layout (NOT redesigned yet)
+
+## Next Steps:
+- If you want the **Trainee Profile** redesigned → It's already done! We need to test it by clicking on a trainee.
+- If you want the **Staff/Instructor Profile** redesigned → We need to redesign the InstructorProfileFlyout.tsx component.

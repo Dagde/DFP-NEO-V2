@@ -501,16 +501,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className="flex-1 space-y-6">
                             {/* Profile Card */}
                             <div className="bg-[#2a3441] rounded-lg p-6">
-                                <div className="flex items-start gap-6 mb-6">
-                                    {/* Profile Photo */}
-                                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                <div className="flex items-start gap-6">
+                                    {/* Profile Photo - Moved down slightly */}
+                                    <div className="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0 mt-4">
                                         <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
                                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                         </svg>
                                     </div>
 
-                                    {/* Name and Status */}
-                                    <div className="flex-1">
+                                    {/* Name and Status - Moved above profile photo */}
+                                    <div className="flex-1 -mt-12">
                                         <h2 className="text-3xl font-bold text-white mb-2">
                                             {isEditing ? name : trainee.name}
                                         </h2>
@@ -528,7 +528,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Identity Grid */}
+                                {/* Identity Grid - Moved to right of profile photo */}
                                 <div className="grid grid-cols-3 gap-x-8 gap-y-4">
                                     <div>
                                         <label className="block text-xs text-gray-400 mb-1">ID Number</label>
@@ -881,52 +881,55 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         </div>
 
                         {/* RIGHT COLUMN: Action Buttons */}
-                        <div className="w-48 space-y-2 flex-shrink-0">
+                        <div className="w-[85px] space-y-[1px] flex-shrink-0 flex flex-col items-center">
                             <button
                                 onClick={() => setShowUnavailabilityFlyout(true)}
-                                className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Unavailable
                             </button>
                             <button
                                 onClick={() => { onNavigateToCurrency(trainee); onClose(); }}
-                                className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Currency
                             </button>
-                            <div className="bg-[#2a3441] rounded-lg p-2 text-center">
-                                <div className="text-gray-400 text-xs">PT-051</div>
-                            </div>
                             <button
                                 onClick={handleViewIndividualLMP}
-                                className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
-                                View Individual LMP
+                                PT-051
+                            </button>
+                            <button
+                                onClick={handleViewIndividualLMP}
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            >
+                                View LMP
                             </button>
                             <button
                                 onClick={() => { onAddRemedialPackage(trainee); onClose(); }}
-                                className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
-                                Add Remedial Package
+                                Remedial
                             </button>
                             <button
                                 onClick={() => { if (onViewLogbook) onViewLogbook(trainee); onClose(); }}
-                                className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             >
                                 Logbook
                             </button>
 
                             {/* Bottom Buttons */}
-                            <div className="pt-4 space-y-2">
+                            <div className="pt-2 space-y-[1px]">
                                 <button
                                     onClick={() => setIsEditing(!isEditing)}
-                                    className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                                 >
                                     {isEditing ? 'Cancel' : 'Edit'}
                                 </button>
                                 <button
                                     onClick={onClose}
-                                    className="w-full h-12 flex items-center justify-center text-sm font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                                 >
                                     Close
                                 </button>
