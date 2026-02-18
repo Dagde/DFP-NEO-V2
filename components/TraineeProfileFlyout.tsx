@@ -936,22 +936,18 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             >
                                 Logbook
                             </button>
-
-                            {/* Bottom Buttons */}
-                            <div className="pt-2 space-y-[1px]">
-                                <button
-                                    onClick={() => setIsEditing(!isEditing)}
-                                    className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
-                                >
-                                    {isEditing ? 'Cancel' : 'Edit'}
-                                </button>
-                                <button
-                                    onClick={onClose}
-                                    className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
-                                >
-                                    Close
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => setIsEditing(!isEditing)}
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            >
+                                {isEditing ? 'Cancel' : 'Edit'}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
