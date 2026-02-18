@@ -530,8 +530,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* Right Section: Three Columns of Data */}
-                                    <div className="flex-1 grid grid-cols-3 gap-x-8 gap-y-4">
+                                    {/* Right Section: Four Columns of Data */}
+                                    <div className="flex-1 grid grid-cols-4 gap-x-6 gap-y-4">
                                         {/* Column 1 */}
                                         <div className="space-y-4">
                                             <div>
@@ -539,16 +539,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 <div className="text-white font-medium">{trainee.idNumber}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Callsign</label>
-                                                <div className="text-white font-medium">{trainee.traineeCallsign || 'N/A'}</div>
+                                                <label className="block text-xs text-gray-400 mb-1">Rank</label>
+                                                <div className="text-white font-medium">{trainee.rank}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Service</label>
                                                 <div className="text-white font-medium">{trainee.service || 'N/A'}</div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Email</label>
-                                                <div className="text-white font-medium text-sm">{trainee.email}</div>
                                             </div>
                                         </div>
 
@@ -559,32 +555,24 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                                 <div className="text-white font-medium">{trainee.course}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Secondary Callsign</label>
-                                                <div className="text-white font-medium">{trainee.secondaryCallsign || '[None]'}</div>
-                                            </div>
-                                            <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Unit</label>
                                                 <div className="text-white font-medium">{trainee.unit}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Location</label>
-                                                <div className="text-white font-medium">{trainee.location}</div>
+                                                <label className="block text-xs text-gray-400 mb-1">Flight</label>
+                                                <div className="text-white font-medium">{trainee.flight || 'D'}</div>
                                             </div>
                                         </div>
 
                                         {/* Column 3 */}
                                         <div className="space-y-4">
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">LMP</label>
-                                                <div className="text-white font-medium">{trainee.lmpType || 'BPC+IPC'}</div>
+                                                <label className="block text-xs text-gray-400 mb-1">Callsign</label>
+                                                <div className="text-white font-medium">{trainee.traineeCallsign || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Rank</label>
-                                                <div className="text-white font-medium">{trainee.rank}</div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs text-gray-400 mb-1">Flight</label>
-                                                <div className="text-white font-medium">{trainee.flight || 'D'}</div>
+                                                <label className="block text-xs text-gray-400 mb-1">Secondary Callsign</label>
+                                                <div className="text-white font-medium">{trainee.secondaryCallsign || '[None]'}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Seat Config</label>
@@ -593,6 +581,22 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Phone Number</label>
                                                 <div className="text-white font-medium">{trainee.phoneNumber}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 4 */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">LMP</label>
+                                                <div className="text-white font-medium">{trainee.lmpType || 'BPC+IPC'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Location</label>
+                                                <div className="text-white font-medium">{trainee.location}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Email</label>
+                                                <div className="text-white font-medium text-sm">{trainee.email}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-xs text-gray-400 mb-1">Permissions</label>
