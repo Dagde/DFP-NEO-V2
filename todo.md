@@ -8,5 +8,5 @@
 - [x] Change top menu button background to #a0a0a0
 - [x] Change Staff Profile button background to #a0a0a0
 - [x] Change Trainee Profile button background to #a0a0a0
-- [ ] Build and deploy the changes
-- [ ] Verify the changes are applied correctly
+- [x] Build and deploy the changes
+- [x] Verify the changes are applied correctly
