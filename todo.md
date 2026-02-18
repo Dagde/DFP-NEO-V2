@@ -11,31 +11,33 @@ All changes deployed and pushed to GitHub
 - **Status Badge**: BELOW the name, ABOVE the profile picture
 - **Profile Picture**: AT THE BOTTOM of the left column, 128x128px
 
-### 2. Data Organization - Three Columns
+### 2. Data Organization - Four Columns
 - **Column 1**:
   - ID Number
-  - Callsign
+  - Rank
   - Service
-  - Email
 
 - **Column 2**:
   - Course
-  - Secondary Callsign
   - Unit
-  - Location
+  - Flight
 
 - **Column 3**:
-  - LMP
-  - Rank
-  - Flight
+  - Callsign
+  - Secondary Callsign
   - Seat Config
   - Phone Number
+
+- **Column 4**:
+  - LMP
+  - Location
+  - Email
   - Permissions
 
 ### 3. Styling Improvements
 - **Labels**: Small gray text (text-xs text-gray-400)
 - **Values**: Medium white text with bold font (text-white font-medium)
-- **Spacing**: Consistent 8px gap between columns (gap-x-8)
+- **Spacing**: Consistent 6px gap between columns (gap-x-6)
 - **Alignment**: Clean vertical stacking with equal spacing (space-y-4)
 
 ### 4. Right Menu Buttons
@@ -51,8 +53,8 @@ All changes deployed and pushed to GitHub
 ## Build & Deploy
 - ✅ Built Vite app successfully
 - ✅ Generated new bundles:
-  - `index-jOlPmlmy.js` (main bundle)
-  - `index.es-CloiOQMY.js` (ES module bundle)
+  - `index-CYAoLI01.js` (main bundle)
+  - `index.es-BOqdj1oa.js` (ES module bundle)
 - ✅ Copied to deployment directories:
   - `dfp-neo-platform/public/flight-school-app/`
   - `dfp-neo-platform/public/flight-school-app/index-v2.html`
