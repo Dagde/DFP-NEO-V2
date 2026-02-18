@@ -1,34 +1,27 @@
-# Fix Scrolling and Ordering Issues on Staff and Trainee Pages
+# Trainee Profile Redesign - Match Reference Image Exactly
 
-## 1. Staff Schedule Tab - Add Vertical Scrolling
-- [x] Identify the container structure in InstructorScheduleView.tsx
-- [x] Fix parent container to use flex-col (was blocking child overflow-auto)
-- [x] Add 100px bottom padding to ensure full visibility
+## Analysis
+- [ ] Analyze reference image layout structure
+- [ ] Document all sections and their positions
+- [ ] Identify all visual elements needed
 
-## 2. Staff Schedule Tab - Implement Proper Ordering
-- [x] Create sorting function for staff by Role, Unit, Rank, then Surname
-- [x] Define rank order: WGCDR, SQNLDR, FLTLT, FLGOFF, PLTOFF
-- [x] Implement unit color coding for visual distinction (already exists via PersonnelColumn)
-- [x] Apply sorting to instructors array before rendering
-- [x] Move SIM IPs to bottom of list (after all QFIs)
+## Implementation
+- [ ] Create new TraineeProfileFlyout with full-width layout
+- [ ] Add "Trainee Profile" header with X close button
+- [ ] Implement profile photo placeholder (circular)
+- [ ] Create identity grid section (left side)
+- [ ] Add Primary/Secondary Instructor section with photos
+- [ ] Add right-side button panel (Unavailable, Currency, PT-051, etc.)
+- [ ] Implement circular gauge components for logbook
+- [ ] Create event cards section (Next Event, Last Flight, etc.)
+- [ ] Add unavailability section at bottom
+- [ ] Add Edit and Close buttons at bottom right
 
-## 3. Trainee Schedule Tab - Add Vertical Scrolling
-- [x] Identify the container structure in TraineeScheduleView.tsx
-- [x] Fix parent container to use flex-col (was blocking child overflow-auto)
-- [x] Add 100px bottom padding to ensure full visibility
-
-## 4. Trainee Profile Page - Add Vertical Scrolling
-- [x] Identify the container structure in CourseRosterView.tsx
-- [x] Verify overflow-y-auto is working correctly (already present on line 265)
-- [x] Fix parent container to use flex-col (was blocking child overflow-auto)
-- [x] Add bottom padding (pb-24) to ensure full visibility
-
-## 5. Staff Profile Page - Add Vertical Scrolling
-- [x] Add bottom padding (pb-24) to InstructorListView to ensure full visibility
-
-## 6. Build and Deploy
-- [x] Build the application
-- [x] Copy to deployment directories
-- [x] Update HTML bundle references (index-DXTeOJfc.js)
-- [x] Restore button colors (#a0a0a0)
-- [x] Commit and push changes (commit 77dd6ad)
+## Build & Deploy
+- [ ] Build Vite app with new design
+- [ ] Copy to deployment directories
+- [ ] Force new bundle name to avoid caching
+- [ ] Commit bundle files to git
+- [ ] Update HTML references
+- [ ] Commit and push changes
+- [ ] Verify deployment
