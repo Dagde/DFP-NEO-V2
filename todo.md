@@ -1,11 +1,9 @@
-# Update NEO Tile and NEO Build Background Colors
+# Todo List
 
-## Tasks
-- [x] Locate NEO Tile component
-- [x] Locate NEO Build component
-- [x] Identify current background colors
-- [x] Find the background color scheme of other tiles in top/right menu
-- [x] Update NEO Tile background color to match
-- [x] Update NEO Build background color to match
-- [x] Build and deploy the changes
-- [x] Verify the changes are applied correctly
+## Investigation & Fix Required
+- [x] Examine top menu bar buttons in Header.tsx
+- [x] Compare text sizes of Validation Check and magnifier buttons
+- [x] Change Validation Check button text size from text-[12px] to text-[10px] and break text into two lines
+- [x] Build and test the changes
+- [x] Deploy to both directories
+- [ ] Commit and push changes

@@ -93,10 +93,10 @@ const Header: React.FC<HeaderProps> = ({
                     {/* Validation Check Button */}
                     <button
                       onClick={() => setShowValidation(!showValidation)}
-                      className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
+                      className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
                       title="Toggle validation"
                     >
-                        <span className="text-center leading-tight">Validation Check</span>
+                        <span className="text-center leading-tight">Validation<br/>Check</span>
                     </button>
                     
                     {/* Hourly Event Rate Button */}
