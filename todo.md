@@ -7,6 +7,6 @@
 - [x] Locate Settings page component
 - [x] Combine Location, Timezone, and Units into single "Location Configuration" section
 - [x] Replicate the layout from screenshot exactly with current app data
-- [ ] Build and test all changes
-- [ ] Deploy to both directories
-- [ ] Commit and push changes
+- [x] Build and test all changes
+- [x] Deploy to both directories
+- [x] Commit and push changes
