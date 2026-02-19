@@ -1204,58 +1204,223 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    />
                 </div>
                 )}
-                {/* Timezone Settings Window */}
-                {shouldShowSection('timezone') && (
-                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 w-96">
-                    <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                        <h2 className="text-lg font-semibold text-gray-200">Timezone Settings</h2>
-                    </div>
-                    <div className="p-4 space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
-                                Timezone Offset (UTC)
-                            </label>
-                            <select 
-                                value={timezoneOffset} 
-                                onChange={(e) => onUpdateTimezoneOffset(parseFloat(e.target.value))}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                {/* Location Configuration - Combined Timezone, Location, and Units */}
+                {shouldShowSection('location-configuration') && (
+                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+                    {/* Header */}
+                    <div className="p-6 border-b border-gray-700 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-white">Operational Configuration</h2>
+                        <div className="flex space-x-3">
+                            <button 
+                                className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-sm font-semibold"
+                                onClick={() => {
+                                    setIsEditingLocations(false);
+                                    setIsEditingUnits(false);
+                                }}
                             >
-                                <option value="-12">UTC-12:00</option>
-                                <option value="-11">UTC-11:00</option>
-                                <option value="-10">UTC-10:00 (Hawaii)</option>
-                                <option value="-9">UTC-09:00 (Alaska)</option>
-                                <option value="-8">UTC-08:00 (Pacific)</option>
-                                <option value="-7">UTC-07:00 (Mountain)</option>
-                                <option value="-6">UTC-06:00 (Central)</option>
-                                <option value="-5">UTC-05:00 (Eastern)</option>
-                                <option value="-4">UTC-04:00</option>
-                                <option value="-3">UTC-03:00</option>
-                                <option value="-2">UTC-02:00</option>
-                                <option value="-1">UTC-01:00</option>
-                                <option value="0">UTC+00:00 (GMT/UTC)</option>
-                                <option value="1">UTC+01:00 (CET)</option>
-                                <option value="2">UTC+02:00</option>
-                                <option value="3">UTC+03:00</option>
-                                <option value="4">UTC+04:00</option>
-                                <option value="5">UTC+05:00</option>
-                                <option value="5.5">UTC+05:30 (India)</option>
-                                <option value="6">UTC+06:00</option>
-                                <option value="7">UTC+07:00</option>
-                                <option value="8">UTC+08:00 (Singapore/Perth)</option>
-                                <option value="9">UTC+09:00 (Japan/Korea)</option>
-                                <option value="9.5">UTC+09:30 (Adelaide)</option>
-                                <option value="10">UTC+10:00 (AEST Sydney/Brisbane)</option>
-                                <option value="10.5">UTC+10:30</option>
-                                <option value="11">UTC+11:00 (AEDT Sydney)</option>
-                                <option value="12">UTC+12:00 (New Zealand)</option>
-                                <option value="13">UTC+13:00 (NZDT)</option>
-                            </select>
-                            <p className="mt-2 text-xs text-gray-400">
-                                Current server time: {new Date().toUTCString()}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400">
-                                Your local time: {new Date(Date.now() + timezoneOffset * 60 * 60 * 1000).toUTCString()}
-                            </p>
+                                Read-Only Mode
+                            </button>
+                            <button 
+                                className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold"
+                                onClick={() => {
+                                    setIsEditingLocations(true);
+                                    setIsEditingUnits(true);
+                                }}
+                                disabled={!canEditSettings}
+                            >
+                                Edit Configuration
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-6 space-y-6">
+                        {/* Timezone Settings Section */}
+                        <div className="space-y-3">
+                            <h3 className="text-lg font-semibold text-gray-200">Timezone Settings</h3>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Timezone Offset (UTC)
+                                </label>
+                                <select 
+                                    value={timezoneOffset} 
+                                    onChange={(e) => onUpdateTimezoneOffset(parseFloat(e.target.value))}
+                                    className="w-full max-w-md bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                >
+                                    <option value="-12">UTC-12:00</option>
+                                    <option value="-11">UTC-11:00</option>
+                                    <option value="-10">UTC-10:00 (Hawaii)</option>
+                                    <option value="-9">UTC-09:00 (Alaska)</option>
+                                    <option value="-8">UTC-08:00 (Pacific)</option>
+                                    <option value="-7">UTC-07:00 (Mountain)</option>
+                                    <option value="-6">UTC-06:00 (Central)</option>
+                                    <option value="-5">UTC-05:00 (Eastern)</option>
+                                    <option value="-4">UTC-04:00</option>
+                                    <option value="-3">UTC-03:00</option>
+                                    <option value="-2">UTC-02:00</option>
+                                    <option value="-1">UTC-01:00</option>
+                                    <option value="0">UTC+00:00 (GMT/UTC)</option>
+                                    <option value="1">UTC+01:00 (CET)</option>
+                                    <option value="2">UTC+02:00</option>
+                                    <option value="3">UTC+03:00</option>
+                                    <option value="4">UTC+04:00</option>
+                                    <option value="5">UTC+05:00</option>
+                                    <option value="5.5">UTC+05:30 (India)</option>
+                                    <option value="6">UTC+06:00</option>
+                                    <option value="7">UTC+07:00</option>
+                                    <option value="8">UTC+08:00 (Singapore/Perth)</option>
+                                    <option value="9">UTC+09:00 (Japan/Korea)</option>
+                                    <option value="9.5">UTC+09:30 (Adelaide)</option>
+                                    <option value="10">UTC+10:00 (AEST Sydney/Brisbane)</option>
+                                    <option value="10.5">UTC+10:30</option>
+                                    <option value="11">UTC+11:00 (AEDT Sydney)</option>
+                                    <option value="12">UTC+12:00 (New Zealand)</option>
+                                    <option value="13">UTC+13:00 (NZDT)</option>
+                                </select>
+                                <p className="mt-2 text-xs text-gray-400">
+                                    Current server time: {new Date().toUTCString()}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Your local time: {new Date(Date.now() + timezoneOffset * 60 * 60 * 1000).toUTCString()}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Operating Locations Section */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold text-gray-200">Operating Locations</h3>
+                                {canEditSettings && (
+                                    <button 
+                                        onClick={() => setIsEditingLocations(!isEditingLocations)}
+                                        className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold"
+                                    >
+                                        {isEditingLocations ? 'Cancel' : 'Edit'}
+                                    </button>
+                                )}
+                            </div>
+                            {isEditingLocations ? (
+                                <div className="space-y-3">
+                                    <p className="text-sm text-gray-400">Manage available operating locations.</p>
+                                    <ul className="space-y-2">
+                                        {tempLocations.map(loc => (
+                                            <li key={loc} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
+                                                <span className="text-white">{loc}</span>
+                                                <button onClick={() => handleRemoveLocation(loc)} className="p-1 text-gray-400 hover:text-red-400">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                    </svg>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <div className="flex space-x-2">
+                                        <input 
+                                            type="text" 
+                                            value={newLocation} 
+                                            onChange={e => setNewLocation(e.target.value)} 
+                                            placeholder="New location name" 
+                                            className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" 
+                                        />
+                                        <button onClick={handleAddLocation} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
+                                        <button onClick={handleSaveLocations} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">Save</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    {locations.map(loc => (
+                                        <div key={loc} className="flex items-center space-x-2 p-3 bg-gray-700/50 rounded text-white">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                            </svg>
+                                            <span>{loc}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Units Section */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold text-gray-200">Units</h3>
+                                {canEditSettings && (
+                                    <button 
+                                        onClick={() => setIsEditingUnits(!isEditingUnits)}
+                                        className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold"
+                                    >
+                                        {isEditingUnits ? 'Cancel' : 'Edit'}
+                                    </button>
+                                )}
+                            </div>
+                            {isEditingUnits ? (
+                                <div className="space-y-3">
+                                    <p className="text-sm text-gray-400">Manage units and their primary locations.</p>
+                                    <ul className="space-y-2">
+                                        {tempUnits.map(unit => (
+                                            <li key={unit} className="p-2 bg-gray-700/50 rounded">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-white">{unit}</span>
+                                                    <button onClick={() => handleRemoveUnit(unit)} className="p-1 text-gray-400 hover:text-red-400">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <select
+                                                    value={tempUnitLocations[unit] || ''}
+                                                    onChange={(e) => handleTempUnitLocationChange(unit, e.target.value)}
+                                                    className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-xs"
+                                                >
+                                                    {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                                </select>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <div className="flex space-x-2">
+                                        <input 
+                                            type="text" 
+                                            value={newUnit} 
+                                            onChange={e => setNewUnit(e.target.value)} 
+                                            placeholder="New unit name" 
+                                            className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" 
+                                        />
+                                        <button onClick={handleAddUnit} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
+                                        <button onClick={handleSaveUnits} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">Save</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full">
+                                        <thead>
+                                            <tr className="border-b border-gray-600">
+                                                <th className="text-left py-2 px-3 text-sm font-semibold text-gray-300">Unit</th>
+                                                <th className="text-left py-2 px-3 text-sm font-semibold text-gray-300">Location</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {units.map(unit => (
+                                                <tr key={unit} className="border-b border-gray-700">
+                                                    <td className="py-2 px-3 text-white">{unit}</td>
+                                                    <td className="py-2 px-3 text-gray-300">{unitLocations[unit]}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Formation Callsigns Section */}
+                        <div className="space-y-3">
+                            <h3 className="text-lg font-semibold text-gray-200">Formation Callsigns</h3>
+                            <FormationCallsignsSection
+                                callsigns={formationCallsigns}
+                                onUpdateCallsigns={onUpdateFormationCallsigns}
+                                units={units}
+                                locations={locations}
+                                canEditSettings={canEditSettings}
+                                onAuditLog={logAudit}
+                            />
                         </div>
                     </div>
                 </div>
@@ -1284,142 +1449,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                    )}
 
-                    {/* Location Window */}
-                   {shouldShowSection('location') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
-                        <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Location</h2>
-                            {isEditingLocations ? (
-                                <div className="flex space-x-2">
-                                    <button onClick={handleSaveLocations} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                    <button onClick={handleCancelLocations} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
-                                </div>
-                            ) : (
-                                <button 
-                                   onClick={handleEditLocations} 
-                                   disabled={!canEditSettings}
-                                   className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                                       canEditSettings 
-                                           ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                           : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                   }`}
-                               >
-                                   Edit
-                               </button>
-                            )}
-                        </div>
-                        <div className="p-4 space-y-4">
-                            {isEditingLocations ? (
-                                <>
-                                    <p className="text-sm text-gray-400">Manage available operating locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                        {tempLocations.map(loc => (
-                                            <li key={loc} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
-                                                <span className="text-white">{loc}</span>
-                                                <button onClick={() => handleRemoveLocation(loc)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <div className="flex space-x-2">
-                                        <input type="text" value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="New location name" className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        <button onClick={handleAddLocation} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-sm text-gray-400">Configured operating locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                        {locations.map(loc => (
-                                            <li key={loc} className="p-2 bg-gray-700/50 rounded text-white">
-                                                {loc}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                   )}
-
-
-                      {/* Formation Callsigns Window */}
-                      {shouldShowSection('location') && (
-                          <FormationCallsignsSection
-                              callsigns={formationCallsigns}
-                              onUpdateCallsigns={onUpdateFormationCallsigns}
-                              units={units}
-                              locations={locations}
-                              canEditSettings={canEditSettings}
-                              onAuditLog={logAudit}
-                          />
-                      )}
-                    {/* Units Window */}
-                   {shouldShowSection('units') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
-                        <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Units</h2>
-                            {isEditingUnits ? (
-                                <div className="flex space-x-2">
-                                    <button onClick={handleSaveUnits} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
-                                    <button onClick={handleCancelUnits} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
-                                </div>
-                            ) : (
-                                <button 
-                                onClick={handleEditUnits} 
-                                disabled={!canEditSettings}
-                                className={`px-3 py-1 rounded-md text-xs font-semibold ${
-                                    canEditSettings 
-                                        ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' 
-                                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                }`}
-                            >
-                                Edit
-                            </button>
-                            )}
-                        </div>
-                        <div className="p-4 space-y-4">
-                            {isEditingUnits ? (
-                                <>
-                                    <p className="text-sm text-gray-400">Manage units and their primary locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                        {tempUnits.map(unit => (
-                                            <li key={unit} className="p-2 bg-gray-700/50 rounded">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-white">{unit}</span>
-                                                    <button onClick={() => handleRemoveUnit(unit)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
-                                                </div>
-                                                <select
-                                                    value={tempUnitLocations[unit] || ''}
-                                                    onChange={(e) => handleTempUnitLocationChange(unit, e.target.value)}
-                                                    className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-xs"
-                                                >
-                                                    {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                                                </select>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <div className="flex space-x-2">
-                                        <input type="text" value={newUnit} onChange={e => setNewUnit(e.target.value)} placeholder="New unit name" className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" />
-                                        <button onClick={handleAddUnit} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <p className="text-sm text-gray-400">Configured units and their locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
-                                        {units.map(unit => (
-                                            <li key={unit} className="p-2 bg-gray-700/50 rounded text-white flex justify-between">
-                                                <span>{unit}</span>
-                                                <span className="text-gray-400">{unitLocations[unit]}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                   )}
+                    
                        {/* Duty & Turnaround Window */}
                    {shouldShowSection('duty-turnaround') && (
                     <DutyTurnaroundSection
