@@ -1205,14 +1205,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 )}
                 {/* Location Configuration - Combined Timezone, Location, and Units */}
-                {shouldShowSection('location-configuration') && (
+                {(shouldShowSection('timezone') || shouldShowSection('location') || shouldShowSection('units')) && (
                 <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
                     {/* Header */}
                     <div className="p-6 border-b border-gray-700 flex justify-between items-center">
                         <h2 className="text-xl font-bold text-white">Operational Configuration</h2>
                         <div className="flex space-x-3">
                             <button 
-                                className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 text-sm font-semibold"
+                                className="px-4 py-2 border-2 border-amber-500 text-amber-500 rounded-md hover:bg-amber-50 hover:text-amber-600 text-sm font-semibold"
                                 onClick={() => {
                                     setIsEditingLocations(false);
                                     setIsEditingUnits(false);
@@ -1221,7 +1221,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 Read-Only Mode
                             </button>
                             <button 
-                                className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold"
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-semibold"
                                 onClick={() => {
                                     setIsEditingLocations(true);
                                     setIsEditingUnits(true);
@@ -1326,9 +1326,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="space-y-2">
                                     {locations.map(loc => (
-                                        <div key={loc} className="flex items-center space-x-2 p-3 bg-gray-700/50 rounded text-white">
+                                        <div key={loc} className="flex items-center space-x-2 p-2 bg-gray-700/50 rounded text-white">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                                             </svg>
