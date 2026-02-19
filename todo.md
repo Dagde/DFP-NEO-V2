@@ -7,5 +7,5 @@
 - [x] Find the background color scheme of other tiles in top/right menu
 - [x] Update NEO Tile background color to match
 - [x] Update NEO Build background color to match
-- [ ] Build and deploy the changes
-- [ ] Verify the changes are applied correctly
+- [x] Build and deploy the changes
+- [x] Verify the changes are applied correctly
