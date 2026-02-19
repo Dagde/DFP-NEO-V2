@@ -22,3 +22,12 @@ dist-ssr
 *.sln
 *.sw?
 outputs/
+
+# Screenshots
+*.jpg
+*.png
+*.jpeg
+screenshot*.jpg
+
+# Summarized conversations
+summarized_conversations/

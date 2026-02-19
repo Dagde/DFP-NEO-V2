@@ -1205,7 +1205,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 )}
                 {/* Location Configuration - Combined Timezone, Location, and Units */}
-                {(shouldShowSection('timezone') || shouldShowSection('location') || shouldShowSection('units')) && (
+                {(shouldShowSection('location') || shouldShowSection('units')) && (
                 <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
                     {/* Header */}
                     <div className="p-6 border-b border-gray-700 flex justify-between items-center">
