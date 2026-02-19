@@ -140,7 +140,7 @@ const Header: React.FC<HeaderProps> = ({
                     {/* NEO - Tile Button */}
                     <button
                         onClick={onToggleOracleMode}
-                        className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-gold-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
+                        className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
                         title="NEO - Tile"
                     >
                         <span className="text-center leading-tight">NEO - Tile</span>
