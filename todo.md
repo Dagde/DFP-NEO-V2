@@ -18,6 +18,18 @@
 - [x] Pass location/unit info
 
 ## Task 4: Build and deploy
-- [ ] Build with Vite
-- [ ] Deploy to both directories
-- [ ] Commit and push changes
+- [x] Build with Vite
+- [x] Deploy to both directories
+- [x] Commit and push changes
+
+## Summary
+Successfully reorganized the sidebars:
+- All courses now displayed in the left sidebar with 9px text
+- Right sidebar no longer shows courses
+- Right sidebar now displays current user info at the bottom:
+  - Rank (line 1)
+  - Surname only (line 2)
+  - Location (line 3)
+  - Assigned unit (line 4)
+- No headings on user info, just data
+- All changes built, deployed, committed, and pushed to feature/comprehensive-build-algorithm branch
