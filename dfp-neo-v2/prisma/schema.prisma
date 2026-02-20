@@ -8,30 +8,32 @@ datasource db {
 }
 
 model User {
-  id              String                @id @default(cuid())
-  username        String                @unique
-  email           String?               @unique
-  password        String
-  role            Role                  @default(USER)
-  firstName       String?
-  lastName        String?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  lastLogin       DateTime?
-  isActive        Boolean               @default(true)
-  createdById     String?
-  userId          String                @unique
-  aircraft        Aircraft[]            @relation("Aircraft")
-  AuditLog        AuditLog[]
-  cancellations   CancellationHistory[] @relation("CancellationHistory")
-  flightSchedules FlightSchedule[]      @relation("FlightSchedules")
-  personnel       Personnel?            @relation("Personnel")
-  schedules       Schedule[]
-  sessions        Session[]
-  trainees        Trainee?              @relation("Trainee")
-  createdBy       User?                 @relation("UserCreatedBy", fields: [createdById], references: [id])
-  createdUsers    User[]                @relation("UserCreatedBy")
-  settings        UserSettings?
+  id                 String                @id @default(cuid())
+  username           String                @unique
+  email              String?               @unique
+  password           String
+  role               Role                  @default(USER)
+  firstName          String?
+  lastName           String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  lastLogin          DateTime?
+  isActive           Boolean               @default(true)
+  mustChangePassword Boolean               @default(false)
+  createdById        String?
+  userId             String                @unique
+  aircraft           Aircraft[]            @relation("Aircraft")
+  AuditLog           AuditLog[]
+  cancellations      CancellationHistory[] @relation("CancellationHistory")
+  flightSchedules    FlightSchedule[]      @relation("FlightSchedules")
+  personnel          Personnel?            @relation("Personnel")
+  schedules          Schedule[]
+  sessions           Session[]
+  trainees           Trainee?              @relation("Trainee")
+  createdBy          User?                 @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers       User[]                @relation("UserCreatedBy")
+  passwordResetTokens PasswordResetToken[]
+  settings           UserSettings?
 
   @@index([email])
   @@index([username])
@@ -266,6 +268,19 @@ model Score {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expires   DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
 }
 
 enum Role {

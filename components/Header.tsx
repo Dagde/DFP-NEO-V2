@@ -20,6 +20,11 @@ interface HeaderProps {
     onToggleAircraftAvailability?: () => void;
     showDepartureDensityOverlay: boolean;
     onToggleDepartureDensityOverlay: () => void;
+    // Auth props
+    authUser?: { userId: string; displayName: string; role: string; firstName: string | null; lastName: string | null } | null;
+    onLogout?: () => void;
+    onShowAdminPanel?: () => void;
+    onShowChangePassword?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -39,9 +44,15 @@ const Header: React.FC<HeaderProps> = ({
     showAircraftAvailability, 
     onToggleAircraftAvailability, 
     showDepartureDensityOverlay, 
-    onToggleDepartureDensityOverlay, 
+    onToggleDepartureDensityOverlay,
+    authUser,
+    onLogout,
+    onShowAdminPanel,
+    onShowChangePassword,
 }) => {
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
 
     return (
         <>
@@ -145,6 +156,64 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">NEO - Tile</span>
                     </button>
+
+                    {/* User Menu Button */}
+                    {authUser && (
+                        <div className="relative ml-2">
+                            <button
+                                onClick={() => setShowUserMenu(!showUserMenu)}
+                                className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
+                                title={`Logged in as ${authUser.displayName}`}
+                            >
+                                <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span className="text-center leading-tight truncate w-full px-1 text-center">
+                                    {authUser.lastName || authUser.userId}
+                                </span>
+                            </button>
+                            {showUserMenu && (
+                                <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden" style={{ background: '#1a1f2e' }}>
+                                    <div className="px-3 py-2 border-b border-gray-700">
+                                        <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
+                                        <p className="text-[10px] text-gray-400">{authUser.userId}</p>
+                                        <p className="text-[10px] text-blue-400">{authUser.role}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}
+                                        className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                        </svg>
+                                        Change Password
+                                    </button>
+                                    {isSuperAdmin && (
+                                        <button
+                                            onClick={() => { setShowUserMenu(false); onShowAdminPanel?.(); }}
+                                            className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                            </svg>
+                                            Admin Panel
+                                        </button>
+                                    )}
+                                    <div className="border-t border-gray-700">
+                                        <button
+                                            onClick={() => { setShowUserMenu(false); onLogout?.(); }}
+                                            className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-900/20 flex items-center gap-2"
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg>
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </header>
             

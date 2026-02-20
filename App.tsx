@@ -3,6 +3,9 @@ console.log("🚨🚨🚨 NEW BUILD V3 LOADED 🚨🚨🚨");
 console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
+import ChangePasswordModal from './components/ChangePasswordModal';
+import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser } from './utils/auditLogger';
@@ -3182,15 +3185,95 @@ useEffect(() => {
     const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
        const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
     
+    // ============================================================
+    // AUTHENTICATION STATE
+    // ============================================================
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const [authSessionToken, setAuthSessionToken] = useState<string>('');
+    const [authLoading, setAuthLoading] = useState<boolean>(true);
+    const [showChangePassword, setShowChangePassword] = useState<boolean>(false);
+    const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
+
+    // Check for existing session on app load
+    useEffect(() => {
+        const checkExistingSession = async () => {
+            const storedToken = localStorage.getItem('dfp_session_token');
+            if (storedToken) {
+                const user = await checkSession(storedToken);
+                if (user) {
+                    setAuthUser(user);
+                    setAuthSessionToken(storedToken);
+                    setIsAuthenticated(true);
+                    // Update currentUserName from auth user
+                    if (user.lastName && user.firstName) {
+                        setCurrentUserName(`${user.lastName}, ${user.firstName}`);
+                    } else if (user.displayName) {
+                        setCurrentUserName(user.displayName);
+                    }
+                    // Update sessionUser
+                    setSessionUser({
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        role: user.role,
+                        militaryRank: 'FLTLT',
+                        userId: user.userId,
+                    });
+                    if (user.mustChangePassword) {
+                        setShowChangePassword(true);
+                    }
+                } else {
+                    localStorage.removeItem('dfp_session_token');
+                    localStorage.removeItem('dfp_session_expires');
+                }
+            }
+            setAuthLoading(false);
+        };
+        checkExistingSession();
+    }, []);
+
+    const handleLoginSuccess = (user: AuthUser, token: string) => {
+        setAuthUser(user);
+        setAuthSessionToken(token);
+        setIsAuthenticated(true);
+        // Update currentUserName from auth user
+        if (user.lastName && user.firstName) {
+            setCurrentUserName(`${user.lastName}, ${user.firstName}`);
+        } else if (user.displayName) {
+            setCurrentUserName(user.displayName);
+        }
+        // Update sessionUser
+        setSessionUser({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            militaryRank: 'FLTLT',
+            userId: user.userId,
+        });
+        if (user.mustChangePassword) {
+            setShowChangePassword(true);
+        }
+    };
+
+    const handleLogout = async () => {
+        if (authSessionToken) {
+            await logoutUser(authSessionToken);
+        }
+        localStorage.removeItem('dfp_session_token');
+        localStorage.removeItem('dfp_session_expires');
+        setIsAuthenticated(false);
+        setAuthUser(null);
+        setAuthSessionToken('');
+        setCurrentUserName('Bloggs, Joe');
+        setSessionUser(null);
+    };
+
     // Current User State (for permission checking)
-    // Default to Joe Bloggs (Super Admin) - in production this would come from authentication
     const [currentUserName, setCurrentUserName] = useState<string>('Bloggs, Joe');
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
-    // Session user info from NextAuth (real user, not mockdata)
+    // Session user info (populated from auth)
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string} | null>(null);
-    // DISABLED: Authentication now handled by DFP-NEO-Website - app loads independently
-    console.log("✅ App loading independently - no authentication check required");
 //     useEffect(() => {
 //         const fetchCurrentUser = async () => {
 //            console.log('🔍 [SESSION DEBUG] useEffect hook running');
@@ -9153,6 +9236,7 @@ updates.forEach(update => {
        }
     };
     return (
+    <>
         <div id="app-content" className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}
@@ -9208,6 +9292,10 @@ updates.forEach(update => {
                     
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
+                       authUser={authUser}
+                       onLogout={handleLogout}
+                       onShowAdminPanel={() => setShowAdminPanel(true)}
+                       onShowChangePassword={() => setShowChangePassword(true)}
                 />}
                 {renderActiveView()}
             </div>
@@ -9528,9 +9616,50 @@ updates.forEach(update => {
                       autoCloseDelay={darkMessageModal.autoCloseDelay}
                 />
             )}
+
+            {/* Change Password Modal */}
+            {showChangePassword && authUser && (
+                <ChangePasswordModal
+                    sessionToken={authSessionToken}
+                    userId={authUser.userId}
+                    isMandatory={authUser.mustChangePassword}
+                    onSuccess={() => {
+                        setShowChangePassword(false);
+                        if (authUser) {
+                            setAuthUser({ ...authUser, mustChangePassword: false });
+                        }
+                    }}
+                    onCancel={authUser.mustChangePassword ? undefined : () => setShowChangePassword(false)}
+                />
+            )}
+
+            {/* Admin Panel */}
+            {showAdminPanel && authUser && (
+                <AdminPanel
+                    sessionToken={authSessionToken}
+                    currentUserId={authUser.userId}
+                    onClose={() => setShowAdminPanel(false)}
+                />
+            )}
         </div>
+
+        {/* Authentication - Login Modal (shown when not authenticated) */}
+        {!authLoading && !isAuthenticated && (
+            <LoginModal onLoginSuccess={handleLoginSuccess} />
+        )}
+
+        {/* Loading screen while checking session */}
+        {authLoading && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900">
+                <div className="text-center">
+                    <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-400 text-sm">Loading DFP-NEO...</p>
+                </div>
+            </div>
+        )}
+    </>
     );
 };
 
 export default App;
-// Force rebuild visual-adjust-5min-intervals
+// Force rebuild auth-implementation-v1

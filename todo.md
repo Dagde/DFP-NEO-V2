@@ -1,35 +1,42 @@
-# TODO: Reorganize Sidebars
+# Authentication Implementation Plan
 
-## Task 1: Move all courses to left sidebar
-- [x] Update Sidebar.tsx to show all courses (not just half)
-- [x] Change course text size to 9px
+## Phase 1: Database & Backend Setup
+- [x] Add PasswordResetToken model to Prisma schema
+- [x] Run database migration (using existing SQLite dev.db)
+- [x] Create initial users in database (SuperAdmin & Alexander Burns)
+- [x] Create backend auth server (Express.js)
+  - POST /api/auth/login ✅
+  - POST /api/auth/logout ✅
+  - POST /api/auth/change-password ✅
+  - POST /api/auth/forgot-password ✅
+  - POST /api/auth/reset-password ✅
+  - POST /api/admin/reset-user-password ✅
+  - GET /api/admin/users ✅
 
-## Task 2: Add user info to right sidebar bottom
-- [x] Remove courses section from RightSidebar.tsx
-- [x] Add user info display showing:
-  - Line 1: Rank
-  - Line 2: Surname only
-  - Line 3: Location
-  - Line 4: Assigned unit
-- [x] No headings, just data
+## Phase 2: Frontend Authentication UI
+- [ ] Create Login component (LoginModal.tsx)
+- [ ] Create ChangePassword component
+- [ ] Create ForgotPassword component
+- [ ] Update App.tsx to implement authentication state
+- [ ] Remove hardcoded "Bloggs, Joe" default user
+- [ ] Add session check on app load
+- [ ] Update RightSidebar to display authenticated user info
 
-## Task 3: Update App.tsx to pass user data to RightSidebar
-- [x] Pass currentUser data to RightSidebar
-- [x] Pass location/unit info
+## Phase 3: Admin Panel
+- [ ] Create AdminPanel component
+- [ ] User list display
+- [ ] Reset user password functionality
+- [ ] Create new user functionality
 
-## Task 4: Build and deploy
-- [x] Build with Vite
-- [x] Deploy to both directories
-- [x] Commit and push changes
+## Phase 4: Build & Deploy
+- [ ] Build application with Vite
+- [ ] Deploy to both directories
+- [ ] Update index-v2.html files
+- [ ] Commit and push all changes
 
-## Summary
-Successfully reorganized the sidebars:
-- All courses now displayed in the left sidebar with 9px text
-- Right sidebar no longer shows courses
-- Right sidebar now displays current user info at the bottom:
-  - Rank (line 1)
-  - Surname only (line 2)
-  - Location (line 3)
-  - Assigned unit (line 4)
-- No headings on user info, just data
-- All changes built, deployed, committed, and pushed to feature/comprehensive-build-algorithm branch
+## Phase 5: Testing & Verification
+- [ ] Test SuperAdmin login
+- [ ] Test Alexander Burns login
+- [ ] Test password reset
+- [ ] Test admin panel
+- [ ] Verify logout works
