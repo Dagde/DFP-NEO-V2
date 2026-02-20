@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && bash scripts/update-index-v2.sh",
+    "build-only": "vite build",
     "preview": "vite preview",
     "git-sync": "node git-automation.js",
     "git-sync-once": "node git-sync-once.js",
