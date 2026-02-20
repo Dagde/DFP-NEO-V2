@@ -98,10 +98,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     return a.localeCompare(b);
   });
 
-  // Distribute courses - take first half for left sidebar
+  // Show all courses in left sidebar
   const courses = Object.entries(courseColors);
-  const halfPoint = Math.ceil(courses.length / 2);
-  const leftCourses = courses.slice(0, halfPoint);
+  const allCourses = courses;
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
@@ -188,10 +187,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             </div>
             <div className="px-4 pb-2 flex justify-center">
               <div className="flex-1 min-w-0">
-                {leftCourses.map(([courseName, color]) => (
+                {allCourses.map(([courseName, color]) => (
                   <div key={courseName} className="py-1 flex items-center justify-center">
                     <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
-                    <span className="text-[10px] text-gray-300">{formatCourseName(courseName)}</span>
+                    <span className="text-[9px] text-gray-300">{formatCourseName(courseName)}</span>
                   </div>
                 ))}
               </div>

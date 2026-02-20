@@ -9218,6 +9218,10 @@ updates.forEach(update => {
                 onBuildDfpClick={handleBuildDfp}
                 isSupervisor={true}
                 onPublish={handlePublish}
+                currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || 'FLTLT'}
+                currentUserName={currentUserName}
+                currentUserLocation={school}
+                currentUserUnit={currentUser?.unit || '1FTS'}
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 

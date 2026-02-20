@@ -7,22 +7,23 @@ interface RightSidebarProps {
     onBuildDfpClick: () => void;
     isSupervisor: boolean;
     onPublish: () => void;
+    currentUserRank: string;
+    currentUserName: string;
+    currentUserLocation?: string;
+    currentUserUnit?: string;
 }
-
-const formatCourseName = (name: string): string => {
-  if (name.startsWith('Course ')) {
-    return name.replace('Course ', 'ADF');
-  }
-  return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
-};
 
 const RightSidebar: React.FC<RightSidebarProps> = ({ 
     activeView, 
     onNavigate, 
     courseColors,
-    onBuildDfpClick,
-    isSupervisor,
-    onPublish 
+    onBuildDfpClick, 
+    isSupervisor, 
+    onPublish,
+    currentUserRank,
+    currentUserName,
+    currentUserLocation,
+    currentUserUnit
 }) => {
   const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
   const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
@@ -30,10 +31,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
 
-  // Distribute courses - take second half for right sidebar
-  const courses = Object.entries(courseColors);
-  const halfPoint = Math.ceil(courses.length / 2);
-  const rightCourses = courses.slice(halfPoint);
+  // Extract surname from currentUserName (format: "Bloggs, Joe")
+  const userSurname = currentUserName.split(',')[0];
 
   return (
     <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700">
@@ -108,24 +107,15 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         </button>
       </nav>
 
-      {/* Courses Section */}
-      <div className="flex-shrink-0 border-t border-gray-700">
-        <div className="px-4 pt-4 mb-2 flex justify-center items-center">
-          <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
-        </div>
-        <div className="px-4 pb-2 flex justify-center">
-          <div className="flex-1 min-w-0">
-            {rightCourses.map(([courseName, color]) => (
-              <div key={courseName} className="py-1 flex items-center justify-center">
-                <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
-                <span className="text-[10px] text-gray-300">{formatCourseName(courseName)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* User Info Section - Bottom */}
+      <div className="flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center">
+        <span className="text-[9px] text-gray-300 font-semibold">{currentUserRank}</span>
+        <span className="text-[9px] text-gray-300">{userSurname}</span>
+        <span className="text-[9px] text-gray-300">{currentUserLocation || 'N/A'}</span>
+        <span className="text-[9px] text-gray-300">{currentUserUnit || 'N/A'}</span>
       </div>
     </aside>
   );
 };
 
-export default RightSidebar;// Thu Feb 19 05:53:42 UTC 2026
+export default RightSidebar;
