@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 
-// Auth server URL - use empty string to use relative URLs (proxied through Vite)
+// Auth server URL - use empty string to use relative URLs
 const AUTH_SERVER = '';
+const API_CHANGE_PASSWORD = '/api/auth/direct-change-password';
 
 interface ChangePasswordModalProps {
   sessionToken: string;
@@ -54,7 +55,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     setLoading(true);
     try {
-      const res = await fetch(`${AUTH_SERVER}/api/auth/change-password`, {
+      const res = await fetch(`${AUTH_SERVER}${API_CHANGE_PASSWORD}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
-// Auth server URL - use empty string to use relative URLs (proxied through Vite)
+// Auth server URL - use empty string to use relative URLs
 const AUTH_SERVER = '';
+const API_USERS = '/api/admin/direct-users';
+const API_RESET_PASSWORD = '/api/admin/direct-reset-password';
+const API_CREATE_USER = '/api/admin/direct-create-user';
 
 interface AdminUser {
   id: string;
@@ -58,7 +61,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${AUTH_SERVER}/api/admin/users`, {
+      const res = await fetch(`${AUTH_SERVER}${API_USERS}`, {
         headers: { 'Authorization': `Bearer ${sessionToken}` },
       });
       if (!res.ok) throw new Error('Failed to fetch users');
@@ -77,7 +80,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
     setResetLoading(true);
     setResetMessage('');
     try {
-      const res = await fetch(`${AUTH_SERVER}/api/admin/reset-user-password`, {
+      const res = await fetch(`${AUTH_SERVER}${API_RESET_PASSWORD}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +113,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
     setCreateMessage('');
     setCreateError('');
     try {
-      const res = await fetch(`${AUTH_SERVER}/api/admin/create-user`, {
+      const res = await fetch(`${AUTH_SERVER}${API_CREATE_USER}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

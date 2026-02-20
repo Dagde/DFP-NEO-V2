@@ -12,18 +12,25 @@ export default defineConfig({
       clientPort: 8080
     },
     proxy: {
-      '/api/auth': {
-        target: 'http://localhost:3001',
+      // Proxy auth requests to Next.js platform (port 3003) in development
+      // In production, these routes are served by the Next.js app directly
+      '/api/auth/direct': {
+        target: 'http://localhost:3003',
         changeOrigin: true,
         secure: false,
       },
-      '/api/admin': {
-        target: 'http://localhost:3001',
+      '/api/admin/direct': {
+        target: 'http://localhost:3003',
         changeOrigin: true,
         secure: false,
       },
-      '/api/health': {
-        target: 'http://localhost:3001',
+      '/api/auth/forgot-password': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/admin/setup-users': {
+        target: 'http://localhost:3003',
         changeOrigin: true,
         secure: false,
       },

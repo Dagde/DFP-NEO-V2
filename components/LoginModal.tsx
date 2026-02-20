@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 
-// Auth server URL - use empty string to use relative URLs (proxied through Vite)
+// Auth server URL - use empty string to use relative URLs
+// Routes are handled by the Next.js platform API
 const AUTH_SERVER = '';
+
+// API endpoint paths - using direct auth routes that work on the deployed platform
+const API_LOGIN = '/api/auth/direct-login';
+const API_LOGOUT = '/api/auth/direct-logout';
+const API_SESSION = '/api/auth/direct-session';
+const API_FORGOT_PASSWORD = '/api/auth/forgot-password';
 
 interface LoginModalProps {
   onLoginSuccess: (user: AuthUser, sessionToken: string) => void;
@@ -22,7 +29,7 @@ export interface AuthUser {
 
 export async function checkSession(token: string): Promise<AuthUser | null> {
   try {
-    const res = await fetch(`${AUTH_SERVER}/api/auth/session`, {
+    const res = await fetch(`${AUTH_SERVER}${API_SESSION}`, {
       headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!res.ok) return null;
@@ -34,7 +41,7 @@ export async function checkSession(token: string): Promise<AuthUser | null> {
 }
 
 export async function loginUser(userId: string, password: string): Promise<{ user: AuthUser; sessionToken: string; mustChangePassword: boolean }> {
-  const res = await fetch(`${AUTH_SERVER}/api/auth/login`, {
+  const res = await fetch(`${AUTH_SERVER}${API_LOGIN}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, password }),
@@ -46,7 +53,7 @@ export async function loginUser(userId: string, password: string): Promise<{ use
 
 export async function logoutUser(token: string): Promise<void> {
   try {
-    await fetch(`${AUTH_SERVER}/api/auth/logout`, {
+    await fetch(`${AUTH_SERVER}${API_LOGOUT}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
     });
@@ -89,7 +96,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess }) => {
     setForgotLoading(true);
 
     try {
-      const res = await fetch(`${AUTH_SERVER}/api/auth/forgot-password`, {
+      const res = await fetch(`${AUTH_SERVER}${API_FORGOT_PASSWORD}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: forgotUserId.trim() }),
