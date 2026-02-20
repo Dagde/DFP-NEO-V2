@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
-
-// In-memory session store (shared via module scope)
-// In production with multiple instances, use Redis or database sessions
-const sessions = new Map<string, { userId: string; expires: string; user: any }>();
-
-// Export sessions for use in other routes
-export { sessions };
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -108,28 +102,32 @@ export async function POST(request: NextRequest) {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      displayName: user.firstName && user.lastName 
-        ? `${user.firstName} ${user.lastName}` 
+      displayName: user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
         : user.username,
       mustChangePassword: false,
       permissionsRoleId: null,
     };
 
-    // Store session in memory
-    sessions.set(sessionToken, {
+    // Store session in shared memory store
+    authSessions.set(sessionToken, {
       userId: user.id,
       expires: expires.toISOString(),
       user: sessionUser,
     });
 
     // Store session in database
-    await prisma.session.create({
-      data: {
-        sessionToken,
-        userId: user.id,
-        expires,
-      },
-    });
+    try {
+      await prisma.session.create({
+        data: {
+          sessionToken,
+          userId: user.id,
+          expires,
+        },
+      });
+    } catch (sessionErr) {
+      console.error('Session DB error:', sessionErr);
+    }
 
     // Update last login
     await prisma.user.update({

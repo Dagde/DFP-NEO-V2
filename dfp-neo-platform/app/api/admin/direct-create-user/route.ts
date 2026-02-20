@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
-import { sessions } from '../../auth/direct-login/route';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
 
-function generateCuid(): string {
-  const timestamp = Date.now().toString(36);
-  const random = crypto.randomBytes(8).toString('hex');
-  return 'c' + timestamp + random;
-}
-
-async function verifyAdminSession(token: string): Promise<{ userId: string; role: string; user: any } | null> {
-  const memSession = sessions.get(token);
+async function verifyAdminSession(token: string): Promise<{ userId: string; role: string; adminUser: any } | null> {
+  const memSession = authSessions.get(token);
   if (memSession && new Date() < new Date(memSession.expires)) {
     const role = memSession.user.role;
     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-      return { userId: memSession.userId, role, user: memSession.user };
+      return { userId: memSession.userId, role, adminUser: memSession.user };
     }
     return null;
   }
@@ -30,7 +23,7 @@ async function verifyAdminSession(token: string): Promise<{ userId: string; role
   if (!dbSession || new Date() > dbSession.expires) return null;
   const role = dbSession.user.role;
   if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') return null;
-  return { userId: dbSession.userId, role, user: dbSession.user };
+  return { userId: dbSession.userId, role, adminUser: dbSession.user };
 }
 
 export async function POST(request: NextRequest) {
@@ -57,7 +50,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if userId already exists
     const existing = await prisma.user.findUnique({ where: { userId } });
     if (existing) {
       return NextResponse.json(
@@ -67,12 +59,11 @@ export async function POST(request: NextRequest) {
     }
 
     const newHash = await bcrypt.hash(password, 12);
-    const username = userId;
 
     const newUser = await prisma.user.create({
       data: {
         userId,
-        username,
+        username: userId,
         email: email || null,
         password: newHash,
         firstName: firstName || null,
@@ -83,7 +74,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Log audit
     try {
       await prisma.auditLog.create({
         data: {
@@ -91,7 +81,7 @@ export async function POST(request: NextRequest) {
           action: 'CREATE_USER',
           entityType: 'User',
           entityId: newUser.id,
-          changes: { createdBy: admin.user?.userId || admin.userId, newUser: userId },
+          changes: { createdBy: admin.adminUser?.userId || admin.userId, newUser: userId },
         },
       });
     } catch (auditErr) {

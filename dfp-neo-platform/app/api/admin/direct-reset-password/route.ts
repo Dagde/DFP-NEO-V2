@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { sessions } from '../../auth/direct-login/route';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
 
-async function verifyAdminSession(token: string): Promise<{ userId: string; role: string; user: any } | null> {
-  const memSession = sessions.get(token);
+async function verifyAdminSession(token: string): Promise<{ userId: string; role: string; adminUser: any } | null> {
+  const memSession = authSessions.get(token);
   if (memSession && new Date() < new Date(memSession.expires)) {
     const role = memSession.user.role;
     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
-      return { userId: memSession.userId, role, user: memSession.user };
+      return { userId: memSession.userId, role, adminUser: memSession.user };
     }
     return null;
   }
@@ -23,7 +23,7 @@ async function verifyAdminSession(token: string): Promise<{ userId: string; role
   if (!dbSession || new Date() > dbSession.expires) return null;
   const role = dbSession.user.role;
   if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') return null;
-  return { userId: dbSession.userId, role, user: dbSession.user };
+  return { userId: dbSession.userId, role, adminUser: dbSession.user };
 }
 
 export async function POST(request: NextRequest) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { targetUserId, newPassword, mustChangePassword = true } = body;
+    const { targetUserId, newPassword } = body;
 
     if (!targetUserId || !newPassword) {
       return NextResponse.json(
@@ -63,13 +63,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Invalidate all sessions for target user
-    const userSessions = await prisma.session.findMany({
-      where: { userId: targetUser.id },
-    });
-    userSessions.forEach(s => sessions.delete(s.sessionToken));
+    const userSessions = await prisma.session.findMany({ where: { userId: targetUser.id } });
+    userSessions.forEach(s => authSessions.delete(s.sessionToken));
     await prisma.session.deleteMany({ where: { userId: targetUser.id } });
 
-    // Log audit
     try {
       await prisma.auditLog.create({
         data: {
@@ -77,7 +74,7 @@ export async function POST(request: NextRequest) {
           action: 'ADMIN_PASSWORD_RESET',
           entityType: 'User',
           entityId: targetUser.id,
-          changes: { resetBy: admin.user?.userId || admin.userId, targetUser: targetUserId },
+          changes: { resetBy: admin.adminUser?.userId || admin.userId, targetUser: targetUserId },
         },
       });
     } catch (auditErr) {

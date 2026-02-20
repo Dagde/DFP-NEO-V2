@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { sessions } from '../../auth/direct-login/route';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
 
 async function verifyAdminSession(token: string): Promise<{ userId: string; role: string } | null> {
-  const memSession = sessions.get(token);
+  const memSession = authSessions.get(token);
   if (memSession && new Date() < new Date(memSession.expires)) {
     const role = memSession.user.role;
     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
@@ -14,7 +14,6 @@ async function verifyAdminSession(token: string): Promise<{ userId: string; role
     return null;
   }
 
-  // Check database
   const dbSession = await prisma.session.findUnique({
     where: { sessionToken: token },
     include: { user: true },

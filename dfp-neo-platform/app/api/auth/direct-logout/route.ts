@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { sessions } from '../direct-login/route';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || 
+    const token = authHeader?.replace('Bearer ', '') ||
                   request.headers.get('x-session-token') || '';
 
     if (!token) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Remove from memory
-    sessions.delete(token);
+    authSessions.delete(token);
 
     // Remove from database
     try {

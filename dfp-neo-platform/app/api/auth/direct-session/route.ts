@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
-
-// Import sessions from direct-login (shared module scope)
-// Note: In serverless environments, sessions may not persist between requests
-// For production, use database-backed sessions
-import { sessions } from '../direct-login/route';
 
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || 
+    const token = authHeader?.replace('Bearer ', '') ||
                   request.headers.get('x-session-token') || '';
 
     if (!token) {
@@ -22,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check in-memory sessions first
-    const memSession = sessions.get(token);
+    const memSession = authSessions.get(token);
     if (memSession && new Date() < new Date(memSession.expires)) {
       return NextResponse.json({
         user: memSession.user,
@@ -52,15 +48,15 @@ export async function GET(request: NextRequest) {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      displayName: user.firstName && user.lastName 
-        ? `${user.firstName} ${user.lastName}` 
+      displayName: user.firstName && user.lastName
+        ? `${user.firstName} ${user.lastName}`
         : user.username,
       mustChangePassword: false,
       permissionsRoleId: null,
     };
 
     // Restore to memory cache
-    sessions.set(token, {
+    authSessions.set(token, {
       userId: user.id,
       expires: dbSession.expires.toISOString(),
       user: sessionUser,

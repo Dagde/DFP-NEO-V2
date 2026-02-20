@@ -4,10 +4,6 @@
  * 
  * POST /api/admin/setup-users
  * Body: { setupKey: "DFP-NEO-SETUP-2026" }
- * 
- * This creates:
- * - superadmin / Bathurst063371526 (SUPER_ADMIN)
- * - alexander.burns / Burns8201112 (INSTRUCTOR)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +12,6 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// Setup key to protect this endpoint
 const SETUP_KEY = process.env.SETUP_KEY || 'DFP-NEO-SETUP-2026';
 
 export async function POST(request: NextRequest) {
@@ -33,7 +28,6 @@ export async function POST(request: NextRequest) {
 
     console.log('🌱 Setting up initial auth users...');
 
-    // Hash passwords
     const superAdminHash = await bcrypt.hash('Bathurst063371526', 12);
     const burnsHash = await bcrypt.hash('Burns8201112', 12);
 
@@ -107,10 +101,6 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Initial users setup complete',
       results,
-      credentials: {
-        superAdmin: { userId: 'superadmin', password: 'Bathurst063371526', role: 'SUPER_ADMIN' },
-        alexanderBurns: { userId: 'alexander.burns', password: 'Burns8201112', role: 'INSTRUCTOR' },
-      },
     });
 
   } catch (error: any) {
@@ -122,12 +112,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Also allow GET to check if users exist
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     const setupKey = authHeader?.replace('Bearer ', '') || '';
-    
+
     if (setupKey !== SETUP_KEY) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

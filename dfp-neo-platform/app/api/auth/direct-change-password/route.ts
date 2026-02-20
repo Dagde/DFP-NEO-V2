@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
-import { sessions } from '../direct-login/route';
+import { authSessions } from '@/lib/auth-sessions';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +17,7 @@ function validatePasswordStrength(password: string): string[] {
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || 
+    const token = authHeader?.replace('Bearer ', '') ||
                   request.headers.get('x-session-token') || '';
 
     if (!token) {
@@ -28,13 +28,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify session
-    const memSession = sessions.get(token);
     let userId: string | null = null;
 
+    const memSession = authSessions.get(token);
     if (memSession && new Date() < new Date(memSession.expires)) {
       userId = memSession.userId;
     } else {
-      // Check database
       const dbSession = await prisma.session.findUnique({
         where: { sessionToken: token },
       });
@@ -57,7 +56,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate new password strength
     const errors = validatePasswordStrength(newPassword);
     if (errors.length > 0) {
       return NextResponse.json(
@@ -66,7 +64,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.password) {
       return NextResponse.json(
@@ -75,7 +72,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify current password
     const isValid = await bcrypt.compare(currentPassword, user.password);
     if (!isValid) {
       return NextResponse.json(
@@ -84,36 +80,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash new password
     const newHash = await bcrypt.hash(newPassword, 12);
 
-    // Update password
     await prisma.user.update({
       where: { id: userId },
       data: { password: newHash, updatedAt: new Date() },
     });
 
     // Invalidate all other sessions for this user
-    const userSessions = await prisma.session.findMany({
-      where: { userId },
-    });
+    const userSessions = await prisma.session.findMany({ where: { userId } });
     userSessions.forEach(s => {
-      if (s.sessionToken !== token) {
-        sessions.delete(s.sessionToken);
-      }
+      if (s.sessionToken !== token) authSessions.delete(s.sessionToken);
     });
     await prisma.session.deleteMany({
       where: { userId, NOT: { sessionToken: token } },
     });
 
-    // Update current session user
-    const currentSession = sessions.get(token);
+    // Update current session
+    const currentSession = authSessions.get(token);
     if (currentSession) {
       currentSession.user.mustChangePassword = false;
-      sessions.set(token, currentSession);
+      authSessions.set(token, currentSession);
     }
 
-    // Log audit
     try {
       await prisma.auditLog.create({
         data: {
@@ -131,9 +120,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Direct change password error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
