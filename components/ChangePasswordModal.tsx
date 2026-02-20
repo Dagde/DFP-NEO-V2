@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
-const AUTH_SERVER = 'http://localhost:3001';
+// Auth server URL - use empty string to use relative URLs (proxied through Vite)
+const AUTH_SERVER = '';
 
 interface ChangePasswordModalProps {
   sessionToken: string;

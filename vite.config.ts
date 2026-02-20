@@ -10,6 +10,23 @@ export default defineConfig({
     strictPort: false,
     hmr: {
       clientPort: 8080
+    },
+    proxy: {
+      '/api/auth': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/admin': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/health': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
     }
   },
   plugins: [react()],
