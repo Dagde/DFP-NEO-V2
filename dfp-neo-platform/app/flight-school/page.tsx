@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function FlightSchoolPage() {
+function FlightSchoolContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -99,5 +99,17 @@ export default function FlightSchoolPage() {
         title="DFP-NEO Flight School"
       />
     </div>
+  );
+}
+
+export default function FlightSchoolPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    }>
+      <FlightSchoolContent />
+    </Suspense>
   );
 }
