@@ -1,8 +1,8 @@
 'use client';
 
-// Authentication removed - handled by DFP-NEO-Website
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 const apps = [
   {
@@ -22,6 +22,7 @@ const apps = [
     image: '/images/p8-aircraft.jpg',
     status: 'active',
     href: 'https://dfp-neo-v2-production.up.railway.app',
+    external: true,
   },
   {
     id: 'air-movements',
@@ -45,8 +46,48 @@ const apps = [
 
 export default function SelectPage() {
   const router = useRouter();
-  
-  // No authentication check - handled by parent website
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for session
+    const sessionData = localStorage.getItem('dfp_session');
+    if (!sessionData) {
+      // No session - redirect to login
+      router.push('/login');
+      return;
+    }
+
+    const session = JSON.parse(sessionData);
+
+    // Validate session with backend
+    const validateSession = async () => {
+      try {
+        const response = await fetch('/api/auth/direct-session', {
+          headers: {
+            'Authorization': `Bearer ${session.token}`,
+          },
+        });
+
+        if (!response.ok) {
+          // Session invalid - redirect to login
+          localStorage.removeItem('dfp_session');
+          router.push('/login');
+          return;
+        }
+
+        const data = await response.json();
+        setUser(data.user);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Session validation failed:', error);
+        localStorage.removeItem('dfp_session');
+        router.push('/login');
+      }
+    };
+
+    validateSession();
+  }, [router]);
 
   return (
     <div className="h-screen w-screen bg-black overflow-hidden flex flex-col">
@@ -63,7 +104,26 @@ export default function SelectPage() {
           />
         </div>
         <div className="flex items-center gap-6">
-          {/* User info removed - handled by parent website */}
+          {user && (
+            <>
+              <div className="text-right">
+                <div className="text-neutral-200 text-sm font-medium">{user.name}</div>
+                <div className="text-neutral-500 text-xs">{user.userId}</div>
+                {user.location && user.unit && (
+                  <div className="text-neutral-600 text-xs">{user.location}{user.unit}</div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('dfp_session');
+                  router.push('/login');
+                }}
+                className="px-4 py-2 rounded border border-white/20 text-white/70 text-sm hover:bg-white/10 transition"
+              >
+                Logout
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -75,7 +135,19 @@ export default function SelectPage() {
               key={app.id}
               onClick={() => {
                 if (app.status === 'active') {
-                  router.push(app.href);
+                  if (app.external) {
+                    // For external apps, pass session via URL parameter
+                    const sessionData = localStorage.getItem('dfp_session');
+                    if (sessionData) {
+                      const session = JSON.parse(sessionData);
+                      const url = new URL(app.href);
+                      url.searchParams.set('token', session.token);
+                      url.searchParams.set('userId', session.user.userId);
+                      window.open(url.toString(), '_blank');
+                    }
+                  } else {
+                    router.push(app.href);
+                  }
                 }
               }}
               disabled={app.status !== 'active'}

@@ -18,18 +18,27 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
-        userId,
-        password,
-        redirect: false,
+      const response = await fetch('/api/auth/direct-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, password }),
       });
 
-      if (result?.error) {
-        setError('Invalid User ID or password');
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || 'Invalid User ID or password');
         setIsLoading(false);
         return;
       }
 
+      // Store session and user data
+      localStorage.setItem('dfp_session', JSON.stringify({
+        token: data.token,
+        user: data.user,
+      }));
+
+      // Redirect to launch page
       router.push('/select');
     } catch (error) {
       setError('An error occurred. Please try again.');
