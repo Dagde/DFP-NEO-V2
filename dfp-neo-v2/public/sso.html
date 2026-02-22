@@ -52,7 +52,7 @@
       setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
     }
 
-    function authenticate() {
+    async function authenticate() {
       console.log('[SSO] Page loaded, URL:', window.location.href);
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -65,26 +65,41 @@
       const role = urlParams.get('role');
       const isActive = urlParams.get('isActive');
 
-      console.log('[SSO] URL params - token:', token ? 'found' : 'not found', 'userId:', userId, 'username:', username);
+      console.log('[SSO] URL params - userId:', userId, 'username:', username);
 
-      // Strategy 1: Use URL parameters (token + user data passed from website)
-      // We trust these params since they come from the authenticated website session
+      // Strategy 1: Use URL parameters passed from website
       if (userId && username) {
-        setStatus('Loading application...');
-        
+        setStatus('Setting up session...');
+
+        // Build user object matching AuthUser interface expected by App.tsx
         const userData = {
+          id: userId,
           userId: userId,
           username: username,
           firstName: firstName || '',
           lastName: lastName || '',
-          email: email || '',
+          displayName: (firstName && lastName) ? `${lastName}, ${firstName}` : username,
+          email: email || null,
           role: role || 'USER',
-          isActive: isActive !== 'false'
+          isActive: isActive !== 'false',
+          mustChangePassword: false,
+          permissionsRoleId: ''
         };
-        
-        console.log('[SSO] Storing user data:', userData);
+
+        // Store authUser for flight-school page
         localStorage.setItem('authUser', JSON.stringify(userData));
-        
+
+        // Also store a synthetic session token so App.tsx skips the login modal
+        // The token from the website is stored as dfp_session_token
+        // We also store the user data so checkSession can return it without an API call
+        if (token) {
+          localStorage.setItem('dfp_session_token', token);
+          localStorage.setItem('dfp_session_expires', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+          localStorage.setItem('dfp_sso_user', JSON.stringify(userData));
+        }
+
+        console.log('[SSO] Session stored, redirecting to flight-school');
+        setStatus('Loading application...');
         setTimeout(() => { window.location.href = '/flight-school'; }, 300);
         return;
       }
