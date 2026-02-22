@@ -1,177 +1,56 @@
-# Deployment Error Fix - COMPLETE ✅
+# Single Sign-On Implementation for DFP-NEO
 
-## All Tasks Completed
-- [x] Removed all permissionsRole references
-- [x] Fixed User model field mismatches (displayName → firstName/lastName, passwordHash → password, status → isActive)
-- [x] Fixed AuditLog model field mismatches (actorUserId → userId, actionType → action)
-- [x] Simplified lib/password.ts to match existing schema
-- [x] Disabled routes that require missing database models
-- [x] Fixed lib/auth.ts and lib/mobile-auth.ts
-- [x] Fixed lib/permissions.ts to use Role enum
-- [x] Fixed API routes (users, auth)
-- [x] Disabled script files that were being compiled
-- [x] Build completed successfully ✅
+## Goal
+Implement single sign-on (SSO) between DFP-NEO-Website and DFP-NEO-V2 app so users only need to log in once.
 
-## Next Steps
-- [ ] Commit changes to git
-- [ ] Push to GitHub
-- [ ] Verify Railway deployment succeeds
-- [ ] Test app at dfp-neo.com
+## Architecture
+- Website (dfp-neo.com) handles authentication
+- V2 app accepts session token from website
+- No popup authentication in V2 app
 
----
+## Tasks
 
-# Database Schema Migration - Complete Implementation (PAUSED)
+### Phase 1: Website Updates (DFP-NEO-Website)
+- [x] Create API route to generate authentication token for V2 app
+- [x] Update launch page to pass token to V2 app via URL parameters
+- [x] Ensure user data (userId, name, role, location, unit) is included
 
-## Phase 1: Update Database Schema (NEW APPROACH)
+### Phase 2: V2 App Updates (DFP-NEO-V2)
+- [x] Create API route to validate authentication token from website
+- [x] Update V2 app to accept token from URL parameters
+- [x] Remove popup authentication requirement
+- [x] Redirect to login if no valid token
 
-### Task 1.1: Update User table with optional relations
-- [ ] Update Personnel relation to be optional (Personnel?)
-- [ ] Add Trainee relation as optional (Trainee?)
-- [ ] Verify existing User fields are correct
+### Phase 3: Testing
+- [ ] Test login flow from website to V2 app
+- [ ] Verify session persistence
+- [ ] Test logout functionality
 
-### Task 1.2: Update Personnel table with optional userId
-- [ ] Make userId optional initially for migration (String?)
-- [ ] Add all missing boolean flags (isTestingOfficer, isExecutive, etc.)
-- [ ] Add qualification fields (category, seatConfig, callsignNumber)
-- [ ] Add assignment fields (location, unit, flight)
-- [ ] Add contact fields (phoneNumber, email)
-- [ ] Add permissions array field
-- [ ] Add priorExperience JSON field
-- [ ] Add unavailability JSON field
-- [ ] Add idNumber field (unique, matches userId)
-- [ ] Remove foreign key constraint temporarily
+## Current Status
+- Website: ✅ Single sign-on token generation implemented and pushed to main
+- V2 App: ✅ Token validation and authentication flow implemented and pushed to feature/comprehensive-build-algorithm
+- Next: Deploy both repositories and test the complete flow
 
-### Task 1.3: Create Trainee table
-- [ ] Create new Trainee model with all required fields
-- [ ] Add userId as optional field (String?)
-- [ ] Add idNumber field (unique)
-- [ ] Add course, lmpType, traineeCallsign fields
-- [ ] Add status fields (isPaused, seatConfig)
-- [ ] Add assignment fields (unit, flight, location)
-- [ ] Add contact fields (phoneNumber, email)
-- [ ] Add instructor fields (primaryInstructor, secondaryInstructor)
-- [ ] Add progress fields (lastEventDate, lastFlightDate, currencyStatus)
-- [ ] Add permissions array field
-- [ ] Add priorExperience JSON field
-- [ ] Add unavailability JSON field
-- [ ] Create optional relation to User table
+## Deployment Instructions
 
-### Task 1.4: Run Prisma migration
-- [ ] Generate Prisma migration
-- [ ] Run `prisma db push` to apply schema changes
-- [ ] Verify all tables created successfully
+### DFP-NEO-Website (dfp-neo.com)
+- Repository: https://github.com/Dagde/DFP-NEO-Website.git
+- Branch: main
+- Latest commit: cdcaa6b
+- Status: ✅ Pushed and ready for deployment
 
-## Phase 2: Create Migration Scripts
+### DFP-NEO-V2
+- Repository: https://github.com/Dagde/DFP-NEO-V2.git
+- Branch: feature/comprehensive-build-algorithm
+- Latest commit: a73b000
+- Status: ✅ Pushed and ready for deployment
 
-### Task 2.1: Create Personnel update script
-- [ ] Create script to convert existing Personnel.qualifications JSON to individual fields
-- [ ] Create script to migrate availability to unavailability
-- [ ] Add default values for new boolean fields
-- [ ] Ensure userId matches idNumber for all records
+## Single Sign-On Flow
 
-### Task 2.2: Create Trainee import script
-- [ ] Create script to import trainees from mockData.ts
-- [ ] Map all trainee fields to database schema
-- [ ] Generate User records for trainees with login (if applicable)
-- [ ] Ensure idNumber is unique
-- [ ] Set default values for new fields
-
-### Task 2.3: Execute migration scripts
-- [ ] Run Personnel update script
-- [ ] Run Trainee import script
-- [ ] Verify data integrity
-- [ ] Check for any errors or warnings
-
-## Phase 3: Update API Routes
-
-### Task 3.1: Update authentication routes
-- [ ] Update login route to check profile type based on User.role
-- [ ] Load appropriate profile (Personnel or Trainee)
-- [ ] Return profile data in login response
-- [ ] Update JWT token to include profileType
-
-### Task 3.2: Create Personnel API routes
-- [ ] GET /api/personnel - List all personnel
-- [ ] GET /api/personnel/[id] - Get single personnel record
-- [ ] POST /api/personnel - Create new personnel
-- [ ] PUT /api/personnel/[id] - Update personnel
-- [ ] DELETE /api/personnel/[id] - Delete personnel
-- [ ] Add role-based access control
-
-### Task 3.3: Create Trainee API routes
-- [ ] GET /api/trainee - List all trainees
-- [ ] GET /api/trainee/[id] - Get single trainee record
-- [ ] POST /api/trainee - Create new trainee
-- [ ] PUT /api/trainee/[id] - Update trainee
-- [ ] DELETE /api/trainee/[id] - Delete trainee
-- [ ] Add role-based access control
-
-### Task 3.4: Create Profile API routes
-- [ ] GET /api/profile - Get current user's profile
-- [ ] PUT /api/profile - Update current user's profile
-- [ ] Auto-detect profile type based on User.role
-
-## Phase 4: Update Mobile API Routes
-
-### Task 4.1: Update mobile auth routes
-- [ ] Update /api/mobile/auth/login to return profile data
-- [ ] Update /api/mobile/auth/me to return profile
-- [ ] Add profileType to mobile responses
-
-### Task 4.2: Add mobile personnel routes
-- [ ] GET /api/mobile/personnel/me - Get logged-in personnel profile
-- [ ] PUT /api/mobile/personnel/me - Update personnel profile
-- [ ] GET /api/mobile/personnel/[id] - Get other personnel profile (for instructors)
-
-### Task 4.3: Add mobile trainee routes
-- [ ] GET /api/mobile/trainee/me - Get logged-in trainee profile
-- [ ] PUT /api/mobile/trainee/me - Update trainee profile
-- [ ] GET /api/mobile/trainee/[id] - Get trainee profile (for instructors)
-
-## Phase 5: Testing & Verification
-
-### Task 5.1: Test database schema
-- [ ] Verify Personnel table has all fields
-- [ ] Verify Trainee table exists with all fields
-- [ ] Test foreign key constraints
-- [ ] Verify unique constraints on userId and idNumber
-
-### Task 5.2: Test authentication flow
-- [ ] Test staff login (Personnel profile)
-- [ ] Test trainee login (Trainee profile)
-- [ ] Test admin login (no profile)
-- [ ] Verify JWT tokens include correct profileType
-
-### Task 5.3: Test API routes
-- [ ] Test Personnel CRUD operations
-- [ ] Test Trainee CRUD operations
-- [ ] Test permission checks
-- [ ] Test role-based access control
-
-### Task 5.4: Test data integrity
-- [ ] Verify all Personnel records migrated correctly
-- [ ] Verify all Trainee records imported correctly
-- [ ] Check userId matches idNumber
-- [ ] Verify unavailability data preserved
-
-## Phase 6: Documentation
-
-### Task 6.1: Update API documentation
-- [ ] Document new Personnel API endpoints
-- [ ] Document new Trainee API endpoints
-- [ ] Document authentication flow with profile types
-- [ ] Document role-based access control
-
-### Task 6.2: Update database documentation
-- [ ] Document updated schema structure
-- [ ] Document relations between tables
-- [ ] Document field mappings
-- [ ] Create migration guide
-
-## Phase 7: Frontend Integration (Future)
-
-- [ ] Update InstructorProfileFlyout to use API routes
-- [ ] Update TraineeProfileFlyout to use API routes
-- [ ] Remove dependency on mockData.ts
-- [ ] Update profile loading logic
-- [ ] Add error handling for API failures
+1. User logs in at dfp-neo.com (website)
+2. Website generates authentication token with user data
+3. User clicks on V2 app icon on launch page
+4. Website redirects to V2 app with authToken and userId in URL
+5. V2 app validates token with backend
+6. If valid, V2 app loads and stores user data in localStorage
+7. If invalid, V2 app redirects back to website login
