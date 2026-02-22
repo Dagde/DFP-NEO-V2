@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export default function FlightSchoolPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,13 +19,15 @@ export default function FlightSchoolPage() {
       console.log('[V2 SSO] Page loaded, starting validation');
       console.log('[V2 SSO] Current URL:', window.location.href);
       
-      const userId = searchParams.get('userId');
-      const username = searchParams.get('username');
-      const firstName = searchParams.get('firstName');
-      const lastName = searchParams.get('lastName');
-      const email = searchParams.get('email');
-      const role = searchParams.get('role');
-      const isActive = searchParams.get('isActive');
+      // Use URLSearchParams from window.location for better reliability
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get('userId');
+      const username = urlParams.get('username');
+      const firstName = urlParams.get('firstName');
+      const lastName = urlParams.get('lastName');
+      const email = urlParams.get('email');
+      const role = urlParams.get('role');
+      const isActive = urlParams.get('isActive');
 
       console.log('[V2 SSO] URL Parameters:', {
         userId,
@@ -77,7 +78,7 @@ export default function FlightSchoolPage() {
     };
 
     validateUser();
-  }, [searchParams]);
+  }, []);
 
   if (isLoading) {
     return (
