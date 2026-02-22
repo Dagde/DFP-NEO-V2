@@ -25,16 +25,9 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .status { color: #aaa; font-size: 14px; }
-    .error {
-      color: #f87171;
-      font-size: 14px;
-      text-align: center;
-      max-width: 400px;
-    }
+    .error { color: #f87171; font-size: 14px; text-align: center; max-width: 400px; }
   </style>
 <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
 </head>
@@ -48,7 +41,6 @@
       document.getElementById('status').textContent = msg;
       console.log('[SSO]', msg);
     }
-
     function setError(msg) {
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('status').style.display = 'none';
@@ -56,7 +48,6 @@
       document.getElementById('error').textContent = msg;
       console.error('[SSO Error]', msg);
     }
-
     function redirectToLogin() {
       setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
     }
@@ -64,66 +55,66 @@
     async function authenticate() {
       console.log('[SSO] Page loaded, URL:', window.location.href);
 
-      // Get credentials from sessionStorage (set during website login)
+      // Strategy 1: Use credentials from sessionStorage (set during website login)
       const credsStr = sessionStorage.getItem('sso_creds');
       console.log('[SSO] Credentials in sessionStorage:', credsStr ? 'found' : 'not found');
 
-      if (!credsStr) {
-        setError('Session expired. Please login again.');
-        redirectToLogin();
-        return;
-      }
+      if (credsStr) {
+        let creds;
+        try { creds = JSON.parse(credsStr); } catch(e) {}
+        
+        // Clear credentials immediately for security
+        sessionStorage.removeItem('sso_creds');
 
-      let creds;
-      try {
-        creds = JSON.parse(credsStr);
-      } catch(e) {
-        setError('Invalid session data. Please login again.');
-        redirectToLogin();
-        return;
-      }
+        if (creds && creds.userId && creds.password) {
+          setStatus('Logging in...');
+          try {
+            // Login directly to V2 app
+            const response = await fetch('/api/auth/direct-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: creds.userId, password: creds.password })
+            });
 
-      // Clear credentials from sessionStorage immediately for security
-      sessionStorage.removeItem('sso_creds');
-
-      setStatus('Logging in to application...');
-
-      try {
-        // Login directly to V2 app using same credentials
-        const response = await fetch('/api/auth/direct-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: creds.userId, password: creds.password })
-        });
-
-        console.log('[SSO] V2 login response status:', response.status);
-
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error('Login failed: ' + (errData.message || response.status));
+            if (response.ok) {
+              const data = await response.json();
+              console.log('[SSO] V2 login successful:', data.user?.userId);
+              
+              // Store in dfp_session format (what deployed V2 app expects)
+              localStorage.setItem('dfp_session', JSON.stringify({
+                token: data.sessionToken,
+                user: data.user
+              }));
+              
+              setStatus('Loading application...');
+              setTimeout(() => { window.location.href = '/flight-school'; }, 300);
+              return;
+            } else {
+              console.error('[SSO] V2 login failed:', response.status);
+            }
+          } catch(e) {
+            console.error('[SSO] V2 login error:', e);
+          }
         }
-
-        const data = await response.json();
-        console.log('[SSO] V2 login successful for:', data.user?.userId);
-
-        // Store session in the format the deployed V2 app expects
-        const sessionData = {
-          token: data.sessionToken,
-          user: data.user
-        };
-        localStorage.setItem('dfp_session', JSON.stringify(sessionData));
-        console.log('[SSO] Session stored in localStorage as dfp_session');
-
-        setStatus('Loading application...');
-        setTimeout(() => {
-          window.location.href = '/flight-school';
-        }, 300);
-
-      } catch (error) {
-        console.error('[SSO] Error:', error);
-        setError('Authentication failed: ' + error.message + '. Redirecting to login...');
-        redirectToLogin();
       }
+
+      // Strategy 2: Check if already have valid dfp_session in localStorage
+      const existingSession = localStorage.getItem('dfp_session');
+      if (existingSession) {
+        try {
+          const session = JSON.parse(existingSession);
+          if (session.token && session.user) {
+            console.log('[SSO] Found existing dfp_session for:', session.user.userId);
+            setStatus('Loading application...');
+            setTimeout(() => { window.location.href = '/flight-school'; }, 300);
+            return;
+          }
+        } catch(e) {}
+      }
+
+      // No valid session found
+      setError('Session expired. Please login again.');
+      redirectToLogin();
     }
 
     authenticate();
