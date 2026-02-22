@@ -10,39 +10,45 @@ export default function FlightSchoolPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const validateToken = async () => {
-      const authToken = searchParams.get('authToken');
+    const validateUser = () => {
       const userId = searchParams.get('userId');
+      const username = searchParams.get('username');
+      const firstName = searchParams.get('firstName');
+      const lastName = searchParams.get('lastName');
+      const email = searchParams.get('email');
+      const role = searchParams.get('role');
+      const isActive = searchParams.get('isActive');
 
-      if (!authToken || !userId) {
-        // No token provided, redirect to website login
+      if (!userId || !username) {
+        // No user data provided, redirect to website login
         window.location.href = 'https://dfp-neo.com/login';
         return;
       }
 
       try {
-        // Validate token against the website's SSO API directly
-        const response = await fetch(`https://dfp-neo.com/api/sso/validate?authToken=${encodeURIComponent(authToken)}&userId=${encodeURIComponent(userId)}`);
-        const data = await response.json();
-
-        if (data.valid) {
-          // Token is valid, load the app
-          setIsValid(true);
-          // Store user data in localStorage for the iframe to access
-          localStorage.setItem('authUser', JSON.stringify(data.user));
-        } else {
-          // Token is invalid, redirect to website login
-          window.location.href = 'https://dfp-neo.com/login';
-        }
+        // User data is provided, load the app
+        const userData = {
+          userId,
+          username,
+          firstName,
+          lastName,
+          email,
+          role,
+          isActive: isActive === 'true'
+        };
+        
+        setIsValid(true);
+        // Store user data in localStorage for the iframe to access
+        localStorage.setItem('authUser', JSON.stringify(userData));
       } catch (error) {
-        console.error('Error validating token:', error);
+        console.error('Error processing user data:', error);
         window.location.href = 'https://dfp-neo.com/login';
       } finally {
         setIsLoading(false);
       }
     };
 
-    validateToken();
+    validateUser();
   }, [searchParams]);
 
   if (isLoading) {
