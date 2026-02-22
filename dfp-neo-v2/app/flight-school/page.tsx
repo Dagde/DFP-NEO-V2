@@ -16,64 +16,55 @@ export default function FlightSchoolPage() {
 
   useEffect(() => {
     const validateUser = () => {
-      console.log('[V2 SSO] Page loaded, starting validation');
+      console.log('[V2 SSO] FlightSchool page loaded');
       console.log('[V2 SSO] Current URL:', window.location.href);
-      
-      // Use URLSearchParams from window.location for better reliability
+
+      // First check URL params (direct SSO)
       const urlParams = new URLSearchParams(window.location.search);
-      const userId = urlParams.get('userId');
-      const username = urlParams.get('username');
-      const firstName = urlParams.get('firstName');
-      const lastName = urlParams.get('lastName');
-      const email = urlParams.get('email');
-      const role = urlParams.get('role');
-      const isActive = urlParams.get('isActive');
+      const urlUserId = urlParams.get('userId');
+      const urlUsername = urlParams.get('username');
 
-      console.log('[V2 SSO] URL Parameters:', {
-        userId,
-        username,
-        firstName,
-        lastName,
-        email,
-        role,
-        isActive
-      });
+      // Then check localStorage (set by sso.html)
+      const storedUser = localStorage.getItem('authUser');
 
-      if (!userId || !username) {
-        console.error('[V2 SSO] Missing required parameters - userId or username is null');
-        console.error('[V2 SSO] Redirecting to login page');
-        // No user data provided, redirect to website login
-        window.location.href = 'https://dfp-neo.com/login';
-        return;
-      }
+      console.log('[V2 SSO] URL userId:', urlUserId);
+      console.log('[V2 SSO] localStorage authUser:', storedUser);
 
-      try {
-        console.log('[V2 SSO] User data validated, creating user object');
-        // User data is provided, load the app
+      if (urlUserId && urlUsername) {
+        // URL params present - store and proceed
+        console.log('[V2 SSO] Using URL parameters');
         const userData = {
-          userId,
-          username,
-          firstName,
-          lastName,
-          email,
-          role,
-          isActive: isActive === 'true'
+          userId: urlUserId,
+          username: urlUsername,
+          firstName: urlParams.get('firstName'),
+          lastName: urlParams.get('lastName'),
+          email: urlParams.get('email'),
+          role: urlParams.get('role'),
+          isActive: urlParams.get('isActive') === 'true'
         };
-        
-        console.log('[V2 SSO] User object created:', userData);
-        console.log('[V2 SSO] Storing in localStorage');
-        
-        setIsValid(true);
-        // Store user data in localStorage for the iframe to access
         localStorage.setItem('authUser', JSON.stringify(userData));
-        
-        console.log('[V2 SSO] User data stored successfully, loading app');
-      } catch (error) {
-        console.error('[V2 SSO] Error processing user data:', error);
-        console.error('[V2 SSO] Redirecting to login page due to error');
-        window.location.href = 'https://dfp-neo.com/login';
-      } finally {
+        setIsValid(true);
         setIsLoading(false);
+      } else if (storedUser) {
+        // localStorage has user data (set by sso.html)
+        console.log('[V2 SSO] Using localStorage user data');
+        try {
+          const userData = JSON.parse(storedUser);
+          if (userData.userId && userData.username) {
+            console.log('[V2 SSO] Valid user found in localStorage:', userData.userId);
+            setIsValid(true);
+            setIsLoading(false);
+          } else {
+            console.error('[V2 SSO] Invalid user data in localStorage');
+            window.location.href = 'https://dfp-neo.com/login';
+          }
+        } catch (e) {
+          console.error('[V2 SSO] Failed to parse localStorage user data');
+          window.location.href = 'https://dfp-neo.com/login';
+        }
+      } else {
+        console.error('[V2 SSO] No user data found - redirecting to login');
+        window.location.href = 'https://dfp-neo.com/login';
       }
     };
 

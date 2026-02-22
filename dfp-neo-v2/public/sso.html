@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DFP-NEO | Authenticating...</title>
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #333;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status {
+      color: #aaa;
+      font-size: 14px;
+    }
+    .error {
+      color: #f87171;
+      font-size: 14px;
+      text-align: center;
+      max-width: 400px;
+    }
+    .debug {
+      color: #666;
+      font-size: 11px;
+      text-align: center;
+      max-width: 600px;
+      word-break: break-all;
+      margin-top: 20px;
+    }
+  </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Authenticating...</div>
+  <div class="error" id="error" style="display:none"></div>
+  <div class="debug" id="debug"></div>
+
+  <script>
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+      console.log('[SSO]', msg);
+    }
+
+    function setError(msg) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = msg;
+      console.error('[SSO Error]', msg);
+    }
+
+    function setDebug(msg) {
+      document.getElementById('debug').textContent = msg;
+    }
+
+    window.onload = function() {
+      const fullUrl = window.location.href;
+      console.log('[SSO] Page loaded, URL:', fullUrl);
+      setDebug('URL: ' + fullUrl);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get('userId');
+      const username = urlParams.get('username');
+      const firstName = urlParams.get('firstName');
+      const lastName = urlParams.get('lastName');
+      const email = urlParams.get('email');
+      const role = urlParams.get('role');
+      const isActive = urlParams.get('isActive');
+
+      console.log('[SSO] Parameters:', { userId, username, firstName, lastName, email, role, isActive });
+
+      if (!userId || !username) {
+        console.error('[SSO] Missing userId or username, redirecting to login');
+        setError('Authentication required. Redirecting to login...');
+        setTimeout(() => {
+          window.location.href = 'https://dfp-neo.com/login';
+        }, 2000);
+        return;
+      }
+
+      setStatus('User verified: ' + userId);
+
+      // Store user data in localStorage
+      const userData = {
+        userId,
+        username,
+        firstName,
+        lastName,
+        email,
+        role,
+        isActive: isActive === 'true'
+      };
+
+      localStorage.setItem('authUser', JSON.stringify(userData));
+      console.log('[SSO] User data stored in localStorage:', userData);
+
+      setStatus('Loading application...');
+
+      // Redirect to the flight-school page
+      setTimeout(() => {
+        window.location.href = '/flight-school';
+      }, 500);
+    };
+  </script>
+</body>
+</html>
