@@ -52,7 +52,7 @@
       setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
     }
 
-    async function authenticate() {
+    function authenticate() {
       console.log('[SSO] Page loaded, URL:', window.location.href);
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -65,78 +65,28 @@
       const role = urlParams.get('role');
       const isActive = urlParams.get('isActive');
 
-      console.log('[SSO] URL params - token:', token ? 'found' : 'not found', 'userId:', userId);
+      console.log('[SSO] URL params - token:', token ? 'found' : 'not found', 'userId:', userId, 'username:', username);
 
       // Strategy 1: Use URL parameters (token + user data passed from website)
-      if (token && userId && username) {
-        setStatus('Validating session...');
-        try {
-          // Validate the token with the website API
-          const validateResponse = await fetch(`https://dfp-neo.com/api/auth/direct-login`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (validateResponse.ok) {
-            const sessionData = await validateResponse.json();
-            console.log('[SSO] Token validated successfully:', sessionData.user?.userId);
-
-            // Store user data in authUser format (what flight-school page expects)
-            const userData = {
-              userId: sessionData.user?.userId || userId,
-              username: sessionData.user?.username || username,
-              firstName: sessionData.user?.firstName || firstName,
-              lastName: sessionData.user?.lastName || lastName,
-              email: sessionData.user?.email || email,
-              role: sessionData.user?.role || role,
-              isActive: sessionData.user?.isActive ?? (isActive === 'true')
-            };
-            localStorage.setItem('authUser', JSON.stringify(userData));
-
-            setStatus('Loading application...');
-            setTimeout(() => { window.location.href = '/flight-school'; }, 300);
-            return;
-          } else {
-            console.warn('[SSO] Token validation failed, using URL params directly');
-            // Token validation failed but we have user data in URL - use it directly
-            const userData = {
-              userId: userId,
-              username: username,
-              firstName: firstName || '',
-              lastName: lastName || '',
-              email: email || '',
-              role: role || 'USER',
-              isActive: isActive !== 'false'
-            };
-            localStorage.setItem('authUser', JSON.stringify(userData));
-
-            setStatus('Loading application...');
-            setTimeout(() => { window.location.href = '/flight-school'; }, 300);
-            return;
-          }
-        } catch(e) {
-          console.error('[SSO] Token validation error:', e);
-          // Fallback: use URL params directly if validation fails
-          if (userId && username) {
-            const userData = {
-              userId: userId,
-              username: username,
-              firstName: firstName || '',
-              lastName: lastName || '',
-              email: email || '',
-              role: role || 'USER',
-              isActive: isActive !== 'false'
-            };
-            localStorage.setItem('authUser', JSON.stringify(userData));
-
-            setStatus('Loading application...');
-            setTimeout(() => { window.location.href = '/flight-school'; }, 300);
-            return;
-          }
-        }
+      // We trust these params since they come from the authenticated website session
+      if (userId && username) {
+        setStatus('Loading application...');
+        
+        const userData = {
+          userId: userId,
+          username: username,
+          firstName: firstName || '',
+          lastName: lastName || '',
+          email: email || '',
+          role: role || 'USER',
+          isActive: isActive !== 'false'
+        };
+        
+        console.log('[SSO] Storing user data:', userData);
+        localStorage.setItem('authUser', JSON.stringify(userData));
+        
+        setTimeout(() => { window.location.href = '/flight-school'; }, 300);
+        return;
       }
 
       // Strategy 2: Check if already have valid authUser in localStorage
@@ -150,47 +100,13 @@
             setTimeout(() => { window.location.href = '/flight-school'; }, 300);
             return;
           }
-        } catch(e) {}
-      }
-
-      // Strategy 3: Check sessionStorage for credentials (legacy)
-      const credsStr = sessionStorage.getItem('sso_creds');
-      if (credsStr) {
-        let creds;
-        try { creds = JSON.parse(credsStr); } catch(e) {}
-        sessionStorage.removeItem('sso_creds');
-
-        if (creds && creds.userId && creds.password) {
-          setStatus('Logging in...');
-          try {
-            const response = await fetch('/api/auth/direct-login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: creds.userId, password: creds.password })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              localStorage.setItem('authUser', JSON.stringify({
-                userId: data.user?.userId,
-                username: data.user?.username,
-                firstName: data.user?.firstName,
-                lastName: data.user?.lastName,
-                email: data.user?.email,
-                role: data.user?.role,
-                isActive: data.user?.isActive
-              }));
-              setStatus('Loading application...');
-              setTimeout(() => { window.location.href = '/flight-school'; }, 300);
-              return;
-            }
-          } catch(e) {
-            console.error('[SSO] Login error:', e);
-          }
+        } catch(e) {
+          console.error('[SSO] Failed to parse existing authUser:', e);
         }
       }
 
       // No valid session found
+      console.error('[SSO] No user data found in URL params or localStorage');
       setError('Session expired. Please log in again.');
       redirectToLogin();
     }
