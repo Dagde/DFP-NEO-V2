@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" autocomplete="off">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -7,11 +7,6 @@
     <meta http-equiv="Expires" content="0" />
     <!-- Favicon removed to prevent 403 error -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-       <!-- Disable password management and autocomplete -->
-       <meta name="autocomplete" content="off" />
-       <meta name="password-manager" content="disabled" />
-       <meta name="browser-autocomplete" content="off" />
-       <meta name="format-detection" content="telephone=no" />
     <title>Flight School Scheduler - v2024-12-08-2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
@@ -79,22 +74,35 @@
     transform: translateY(1px);
   }
   .btn-green-brushed {
-    background-color: #166534; /* green-800 fallback */
-    background-image: linear-gradient(to bottom, #4ade80, #16a34a); /* green-400 to green-600 */
-    border: 1px solid #14532d; /* green-900 */
-    color: #1f2937; /* gray-800 */
-    text-shadow: 0 1px 1px rgba(255,255,255,0.4);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.2);
-    transition: all 0.1s ease-in-out;
+    /* Square button styling - unpressed - DFP button */
+    background-color: #DEE1E6;
+    background-image: linear-gradient(to bottom, #e8eaef, #DEE1E6);
+    border: 2px solid #9ca3af;
+    border-radius: 6px;
+    color: #000000;
+    font-weight: 600;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition: all 0.1s ease;
   }
   .btn-green-brushed:hover {
-    background-image: linear-gradient(to bottom, #86efac, #22c55e); /* lighter green gradient */
+    background-image: linear-gradient(145deg, #f0f0f4, #e0e0e4, #e8e8ec);
+    box-shadow: 
+      0 6px 8px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   }
-  .btn-green-brushed:active {
-    background-image: linear-gradient(to top, #4ade80, #16a34a);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-    border-color: #14532d;
-    transform: translateY(1px);
+  .btn-green-brushed.active, .btn-green-brushed:active {
+    /* Pressed state - slightly darker again */
+    background-color: #a0a0a0;
+    background-image: linear-gradient(to bottom, #a8a8a8, #a0a0a0);
+    border: 2px solid #9ca3af;
+    color: #ffffff;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transform: none;
   }
   .btn-orange-brushed {
     background-color: #d97706; /* amber-600 fallback */
@@ -151,28 +159,35 @@
     transform: translateY(1px);
   }
   .btn-aluminium-brushed {
-    background-color: #9ca3af; /* gray-400 fallback */
-    background-image: linear-gradient(to right, #d1d5db, #f9fafb, #d1d5db);
-    border-top: 1px solid #e5e7eb;
-    border-bottom: 1px solid #9ca3af;
-    border-left: 1px solid #9ca3af;
-    border-right: 1px solid #9ca3af;
-    color: #1f2937; /* gray-800 */
-    text-shadow: 0 1px 0 rgba(255,255,255,0.2);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 1px rgba(0,0,0,0.1);
-    transition: all 0.1s ease-in-out;
+    /* Square button styling - unpressed */
+    background-color: #DEE1E6;
+    background-image: linear-gradient(to bottom, #e8eaef, #DEE1E6);
+    border: 2px solid #9ca3af;
+    border-radius: 6px;
+    color: #000000;
+    font-weight: 600;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transition: all 0.1s ease;
   }
   .btn-aluminium-brushed:hover {
-    background-image: linear-gradient(to right, #e5e7eb, #ffffff, #e5e7eb);
+    background-image: linear-gradient(145deg, #f0f0f4, #e0e0e4, #e8e8ec);
+    box-shadow: 
+      0 6px 8px rgba(0, 0, 0, 0.25),
+      inset  0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   }
   .btn-aluminium-brushed.active, .btn-aluminium-brushed:active {
-    background-image: linear-gradient(to right, #9ca3af, #d1d5db, #9ca3af);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
-    border-top-color: #9ca3af;
-    border-bottom-color: #d1d5db;
-    border-left-color: #9ca3af;
-    border-right-color: #9ca3af;
-    transform: translateY(1px);
+    /* Pressed state - slightly darker again */
+    background-color: #a0a0a0;
+    background-image: linear-gradient(to bottom, #a8a8a8, #a0a0a0);
+    border: 2px solid #9ca3af;
+    color: #ffffff;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    transform: none;
   }
   .changed-bar-stripes {
     background: repeating-linear-gradient(
@@ -184,95 +199,9 @@
     );
   }
   </style>
-  <script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
-     <script>
-       // Disable password/autocomplete prompts throughout the entire application
-       document.addEventListener("DOMContentLoaded", function() {
-         // Disable autocomplete on all inputs
-         const inputs = document.querySelectorAll("input, textarea, select");
-         inputs.forEach(input => {
-           input.setAttribute("autocomplete", "off");
-           input.setAttribute("autocorrect", "off");
-           input.setAttribute("autocapitalize", "off");
-           input.setAttribute("spellcheck", "false");
-         });
-         
-         // Monitor for dynamically added inputs
-         const observer = new MutationObserver(function(mutations) {
-           mutations.forEach(function(mutation) {
-             mutation.addedNodes.forEach(function(node) {
-               if (node.nodeType === 1) { // Element node
-                 const inputs = node.querySelectorAll ? node.querySelectorAll("input, textarea, select") : [];
-                 inputs.forEach(input => {
-                   input.setAttribute("autocomplete", "off");
-                   input.setAttribute("autocorrect", "off");
-                   input.setAttribute("autocapitalize", "off");
-                   input.setAttribute("spellcheck", "false");
-                 });
-                 
-                 // Also handle if the node itself is an input
-                 if (node.tagName === "INPUT" || node.tagName === "TEXTAREA" || node.tagName === "SELECT") {
-                   node.setAttribute("autocomplete", "off");
-                   node.setAttribute("autocorrect", "off");
-                   node.setAttribute("autocapitalize", "off");
-                   node.setAttribute("spellcheck", "false");
-                 }
-               }
-             });
-           });
-         });
-         
-         // Start observing the entire document
-         observer.observe(document.body, {
-           childList: true,
-           subtree: true
-         });
-         
-         console.log("Password/autocomplete protection enabled");
-         
-         // Additional aggressive prevention for PIN fields
-         const preventPasswordManagers = () => {
-           const pinInputs = document.querySelectorAll('input[maxlength="4"], input[id*="pin"], input[placeholder*="pin" i], input[aria-label*="pin" i]');
-           pinInputs.forEach(input => {
-             // Force remove any autocomplete
-             input.removeAttribute('autocomplete');
-             input.setAttribute('autocomplete', 'new-password-off');
-             
-             // Remove password field characteristics
-             input.setAttribute('inputmode', 'numeric');
-             input.setAttribute('pattern', '[0-9]*');
-             
-             // Prevent password manager detection
-             input.setAttribute('data-form-autocomplete-off', 'true');
-             input.setAttribute('data-lpignore', 'true');
-             input.setAttribute('data-bwignore', 'true');
-             input.setAttribute('data-1p-ignore', 'true');
-             
-             // Force text security styling
-             input.style.setProperty('-webkit-text-security', 'disc', 'important');
-             
-             // Override any injected autocomplete attributes
-             input.addEventListener('focus', function() {
-               this.removeAttribute('autocomplete');
-               this.setAttribute('autocomplete', 'new-password-off');
-             });
-             
-             // Prevent context menu
-             input.addEventListener('contextmenu', function(e) {
-               e.preventDefault();
-               return false;
-             });
-           });
-         };
-         
-         // Run prevention immediately and every 50ms
-         preventPasswordManagers();
-         setInterval(preventPasswordManagers, 50);
-       });
-     </script>
-  <script type="module" crossorigin src="/assets/index-BvqeK-9V.js"></script>
+  <script type="module" crossorigin src="./assets/index-BVQnpOB4.js"></script>
 </head>
-    <body class="bg-gray-800 text-white" autocomplete="off" data-form-autocomplete-off="true">
+    <body class="bg-gray-800 text-white">
       <div id="root"></div>
     </body>
   </html>
