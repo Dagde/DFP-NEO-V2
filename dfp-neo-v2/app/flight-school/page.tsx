@@ -21,8 +21,8 @@ export default function FlightSchoolPage() {
       }
 
       try {
-        // Validate token against the website's API directly
-        const response = await fetch(`https://dfp-neo.com/api/auth/validate-token?authToken=${encodeURIComponent(authToken)}&userId=${encodeURIComponent(userId)}`);
+        // Validate token against the website's SSO API directly
+        const response = await fetch(`https://dfp-neo.com/api/sso/validate?authToken=${encodeURIComponent(authToken)}&userId=${encodeURIComponent(userId)}`);
         const data = await response.json();
 
         if (data.valid) {
