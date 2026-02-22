@@ -28,10 +28,7 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    .status {
-      color: #aaa;
-      font-size: 14px;
-    }
+    .status { color: #aaa; font-size: 14px; }
     .error {
       color: #f87171;
       font-size: 14px;
@@ -60,76 +57,72 @@
       console.error('[SSO Error]', msg);
     }
 
+    function redirectToLogin() {
+      setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
+    }
+
     async function authenticate() {
-      const fullUrl = window.location.href;
-      console.log('[SSO] Page loaded, URL:', fullUrl);
+      console.log('[SSO] Page loaded, URL:', window.location.href);
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const token = urlParams.get('token');
-      const userId = urlParams.get('userId');
+      // Get credentials from sessionStorage (set during website login)
+      const credsStr = sessionStorage.getItem('sso_creds');
+      console.log('[SSO] Credentials in sessionStorage:', credsStr ? 'found' : 'not found');
 
-      console.log('[SSO] token:', token ? 'found' : 'missing');
-      console.log('[SSO] userId:', userId);
-
-      if (!token || !userId) {
-        setError('Authentication required. Redirecting to login...');
-        setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
+      if (!credsStr) {
+        setError('Session expired. Please login again.');
+        redirectToLogin();
         return;
       }
 
-      setStatus('Validating session...');
+      let creds;
+      try {
+        creds = JSON.parse(credsStr);
+      } catch(e) {
+        setError('Invalid session data. Please login again.');
+        redirectToLogin();
+        return;
+      }
+
+      // Clear credentials from sessionStorage immediately for security
+      sessionStorage.removeItem('sso_creds');
+
+      setStatus('Logging in to application...');
 
       try {
-        // Validate token against the website's API
-        const response = await fetch('https://dfp-neo.com/api/auth/direct-login', {
-          method: 'GET',
-          headers: {
-            'Authorization': 'Bearer ' + token
-          }
+        // Login directly to V2 app using same credentials
+        const response = await fetch('/api/auth/direct-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: creds.userId, password: creds.password })
         });
 
-        console.log('[SSO] Validation response status:', response.status);
+        console.log('[SSO] V2 login response status:', response.status);
 
         if (!response.ok) {
-          throw new Error('Session validation failed: ' + response.status);
+          const errData = await response.json();
+          throw new Error('Login failed: ' + (errData.message || response.status));
         }
 
         const data = await response.json();
-        console.log('[SSO] Validation response:', data);
+        console.log('[SSO] V2 login successful for:', data.user?.userId);
 
-        if (!data.user) {
-          throw new Error('No user data in response');
-        }
-
-        setStatus('Session validated for ' + data.user.userId);
-
-        // Store user data in localStorage for flight-school page
-        const userData = {
-          userId: data.user.userId,
-          username: data.user.username,
-          firstName: data.user.firstName,
-          lastName: data.user.lastName,
-          email: data.user.email,
-          role: data.user.role,
-          isActive: data.user.isActive,
-          token: token
+        // Store session in the format the deployed V2 app expects
+        const sessionData = {
+          token: data.sessionToken,
+          user: data.user
         };
+        localStorage.setItem('dfp_session', JSON.stringify(sessionData));
+        console.log('[SSO] Session stored in localStorage as dfp_session');
 
-        localStorage.setItem('authUser', JSON.stringify(userData));
-        // Also store in dfp_session format that the deployed V2 app uses
-        localStorage.setItem('dfp_session', JSON.stringify({ token: token, user: data.user }));
-
-        console.log('[SSO] User data stored in localStorage');
         setStatus('Loading application...');
-
         setTimeout(() => {
           window.location.href = '/flight-school';
-        }, 500);
+        }, 300);
 
       } catch (error) {
         console.error('[SSO] Error:', error);
         setError('Authentication failed: ' + error.message + '. Redirecting to login...');
-        setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 3000);
+        redirectToLogin();
       }
     }
 
