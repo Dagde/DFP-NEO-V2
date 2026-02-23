@@ -3198,6 +3198,54 @@ useEffect(() => {
     // Check for existing session on app load
     useEffect(() => {
         const checkExistingSession = async () => {
+            // FIRST: Check for SSO user data from Next.js wrapper
+            const ssoUserData = localStorage.getItem('dfp_sso_user');
+            if (ssoUserData) {
+                try {
+                    const ssoUser = JSON.parse(ssoUserData);
+                    if (ssoUser && ssoUser.userId && ssoUser.username) {
+                        console.log('[SSO] Using SSO user from Next.js wrapper:', ssoUser.userId);
+                        // Set authentication state from SSO data
+                        setAuthUser({
+                            userId: ssoUser.userId,
+                            username: ssoUser.username,
+                            firstName: ssoUser.firstName || '',
+                            lastName: ssoUser.lastName || '',
+                            displayName: ssoUser.displayName || ssoUser.username,
+                            email: ssoUser.email || null,
+                            role: ssoUser.role || 'USER',
+                            isActive: ssoUser.isActive !== false,
+                            mustChangePassword: false,
+                            permissionsRoleId: ''
+                        });
+                        setAuthSessionToken(localStorage.getItem('dfp_session_token') || '');
+                        setIsAuthenticated(true);
+                        setAuthLoading(false);
+                        // Update currentUserName from SSO user
+                        if (ssoUser.lastName && ssoUser.firstName) {
+                            setCurrentUserName(`${ssoUser.lastName}, ${ssoUser.firstName}`);
+                        } else if (ssoUser.displayName) {
+                            setCurrentUserName(ssoUser.displayName);
+                        } else {
+                            setCurrentUserName(ssoUser.username);
+                        }
+                        // Update sessionUser
+                        setSessionUser({
+                            firstName: ssoUser.firstName || '',
+                            lastName: ssoUser.lastName || '',
+                            role: ssoUser.role || 'USER',
+                            militaryRank: 'FLTLT',
+                            userId: ssoUser.userId,
+                            username: ssoUser.username
+                        });
+                        return; // Exit early - SSO user authenticated
+                    }
+                } catch (e) {
+                    console.error('[SSO] Failed to parse SSO user data:', e);
+                }
+            }
+
+            // SECOND: Check for regular session token
             const storedToken = localStorage.getItem('dfp_session_token');
             if (storedToken) {
                 const user = await checkSession(storedToken);
@@ -3218,6 +3266,7 @@ useEffect(() => {
                         role: user.role,
                         militaryRank: 'FLTLT',
                         userId: user.userId,
+                        username: user.username
                     });
                     if (user.mustChangePassword) {
                         setShowChangePassword(true);
