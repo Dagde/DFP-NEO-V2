@@ -153,7 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <span className="text-center leading-tight">Syllabus</span>
           </button>
 
-          {/* Course Progress - Square Button with Smaller Text */}
+{/* Course Progress - Square Button with Smaller Text */}
           <button 
             onClick={() => onNavigate('CourseProgress')} 
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''}`}
@@ -175,6 +175,22 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''}`}
           >
             <span className="text-center leading-tight">Settings</span>
+          </button>
+
+          {/* NEO Build - Square Button */}
+          <button 
+            onClick={onBuildDfpClick} 
+            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
+          >
+            <span className="text-center leading-tight text-orange-400">NEO - Build</span>
+          </button>
+
+          {/* Publish - Square Button */}
+          <button 
+            onClick={onPublish} 
+            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
+          >
+            <span className="text-center leading-tight text-green-400">Publish</span>
           </button>
         </nav>
 
