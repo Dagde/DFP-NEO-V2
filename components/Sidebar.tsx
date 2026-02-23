@@ -283,8 +283,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
                     <button onClick={() => onNavigate('Priorities')} className={`w-full text-left px-4 py-1 text-sm font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''}`}><span>Priorities</span></button>
                     <button onClick={() => onNavigate('ProgramData')} className={`w-full text-left px-4 py-1 text-sm font-semibold btn-aluminium-brushed rounded-md ${activeView === 'ProgramData' ? 'active' : ''}`}><span>Program Data</span></button>
                     <button onClick={() => onNavigate('BuildAnalysis')} className={`w-full text-left px-4 py-1 text-sm font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildAnalysis' ? 'active' : ''}`}><span>Build Analysis</span></button>
-                    <button onClick={onBuildDfpClick} className="w-full text-left px-4 py-1 text-sm font-semibold btn-orange-brushed rounded-md"><span>NEO - Build</span></button>
-                    <button onClick={onPublish} className="w-full text-left px-4 py-1 text-sm font-semibold btn-green-brushed rounded-md"><span>Publish</span></button>
+                    <button onClick={onBuildDfpClick} className="w-full text-left px-4 py-1 text-sm font-semibold btn-orange-brushed rounded-md"><span className="text-orange-400">NEO - Build</span></button>
+                    <button onClick={onPublish} className="w-full text-left px-4 py-1 text-sm font-semibold btn-green-brushed rounded-md"><span className="text-green-400">Publish</span></button>
                 </div>
             </div>
           </div>
