@@ -63,7 +63,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           onClick={() => onNavigate('NextDayBuild')} 
           className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
         >
-          <span className="text-center leading-tight" style={{ color: activeView === 'NextDayBuild' ? '#ffffff' : '#166534' }}>Program Schedule</span>
+          <span className="text-center leading-tight" style={{ color: activeView === 'NextDayBuild' ? '#ffffff' : '#000000' }}>Program Schedule</span>
         </button>
       </div>
 
@@ -89,7 +89,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           onClick={onPublish} 
           className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
         >
-          <span className="text-center leading-tight" style={{ color: '#166534' }}>Publish</span>
+          <span className="text-center leading-tight" style={{ color: '#22c55e' }}>Publish</span>
         </button>
 
         <button 
