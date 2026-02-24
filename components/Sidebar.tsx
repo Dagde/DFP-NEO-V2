@@ -177,21 +177,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
             <span className="text-center leading-tight">Settings</span>
           </button>
 
-          {/* NEO Build - Square Button */}
-          <button 
-            onClick={onBuildDfpClick} 
-            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-orange-brushed rounded-md"
-          >
-            <span className="text-center leading-tight">NEO - Build</span>
-          </button>
-
-          {/* Publish - Square Button */}
-          <button 
-            onClick={onPublish} 
-            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
-          >
-            <span className="text-center leading-tight">Publish</span>
-          </button>
         </nav>
 
         {/* BOTTOM FIXED CONTAINER */}
