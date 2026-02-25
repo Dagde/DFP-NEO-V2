@@ -110,8 +110,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         return { primaryTrainees: primary, secondaryTrainees: secondary };
     }, [traineesData, instructor.name]);
 
-    const hasAssignedTrainees = primaryTrainees.length > 0 || secondaryTrainees.length > 0;
-
     // Calculate logbook totals
     const dayTotal = priorExperience.day.p1 + priorExperience.day.p2 + priorExperience.day.dual;
     const nightTotal = priorExperience.night.p1 + priorExperience.night.p2 + priorExperience.night.dual;
@@ -502,8 +500,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                                 <div className="text-white font-medium text-sm">{instructor.rank}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
-                                                <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
+                                                <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
                                             </div>
                                         </div>
 
@@ -514,16 +512,32 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                                 <div className="text-white font-medium text-sm">{instructor.role}</div>
                                             </div>
                                             <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
+                                                <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
+                                                <div className="text-white font-medium text-sm">{instructor.location || 'N/A'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 3 */}
+                                        <div className="space-y-3">
+                                            <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Category</label>
                                                 <div className="text-white font-medium text-sm">{instructor.category || 'N/A'}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Unit</label>
-                                                <div className="text-white font-medium text-sm">{instructor.unit}</div>
+                                                <div className="text-white font-medium text-sm">{instructor.unit || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
+                                                <div className="text-white font-medium text-sm">{instructor.phoneNumber || 'N/A'}</div>
                                             </div>
                                         </div>
 
-                                        {/* Column 3 */}
+                                        {/* Column 4 */}
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Callsign</label>
@@ -532,28 +546,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                                 </div>
                                             </div>
                                             <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Secondary Callsign</label>
+                                                <div className="text-white font-medium text-sm">[None]</div>
+                                            </div>
+                                            <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Flight</label>
                                                 <div className="text-white font-medium text-sm">{instructor.flight || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
-                                                <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
-                                                <div className="text-white font-medium text-sm">{instructor.phoneNumber}</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Column 4 */}
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
-                                                <div className="text-white font-medium text-sm">{instructor.location}</div>
-                                            </div>
-                                            <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Email</label>
-                                                <div className="text-white font-medium text-xs">{instructor.email}</div>
+                                                <div className="text-white font-medium text-xs">{instructor.email || 'N/A'}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Permissions</label>
@@ -570,44 +572,45 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                 </div>
                             </div>
 
-                            {/* Qualifications & Roles Section */}
-                            <div className="bg-[#2a3441] rounded-lg p-3">
-                                <h4 className="text-xs font-semibold text-gray-300 mb-3">Qualifications & Roles</h4>
-                                <div className="grid grid-cols-4 gap-2 text-[10px]">
-                                    <div className={instructor.isExecutive ? 'text-white' : 'text-gray-500'}>Executive</div>
-                                    <div className={instructor.isFlyingSupervisor ? 'text-white' : 'text-gray-500'}>Flying Supervisor</div>
-                                    <div className={instructor.isTestingOfficer ? 'text-white' : 'text-gray-500'}>Testing Officer</div>
-                                    <div className={instructor.isIRE ? 'text-white' : 'text-gray-500'}>IRE</div>
-                                    <div className={instructor.isCommandingOfficer ? 'text-white' : 'text-gray-500'}>CO</div>
-                                    <div className={instructor.isCFI ? 'text-white' : 'text-gray-500'}>CFI</div>
-                                    <div className={instructor.isDeputyFlightCommander ? 'text-white' : 'text-gray-500'}>DFC</div>
-                                    <div className={instructor.isContractor ? 'text-white' : 'text-gray-500'}>Contractor</div>
-                                    <div className={instructor.isAdminStaff ? 'text-white' : 'text-gray-500'}>Admin Staff</div>
-                                    <div className={instructor.isQFI ? 'text-white' : 'text-gray-500'}>QFI</div>
-                                    <div className={instructor.isOFI ? 'text-white' : 'text-gray-500'}>OFI</div>
-                                </div>
-                            </div>
-
-                            {/* Assigned Trainees Section */}
+                            {/* Primary / Secondary Trainees Section */}
                             {!isCreating && (
-                                <div className="bg-[#2a3441] rounded-lg p-3">
-                                    <h4 className="text-xs font-semibold text-gray-300 mb-2">Assigned Trainees</h4>
-                                    <div className="h-24 overflow-y-auto space-y-1 text-xs scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                                        {hasAssignedTrainees ? (
-                                            <>
-                                                {primaryTrainees.map(t => (
-                                                    <div key={t.idNumber} className="text-white truncate">
-                                                        <span className="font-semibold text-sky-400">Primary:</span> {t.name}
-                                                    </div>
-                                                ))}
-                                                {secondaryTrainees.map(t => (
-                                                    <div key={t.idNumber} className="text-gray-300 truncate">
-                                                        <span className="font-semibold text-sky-500">Secondary:</span> {t.name}
-                                                    </div>
-                                                ))}
-                                            </>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <label className="block text-xs text-gray-400 mb-2">Primary Trainees</label>
+                                        {primaryTrainees.length === 0 ? (
+                                            <div className="text-gray-500 italic text-xs">No trainees assigned</div>
                                         ) : (
-                                            <p className="text-gray-500 italic text-center">No trainees assigned.</p>
+                                            <div className="space-y-1">
+                                                {primaryTrainees.map(t => (
+                                                    <div key={t.idNumber} className="flex items-center gap-2">
+                                                        <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </div>
+                                                        <div className="text-white text-xs font-medium">{t.name}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <label className="block text-xs text-gray-400 mb-2">Secondary Trainees</label>
+                                        {secondaryTrainees.length === 0 ? (
+                                            <div className="text-gray-500 italic text-xs">No trainees assigned</div>
+                                        ) : (
+                                            <div className="space-y-1">
+                                                {secondaryTrainees.map(t => (
+                                                    <div key={t.idNumber} className="flex items-center gap-2">
+                                                        <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </div>
+                                                        <div className="text-white text-xs font-medium">{t.name}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -729,6 +732,35 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                 </div>
                             </div>
 
+                            {/* Events Section */}
+                            {!isCreating && (
+                                <div className="grid grid-cols-4 gap-3">
+                                    {/* Next Event */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Next Event</h4>
+                                        <div className="text-gray-500 italic text-xs">No event found</div>
+                                    </div>
+
+                                    {/* Next Event +1 */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Next Event +1</h4>
+                                        <div className="text-gray-500 italic text-xs">No subsequent event</div>
+                                    </div>
+
+                                    {/* Last Flight */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Last Flight</h4>
+                                        <div className="text-gray-500 italic text-xs">No flights recorded</div>
+                                    </div>
+
+                                    {/* Last Event */}
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <h4 className="text-xs font-semibold text-gray-400 mb-2">Last Event</h4>
+                                        <div className="text-gray-500 italic text-xs">No events recorded</div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Unavailability Section */}
                             <div className="bg-[#252d3d] rounded-lg p-5">
                                 <h3 className="text-sm font-semibold text-white mb-3">Unavailability</h3>
@@ -792,16 +824,25 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         Currency
                                     </button>
                                     <button
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                    >
+                                        PT-051
+                                    </button>
+                                    <button
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all text-center leading-tight"
+                                    >
+                                        View Individual LMP
+                                    </button>
+                                    <button
+                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all text-center leading-tight"
+                                    >
+                                        Add Remedial Package
+                                    </button>
+                                    <button
                                         onClick={() => { if(onViewLogbook) onViewLogbook(instructor); }}
                                         className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                                     >
                                         Logbook
-                                    </button>
-                                    <button
-                                        onClick={onRequestSct}
-                                        className="w-[69px] h-[47px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
-                                    >
-                                        Request SCT
                                     </button>
                                     <button
                                         onClick={handleEdit}
