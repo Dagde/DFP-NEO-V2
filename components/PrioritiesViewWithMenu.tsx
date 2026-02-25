@@ -52,7 +52,7 @@ interface PrioritiesViewWithMenuProps {
 type PrioritiesSection = 'course-priority' | 'build-factors' | 'sct-requests' | 'highest-priority' | 'remedial-queue';
 
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
-    const [activeSection, setActiveSection] = useState<PrioritiesSection>('course-priority');
+    const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-factors');
 
     const menuItems = [
         { id: 'build-factors' as const, label: 'Build Factors', icon: (
