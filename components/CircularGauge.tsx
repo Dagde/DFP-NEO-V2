@@ -54,7 +54,7 @@ const CircularGauge: React.FC<CircularGaugeProps> = ({
             </div>
             {label && (
                 <span className="text-gray-400 text-xs mt-2 text-center">{label}</span>
-            )}
+            )}        
         </div>
     );
 };
