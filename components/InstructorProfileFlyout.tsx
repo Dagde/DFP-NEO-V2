@@ -431,14 +431,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     return (
         <>
             {/* Full Screen Overlay */}
-            <div 
+            <div
                 className={`fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity duration-300 ${
                     isAnimatingOpen || isClosing ? 'opacity-0' : 'opacity-100'
                 }`}
                 onClick={onClose}
             />
-            
-            {/* Main Profile Panel - Scaled Down */}
+
+            {/* Main Profile Panel */}
             <div
                 ref={panelRef}
                 className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#1e2433] z-50 transition-all duration-300 ease-out flex flex-col shadow-2xl rounded-lg overflow-hidden ${
@@ -446,7 +446,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 }`}
                 style={{ width: '85vw', height: '85vh' }}
             >
-                {/* Header with Title and Close Button */}
+                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-3 bg-[#252d3d] border-b border-gray-700 flex-shrink-0">
                     <h1 className="text-xl font-bold text-white">{isCreating ? 'New Staff' : 'Staff Profile'}</h1>
                     <button
@@ -462,26 +462,31 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 {/* Main Content Area */}
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="flex gap-5">
-                        {/* LEFT COLUMN: Profile Info */}
+
+                        {/* LEFT COLUMN */}
                         <div className="flex-1 space-y-6">
-                            {/* Profile Card */}
+
+                            {/* SECTION 1: Profile Card */}
                             <div className="bg-[#2a3441] rounded-lg p-5">
                                 <div className="flex gap-6">
-                                    {/* Left Column: Name, Status, Avatar */}
+                                    {/* Left: Name, Status Badge, Avatar */}
                                     <div className="flex flex-col items-center flex-shrink-0">
-                                        {/* Name - AT TOP */}
-                                        <h2 className="text-xl font-bold text-white mb-1.5 text-center">
-                                            {isEditing ? name : instructor.name}
-                                        </h2>
-
-                                        {/* Status Badge - BELOW NAME, ABOVE AVATAR */}
+                                        {isEditing ? (
+                                            <input
+                                                type="text"
+                                                value={name}
+                                                onChange={e => handleNameChange(e.target.value)}
+                                                className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600 mb-1.5 text-center font-bold"
+                                                placeholder="Full Name"
+                                            />
+                                        ) : (
+                                            <h2 className="text-xl font-bold text-white mb-1.5 text-center">{instructor.name}</h2>
+                                        )}
                                         <div className="mb-3.5">
                                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/50">
                                                 Active
                                             </span>
                                         </div>
-
-                                        {/* Large Profile Photo - AT BOTTOM */}
                                         <div className="w-28 h-28 bg-gray-700 rounded-full flex items-center justify-center text-gray-500">
                                             <svg className="w-14 h-14" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
@@ -489,131 +494,165 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         </div>
                                     </div>
 
-                                    {/* Right Section: Four Columns of Data */}
+                                    {/* Right: 4-column data grid */}
                                     <div className="flex-1 grid grid-cols-4 gap-x-3 gap-y-3">
-                                        {/* Column 1 */}
+                                        {/* Column 1: ID Number, Rank, Service */}
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">ID Number</label>
-                                                <div className="text-white font-medium text-sm">{instructor.idNumber}</div>
+                                                {isEditing ? (
+                                                    <input type="number" value={idNumber} onChange={e => setIdNumber(Number(e.target.value))} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600" />
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.idNumber}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Rank</label>
-                                                <div className="text-white font-medium text-sm">{instructor.rank}</div>
+                                                {isEditing ? (
+                                                    <select value={rank} onChange={e => handleRankChange(e.target.value as InstructorRank)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        {(['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'] as InstructorRank[]).map(r => <option key={r} value={r}>{r}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.rank}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
-                                                <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
+                                                {isEditing ? (
+                                                    <select value={service || ''} onChange={e => setService((e.target.value || undefined) as 'RAAF' | 'RAN' | 'ARA' | undefined)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        <option value=""></option>
+                                                        {(['RAAF', 'RAN', 'ARA'] as const).map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Column 2 */}
+                                        {/* Column 2: Role, Category, Unit */}
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Role</label>
-                                                <div className="text-white font-medium text-sm">{instructor.role}</div>
+                                                {isEditing ? (
+                                                    <select value={role} onChange={e => handleRoleChange(e.target.value as 'QFI' | 'SIM IP')} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        <option value="QFI">QFI</option>
+                                                        <option value="SIM IP">SIM IP</option>
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.role}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Category</label>
-                                                <div className="text-white font-medium text-sm">{instructor.category || 'N/A'}</div>
+                                                {isEditing ? (
+                                                    <select value={category} onChange={e => handleCategoryChange(e.target.value as InstructorCategory)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        {(['UnCat', 'D', 'C', 'B', 'A'] as InstructorCategory[]).map(c => <option key={c} value={c}>{c}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.category || 'N/A'}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Unit</label>
-                                                <div className="text-white font-medium text-sm">{instructor.unit}</div>
+                                                {isEditing ? (
+                                                    <select value={unit} onChange={e => setUnit(e.target.value)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        {units.map(u => <option key={u} value={u}>{u}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.unit}</div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Column 3 */}
+                                        {/* Column 3: Callsign, Flight, Seat Config, Phone Number */}
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Callsign</label>
-                                                <div className="text-white font-medium text-sm">
-                                                    {instructor.callsignNumber > 0 ? `${callsignPrefix} ${String(instructor.callsignNumber).padStart(3, '0')}` : 'N/A'}
-                                                </div>
+                                                {isEditing ? (
+                                                    <select value={callsignNumber} onChange={e => setCallsignNumber(Number(e.target.value))} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        {callsignNumbers.map(n => <option key={n} value={n}>{callsignPrefix} {String(n).padStart(3, '0')}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">
+                                                        {instructor.callsignNumber > 0 ? `${callsignPrefix} ${String(instructor.callsignNumber).padStart(3, '0')}` : 'N/A'}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Flight</label>
-                                                <div className="text-white font-medium text-sm">{instructor.flight || 'N/A'}</div>
+                                                {isEditing ? (
+                                                    <input type="text" value={flight} onChange={e => setFlight(e.target.value)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600" />
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.flight || 'N/A'}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
-                                                <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
+                                                {isEditing ? (
+                                                    <select value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        {(['Normal', 'FWD/SHORT', 'REAR/SHORT', 'FWD/LONG'] as SeatConfig[]).map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
-                                                <div className="text-white font-medium text-sm">{instructor.phoneNumber}</div>
+                                                {isEditing ? (
+                                                    <input type="text" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600" />
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.phoneNumber}</div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Column 4 */}
+                                        {/* Column 4: Location, Email, Permissions */}
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
-                                                <div className="text-white font-medium text-sm">{instructor.location}</div>
+                                                {isEditing ? (
+                                                    <select value={location} onChange={e => setLocation(e.target.value)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600">
+                                                        {locations.map(l => <option key={l} value={l}>{l}</option>)}
+                                                    </select>
+                                                ) : (
+                                                    <div className="text-white font-medium text-sm">{instructor.location}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Email</label>
-                                                <div className="text-white font-medium text-xs">{instructor.email}</div>
+                                                {isEditing ? (
+                                                    <input type="text" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-[#1e2433] text-white text-sm rounded px-2 py-1 border border-gray-600" />
+                                                ) : (
+                                                    <div className="text-white font-medium text-xs">{instructor.email}</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Permissions</label>
-                                                <div className="text-white font-medium text-xs">
-                                                    {instructor.permissions && instructor.permissions.length > 0 ? (
-                                                        <span>• {instructor.permissions.join(' • ')}</span>
-                                                    ) : (
-                                                        <span className="text-gray-500 italic">No permissions assigned</span>
-                                                    )}
-                                                </div>
+                                                {isEditing ? (
+                                                    <div className="space-y-1">
+                                                        {allPermissions.map(p => (
+                                                            <label key={p} className="flex items-center gap-1 cursor-pointer">
+                                                                <input type="checkbox" checked={permissions.includes(p)} onChange={e => handlePermissionChange(p, e.target.checked)} className="accent-sky-400" />
+                                                                <span className="text-gray-300 text-[10px]">{p}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-white font-medium text-xs">
+                                                        {instructor.permissions && instructor.permissions.length > 0 ? (
+                                                            <span>• {instructor.permissions.join(' • ')}</span>
+                                                        ) : (
+                                                            <span className="text-gray-500 italic">No permissions assigned</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Qualifications & Roles Section */}
-                            <div className="bg-[#2a3441] rounded-lg p-3">
-                                <h4 className="text-xs font-semibold text-gray-300 mb-3">Qualifications & Roles</h4>
-                                <div className="grid grid-cols-4 gap-2 text-[10px]">
-                                    <div className={instructor.isExecutive ? 'text-white' : 'text-gray-500'}>Executive</div>
-                                    <div className={instructor.isFlyingSupervisor ? 'text-white' : 'text-gray-500'}>Flying Supervisor</div>
-                                    <div className={instructor.isTestingOfficer ? 'text-white' : 'text-gray-500'}>Testing Officer</div>
-                                    <div className={instructor.isIRE ? 'text-white' : 'text-gray-500'}>IRE</div>
-                                    <div className={instructor.isCommandingOfficer ? 'text-white' : 'text-gray-500'}>CO</div>
-                                    <div className={instructor.isCFI ? 'text-white' : 'text-gray-500'}>CFI</div>
-                                    <div className={instructor.isDeputyFlightCommander ? 'text-white' : 'text-gray-500'}>DFC</div>
-                                    <div className={instructor.isContractor ? 'text-white' : 'text-gray-500'}>Contractor</div>
-                                    <div className={instructor.isAdminStaff ? 'text-white' : 'text-gray-500'}>Admin Staff</div>
-                                    <div className={instructor.isQFI ? 'text-white' : 'text-gray-500'}>QFI</div>
-                                    <div className={instructor.isOFI ? 'text-white' : 'text-gray-500'}>OFI</div>
-                                </div>
-                            </div>
-
-                            {/* Assigned Trainees Section */}
-                            {!isCreating && (
-                                <div className="bg-[#2a3441] rounded-lg p-3">
-                                    <h4 className="text-xs font-semibold text-gray-300 mb-2">Assigned Trainees</h4>
-                                    <div className="h-24 overflow-y-auto space-y-1 text-xs scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-                                        {hasAssignedTrainees ? (
-                                            <>
-                                                {primaryTrainees.map(t => (
-                                                    <div key={t.idNumber} className="text-white truncate">
-                                                        <span className="font-semibold text-sky-400">Primary:</span> {t.name}
-                                                    </div>
-                                                ))}
-                                                {secondaryTrainees.map(t => (
-                                                    <div key={t.idNumber} className="text-gray-300 truncate">
-                                                        <span className="font-semibold text-sky-500">Secondary:</span> {t.name}
-                                                    </div>
-                                                ))}
-                                            </>
-                                        ) : (
-                                            <p className="text-gray-500 italic text-center">No trainees assigned.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Logbook Section with Circular Gauges */}
+                            {/* SECTION 2: Logbook – Prior Experience */}
                             <div className="bg-[#252d3d] rounded-lg p-5">
                                 <h3 className="text-sm font-semibold text-white mb-5">Logbook - Prior Experience (PC-21 only)</h3>
                                 <div className="grid grid-cols-5 gap-4">
@@ -626,15 +665,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P1</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.p1.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.day.p1} onChange={e => handleExperienceChange('day', 'p1', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.day.p1.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P2</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.p2.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.day.p2} onChange={e => handleExperienceChange('day', 'p2', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.day.p2.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Dual</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.day.dual.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.day.dual} onChange={e => handleExperienceChange('day', 'dual', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.day.dual.toFixed(1)}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -648,15 +687,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P1</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.p1.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.night.p1} onChange={e => handleExperienceChange('night', 'p1', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.night.p1.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P2</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.p2.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.night.p2} onChange={e => handleExperienceChange('night', 'p2', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.night.p2.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Dual</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.night.dual.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.night.dual} onChange={e => handleExperienceChange('night', 'dual', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.night.dual.toFixed(1)}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -670,15 +709,15 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>TOTAL</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.total.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.total} onChange={e => handleExperienceChange('total', null, parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.total.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Captain</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.captain.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.captain} onChange={e => handleExperienceChange('captain', null, parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.captain.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Instructor</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.instructor.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.instructor} onChange={e => handleExperienceChange('instructor', null, parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.instructor.toFixed(1)}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -692,11 +731,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Sim</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.instrument.sim.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.instrument.sim} onChange={e => handleExperienceChange('instrument', 'sim', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.instrument.sim.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Actual</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.instrument.actual.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.instrument.actual} onChange={e => handleExperienceChange('instrument', 'actual', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.instrument.actual.toFixed(1)}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -710,26 +749,68 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                         <div className="space-y-0.5 text-[10px]">
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P1</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p1.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.simulator.p1} onChange={e => handleExperienceChange('simulator', 'p1', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p1.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>P2</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p2.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.simulator.p2} onChange={e => handleExperienceChange('simulator', 'p2', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.simulator.p2.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400">
                                                 <span>Dual</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.dual.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.simulator.dual} onChange={e => handleExperienceChange('simulator', 'dual', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.simulator.dual.toFixed(1)}</span>}
                                             </div>
                                             <div className="flex justify-between text-gray-400 pt-0.5 border-t border-gray-600">
                                                 <span>Total</span>
-                                                <span className="text-white font-mono text-[10px]">{priorExperience.simulator.total.toFixed(1)}</span>
+                                                {isEditing ? <input type="number" step="0.1" min="0" value={priorExperience.simulator.total} onChange={e => handleExperienceChange('simulator', 'total', parseFloat(e.target.value) || 0)} className="w-16 bg-[#1e2433] text-white text-xs rounded px-1 py-0.5 border border-gray-600 font-mono" /> : <span className="text-white font-mono text-[10px]">{priorExperience.simulator.total.toFixed(1)}</span>}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Unavailability Section */}
+                            {/* SECTION 3: Assigned Trainees */}
+                            {!isCreating && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <label className="block text-xs text-gray-400 mb-2">Assigned Trainees (Primary)</label>
+                                        {primaryTrainees.length > 0 ? primaryTrainees.map(t => (
+                                            <div key={t.idNumber} className="flex items-center gap-2 mb-1">
+                                                <div className="w-7 h-7 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                                                </div>
+                                                <div className="text-white text-xs font-medium">{t.name}</div>
+                                            </div>
+                                        )) : (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                                                </div>
+                                                <p className="text-gray-500 italic text-xs">No trainees assigned</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="bg-[#2a3441] rounded-lg p-3">
+                                        <label className="block text-xs text-gray-400 mb-2">Assigned Trainees (Secondary)</label>
+                                        {secondaryTrainees.length > 0 ? secondaryTrainees.map(t => (
+                                            <div key={t.idNumber} className="flex items-center gap-2 mb-1">
+                                                <div className="w-7 h-7 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                                                </div>
+                                                <div className="text-white text-xs font-medium">{t.name}</div>
+                                            </div>
+                                        )) : (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                                                </div>
+                                                <p className="text-gray-500 italic text-xs">No trainees assigned</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SECTION 4: Unavailability */}
                             <div className="bg-[#252d3d] rounded-lg p-5">
                                 <h3 className="text-sm font-semibold text-white mb-3">Unavailability</h3>
                                 {(instructor.unavailability || []).length > 0 ? (
@@ -739,7 +820,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                             .map(period => {
                                                 let displayText = '';
                                                 const startDateFormatted = formatDate(period.startDate);
-                                                
+
                                                 if (period.allDay) {
                                                     const endDate = new Date(`${period.endDate}T00:00:00Z`);
                                                     endDate.setUTCDate(endDate.getUTCDate() - 1);
@@ -773,6 +854,77 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                     </div>
                                 )}
                             </div>
+
+                            {/* SECTION 5: Qualifications & Roles */}
+                            <div className="bg-[#2a3441] rounded-lg p-3">
+                                <h4 className="text-xs font-semibold text-gray-300 mb-3">Qualifications &amp; Roles</h4>
+                                {isEditing ? (
+                                    <div className="grid grid-cols-4 gap-2 text-[10px]">
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isExecutive} onChange={e => setIsExecutive(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">Executive</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isFlyingSupervisor} onChange={e => setIsFlyingSupervisor(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">Flying Supervisor</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isTestingOfficer} onChange={e => setIsTestingOfficer(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">Testing Officer</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isIRE} onChange={e => setIsIRE(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">IRE</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isCommandingOfficer} onChange={e => setIsCommandingOfficer(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">CO</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isCFI} onChange={e => setIsCFI(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">CFI</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isDeputyFlightCommander} onChange={e => setIsDeputyFlightCommander(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">DFC</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isContractor} onChange={e => setIsContractor(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">Contractor</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isAdminStaff} onChange={e => setIsAdminStaff(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">Admin Staff</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isQFI} onChange={e => setIsQFI(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">QFI</span>
+                                        </label>
+                                        <label className="flex items-center gap-1 cursor-pointer">
+                                            <input type="checkbox" checked={isOFI} onChange={e => setIsOFI(e.target.checked)} className="accent-sky-400" />
+                                            <span className="text-gray-300">OFI</span>
+                                        </label>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2">
+                                        {instructor.isExecutive && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">Executive</span>}
+                                        {instructor.isFlyingSupervisor && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">Flying Supervisor</span>}
+                                        {instructor.isTestingOfficer && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">Testing Officer</span>}
+                                        {instructor.isIRE && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">IRE</span>}
+                                        {instructor.isCommandingOfficer && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">CO</span>}
+                                        {instructor.isCFI && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">CFI</span>}
+                                        {instructor.isDeputyFlightCommander && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">DFC</span>}
+                                        {instructor.isContractor && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">Contractor</span>}
+                                        {instructor.isAdminStaff && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">Admin Staff</span>}
+                                        {instructor.isQFI && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">QFI</span>}
+                                        {instructor.isOFI && <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-500/20 text-sky-400 border border-sky-500/30">OFI</span>}
+                                        {!instructor.isExecutive && !instructor.isFlyingSupervisor && !instructor.isTestingOfficer && !instructor.isIRE && !instructor.isCommandingOfficer && !instructor.isCFI && !instructor.isDeputyFlightCommander && !instructor.isContractor && !instructor.isAdminStaff && !instructor.isQFI && !instructor.isOFI && (
+                                            <span className="text-gray-500 italic text-xs">No active roles</span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                         </div>
 
                         {/* RIGHT COLUMN: Action Buttons */}
@@ -834,6 +986,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                 </>
                             )}
                         </div>
+
                     </div>
                 </div>
             </div>
