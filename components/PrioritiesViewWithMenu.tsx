@@ -86,11 +86,12 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         <div className="flex-1 flex overflow-hidden bg-gray-900">
             {/* Side Menu */}
             <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
-                <div className="p-6 border-b border-gray-700">
-                    <h1 className="text-2xl font-bold text-white">Build Priorities</h1>
-                    <p className="text-sm text-gray-400 mt-1">Configuration</p>
-                </div>
                 <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                    {/* Build Priorities Title at top of menu */}
+                    <div className="px-4 py-3 mb-2">
+                        <h1 className="text-2xl font-bold text-white">Build Priorities</h1>
+                        <p className="text-sm text-gray-400 mt-1">Configuration</p>
+                    </div>
                     {menuItems.map((item) => (
                         <button
                             key={item.id}
@@ -134,7 +135,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
                             {activeSection === 'remedial-queue' && 'Remedial Priority Queue'}
                         </h2>
                     </div>
-                    <div className="priorities-content">
+                    <div className="priorities-content"> 
                         <PrioritiesView {...props} activeSection={activeSection} />
                     </div>
                 </div>
