@@ -500,8 +500,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                                 <div className="text-white font-medium text-sm">{instructor.rank}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
-                                                <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
+                                                <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
                                             </div>
                                         </div>
 
@@ -512,16 +512,32 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                                 <div className="text-white font-medium text-sm">{instructor.role}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Unit</label>
-                                                <div className="text-white font-medium text-sm">{instructor.unit || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Service</label>
+                                                <div className="text-white font-medium text-sm">{instructor.service || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Flight</label>
-                                                <div className="text-white font-medium text-sm">{instructor.flight || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
+                                                <div className="text-white font-medium text-sm">{instructor.location || 'N/A'}</div>
                                             </div>
                                         </div>
 
                                         {/* Column 3 */}
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Category</label>
+                                                <div className="text-white font-medium text-sm">{instructor.category || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Unit</label>
+                                                <div className="text-white font-medium text-sm">{instructor.unit || 'N/A'}</div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
+                                                <div className="text-white font-medium text-sm">{instructor.phoneNumber || 'N/A'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 4 */}
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Callsign</label>
@@ -534,24 +550,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                                 <div className="text-white font-medium text-sm">[None]</div>
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Seat Config</label>
-                                                <div className="text-white font-medium text-sm">{instructor.seatConfig}</div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Phone Number</label>
-                                                <div className="text-white font-medium text-sm">{instructor.phoneNumber || 'N/A'}</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Column 4 */}
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Category</label>
-                                                <div className="text-white font-medium text-sm">{instructor.category || 'N/A'}</div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-[10px] text-gray-400 mb-0.5">Location</label>
-                                                <div className="text-white font-medium text-sm">{instructor.location || 'N/A'}</div>
+                                                <label className="block text-[10px] text-gray-400 mb-0.5">Flight</label>
+                                                <div className="text-white font-medium text-sm">{instructor.flight || 'N/A'}</div>
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] text-gray-400 mb-0.5">Email</label>
