@@ -488,7 +488,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                     </div>
 
                                     {/* Right Section: Four Columns of Data */}
-                                    <div className="flex-1 grid grid-cols-4 gap-x-3 gap-y-3">
+                                    <div className="flex-1 grid grid-cols-4 gap-x-2 gap-y-2">
                                         {/* Column 1 */}
                                         <div className="space-y-3">
                                             <div>
@@ -569,52 +569,52 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Trainees Panel (right side of profile card) */}
+                                    {!isCreating && (
+                                        <div className="w-44 flex-shrink-0 border-l border-gray-600/50 pl-3 space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-1">Primary Trainees</label>
+                                                {primaryTrainees.length === 0 ? (
+                                                    <div className="text-gray-500 italic text-xs">No trainees assigned</div>
+                                                ) : (
+                                                    <div className="space-y-1 max-h-[80px] overflow-y-auto" tabIndex={0} aria-label="Primary trainees list">
+                                                        {primaryTrainees.map(t => (
+                                                            <div key={t.idNumber} className="flex items-center gap-1.5">
+                                                                <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </div>
+                                                                <div className="text-white text-xs font-medium truncate">{t.name}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-400 mb-1">Secondary Trainees</label>
+                                                {secondaryTrainees.length === 0 ? (
+                                                    <div className="text-gray-500 italic text-xs">No trainees assigned</div>
+                                                ) : (
+                                                    <div className="space-y-1 max-h-[80px] overflow-y-auto" tabIndex={0} aria-label="Secondary trainees list">
+                                                        {secondaryTrainees.map(t => (
+                                                            <div key={t.idNumber} className="flex items-center gap-1.5">
+                                                                <div className="w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                </div>
+                                                                <div className="text-white text-xs font-medium truncate">{t.name}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* Primary / Secondary Trainees Section */}
-                            {!isCreating && (
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-[#2a3441] rounded-lg p-3">
-                                        <label className="block text-xs text-gray-400 mb-2">Primary Trainees</label>
-                                        {primaryTrainees.length === 0 ? (
-                                            <div className="text-gray-500 italic text-xs">No trainees assigned</div>
-                                        ) : (
-                                            <div className="space-y-1 max-h-[80px] overflow-y-auto" tabIndex={0} aria-label="Primary trainees list">
-                                                {primaryTrainees.map(t => (
-                                                    <div key={t.idNumber} className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
-                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                                            </svg>
-                                                        </div>
-                                                        <div className="text-white text-xs font-medium">{t.name}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="bg-[#2a3441] rounded-lg p-3">
-                                        <label className="block text-xs text-gray-400 mb-2">Secondary Trainees</label>
-                                        {secondaryTrainees.length === 0 ? (
-                                            <div className="text-gray-500 italic text-xs">No trainees assigned</div>
-                                        ) : (
-                                            <div className="space-y-1 max-h-[80px] overflow-y-auto" tabIndex={0} aria-label="Secondary trainees list">
-                                                {secondaryTrainees.map(t => (
-                                                    <div key={t.idNumber} className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
-                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                                            </svg>
-                                                        </div>
-                                                        <div className="text-white text-xs font-medium">{t.name}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
 
                             {/* Logbook Section with Circular Gauges */}
                             <div className="bg-[#252d3d] rounded-lg p-5">
