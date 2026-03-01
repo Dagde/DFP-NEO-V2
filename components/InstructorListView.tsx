@@ -590,9 +590,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             </div>
       </div>
       
-      {/* Profile Overlay - Fixed Position over Grid */}
+      {/* Profile Overlay - Centred Modal (same as Trainee profile) */}
       {(selectedInstructor || (isAddingNew && newInstructorTemplate)) && (
-            <div className="fixed inset-y-0 right-0 w-full max-w-3xl bg-gray-900 shadow-2xl z-50 border-l border-gray-700 transform transition-transform duration-300 ease-in-out">
                 <InstructorProfileFlyout
                     instructor={isAddingNew && newInstructorTemplate ? newInstructorTemplate : selectedInstructor!}
                     onClose={handleCloseProfile}
@@ -614,7 +613,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                         }
                     }}
                 />
-            </div>
         )}
       
       {/* Hover Flyout */}
