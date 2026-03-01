@@ -261,7 +261,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   };
 
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';
+  const [activeTab, setActiveTab] = useState<'profile' | 'unavailable' | 'currency' | 'logbook' | 'pt051' | 'lmp' | 'remedial'>('profile');
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
+  const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
+  const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? 'profile' : tab);
   const exp = priorExperience;
 
   return (
@@ -278,6 +281,117 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
           <div className="flex flex-1 overflow-hidden">
             {/* MAIN CONTENT */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {/* TAB: CURRENCY */}
+            {activeTab === 'currency' && (
+              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-white mb-3">Currency — {trainee.name}</h4>
+                <p className="text-gray-400 text-xs italic">Currency data for this trainee is managed in the main Currency view. Click Currency again to return to profile.</p>
+                <div className="mt-4 space-y-2">
+                  {(trainee.currencyStatus || []).length > 0 ? (trainee.currencyStatus || []).map((cs: any) => (
+                    <div key={cs.currencyId} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
+                      <span className="text-white font-medium">{cs.currencyId}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cs.status === 'Current' ? 'bg-green-600 text-white' : cs.status === 'Expiring' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}`}>{cs.status}</span>
+                    </div>
+                  )) : <p className="text-gray-500 text-xs italic text-center py-4">No currency records found.</p>}
+                </div>
+              </div>
+            )}
+            {/* TAB: PT-051 */}
+            {activeTab === 'pt051' && (
+              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-white mb-3">PT-051 — {trainee.name}</h4>
+                <p className="text-gray-400 text-xs italic mb-4">Hate sheet / PT-051 for this trainee.</p>
+                <button onClick={() => { handleHateSheetClick(); }} className="px-4 py-2 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Open Full PT-051 View</button>
+              </div>
+            )}
+            {/* TAB: VIEW INDIVIDUAL LMP */}
+            {activeTab === 'lmp' && (
+              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-white mb-3">Individual LMP — {trainee.name}</h4>
+                <p className="text-gray-400 text-xs italic mb-4">Individual Learning Management Plan for this trainee.</p>
+                <button onClick={() => { handleIndividualLMPClick(); }} className="px-4 py-2 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Open Full LMP View</button>
+              </div>
+            )}
+            {/* TAB: ADD REMEDIAL PACKAGE */}
+            {activeTab === 'remedial' && (
+              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-white mb-3">Remedial Package — {trainee.name}</h4>
+                <p className="text-gray-400 text-xs italic mb-4">Add a remedial package for this trainee.</p>
+                <button onClick={() => { onAddRemedialPackage(trainee); setActiveTab('profile'); }} className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">Add Remedial Package</button>
+              </div>
+            )}
+            {/* TAB: LOGBOOK */}
+            {activeTab === 'logbook' && (
+              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-white mb-3">Logbook — {trainee.name}</h4>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Day Flying</span>
+                      <div className="flex justify-center space-x-2">
+                        <ExperienceInput label="P1" value={priorExperience.day.p1} onChange={v => setPriorExperience(prev => ({...prev, day: {...prev.day, p1: v}}))} />
+                        <ExperienceInput label="P2" value={priorExperience.day.p2} onChange={v => setPriorExperience(prev => ({...prev, day: {...prev.day, p2: v}}))} />
+                        <ExperienceInput label="Dual" value={priorExperience.day.dual} onChange={v => setPriorExperience(prev => ({...prev, day: {...prev.day, dual: v}}))} />
+                      </div>
+                    </div>
+                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Night Flying</span>
+                      <div className="flex justify-center space-x-2">
+                        <ExperienceInput label="P1" value={priorExperience.night.p1} onChange={v => setPriorExperience(prev => ({...prev, night: {...prev.night, p1: v}}))} />
+                        <ExperienceInput label="P2" value={priorExperience.night.p2} onChange={v => setPriorExperience(prev => ({...prev, night: {...prev.night, p2: v}}))} />
+                        <ExperienceInput label="Dual" value={priorExperience.night.dual} onChange={v => setPriorExperience(prev => ({...prev, night: {...prev.night, dual: v}}))} />
+                      </div>
+                    </div>
+                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Totals</span>
+                      <div className="flex justify-center space-x-2">
+                        <ExperienceInput label="TOTAL" value={priorExperience.total} onChange={v => setPriorExperience(prev => ({...prev, total: v}))} />
+                        <ExperienceInput label="Captain" value={priorExperience.captain} onChange={v => setPriorExperience(prev => ({...prev, captain: v}))} />
+                        <ExperienceInput label="Instructor" value={priorExperience.instructor} onChange={v => setPriorExperience(prev => ({...prev, instructor: v}))} />
+                      </div>
+                    </div>
+                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Instrument</span>
+                      <div className="flex justify-center space-x-2">
+                        <ExperienceInput label="Sim" value={priorExperience.instrument.sim} onChange={v => setPriorExperience(prev => ({...prev, instrument: {...prev.instrument, sim: v}}))} />
+                        <ExperienceInput label="Actual" value={priorExperience.instrument.actual} onChange={v => setPriorExperience(prev => ({...prev, instrument: {...prev.instrument, actual: v}}))} />
+                      </div>
+                    </div>
+                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Simulator</span>
+                      <div className="flex justify-center space-x-2">
+                        <ExperienceInput label="P1" value={priorExperience.simulator.p1} onChange={v => setPriorExperience(prev => ({...prev, simulator: {...prev.simulator, p1: v}}))} />
+                        <ExperienceInput label="P2" value={priorExperience.simulator.p2} onChange={v => setPriorExperience(prev => ({...prev, simulator: {...prev.simulator, p2: v}}))} />
+                        <ExperienceInput label="Dual" value={priorExperience.simulator.dual} onChange={v => setPriorExperience(prev => ({...prev, simulator: {...prev.simulator, dual: v}}))} />
+                        <ExperienceInput label="Total" value={priorExperience.simulator.total} onChange={v => setPriorExperience(prev => ({...prev, simulator: {...prev.simulator, total: v}}))} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={handleSave} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Save Logbook</button>
+                    <button onClick={() => setActiveTab('profile')} className="px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* TAB: UNAVAILABLE */}
+            {activeTab === 'unavailable' && (
+              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-bold text-white mb-3">Unavailability — {trainee.name}</h4>
+                <div className="space-y-1 mb-4 max-h-48 overflow-y-auto">
+                  {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => {
+                    const startDisplay = formatDate(p.startDate);
+                    const endDisplay = formatDate(p.endDate);
+                    const timeStr = p.allDay ? 'All Day' : `${p.startTime || ''}-${p.endTime || ''}`;
+                    return (
+                      <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
+                        <span className="text-white font-medium">{p.reason}</span>
+                        <span className="text-gray-300 font-mono">{startDisplay}{p.startDate !== p.endDate ? ` – ${endDisplay}` : ''} {timeStr}</span>
+                        <button onClick={() => handleRemoveUnavailabilityFromFlyout(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
+                      </div>
+                    );
+                  }) : <p className="text-gray-500 text-xs italic text-center py-2">No unavailability periods scheduled.</p>}
+                </div>
+                <button onClick={() => setShowAddUnavailability(true)} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">+ Add Unavailability</button>
+              </div>
+            )}
+            {/* PROFILE TAB (default) */}
+            {activeTab === 'profile' && <>
 
               {/* TOP CARD */}
               <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
@@ -517,18 +631,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 </div>
               </div>
 
+            </>}
             </div>
 
             {/* RIGHT BUTTON PANEL */}
             <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#151d2e] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && (<>
-                <button onClick={() => setShowAddUnavailability(true)} className={btnClass}>Unavailable</button>
-                <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={btnClass}>Currency</button>
-                <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
-                <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
-                <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
-                <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={btnClass}>Logbook</button>
-                <button onClick={() => setIsEditing(true)} className={btnClass}>✦ Edit</button>
+                <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavailable</button>
+                <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
+                <button onClick={() => handleTabClick('pt051')} className={tabBtnClass('pt051')}>PT-051</button>
+                <button onClick={() => handleTabClick('lmp')} className={tabBtnClass('lmp')}>View Individual LMP</button>
+                <button onClick={() => handleTabClick('remedial')} className={tabBtnClass('remedial')}>Add Remedial Package</button>
+                <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
+                <button onClick={() => { setActiveTab('profile'); setIsEditing(true); }} className={btnClass}>Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
