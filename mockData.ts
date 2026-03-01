@@ -620,8 +620,8 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     // Total ESL: 4 exec (1FTS) + 28 FLTLT (1FTS) = 32 for 1FTS
     //            2 exec (CFS) + 11 FLTLT (CFS) + 1 Joe Bloggs (CFS) = 14 for CFS
     // PEA: 31 for 2FTS
-    const num1FTSFltlts = isESL ? 28 : 0;
-    const numCFSFltlts = isESL ? 11 : 0;
+    const num1FTSFltlts = isESL ? 32 : 0;
+    const numCFSFltlts = isESL ? 16 : 0;
     const num2FTSFltlts = isESL ? 0 : 31;
     const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
     

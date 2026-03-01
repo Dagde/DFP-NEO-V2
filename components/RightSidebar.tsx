@@ -56,7 +56,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           onClick={onBuildDfpClick} 
           className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
         >
-          <span className="text-center leading-tight">NEO Build</span>
+          <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO Build</span>
         </button>
 
         <button 
@@ -87,9 +87,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <button 
           onClick={onPublish} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md"
+          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
         >
-          <span className="text-center leading-tight">Publish</span>
+          <span className="text-center leading-tight" style={{color: "#22c55e"}}>Publish</span>
         </button>
 
         <button 

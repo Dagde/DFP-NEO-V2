@@ -124,9 +124,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           {/* DFP Button */}
           <button 
             onClick={() => onNavigate('Program Schedule')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-green-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
           >
-            <span>DFP</span>
+            <span style={{color: "#22c55e"}}>DFP</span>
           </button>
           
           {/* Staff Button */}

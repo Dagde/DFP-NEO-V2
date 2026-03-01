@@ -154,7 +154,7 @@ const Header: React.FC<HeaderProps> = ({
                         className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
                         title="NEO - Tile"
                     >
-                        <span className="text-center leading-tight">NEO - Tile</span>
+                        <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO - Tile</span>
                     </button>
 
                     {/* User Menu Button */}
