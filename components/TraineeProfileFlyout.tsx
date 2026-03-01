@@ -261,7 +261,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   };
 
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';
-  const btnClass = "w-full px-3 py-2 rounded-md text-sm font-semibold btn-aluminium-brushed text-center";
+  const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
   const exp = priorExperience;
 
   return (
@@ -520,7 +520,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             </div>
 
             {/* RIGHT BUTTON PANEL */}
-            <div className="w-36 flex-shrink-0 border-l border-gray-600 bg-[#151d2e] p-3 flex flex-col space-y-2">
+            <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#151d2e] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && (<>
                 <button onClick={() => setShowAddUnavailability(true)} className={btnClass}>Unavailable</button>
                 <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={btnClass}>Currency</button>
@@ -528,14 +528,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
                 <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
                 <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={btnClass}>Logbook</button>
-              </>)}
-              <div className="flex-grow" />
-              {isEditing ? (<>
-                <button onClick={handleSave} className={btnClass}>Save</button>
-                <button onClick={handleCancel} className={btnClass}>Cancel</button>
-              </>) : (<>
                 <button onClick={() => setIsEditing(true)} className={btnClass}>✦ Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
+              </>)}
+              {isEditing && (<>
+                <button onClick={handleSave} className={btnClass}>Save</button>
+                <button onClick={handleCancel} className={btnClass}>Cancel</button>
               </>)}
             </div>
           </div>

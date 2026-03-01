@@ -225,7 +225,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';
-  const btnClass = "w-full px-3 py-2 rounded-md text-sm font-semibold btn-aluminium-brushed text-center";
+  const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
   const exp = priorExperience;
 
   // Build role badges
@@ -375,33 +375,31 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     </div>
 
-                    {/* Assigned Trainees */}
+                    {/* Assigned Trainees - 4 slots (Primary + Secondary combined) */}
                     {!isCreating && (
-                      <div className="flex-shrink-0 w-44 space-y-2">
+                      <div className="flex-shrink-0 w-44">
                         <div className="bg-[#151d2e] border border-gray-600 rounded-lg p-2">
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Primary Trainees</div>
+                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Assigned Trainees</div>
                           <div className="space-y-1">
-                            {primaryTrainees.length > 0 ? primaryTrainees.slice(0, 3).map(t => (
-                              <div key={t.idNumber} className="flex items-center gap-1">
-                                <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                            {(() => {
+                              const allAssigned = [
+                                ...primaryTrainees.map(t => ({ ...t, type: 'P' as const })),
+                                ...secondaryTrainees.map(t => ({ ...t, type: 'S' as const }))
+                              ].slice(0, 4);
+                              const slots = Array.from({ length: 4 }, (_, i) => allAssigned[i] || null);
+                              return slots.map((t, i) => (
+                                <div key={i} className="flex items-center gap-1 min-h-[20px]">
+                                  <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                  </div>
+                                  {t ? (
+                                    <span className="text-white text-[10px] truncate">{t.name} <span className="text-gray-400">({t.type})</span></span>
+                                  ) : (
+                                    <span className="text-gray-600 text-[10px] italic">—</span>
+                                  )}
                                 </div>
-                                <span className="text-white text-[10px] truncate">{t.name}</span>
-                              </div>
-                            )) : <span className="text-gray-500 text-[10px] italic">None assigned</span>}
-                          </div>
-                        </div>
-                        <div className="bg-[#151d2e] border border-gray-600 rounded-lg p-2">
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Secondary Trainees</div>
-                          <div className="space-y-1">
-                            {secondaryTrainees.length > 0 ? secondaryTrainees.slice(0, 3).map(t => (
-                              <div key={t.idNumber} className="flex items-center gap-1">
-                                <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                </div>
-                                <span className="text-white text-[10px] truncate">{t.name}</span>
-                              </div>
-                            )) : <span className="text-gray-500 text-[10px] italic">None assigned</span>}
+                              ));
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -493,20 +491,18 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             </div>
 
             {/* RIGHT BUTTON PANEL */}
-            <div className="w-36 flex-shrink-0 border-l border-gray-600 bg-[#151d2e] p-3 flex flex-col space-y-2">
+            <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#151d2e] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && !isCreating && (<>
                 <button onClick={() => setShowAddUnavailability(true)} className={btnClass}>Unavailable</button>
                 <button onClick={() => onNavigateToCurrency(instructor)} className={btnClass}>Currency</button>
                 <button onClick={() => { if (onViewLogbook) onViewLogbook(instructor); }} className={btnClass}>Logbook</button>
                 <button onClick={onRequestSct} className={btnClass}>Request SCT</button>
-              </>)}
-              <div className="flex-grow" />
-              {isEditing ? (<>
-                <button onClick={handleSave} className={btnClass}>Save</button>
-                <button onClick={handleCancel} className={btnClass}>Cancel</button>
-              </>) : (<>
                 <button onClick={handleEdit} className={btnClass}>✦ Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
+              </>)}
+              {isEditing && (<>
+                <button onClick={handleSave} className={btnClass}>Save</button>
+                <button onClick={handleCancel} className={btnClass}>Cancel</button>
               </>)}
             </div>
           </div>
