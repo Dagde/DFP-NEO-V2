@@ -342,7 +342,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     </div>
 
-                    {/* Name + data grid */}
+                    {/* Name + data grid - mirrors Trainee profile layout exactly */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="text-xl font-bold text-white">{instructor.name}</h3>
@@ -351,55 +351,56 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           <span key={badge} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-800 text-sky-200">{badge}</span>
                         ))}
                       </div>
+                      {/* Row 1: ID Number, Role, Category, Callsign, Secondary Callsign, Permissions */}
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                         <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{instructor.role}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{callsignData?.callsignPrefix || ''}{instructor.callsignNumber || ''}</span></div>
-                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">&nbsp;</span></div>
-
+                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Permissions</span><span className="text-white text-[10px]">• {(instructor.permissions || []).join(' • ') || 'None'}</span></div>
+                        {/* Row 2: Rank, Service, Unit, Seat Config, Location, Flight */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || 'RAAF'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
-                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">&nbsp;</span></div>
-
                         <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
-                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">&nbsp;</span></div>
-
-                        <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
-                        <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Permissions</span><span className="text-white">• {(instructor.permissions || []).join(' • ') || 'None'}</span></div>
+                        {/* Row 3: Phone Number, Email */}
+                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
+                        <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
                       </div>
                     </div>
 
-                    {/* Assigned Trainees - 4 slots (Primary + Secondary combined) */}
+                    {/* Assigned Trainees - 4 slots matching Trainee profile's instructor panel style */}
                     {!isCreating && (
-                      <div className="flex-shrink-0 w-44">
+                      <div className="flex-shrink-0 w-44 space-y-2">
                         <div className="bg-[#151d2e] border border-gray-600 rounded-lg p-2">
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Assigned Trainees</div>
+                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Primary Trainees</div>
                           <div className="space-y-1">
-                            {(() => {
-                              const allAssigned = [
-                                ...primaryTrainees.map(t => ({ ...t, type: 'P' as const })),
-                                ...secondaryTrainees.map(t => ({ ...t, type: 'S' as const }))
-                              ].slice(0, 4);
-                              const slots = Array.from({ length: 4 }, (_, i) => allAssigned[i] || null);
-                              return slots.map((t, i) => (
-                                <div key={i} className="flex items-center gap-1 min-h-[20px]">
-                                  <div className="w-5 h-5 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                  </div>
-                                  {t ? (
-                                    <span className="text-white text-[10px] truncate">{t.name} <span className="text-gray-400">({t.type})</span></span>
-                                  ) : (
-                                    <span className="text-gray-600 text-[10px] italic">—</span>
-                                  )}
+                            {primaryTrainees.slice(0, 2).map(t => (
+                              <div key={t.idNumber} className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
                                 </div>
-                              ));
-                            })()}
+                                <span className="text-white text-xs font-medium truncate">{t.name}</span>
+                              </div>
+                            ))}
+                            {primaryTrainees.length === 0 && <span className="text-gray-500 text-[10px] italic">None assigned</span>}
+                          </div>
+                        </div>
+                        <div className="bg-[#151d2e] border border-gray-600 rounded-lg p-2">
+                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Secondary Trainees</div>
+                          <div className="space-y-1">
+                            {secondaryTrainees.slice(0, 2).map(t => (
+                              <div key={t.idNumber} className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                </div>
+                                <span className="text-white text-xs font-medium truncate">{t.name}</span>
+                              </div>
+                            ))}
+                            {secondaryTrainees.length === 0 && <span className="text-gray-500 text-[10px] italic">None assigned</span>}
                           </div>
                         </div>
                       </div>
