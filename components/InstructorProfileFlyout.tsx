@@ -51,7 +51,7 @@ const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: 
 );
 
 const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { label: string; value: number }[] }> = ({ title, mainValue, subItems }) => (
-  <div className="flex flex-col items-center bg-gray-800 border border-gray-600 rounded-lg p-3 flex-1">
+  <div className="flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md" style={{boxShadow:'0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)'}}>
     <span className="text-xs text-gray-300 font-semibold mb-2">{title}</span>
     <div className="relative flex items-center justify-center mb-2">
       <svg width="64" height="64" viewBox="0 0 64 64">
@@ -75,7 +75,7 @@ const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { la
 );
 
 const InstrumentGauge: React.FC<{ sim: number; actual: number }> = ({ sim, actual }) => (
-  <div className="flex flex-col items-center bg-gray-800 border border-gray-600 rounded-lg p-3 flex-1">
+  <div className="flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md" style={{boxShadow:'0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)'}}>
     <span className="text-xs text-gray-300 font-semibold mb-2">Instrument</span>
     <div className="relative flex items-center justify-center mb-2">
       <svg width="64" height="64" viewBox="0 0 64 64">
@@ -109,6 +109,10 @@ const initialExperience: LogbookExperience = {
   instrument: { sim: 0, actual: 0 },
   simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
+
+// Shared 3D card style
+const card3d = "rounded-lg border border-gray-500/60 shadow-md";
+const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
@@ -242,13 +246,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   if (isContractor) roleBadges.push('Contractor');
   if (isAdminStaff) roleBadges.push('Admin Staff');
 
+  // Trainee avatar icon
+  const TraineeIcon = () => (
+    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+    </svg>
+  );
+
   return (
     <>
       <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center" onClick={onClose}>
-        <div className="bg-[#1a2235] rounded-lg shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="bg-[#141e2e] rounded-lg shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
 
           {/* Header */}
-          <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#151d2e] flex-shrink-0">
+          <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0">
             <h2 className="text-lg font-bold text-white">{isCreating ? 'New Staff' : 'Staff Profile'}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
           </div>
@@ -257,8 +268,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             {/* MAIN CONTENT */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
-              {/* TOP CARD */}
-              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-4">
+              {/* ── SECTION 1: MAIN INFO CARD ── */}
+              <div className={card3d + " p-4"} style={card3dStyle}>
                 {isEditing ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -332,6 +343,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                   </div>
                 ) : (
+                  /* VIEW MODE: avatar + data grid + permissions panel */
                   <div className="flex gap-4">
                     {/* Profile photo */}
                     <div className="flex-shrink-0">
@@ -342,7 +354,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     </div>
 
-                    {/* Name + data grid - mirrors Trainee profile layout exactly */}
+                    {/* Name + data grid */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="text-xl font-bold text-white">{instructor.name}</h3>
@@ -351,67 +363,117 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           <span key={badge} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-800 text-sky-200">{badge}</span>
                         ))}
                       </div>
-                      {/* Row 1: ID Number, Role, Category, Callsign, Secondary Callsign, Permissions */}
                       <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
+                        {/* Row 1 */}
                         <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{instructor.role}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{callsignData?.callsignPrefix || ''}{instructor.callsignNumber || ''}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Permissions</span><span className="text-white text-[10px]">• {(instructor.permissions || []).join(' • ') || 'None'}</span></div>
-                        {/* Row 2: Rank, Service, Unit, Seat Config, Location, Flight */}
+                        <div></div>
+                        {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || 'RAAF'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
-                        {/* Row 3: Phone Number, Email */}
+                        {/* Row 3 */}
                         <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
                         <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
                       </div>
                     </div>
 
-                    {/* Assigned Trainees - 4 slots matching Trainee profile's instructor panel style */}
-                    {!isCreating && (
-                      <div className="flex-shrink-0 w-44 space-y-2">
-                        <div className="bg-[#151d2e] border border-gray-600 rounded-lg p-2">
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Primary Trainees</div>
-                          <div className="space-y-1">
-                            {primaryTrainees.slice(0, 2).map(t => (
-                              <div key={t.idNumber} className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                </div>
-                                <span className="text-white text-xs font-medium truncate">{t.name}</span>
-                              </div>
-                            ))}
-                            {primaryTrainees.length === 0 && <span className="text-gray-500 text-[10px] italic">None assigned</span>}
-                          </div>
-                        </div>
-                        <div className="bg-[#151d2e] border border-gray-600 rounded-lg p-2">
-                          <div className="text-[10px] text-gray-400 font-semibold mb-2">Secondary Trainees</div>
-                          <div className="space-y-1">
-                            {secondaryTrainees.slice(0, 2).map(t => (
-                              <div key={t.idNumber} className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                </div>
-                                <span className="text-white text-xs font-medium truncate">{t.name}</span>
-                              </div>
-                            ))}
-                            {secondaryTrainees.length === 0 && <span className="text-gray-500 text-[10px] italic">None assigned</span>}
-                          </div>
+                    {/* Permissions panel - single column, to the right of data grid */}
+                    <div className="flex-shrink-0 w-36">
+                      <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                        <div className="space-y-1">
+                          {(instructor.permissions || []).length > 0
+                            ? (instructor.permissions || []).map(p => (
+                                <div key={p} className="text-white text-[10px]">• {p}</div>
+                              ))
+                            : <div className="text-gray-500 text-[10px] italic">None</div>
+                          }
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* LOGBOOK - VIEW MODE */}
+              {/* ── SECTION 2: ASSIGNED TRAINEES (above logbook, full width, 4 sub-windows) ── */}
+              {!isEditing && !isCreating && (
+                <div className={card3d + " p-3"} style={card3dStyle}>
+                  <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Trainees</h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Primary Trainee 1 */}
+                    <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                      <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
+                      {primaryTrainees[0] ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Primary Trainee 2 */}
+                    <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                      <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
+                      {primaryTrainees[1] ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Secondary Trainee 1 */}
+                    <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                      <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
+                      {secondaryTrainees[0] ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Secondary Trainee 2 */}
+                    <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                      <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
+                      {secondaryTrainees[1] ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── SECTION 3: LOGBOOK - VIEW MODE ── */}
               {!isEditing && (
-                <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-3">
+                <div className={card3d + " p-3"} style={card3dStyle}>
                   <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
                   <div className="flex gap-2">
                     <CircularGauge title="Day Flying" mainValue={exp.day.p1 + exp.day.p2 + exp.day.dual}
@@ -427,9 +489,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 </div>
               )}
 
-              {/* LOGBOOK - EDIT MODE */}
+              {/* ── SECTION 3: LOGBOOK - EDIT MODE ── */}
               {isEditing && (
-                <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-3">
+                <div className={card3d + " p-3"} style={card3dStyle}>
                   <h4 className="text-xs font-semibold text-sky-400 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Day Flying</span>
@@ -471,8 +533,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 </div>
               )}
 
-              {/* UNAVAILABILITY */}
-              <div className="bg-[#1e2d42] border border-gray-600 rounded-lg p-3">
+              {/* ── SECTION 4: UNAVAILABILITY ── */}
+              <div className={card3d + " p-3"} style={card3dStyle}>
                 <h4 className="text-xs font-semibold text-gray-300 mb-2">Unavailability</h4>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map(p => {
@@ -492,7 +554,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
             </div>
 
             {/* RIGHT BUTTON PANEL */}
-            <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#151d2e] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
+            <div className="w-[95px] flex-shrink-0 border-l border-gray-600 bg-[#0f1824] pt-2 pb-2 px-[10px] flex flex-col space-y-[1px]">
               {!isEditing && !isCreating && (<>
                 <button onClick={() => setShowAddUnavailability(true)} className={btnClass}>Unavailable</button>
                 <button onClick={() => onNavigateToCurrency(instructor)} className={btnClass}>Currency</button>
