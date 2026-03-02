@@ -128,9 +128,14 @@ export async function initializeData() {
   try {
     console.log('🌐 Initializing data from API...');
     
-       // Fetch instructors
-       console.log('👨‍🏫 Fetching instructors from API...');
-       instructors = await fetchInstructors();
+         // Fetch instructors
+         console.log('👨‍🏫 Fetching instructors from API...');
+         if (dataSourceSettings.staffDb !== false) {
+           instructors = await fetchInstructors();
+           console.log('✅ Staff DB loaded:', instructors.length);
+         } else {
+           console.log('🚫 Staff Database disabled - skipping DB fetch');
+         }
          // Merge with mock data only if staff toggle is ON
          if (dataSourceSettings.staff !== false) {
            console.log('🔄 Merging database + mock data for staff (MockData ON)');
@@ -140,10 +145,14 @@ export async function initializeData() {
          }
    
 
-       // Fetch trainees
-       console.log('👨‍🎓 Fetching trainees from API...');
-       trainees = await fetchTrainees();
-       console.log('✅ Trainees loaded:', trainees.length);
+         // Fetch trainees
+         console.log('👨‍🎓 Fetching trainees from API...');
+         if (dataSourceSettings.traineeDb !== false) {
+           trainees = await fetchTrainees();
+           console.log('✅ Trainee DB loaded:', trainees.length);
+         } else {
+           console.log('🚫 Trainee Database disabled - skipping DB fetch');
+         }
          // Merge with mock data only if trainee toggle is ON
          if (dataSourceSettings.trainee !== false) {
            console.log('🔄 Merging database + mock data for trainees (MockData ON)');
