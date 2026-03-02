@@ -8117,7 +8117,7 @@ updates.forEach(update => {
                                    const instructor = instructorsData.find(i => i.name === instructorName || i.fullName === instructorName);
                                    if (instructor) {
                                        setSelectedPersonForProfile(instructor);
-                                       handleNavigation('StaffView');
+                                       handleNavigation('Instructors');
                                    }
                                }}
                             onDeleteTrainee={(trainee) => {
@@ -8849,6 +8849,22 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
+                            selectedPersonForProfile={selectedPersonForProfile as any}
+                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            locations={locations}
+                            units={units}
+                            onViewLogbook={handleViewLogbook}
+                            onRequestSct={(instructor) => {
+                                setInstructorForSct(instructor);
+                                setShowSctRequest(true);
+                            }}
+                            onOpenTraineeProfile={(traineeName) => {
+                                const trainee = traineesData.find(t => t.name === traineeName || t.fullName === traineeName);
+                                if (trainee) {
+                                    setSelectedPersonForProfile(trainee);
+                                    handleNavigation('Trainee');
+                                }
+                            }}
                         />;
             case 'Instructors':
                 return <InstructorListView 

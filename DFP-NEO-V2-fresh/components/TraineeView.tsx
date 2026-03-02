@@ -27,6 +27,7 @@ interface TraineeViewProps {
   traineeLMPs: Map<string, any[]>;
   onViewLogbook: (trainee: any) => void;
   onDeleteTrainee: (trainee: any) => void;
+  onOpenInstructorProfile?: (instructorName: string) => void;
   
   // Props for TraineeScheduleView
   date: string;
@@ -113,6 +114,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             traineeLMPs={props.traineeLMPs}
             onViewLogbook={props.onViewLogbook}
             onDeleteTrainee={props.onDeleteTrainee}
+            onOpenInstructorProfile={props.onOpenInstructorProfile}
           />
         )}
         {activeTab === 'schedule' && (
