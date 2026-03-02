@@ -21,6 +21,7 @@ interface InstructorProfileFlyoutProps {
   traineesData: Trainee[];
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
+  onOpenTraineeProfile?: (traineeName: string) => void;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -117,7 +118,7 @@ const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 6
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, onViewLogbook, onRequestSct
+  locations, units, traineesData, onViewLogbook, onRequestSct, onOpenTraineeProfile
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -525,10 +526,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
                       {primaryTrainees[0] ? (
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { onOpenTraineeProfile?.(primaryTrainees[0].name); onClose(); }}
+                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
+                        >
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
-                        </div>
+                          <span className="text-sky-300 hover:text-sky-100 text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
+                        </button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
@@ -540,10 +544,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
                       {primaryTrainees[1] ? (
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { onOpenTraineeProfile?.(primaryTrainees[1].name); onClose(); }}
+                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
+                        >
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
-                        </div>
+                          <span className="text-sky-300 hover:text-sky-100 text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
+                        </button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
@@ -555,10 +562,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
                       {secondaryTrainees[0] ? (
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { onOpenTraineeProfile?.(secondaryTrainees[0].name); onClose(); }}
+                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
+                        >
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
-                        </div>
+                          <span className="text-amber-300 hover:text-amber-100 text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
+                        </button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
@@ -570,10 +580,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
                       {secondaryTrainees[1] ? (
-                        <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { onOpenTraineeProfile?.(secondaryTrainees[1].name); onClose(); }}
+                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
+                        >
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
-                        </div>
+                          <span className="text-amber-300 hover:text-amber-100 text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
+                        </button>
                       ) : (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>

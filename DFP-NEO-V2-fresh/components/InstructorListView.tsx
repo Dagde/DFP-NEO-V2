@@ -53,6 +53,7 @@ interface InstructorListViewProps {
   onProfileOpened?: () => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
+  onOpenTraineeProfile?: (traineeName: string) => void;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({ 
@@ -73,7 +74,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     selectedPersonForProfile,
     onProfileOpened,
     onViewLogbook,
-    onRequestSct
+    onRequestSct,
+    onOpenTraineeProfile
 }) => {
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
@@ -612,6 +614,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             handleCloseProfile();
                         }
                     }}
+                    onOpenTraineeProfile={onOpenTraineeProfile}
                 />
         )}
       

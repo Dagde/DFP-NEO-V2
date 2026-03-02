@@ -8928,6 +8928,13 @@ updates.forEach(update => {
                                 setInstructorForSct(instructor);
                                 setShowSctRequest(true);
                             }}
+                            onOpenTraineeProfile={(traineeName) => {
+                                const trainee = traineesData.find(t => t.name === traineeName || t.fullName === traineeName);
+                                if (trainee) {
+                                    setSelectedPersonForProfile(trainee);
+                                    handleNavigation('Trainees');
+                                }
+                            }}
                         />;
                 case 'Trainees':
                     return <TraineeListView 
