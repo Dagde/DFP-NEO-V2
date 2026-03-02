@@ -744,7 +744,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
                 <div className="mt-1 min-h-[10rem] p-2">
                     {isEditing ? (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-2">
                             {allPermissions.map(perm => (
                                 <label key={perm} className="flex items-center space-x-3 cursor-pointer">
                                     <input 
@@ -753,7 +753,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         onChange={e => handlePermissionChange(perm, e.target.checked)} 
                                         className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
                                     />
-                                    <span className="text-white">{perm}</span>
+                                    <span className="text-white text-[11px]">{perm}</span>
                                 </label>
                             ))}
                         </div>
@@ -772,7 +772,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 <legend className="px-2 text-sm font-semibold text-gray-300">Roles</legend>
                 <div className="mt-1 min-h-[10rem] p-2">
                     {isEditing ? (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-2">
                             {allRoles.map(role => (
                                 <label key={role} className="flex items-center space-x-3 cursor-pointer">
                                     <input 
@@ -780,7 +780,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                         checked={false} 
                                         className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
                                     />
-                                    <span className="text-white">{role}</span>
+                                    <span className="text-white text-[11px]">{role}</span>
                                 </label>
                             ))}
                         </div>
@@ -977,7 +977,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
                               {/* Row 3 */}
-                              <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
+                              <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
                               <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
                             </div>
                           </div>
@@ -987,20 +987,20 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             {/* Permissions panel */}
                             <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                               <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
-                              <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
+                              <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
                                 {(trainee.permissions || []).length > 0
                                   ? (trainee.permissions || []).map(p => (
-                                      <div key={p} className="text-white text-[9px]">• {p}</div>
+                                      <div key={p} className="text-white text-[10px]">• {p}</div>
                                     ))
-                                  : <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
+                                  : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
                                 }
                               </div>
                             </div>
                             {/* Roles panel */}
                             <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                               <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
-                              <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
-                                <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
+                              <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
+                                <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
                               </div>
                             </div>
                           </div>

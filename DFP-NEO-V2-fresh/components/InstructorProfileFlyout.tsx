@@ -446,11 +446,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {/* Permissions */}
                       <div className="bg-gray-700/30 rounded p-3">
                         <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           {allPermissions.map(perm => (
                             <label key={perm} className="flex items-center space-x-1 cursor-pointer">
                               <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                              <span className="text-white text-xs">{perm}</span>
+                              <span className="text-white text-[11px]">{perm}</span>
                             </label>
                           ))}
                         </div>
@@ -458,10 +458,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {/* Roles */}
                       <div className="bg-gray-700/30 rounded p-3">
                         <label className="block text-xs font-medium text-gray-400 mb-2">Roles</label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <label className="flex items-center space-x-1 cursor-pointer">
                             <input type="checkbox" checked={isCommandingOfficer} onChange={e => setIsCommandingOfficer(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">CO</span>
+                            <span className="text-white text-[11px]">CO</span>
                           </label>
                           <label className="flex items-center space-x-1 cursor-pointer">
                             <input type="checkbox" checked={isCFI} onChange={e => setIsCFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
@@ -548,7 +548,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
                         {/* Row 3 */}
-                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
+                        <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
                         <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
                       </div>
                     </div>
@@ -558,24 +558,24 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {/* Permissions panel */}
                       <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                         <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
-                        <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
+                        <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
                           {(instructor.permissions || []).length > 0
                             ? (instructor.permissions || []).map(p => (
-                                <div key={p} className="text-white text-[9px]">• {p}</div>
+                                <div key={p} className="text-white text-[10px]">• {p}</div>
                               ))
-                            : <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
+                            : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
                           }
                         </div>
                       </div>
                       {/* Roles panel */}
                       <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                         <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
-                        <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
+                        <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
                           {roleBadges.length > 0
                             ? roleBadges.map(r => (
-                                <div key={r} className="text-white text-[9px]">• {r}</div>
+                                <div key={r} className="text-white text-[10px]">• {r}</div>
                               ))
-                            : <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
+                            : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
                           }
                         </div>
                       </div>
