@@ -33,6 +33,7 @@ interface CourseRosterViewProps {
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
        onDeleteTrainee: (trainee: Trainee) => void;
+   onOpenInstructorProfile?: (instructorName: string) => void;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -82,6 +83,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     traineeLMPs,
     onViewLogbook
        , onDeleteTrainee
+       , onOpenInstructorProfile
 }) => {
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
@@ -363,6 +365,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     units={units}
                     individualLmp={individualLmpForSelected || []}
                     onViewLogbook={onViewLogbook}
+                    onOpenInstructorProfile={onOpenInstructorProfile}
                     isCreating={isCreatingNew}
                     activeCourses={activeCourseNumbers}
                 />

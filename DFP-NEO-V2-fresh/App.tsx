@@ -8113,6 +8113,13 @@ updates.forEach(update => {
                             onProfileOpened={() => setSelectedPersonForProfile(null)}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
+                               onOpenInstructorProfile={(instructorName) => {
+                                   const instructor = instructorsData.find(i => i.name === instructorName || i.fullName === instructorName);
+                                   if (instructor) {
+                                       setSelectedPersonForProfile(instructor);
+                                       handleNavigation('StaffView');
+                                   }
+                               }}
                             onDeleteTrainee={(trainee) => {
                                 setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
                                 // Remove from trainee LMPs if exists

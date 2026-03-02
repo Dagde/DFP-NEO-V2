@@ -32,6 +32,7 @@ interface TraineeProfileFlyoutProps {
   onViewLogbook?: (person: Trainee) => void;
   isCreating?: boolean;
   activeCourses?: string[];
+  onOpenInstructorProfile?: (instructorName: string) => void;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -242,7 +243,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   individualLmp,
   onViewLogbook,
   isCreating = false,
-  activeCourses = []
+  activeCourses = [],
+  onOpenInstructorProfile
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -972,129 +974,172 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
                     </div>
 
-                                        {/* ── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ── */}
-                    {!isEditing && !isCreating && (
-                      <div className={card3d + " p-3"} style={card3dStyle}>
-                        <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
-                        <div className="grid grid-cols-4 gap-2">
-                          {/* Primary Instructor 1 */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
-                            {trainee.primaryInstructor ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                  {trainee.primaryInstructor.toLowerCase().includes('burns') ? (
-                                    <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.primaryInstructor} className="w-full h-full object-cover object-top" />
+
+                      {/* ─── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ─── */}
+                      {!isEditing && !isCreating && (
+                        <div className={card3d + " p-3"} style={card3dStyle}>
+                          <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Primary Instructor */}
+                            <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
+                              {trainee.primaryInstructor ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                    {trainee.primaryInstructor.toLowerCase().includes('burns') ? (
+                                      <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.primaryInstructor} className="w-full h-full object-cover object-top" />
+                                    ) : (
+                                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    )}
+                                  </div>
+                                  {onOpenInstructorProfile ? (
+                                    <button
+                                      onClick={() => { onOpenInstructorProfile(trainee.primaryInstructor!); onClose(); }}
+                                      className="text-sky-300 hover:text-sky-100 hover:underline text-[10px] font-medium leading-tight text-left"
+                                    >{trainee.primaryInstructor}</button>
                                   ) : (
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    <span className="text-white text-[10px] font-medium leading-tight">{trainee.primaryInstructor}</span>
                                   )}
                                 </div>
-                                <span className="text-white text-[10px] font-medium leading-tight">{trainee.primaryInstructor}</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                  </div>
+                                  <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                                 </div>
-                                <span className="text-gray-600 text-[10px] italic">Not assigned</span>
-                              </div>
-                            )}
-                          </div>
-                          {/* Primary Instructor 2 — empty slot */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                              </div>
-                              <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                              )}
                             </div>
-                          </div>
-                          {/* Secondary Instructor 1 */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
-                            {trainee.secondaryInstructor ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                  {trainee.secondaryInstructor.toLowerCase().includes('burns') ? (
-                                    <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.secondaryInstructor} className="w-full h-full object-cover object-top" />
+                            {/* Secondary Instructor */}
+                            <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
+                              {trainee.secondaryInstructor ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                    {trainee.secondaryInstructor.toLowerCase().includes('burns') ? (
+                                      <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.secondaryInstructor} className="w-full h-full object-cover object-top" />
+                                    ) : (
+                                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    )}
+                                  </div>
+                                  {onOpenInstructorProfile ? (
+                                    <button
+                                      onClick={() => { onOpenInstructorProfile(trainee.secondaryInstructor!); onClose(); }}
+                                      className="text-amber-300 hover:text-amber-100 hover:underline text-[10px] font-medium leading-tight text-left"
+                                    >{trainee.secondaryInstructor}</button>
                                   ) : (
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    <span className="text-white text-[10px] font-medium leading-tight">{trainee.secondaryInstructor}</span>
                                   )}
                                 </div>
-                                <span className="text-white text-[10px] font-medium leading-tight">{trainee.secondaryInstructor}</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                  </div>
+                                  <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                                 </div>
-                                <span className="text-gray-600 text-[10px] italic">Not assigned</span>
-                              </div>
-                            )}
-                          </div>
-                          {/* Secondary Instructor 2 — empty slot */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                              </div>
-                              <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                              )}
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* ── SECTION 3: LOGBOOK VIEW (always visible, not editing) ── */}
-                    {!isEditing && (
-                      <div className={card3d + " p-3"} style={card3dStyle}>
-                        <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
-                        <div className="flex gap-2">
-                          <CircularGauge title="Day Flying" mainValue={exp.day.p1 + exp.day.p2 + exp.day.dual}
-                            subItems={[{ label: 'P1', value: exp.day.p1 }, { label: 'P2', value: exp.day.p2 }, { label: 'Dual', value: exp.day.dual }]} />
-                          <CircularGauge title="Night Flying" mainValue={exp.night.p1 + exp.night.p2 + exp.night.dual}
-                            subItems={[{ label: 'P1', value: exp.night.p1 }, { label: 'P2', value: exp.night.p2 }, { label: 'Dual', value: exp.night.dual }]} />
-                          <CircularGauge title="Totals" mainValue={exp.total}
-                            subItems={[{ label: 'TOTAL', value: exp.total }, { label: 'Captain', value: exp.captain }, { label: 'Instructor', value: exp.instructor }]} />
-                          <InstrumentGauge sim={exp.instrument.sim} actual={exp.instrument.actual} />
-                          <CircularGauge title="Simulator" mainValue={exp.simulator.total}
-                            subItems={[{ label: 'P1', value: exp.simulator.p1 }, { label: 'P2', value: exp.simulator.p2 }, { label: 'Dual', value: exp.simulator.dual }, { label: 'Total', value: exp.simulator.total }]} />
+                      {/* ─── SECTION 3: LOGBOOK VIEW (always visible, not editing) ─── */}
+                      {!isEditing && (
+                        <div className={card3d + " p-3"} style={card3dStyle}>
+                          <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
+                          <div className="flex gap-2">
+                            {/* Day Flying */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Day Flying</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{(exp.day.p1 + exp.day.p2 + exp.day.dual).toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P1</span><span className="text-white font-medium">{exp.day.p1.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P2</span><span className="text-white font-medium">{exp.day.p2.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Dual</span><span className="text-white font-medium">{exp.day.dual.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Night Flying */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Night Flying</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{(exp.night.p1 + exp.night.p2 + exp.night.dual).toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P1</span><span className="text-white font-medium">{exp.night.p1.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P2</span><span className="text-white font-medium">{exp.night.p2.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Dual</span><span className="text-white font-medium">{exp.night.dual.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Totals */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Totals</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{exp.total.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">TOTAL</span><span className="text-white font-medium">{exp.total.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Captain</span><span className="text-white font-medium">{exp.captain.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Instructor</span><span className="text-white font-medium">{exp.instructor.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Instrument */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Instrument</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2">
+                                <span className="text-gray-400 text-[9px] leading-none">Sim</span>
+                                <span className="text-white font-bold text-sm">{exp.instrument.sim.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Actual</span><span className="text-white font-medium">{exp.instrument.actual.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Simulator */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Simulator</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{exp.simulator.total.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P1</span><span className="text-white font-medium">{exp.simulator.p1.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P2</span><span className="text-white font-medium">{exp.simulator.p2.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Dual</span><span className="text-white font-medium">{exp.simulator.dual.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Total</span><span className="text-white font-medium">{exp.simulator.total.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                  </div>
+                    </div>
 
-                  {/* RIGHT SIDEBAR — buttons */}
-                  <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col space-y-[1px]">
-                    {!isEditing && (
-                      <>
-                        <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
-                        <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                        <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
-                        <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
-                        <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
-                        <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
-                      </>
-                    )}
-                    <div className="flex-grow"></div>
-                    {isEditing ? (
-                      <>
-                        <button onClick={handleSave} className={btnClass}>Save</button>
-                        <button onClick={handleCancel} className={btnClass}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => setIsEditing(true)} className={btnClass}>Edit</button>
-                        <button onClick={onClose} className={btnClass}>Close</button>
-                      </>
-                    )}
+                    {/* RIGHT SIDEBAR — buttons */}
+                    <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col space-y-[1px]">
+                      {!isEditing && (
+                        <>
+                          <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
+                          <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
+                          <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
+                          <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
+                          <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
+                          <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
+                          <div className="mt-[1px]"></div>
+                          <button onClick={() => setIsEditing(true)} className={btnClass}>Edit</button>
+                          <button onClick={onClose} className={btnClass}>Close</button>
+                        </>
+                      )}
+                      {isEditing && (
+                        <>
+                          <button onClick={handleSave} className={btnClass}>Save</button>
+                          <button onClick={handleCancel} className={btnClass}>Cancel</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
