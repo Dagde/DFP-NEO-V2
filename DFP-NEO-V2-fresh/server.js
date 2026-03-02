@@ -70,6 +70,34 @@ app.get('/api/personnel', async (req, res) => {
   }
 });
 
+// GET /api/trainees
+app.get('/api/trainees', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { search } = req.query;
+
+    const where = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { rank: { contains: search, mode: 'insensitive' } },
+        { course: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const trainees = await db.trainee.findMany({
+      where,
+      orderBy: { name: 'asc' },
+    });
+
+    console.log(`✅ GET /api/trainees - returning ${trainees.length} records`);
+    res.json({ trainees });
+  } catch (error) {
+    console.error('❌ GET /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to fetch trainees', details: error.message });
+  }
+});
+
 // POST /api/personnel
 app.post('/api/personnel', async (req, res) => {
   try {

@@ -4,6 +4,7 @@ import { UserListSection } from './UserListSection';
 import StaffDatabaseTable from "./StaffDatabaseTable";
 import StaffMockDataTable from "./StaffMockDataTable";
 import StaffCombinedDataTable from "./StaffCombinedDataTable";
+import TraineeDatabaseTable from "./TraineeDatabaseTable";
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -61,7 +62,7 @@ interface SettingsViewWithMenuProps {
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
 }
 
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'staff-combined-data';
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
@@ -150,6 +151,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                       <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                   </svg>
               )},
+                 { id: 'trainee-database' as const, label: 'Trainee Database', icon: (
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                     </svg>
+                 )},
                  { id: 'staff-mockdata' as const, label: 'Staff MockData', icon: (
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
@@ -215,6 +221,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             {activeSection === 'permissions' && 'Permissions Manager'}
                                {activeSection === 'user-list' && 'User List'}
                                   {activeSection === 'staff-database' && 'Staff Database'}
+                                  {activeSection === 'trainee-database' && 'Trainee Database'}
                                   {activeSection === 'staff-mockdata' && 'Staff MockData'}
                                   {activeSection === 'staff-combined-data' && 'Staff Combined Data'}
                         </h2>
@@ -235,6 +242,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                           {activeSection === 'staff-database' && (
                                 <StaffDatabaseTable />
                             )}
+                               {activeSection === 'trainee-database' && (
+                                   <TraineeDatabaseTable />
+                               )}
                             {activeSection === 'staff-mockdata' && (
                                 <StaffMockDataTable 
                                     instructorsData={filteredMockdata}
