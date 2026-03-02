@@ -554,7 +554,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
 
                     {/* Permissions and Roles panels */}
-                    <div className="flex-shrink-0 w-36 flex flex-col gap-2">
+                    <div className="flex-shrink-0 w-40 flex flex-col gap-2">
                       {/* Permissions panel */}
                       <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                         <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
