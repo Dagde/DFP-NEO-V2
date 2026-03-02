@@ -131,18 +131,26 @@ export async function initializeData() {
        // Fetch instructors
        console.log('👨‍🏫 Fetching instructors from API...');
        instructors = await fetchInstructors();
-       // Always merge with mock data for staff
-       console.log('🔁 Merging database + mock data for staff');
-       instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+         // Merge with mock data only if staff toggle is ON
+         if (dataSourceSettings.staff !== false) {
+           console.log('🔄 Merging database + mock data for staff (MockData ON)');
+           instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+         } else {
+           console.log('🚫 Staff MockData disabled - using database only');
+         }
    
 
        // Fetch trainees
        console.log('👨‍🎓 Fetching trainees from API...');
        trainees = await fetchTrainees();
        console.log('✅ Trainees loaded:', trainees.length);
-       // Always merge with mock data for trainees
-       console.log('🔁 Merging database + mock data for trainees');
-       trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+         // Merge with mock data only if trainee toggle is ON
+         if (dataSourceSettings.trainee !== false) {
+           console.log('🔄 Merging database + mock data for trainees (MockData ON)');
+           trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+         } else {
+           console.log('🚫 Trainee MockData disabled - using database only');
+         }
        
        // Assign trainees to Burns (real database instructor)
        assignTraineesToBurns(instructors, trainees);
@@ -164,13 +172,21 @@ export async function initializeData() {
     
     // If API returned no data, fallback to mock data
     if (instructors.length === 0) {
-      console.log('⚠️ No instructors from API, using mock data');
-      instructors = ESL_DATA.instructors;
+        if (dataSourceSettings.staff !== false) {
+          console.log('⚠️ No instructors from API, falling back to mock data');
+          instructors = ESL_DATA.instructors;
+        } else {
+          console.log('⚠️ No instructors from API and MockData disabled');
+        }
     }
     
     if (trainees.length === 0) {
-      console.log('⚠️ No trainees from API, using mock data');
-      trainees = ESL_DATA.trainees;
+        if (dataSourceSettings.trainee !== false) {
+          console.log('⚠️ No trainees from API, falling back to mock data');
+          trainees = ESL_DATA.trainees;
+        } else {
+          console.log('⚠️ No trainees from API and MockData disabled');
+        }
     }
     
     if (aircraft.length === 0) {

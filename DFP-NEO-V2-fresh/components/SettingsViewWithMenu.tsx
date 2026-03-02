@@ -6,6 +6,7 @@ import StaffMockDataTable from "./StaffMockDataTable";
 import StaffCombinedDataTable from "./StaffCombinedDataTable";
 import TraineeDatabaseTable from "./TraineeDatabaseTable";
 import TraineeMockDataTable from "./TraineeMockDataTable";
+import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -63,7 +64,7 @@ interface SettingsViewWithMenuProps {
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
 }
 
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'trainee-mockdata' | 'staff-combined-data';
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'trainee-mockdata' | 'staff-combined-data' | 'data-sources';
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
@@ -179,7 +180,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                         </svg>
                     )},
-                 { id: 'staff-combined-data' as const, label: 'Staff Combined Data', icon: (
+                                     { id: 'data-sources' as const, label: 'Data Sources', icon: (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+                        </svg>
+                    )},
+{ id: 'staff-combined-data' as const, label: 'Staff Combined Data', icon: (
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                          <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
                      </svg>
@@ -242,6 +248,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                   {activeSection === 'staff-mockdata' && 'Staff MockData'}
                                   {activeSection === 'trainee-mockdata' && 'Trainee MockData'}
                                   {activeSection === 'staff-combined-data' && 'Staff Combined Data'}
+                                     {activeSection === 'data-sources' && 'Data Sources'}
                         </h2>
                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
                             <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
@@ -277,7 +284,13 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                )}
                              {activeSection === 'staff-combined-data' && (
                                 <StaffCombinedDataTable instructorsData={props.instructorsData} />
-                            )}                </div>
+                               )}
+                               {activeSection === 'data-sources' && (
+                                   <DataSourcesSettings
+                                       onShowSuccess={props.onShowSuccess}
+                                   />
+                               )}
+                </div>
             </div>
         </div>
     );
