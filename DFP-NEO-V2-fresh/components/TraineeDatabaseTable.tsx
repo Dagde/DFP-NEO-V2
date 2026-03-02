@@ -147,6 +147,22 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
 
   return (
     <div className="w-full">
+
+        {/* Header with title and count */}
+        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4">
+          <div className="p-4 bg-gray-800/80 border-b border-gray-700">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-sky-400">Trainee Database</h3>
+              <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
+                {traineeData.length} Trainees
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 mt-1">
+              All trainee records from the database
+            </p>
+          </div>
+        </div>
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
