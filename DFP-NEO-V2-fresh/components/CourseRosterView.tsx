@@ -81,9 +81,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     selectedPersonForProfile,
     onProfileOpened,
     traineeLMPs,
-    onViewLogbook
-       , onDeleteTrainee
-       , onOpenInstructorProfile
+    onViewLogbook,
+    onDeleteTrainee,
+    onOpenInstructorProfile
 }) => {
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
