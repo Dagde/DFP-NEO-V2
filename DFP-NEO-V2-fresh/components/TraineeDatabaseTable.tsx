@@ -171,6 +171,9 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                 NAME
               </th>
+                 <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
+                   ROLE
+                 </th>
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                 RANK/SERVICE
               </th>
@@ -205,6 +208,9 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
                   <td className="px-4 py-3 text-sm text-white">
                     {trainee.name}
                   </td>
+                     <td className="px-4 py-3 text-sm text-white">
+                       Trainee
+                     </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {[trainee.rank, trainee.service].filter(Boolean).join(' / ') || 'N/A'}
                   </td>
