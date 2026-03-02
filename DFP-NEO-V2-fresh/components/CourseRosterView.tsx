@@ -253,7 +253,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         </button>
                         <ViewToggleButton label="Active Courses" value="active" />
                         <ViewToggleButton label="Archived Courses" value="archived" />
-                           <AuditButton pageName="Trainee Roster" />
+                        <div className="w-[5px]"></div>
+                        <AuditButton pageName="Trainee Roster" />
                     </div>
                 </div>
 
