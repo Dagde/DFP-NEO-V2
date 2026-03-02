@@ -5,6 +5,7 @@ import StaffDatabaseTable from "./StaffDatabaseTable";
 import StaffMockDataTable from "./StaffMockDataTable";
 import StaffCombinedDataTable from "./StaffCombinedDataTable";
 import TraineeDatabaseTable from "./TraineeDatabaseTable";
+import TraineeMockDataTable from "./TraineeMockDataTable";
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -62,20 +63,31 @@ interface SettingsViewWithMenuProps {
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
 }
 
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'staff-combined-data';
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'trainee-mockdata' | 'staff-combined-data';
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
+    const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<any[]>([]);
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
         setFilteredMockdata(props.instructorsData);
     }, [props.instructorsData]);
 
+    // Initialize filtered trainee mockdata with traineesData
+    React.useEffect(() => {
+        setFilteredTraineeMockdata(props.traineesData);
+    }, [props.traineesData]);
+
     const handleDeleteFromMockdata = (idNumber: number) => {
         setFilteredMockdata(prev => prev.filter(instructor => instructor.idNumber !== idNumber));
         props.onShowSuccess(`Staff member removed from mockdata display`);
+    };
+
+    const handleDeleteTraineeFromMockdata = (idNumber: number) => {
+        setFilteredTraineeMockdata(prev => prev.filter(trainee => trainee.idNumber !== idNumber));
+        props.onShowSuccess(`Trainee removed from mockdata display`);
     };
 
     const menuItems = [
@@ -162,6 +174,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
                      </svg>
                  )},
+                    { id: 'trainee-mockdata' as const, label: 'Trainee MockData', icon: (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                    )},
                  { id: 'staff-combined-data' as const, label: 'Staff Combined Data', icon: (
                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                          <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
@@ -223,6 +240,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                   {activeSection === 'staff-database' && 'Staff Database'}
                                   {activeSection === 'trainee-database' && 'Trainee Database'}
                                   {activeSection === 'staff-mockdata' && 'Staff MockData'}
+                                  {activeSection === 'trainee-mockdata' && 'Trainee MockData'}
                                   {activeSection === 'staff-combined-data' && 'Staff Combined Data'}
                         </h2>
                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -251,6 +269,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     onDeleteFromMockdata={handleDeleteFromMockdata}
                                 />
                             )}
+                               {activeSection === 'trainee-mockdata' && (
+                                   <TraineeMockDataTable
+                                       traineesData={filteredTraineeMockdata}
+                                       onDeleteFromMockdata={handleDeleteTraineeFromMockdata}
+                                   />
+                               )}
                              {activeSection === 'staff-combined-data' && (
                                 <StaffCombinedDataTable instructorsData={props.instructorsData} />
                             )}                </div>
