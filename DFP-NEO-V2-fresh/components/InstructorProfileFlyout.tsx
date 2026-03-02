@@ -539,17 +539,21 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{callsignData?.callsignPrefix || ''}{instructor.callsignNumber || ''}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
-                        <div></div>
+                        <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
                         {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || 'RAAF'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || 'N/A'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
                         {/* Row 3 */}
-                        <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
-                        <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
                       </div>
                     </div>
 
@@ -597,12 +601,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           onClick={() => { onOpenTraineeProfile?.(primaryTrainees[0].name); onClose(); }}
                           className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
                         >
-                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-sky-300 hover:text-sky-100 text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}
@@ -615,12 +619,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           onClick={() => { onOpenTraineeProfile?.(primaryTrainees[1].name); onClose(); }}
                           className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
                         >
-                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-sky-300 hover:text-sky-100 text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}
@@ -633,12 +637,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           onClick={() => { onOpenTraineeProfile?.(secondaryTrainees[0].name); onClose(); }}
                           className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
                         >
-                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-amber-300 hover:text-amber-100 text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}
@@ -651,12 +655,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           onClick={() => { onOpenTraineeProfile?.(secondaryTrainees[1].name); onClose(); }}
                           className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
                         >
-                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-amber-300 hover:text-amber-100 text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
                         </button>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}

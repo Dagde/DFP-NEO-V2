@@ -968,17 +968,21 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
-                              <div></div>
+                              <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
                               {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || 'RAAF'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
                               {/* Row 3 */}
-                              <div className="col-span-3"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
-                              <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
+                              <div></div>
+                              <div></div>
+                              <div></div>
+                              <div></div>
                             </div>
                           </div>
 
@@ -1019,7 +1023,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
                               {trainee.primaryInstructor ? (
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                  <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                                     {trainee.primaryInstructor.toLowerCase().includes('burns') ? (
                                       <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.primaryInstructor} className="w-full h-full object-cover object-top" />
                                     ) : (
@@ -1037,7 +1041,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
                                     <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
                                   </div>
                                   <span className="text-gray-600 text-[10px] italic">Not assigned</span>
@@ -1049,7 +1053,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
                               {trainee.secondaryInstructor ? (
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                  <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                                     {trainee.secondaryInstructor.toLowerCase().includes('burns') ? (
                                       <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.secondaryInstructor} className="w-full h-full object-cover object-top" />
                                     ) : (
@@ -1067,7 +1071,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
                                     <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
                                   </div>
                                   <span className="text-gray-600 text-[10px] italic">Not assigned</span>
