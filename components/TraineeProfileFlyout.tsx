@@ -94,6 +94,38 @@ const ExperienceDisplay: React.FC<{ label: string; value: number }> = ({ label, 
     </div>
 );
 
+const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { label: string; value: number }[] }> = ({ title, mainValue, subItems }) => (
+  <div className="flex flex-col items-center bg-gray-800/60 rounded-lg p-2 min-w-[80px]">
+    <div className="text-[10px] text-gray-400 font-semibold mb-1 text-center">{title}</div>
+    <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-1">
+      <span className="text-white font-bold text-sm">{mainValue.toFixed(1)}</span>
+    </div>
+    <div className="space-y-0.5 w-full">
+      {subItems.map(item => (
+        <div key={item.label} className="flex justify-between text-[9px]">
+          <span className="text-gray-400">{item.label}</span>
+          <span className="text-white font-medium">{item.value.toFixed(1)}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const InstrumentGauge: React.FC<{ sim: number; actual: number }> = ({ sim, actual }) => (
+  <div className="flex flex-col items-center bg-gray-800/60 rounded-lg p-2 min-w-[80px]">
+    <div className="text-[10px] text-gray-400 font-semibold mb-1 text-center">Instrument</div>
+    <div className="w-14 h-14 rounded-full border-4 border-purple-500/60 flex items-center justify-center mb-1">
+      <span className="text-white font-bold text-sm">{(sim + actual).toFixed(1)}</span>
+    </div>
+    <div className="space-y-0.5 w-full">
+      <div className="flex justify-between text-[9px]"><span className="text-gray-400">Sim</span><span className="text-white font-medium">{sim.toFixed(1)}</span></div>
+      <div className="flex justify-between text-[9px]"><span className="text-gray-400">Actual</span><span className="text-white font-medium">{actual.toFixed(1)}</span></div>
+    </div>
+  </div>
+);
+
+
+
 const EventDetailCard: React.FC<{
   event: SyllabusItemDetail | null;
   title: string;
@@ -214,6 +246,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
+
+    // Shared 3D card style (matches Staff Profile)
+    const card3d = "rounded-lg border border-gray-500/60 shadow-md";
+    const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
+
+    // Tab state — null means no tab open
+    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | null>(null);
+    const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
+    const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
+    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
     
@@ -224,7 +266,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
-    const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -236,6 +277,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
     
     const [priorExperience, setPriorExperience] = useState<LogbookExperience>(trainee.priorExperience || initialExperience);
+    const exp = priorExperience;
 
     const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Course Supervisor', 'Admin', 'Super Admin'], []);
 
@@ -338,7 +380,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setService(trainee.service || '');
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || 'BPC+IPC');
-        setTraineeCallsign(trainee.traineeCallsign || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -445,19 +486,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
-        const oldTraineeCallsign = traineeCallsign;
-        setTraineeCallsign(newTraineeCallsign);
-        if (oldTraineeCallsign !== newTraineeCallsign) {
-            debouncedAuditLog(
-                `trainee-${trainee.idNumber}-callsign`,
-                'Edit',
-                `Updated trainee callsign`,
-                `Trainee Callsign: ${oldTraineeCallsign} → ${newTraineeCallsign}`,
-                'Trainee Roster'
-            );
-        }
-    };    
+    
     const handleUnitChange = (newUnit: string) => {
         const oldUnit = unit;
         setUnit(newUnit);
@@ -499,7 +528,6 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             fullName,
             course,
             lmpType,
-               traineeCallsign,
             rank,
             seatConfig,
             isPaused,
@@ -531,7 +559,6 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
             if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
             if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
             if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || 'BPC+IPC'} → ${lmpType}`);
-               if (trainee.traineeCallsign !== traineeCallsign) changes.push(`Trainee Callsign: ${trainee.traineeCallsign || 'N/A'} → ${traineeCallsign}`);
             if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
             if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
             if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
@@ -741,284 +768,319 @@ const handleTraineeCallsignChange = (newTraineeCallsign: string) => {
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col border border-gray-700" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50 flex-shrink-0">
-                        <h2 className="text-xl font-bold text-sky-400">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
-                        <button onClick={onClose} className="text-white hover:text-gray-300">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
+            <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center" onClick={onClose}>
+              <div className="bg-[#141e2e] rounded-lg shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col border border-gray-600 overflow-hidden" onClick={e => e.stopPropagation()}>
 
-                    <div className="flex-1 flex flex-row overflow-hidden">
-                        {/* LEFT: Content Panel */}
-                        <div className="flex-1 p-6 space-y-4 overflow-y-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {isEditing ? (
-                                    <>
-                                        <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
-                                        <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
-                                        <Dropdown label="Course" value={course} onChange={e => handleCourseChange(e.target.value)}>
-                                            {activeCourses.length > 0 ? (
-                                                activeCourses.map(c => <option key={c} value={c}>{c}</option>)
-                                            ) : (
-                                                <option disabled>No courses</option>
-                                            )}
-                                        </Dropdown>
-                                        <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
-                                            {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
-                                        </Dropdown>
-                                           <InputField label="Trainee Callsign" value={traineeCallsign} onChange={e => handleTraineeCallsignChange(e.target.value)} />
-                                    </>
-                                ) : (
-                                    <>
-                                        <InfoRow label="Name" value={trainee.name} />
-                                        <InfoRow label="ID Number" value={trainee.idNumber} />
-                                        <InfoRow label="Course" value={<span className={`px-2 py-1 rounded-md text-white font-semibold ${courseColors[trainee.course] || 'bg-gray-500'}`}>{trainee.course}</span>} />
-                                        <InfoRow label="LMP" value={<span className="px-2 py-1 rounded-md text-sky-400 font-semibold bg-sky-900/30">{trainee.lmpType || 'BPC+IPC'}</span>} />
-                                        <InfoRow label="Trainee Callsign" value={<span className="px-2 py-1 rounded-md text-green-400 font-semibold bg-green-900/30">{trainee.traineeCallsign || 'N/A'}</span>} />
-                                    </>
-                                )}
-                            </div>
-
-                            {isEditing ? (
-                                <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <Dropdown label="Rank" value={rank} onChange={e => handleRankChange(e.target.value as TraineeRank)}>
-                                            <option value="OCDT">OCDT</option><option value="MIDN">MIDN</option><option value="PLTOFF">PLTOFF</option><option value="FLGOFF">FLGOFF</option>
-                                            <option value="SBLT">SBLT</option><option value="2LT">2LT</option><option value="FLTLT">FLTLT</option>
-                                        </Dropdown>
-                                        {!isCreating && <InfoRow label="Callsign" value={`${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}/>}
-                                        <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}><option value="">Select...</option><option value="Air Force">Air Force</option><option value="Navy">Navy</option><option value="Army">Army</option></Dropdown>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <Dropdown label="Unit" value={unit} onChange={(e) => handleUnitChange(e.target.value)}>{units.map(u => <option key={u} value={u}>{u}</option>)}</Dropdown>
-                                        <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
-                                        <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}><option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option></Dropdown>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <Dropdown label="Location" value={location} onChange={(e) => handleLocationChange(e.target.value)}>{locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}</Dropdown>
-                                        <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
-                                        <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
-                                    </div>
-                                    {!isCreating && (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Primary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.primaryInstructor || 'Not Assigned'} /></div></fieldset>
-                                            <fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Secondary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.secondaryInstructor || 'Not Assigned'} /></div></fieldset>
-                                        </div>
-                                    )}
-                                    {permissionsWindow}
-                                    {!isCreating && (
-                                        <div className="p-3 border border-gray-600 rounded-lg">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-semibold text-gray-300">Pause Trainee (NTSC)</span>
-                                                <button onClick={handlePauseToggle} className={`relative inline-flex items-center h-6 rounded-full w-12 transition-colors ${isPaused ? 'bg-amber-500' : 'bg-gray-600'}`}><span className={`transform transition-transform inline-block w-5 h-5 bg-white rounded-full ${isPaused ? 'translate-x-6' : 'translate-x-1'}`}/></button>
-                                            </div>
-                                        </div>
-                                    )}
-                                     <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-sky-400">Logbook - Prior Experience (PC-21 only)</legend>
-                                        <div className="space-y-4 mt-2">
-                                            {/* Row 1: Day & Night */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Day Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="P1" value={priorExperience.day.p1} onChange={v => handleExperienceChange('day', 'p1', v)} />
-                                                        <ExperienceInput label="P2" value={priorExperience.day.p2} onChange={v => handleExperienceChange('day', 'p2', v)} />
-                                                        <ExperienceInput label="Dual" value={priorExperience.day.dual} onChange={v => handleExperienceChange('day', 'dual', v)} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Night Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="P1" value={priorExperience.night.p1} onChange={v => handleExperienceChange('night', 'p1', v)} />
-                                                        <ExperienceInput label="P2" value={priorExperience.night.p2} onChange={v => handleExperienceChange('night', 'p2', v)} />
-                                                        <ExperienceInput label="Dual" value={priorExperience.night.dual} onChange={v => handleExperienceChange('night', 'dual', v)} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 2: Totals & Instrument */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Totals</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="TOTAL" value={priorExperience.total} onChange={v => handleExperienceChange('total', null, v)} />
-                                                        <ExperienceInput label="Captain" value={priorExperience.captain} onChange={v => handleExperienceChange('captain', null, v)} />
-                                                        <ExperienceInput label="Instructor" value={priorExperience.instructor} onChange={v => handleExperienceChange('instructor', null, v)} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Instrument</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceInput label="Sim" value={priorExperience.instrument.sim} onChange={v => handleExperienceChange('instrument', 'sim', v)} />
-                                                        <ExperienceInput label="Actual" value={priorExperience.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 3: Simulator */}
-                                            <div>
-                                                <span className="block text-sm font-bold text-gray-300 mb-2 text-center">Simulator</span>
-                                                <div className="flex justify-center space-x-4">
-                                                    <ExperienceInput label="P1" value={priorExperience.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} />
-                                                    <ExperienceInput label="P2" value={priorExperience.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} />
-                                                    <ExperienceInput label="Dual" value={priorExperience.simulator.dual} onChange={v => handleExperienceChange('simulator', 'dual', v)} />
-                                                    <ExperienceInput label="Total" value={priorExperience.simulator.total} onChange={v => handleExperienceChange('simulator', 'total', v)} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </fieldset>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Rank" value={rank} /><InfoRow label="Trainee Callsign" value={<span className="px-2 py-1 rounded-md text-green-400 font-semibold bg-green-900/30">{trainee.traineeCallsign || 'N/A'}</span>} /><InfoRow label="Service" value={service || 'N/A'} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Unit" value={unit} /><InfoRow label="Flight" value={flight || 'N/A'} /><InfoRow label="Seat Config" value={seatConfig} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><InfoRow label="Location" value={location} /><InfoRow label="Phone Number" value={phoneNumber} /><InfoRow label="Email" value={email} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Primary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.primaryInstructor || 'Not Assigned'} /></div></fieldset><fieldset className="p-3 border border-gray-600 rounded-lg"><legend className="px-2 text-sm font-semibold text-gray-300">Secondary Instructor</legend><div className="mt-2"><InfoRow label="Name" value={trainee.secondaryInstructor || 'Not Assigned'} /></div></fieldset></div>
-                                    <InfoRow label="Status" value={trainee.isPaused ? <span className="font-semibold text-amber-400">Paused / NTSC</span> : <span className="font-semibold text-green-400">Active</span>} />
-                                    {permissionsWindow}
-                                     <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                        <legend className="px-2 text-sm font-semibold text-sky-400">Logbook - Prior Experience (PC-21 only)</legend>
-                                        <div className="space-y-4 mt-2">
-                                            {/* Row 1: Day & Night */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Day Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="P1" value={priorExperience.day.p1} />
-                                                        <ExperienceDisplay label="P2" value={priorExperience.day.p2} />
-                                                        <ExperienceDisplay label="Dual" value={priorExperience.day.dual} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Night Flying</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="P1" value={priorExperience.night.p1} />
-                                                        <ExperienceDisplay label="P2" value={priorExperience.night.p2} />
-                                                        <ExperienceDisplay label="Dual" value={priorExperience.night.dual} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 2: Totals & Instrument */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-b border-gray-700 pb-4">
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Totals</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="TOTAL" value={priorExperience.total} />
-                                                        <ExperienceDisplay label="Captain" value={priorExperience.captain} />
-                                                        <ExperienceDisplay label="Instructor" value={priorExperience.instructor} />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Instrument</span>
-                                                    <div className="flex justify-center space-x-2">
-                                                        <ExperienceDisplay label="Sim" value={priorExperience.instrument.sim} />
-                                                        <ExperienceDisplay label="Actual" value={priorExperience.instrument.actual} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {/* Row 3: Simulator */}
-                                            <div>
-                                                <span className="block text-sm font-bold text-gray-400 mb-2 text-center">Simulator</span>
-                                                <div className="flex justify-center space-x-4">
-                                                    <ExperienceDisplay label="P1" value={priorExperience.simulator.p1} />
-                                                    <ExperienceDisplay label="P2" value={priorExperience.simulator.p2} />
-                                                    <ExperienceDisplay label="Dual" value={priorExperience.simulator.dual} />
-                                                    <ExperienceDisplay label="Total" value={priorExperience.simulator.total} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </fieldset>
-                                </>
-                            )}
-                            {!isCreating && (
-                                <>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4"><EventDetailCard event={nextEvent} title="Next Event" onNavigate={onNavigateToSyllabus} onCloseFlyout={onClose} reason={nextEventReason} /><EventDetailCard event={subsequentEvent} title="Next Event +1" onNavigate={onNavigateToSyllabus} onCloseFlyout={onClose} reason={!nextEvent ? 'Requires a valid Next Event.' : 'End of syllabus.'} /></div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <LastEventCard title="Last Flight" date={lastFlight?.date} daysSince={daysSinceLastFlight} eventCode={lastFlight?.event} />
-                                        <LastEventCard title="Last Event" date={lastEvent?.date} daysSince={daysSinceLastEvent} eventCode={lastEvent?.event} />
-                                    </div>
-                                </>
-                            )}
-                            <fieldset className="p-3 border border-gray-600 rounded-lg">
-                                <legend className="px-2 text-sm font-semibold text-gray-300">Unavailability</legend>
-                                <div className="mt-2 space-y-2 max-h-40 overflow-y-auto pr-2">
-                                    {unavailability.length > 0 ? (
-                                        unavailability.map(p => {
-                                            let displayString = '';
-                                            const startDisplayDate = formatDate(p.startDate);
-                                            
-                                            if (p.allDay) {
-                                                const lastDayOfUnavailability = new Date(`${p.endDate}T00:00:00Z`);
-                                                lastDayOfUnavailability.setUTCDate(lastDayOfUnavailability.getUTCDate() - 1);
-                                                const lastDayStr = lastDayOfUnavailability.toISOString().split('T')[0];
-                                                const lastDayDisplay = formatDate(lastDayStr);
-                                                const dateRange = p.startDate === lastDayStr ? startDisplayDate : `${startDisplayDate} to ${lastDayDisplay}`;
-                                                displayString = `${dateRange} @ All Day`;
-                                            } else {
-                                                const endDisplayDate = formatDate(p.endDate);
-                                                const startTimeDisplay = formatMilitaryTime(p.startTime);
-                                                const endTimeDisplay = formatMilitaryTime(p.endTime);
-                                                if (p.startDate === p.endDate) {
-                                                    displayString = `${startTimeDisplay} ${startDisplayDate} - ${endTimeDisplay} ${endDisplayDate}`;
-                                                } else {
-                                                    displayString = `${startTimeDisplay} ${startDisplayDate} to ${endTimeDisplay} ${endDisplayDate}`;
-                                                }
-                                            }
-                                            
-                                            return (
-                                                <div key={p.id} className="p-2 bg-gray-700/50 rounded-md text-sm">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <span className="font-semibold text-white">{p.reason}</span>
-                                                            <div className="text-xs text-gray-300 mt-1 font-mono">{displayString}</div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    ) : (
-                                        <p className="text-sm text-gray-500 text-center italic">No unavailability periods scheduled.</p>
-                                    )}
-                                </div>
-                            </fieldset>
-                        </div>
-
-                        {/* RIGHT: Button Panel */}
-                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
-                             {!isEditing && (
-                                <>
-                                    <button onClick={() => setShowAddUnavailability(true)} className={`${buttonClasses} bg-amber-600 text-white hover:bg-amber-700`}>Unavailability</button>
-                                    <button onClick={() => { onNavigateToCurrency(trainee); onClose(); }} className={`${buttonClasses} btn-aluminium-brushed`}>Currency</button>
-                                    <button onClick={handleHateSheetClick} className={`${buttonClasses} btn-aluminium-brushed`}>PT-051</button>
-                                    <button onClick={handleIndividualLMPClick} className={`${buttonClasses} btn-aluminium-brushed`}>View Individual LMP</button>
-                                    <button onClick={() => onAddRemedialPackage(trainee)} className={`${buttonClasses} btn-aluminium-brushed`}>Add Remedial Package</button>
-                                    <button onClick={() => { if (onViewLogbook) { onViewLogbook(trainee); onClose(); } }} className={`${buttonClasses} btn-aluminium-brushed`}>Logbook</button>
-                                </>
-                            )}
-                            <div className="flex-grow"></div> {/* Spacer */}
-                            {isEditing ? (
-                                <>
-                                    <button onClick={handleSave} className={`${buttonClasses} btn-aluminium-brushed`}>Save</button>
-                                    <button onClick={handleCancel} className={`${buttonClasses} btn-aluminium-brushed`}>Cancel</button>
-                                </>
-                            ) : (
-                                <>
-                                    <button onClick={() => setIsEditing(true)} className={`${buttonClasses} btn-aluminium-brushed`}>Edit</button>
-                                    <button onClick={onClose} className={`${buttonClasses} bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white`}>Close</button>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                {/* Header */}
+                <div className="px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0">
+                  <h2 className="text-lg font-bold text-white">{isCreating ? 'New Trainee' : 'Trainee Profile'}</h2>
+                  <button onClick={onClose} className="text-gray-400 hover:text-white text-xl font-bold leading-none">✕</button>
                 </div>
+
+                <div className="flex flex-1 overflow-hidden">
+                  {/* MAIN CONTENT — scrollable */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+                    {/* ── TAB PANELS (shown inline above profile when a tab is active) ── */}
+                    {activeTab === 'currency' && (
+                      <div className={card3d + " p-4"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-white">Currency — {trainee.name}</h4>
+                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                        </div>
+                        <p className="text-gray-400 text-xs italic mb-4">Currency records for this trainee.</p>
+                        <div className="space-y-2">
+                          {(trainee.currencyStatus || []).length > 0 ? (trainee.currencyStatus || []).map((cs: any) => (
+                            <div key={cs.currencyId} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
+                              <span className="text-white font-medium">{cs.currencyId}</span>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cs.status === 'Current' ? 'bg-green-600 text-white' : cs.status === 'Expiring' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}`}>{cs.status}</span>
+                            </div>
+                          )) : <p className="text-gray-500 text-xs italic text-center py-4">No currency records found.</p>}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'unavailable' && (
+                      <div className={card3d + " p-4"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-white">Unavailability — {trainee.name}</h4>
+                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                        </div>
+                        <div className="space-y-2">
+                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => (
+                            <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
+                              <span className="text-white">{p.startDate}{p.endDate !== p.startDate ? ` → ${p.endDate}` : ''}</span>
+                              <span className="text-gray-300">{p.reason}</span>
+                            </div>
+                          )) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
+                        </div>
+                        <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
+                      </div>
+                    )}
+
+                    {activeTab === 'logbook' && (
+                      <div className={card3d + " p-4"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-bold text-white">Logbook — {trainee.name}</h4>
+                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Day Flying</span>
+                            <div className="flex justify-center space-x-2">
+                              <ExperienceInput label="P1" value={exp.day.p1} onChange={v => handleExperienceChange('day', 'p1', v)} />
+                              <ExperienceInput label="P2" value={exp.day.p2} onChange={v => handleExperienceChange('day', 'p2', v)} />
+                              <ExperienceInput label="Dual" value={exp.day.dual} onChange={v => handleExperienceChange('day', 'dual', v)} />
+                            </div>
+                          </div>
+                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Night Flying</span>
+                            <div className="flex justify-center space-x-2">
+                              <ExperienceInput label="P1" value={exp.night.p1} onChange={v => handleExperienceChange('night', 'p1', v)} />
+                              <ExperienceInput label="P2" value={exp.night.p2} onChange={v => handleExperienceChange('night', 'p2', v)} />
+                              <ExperienceInput label="Dual" value={exp.night.dual} onChange={v => handleExperienceChange('night', 'dual', v)} />
+                            </div>
+                          </div>
+                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Totals</span>
+                            <div className="flex justify-center space-x-2">
+                              <ExperienceInput label="TOTAL" value={exp.total} onChange={v => handleExperienceChange('total', null, v)} />
+                              <ExperienceInput label="Captain" value={exp.captain} onChange={v => handleExperienceChange('captain', null, v)} />
+                              <ExperienceInput label="Instructor" value={exp.instructor} onChange={v => handleExperienceChange('instructor', null, v)} />
+                            </div>
+                          </div>
+                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Instrument</span>
+                            <div className="flex justify-center space-x-2">
+                              <ExperienceInput label="Sim" value={exp.instrument.sim} onChange={v => handleExperienceChange('instrument', 'sim', v)} />
+                              <ExperienceInput label="Actual" value={exp.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} />
+                            </div>
+                          </div>
+                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Simulator</span>
+                            <div className="flex justify-center space-x-2">
+                              <ExperienceInput label="P1" value={exp.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} />
+                              <ExperienceInput label="P2" value={exp.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} />
+                              <ExperienceInput label="Dual" value={exp.simulator.dual} onChange={v => handleExperienceChange('simulator', 'dual', v)} />
+                              <ExperienceInput label="Total" value={exp.simulator.total} onChange={v => handleExperienceChange('simulator', 'total', v)} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                          <button onClick={handleSave} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Save Logbook</button>
+                          <button onClick={() => setActiveTab(null)} className="px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded">Cancel</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SECTION 1: MAIN PROFILE CARD ── */}
+                    <div className={card3d + " p-3"} style={card3dStyle}>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
+                            <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
+                            <Dropdown label="Course" value={course} onChange={e => handleCourseChange(e.target.value)}>
+                              {(activeCourses || []).length > 0 ? (activeCourses || []).map(c => <option key={c} value={c}>{c}</option>) : <option disabled>No courses</option>}
+                            </Dropdown>
+                            <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
+                              {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                            </Dropdown>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
+                              {(['FLTLT','FLGOFF','PLTOFF','WOFF','FSGT','SGT','CPL','LAC','AC','OCdt','CDT'] as TraineeRank[]).map(r => <option key={r} value={r}>{r}</option>)}
+                            </Dropdown>
+                            <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
+                              <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
+                            </Dropdown>
+                            <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
+                              {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
+                            </Dropdown>
+                            <Dropdown label="Location" value={location} onChange={e => setLocation(e.target.value)}>
+                              {(locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                            </Dropdown>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
+                            <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
+                            <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                          </div>
+                          <div className="bg-gray-700/30 rounded p-3">
+                            <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
+                            <div className="grid grid-cols-4 gap-2">
+                              {allPermissions.map(perm => (
+                                <label key={perm} className="flex items-center space-x-1 cursor-pointer">
+                                  <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                                  <span className="text-white text-xs">{perm}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* VIEW MODE: avatar + data grid + permissions panel */
+                        <div className="flex gap-4">
+                          {/* Profile photo */}
+                          <div className="flex-shrink-0">
+                            <div className="w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden">
+                              <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                              </svg>
+                            </div>
+                          </div>
+
+                          {/* Name + data grid */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <h3 className="text-xl font-bold text-white">{trainee.name}</h3>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${trainee.isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+                                {trainee.isPaused ? 'Paused' : 'Active'}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
+                              {/* Row 1 */}
+                              <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{trainee.idNumber}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Course</span><span className={`font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || 'bg-gray-500'}`}>{trainee.course}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
+                              <div></div>
+                              {/* Row 2 */}
+                              <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || 'RAAF'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
+                              {/* Row 3 */}
+                              <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
+                              <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
+                            </div>
+                          </div>
+
+                          {/* Permissions panel */}
+                          <div className="flex-shrink-0 w-36">
+                            <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                              <div className="space-y-1">
+                                {(trainee.permissions || []).length > 0
+                                  ? (trainee.permissions || []).map(p => (
+                                      <div key={p} className="text-white text-[10px]">• {p}</div>
+                                    ))
+                                  : <div className="text-gray-500 text-[10px] italic">None</div>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── SECTION 2: INSTRUCTORS (always visible, not editing) ── */}
+                    {!isEditing && (
+                      <div className={card3d + " p-3"} style={card3dStyle}>
+                        <h4 className="text-xs font-semibold text-gray-300 mb-3">Instructors</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* Primary Instructor */}
+                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                            <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary Instructor</div>
+                            {trainee.primaryInstructor ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                  {trainee.primaryInstructor.toLowerCase().includes('burns') ? (
+                                    <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.primaryInstructor} className="w-full h-full object-cover object-top" />
+                                  ) : (
+                                    <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                  )}
+                                </div>
+                                <span className="text-white text-xs font-medium">{trainee.primaryInstructor}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                </div>
+                                <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Secondary Instructor */}
+                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                            <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary Instructor</div>
+                            {trainee.secondaryInstructor ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                  {trainee.secondaryInstructor.toLowerCase().includes('burns') ? (
+                                    <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.secondaryInstructor} className="w-full h-full object-cover object-top" />
+                                  ) : (
+                                    <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                  )}
+                                </div>
+                                <span className="text-white text-xs font-medium">{trainee.secondaryInstructor}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                </div>
+                                <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── SECTION 3: LOGBOOK VIEW (always visible, not editing) ── */}
+                    {!isEditing && (
+                      <div className={card3d + " p-3"} style={card3dStyle}>
+                        <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
+                        <div className="flex gap-2">
+                          <CircularGauge title="Day Flying" mainValue={exp.day.p1 + exp.day.p2 + exp.day.dual}
+                            subItems={[{ label: 'P1', value: exp.day.p1 }, { label: 'P2', value: exp.day.p2 }, { label: 'Dual', value: exp.day.dual }]} />
+                          <CircularGauge title="Night Flying" mainValue={exp.night.p1 + exp.night.p2 + exp.night.dual}
+                            subItems={[{ label: 'P1', value: exp.night.p1 }, { label: 'P2', value: exp.night.p2 }, { label: 'Dual', value: exp.night.dual }]} />
+                          <CircularGauge title="Totals" mainValue={exp.total}
+                            subItems={[{ label: 'TOTAL', value: exp.total }, { label: 'Captain', value: exp.captain }, { label: 'Instructor', value: exp.instructor }]} />
+                          <InstrumentGauge sim={exp.instrument.sim} actual={exp.instrument.actual} />
+                          <CircularGauge title="Simulator" mainValue={exp.simulator.total}
+                            subItems={[{ label: 'P1', value: exp.simulator.p1 }, { label: 'P2', value: exp.simulator.p2 }, { label: 'Dual', value: exp.simulator.dual }, { label: 'Total', value: exp.simulator.total }]} />
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* RIGHT SIDEBAR — buttons */}
+                  <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col space-y-[1px]">
+                    {!isEditing && (
+                      <>
+                        <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
+                        <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
+                        <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
+                        <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
+                        <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
+                        <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
+                      </>
+                    )}
+                    <div className="flex-grow"></div>
+                    {isEditing ? (
+                      <>
+                        <button onClick={handleSave} className={btnClass}>Save</button>
+                        <button onClick={handleCancel} className={btnClass}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setIsEditing(true)} className={btnClass}>Edit</button>
+                        <button onClick={onClose} className={btnClass}>Close</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
         </>
     );
+
 };
 
 export default TraineeProfileFlyout;

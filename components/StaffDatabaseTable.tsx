@@ -34,37 +34,61 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     fetchDatabaseStaff();
   }, []);
 
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+
+  const addDebug = (msg: string) => {
+    console.log('[StaffDB Debug]', msg);
+    setDebugInfo(prev => [...prev, `${new Date().toISOString().split('T')[1].split('.')[0]} ${msg}`]);
+  };
+
   const fetchDatabaseStaff = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('🔍 StaffDatabaseTable: Fetching from /api/personnel');
-        console.log('🔍 StaffDatabaseTable: Fetching from /api/personnel');
-        const response = await fetch('/api/personnel');
-      
+      setDebugInfo([]);
+
+      const API_URL = '/api/personnel';
+      const resolvedUrl = new URL(API_URL, window.location.href).href;
+      addDebug(`window.location = ${window.location.href}`);
+      addDebug(`Resolved URL = ${resolvedUrl}`);
+      addDebug(`Fetching ${API_URL}...`);
+
+      const response = await fetch(API_URL);
+
+      addDebug(`Status: ${response.status} ${response.statusText}`);
+      addDebug(`Content-Type: ${response.headers.get('content-type') || 'none'}`);
+
+      const rawText = await response.text();
+      addDebug(`Response length: ${rawText.length} chars`);
+      addDebug(`Preview: ${rawText.substring(0, 200)}`);
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP ${response.status} ${response.statusText} — ${rawText.substring(0, 100)}`);
       }
-      
-      const data = await response.json();
-        console.log('📊 StaffDatabaseTable: API Response:', data);
-      
+
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+        addDebug(`JSON OK. Keys: ${Object.keys(data).join(', ')}`);
+      } catch (parseErr) {
+        throw new Error(`JSON parse failed: ${parseErr}. Raw: ${rawText.substring(0, 150)}`);
+      }
+
       if (data.personnel && Array.isArray(data.personnel)) {
-          console.log(`📊 StaffDatabaseTable: Total personnel in DB: ${data.personnel.length}`);
-        // Filter to show ONLY real database staff (those with a userId)
-        // Mockdata from migration doesn't have a userId
-        const realStaff = data.personnel.filter((staff: DatabaseStaff) => 
+        addDebug(`Total personnel: ${data.personnel.length}`);
+        const realStaff = data.personnel.filter((staff: DatabaseStaff) =>
           staff.userId !== null && staff.userId !== undefined && staff.userId !== ''
         );
-          console.log(`✅ StaffDatabaseTable: Real staff with userId: ${realStaff.length}`);
+        addDebug(`Staff with userId: ${realStaff.length}`);
         setStaffData(realStaff);
       } else {
-        setError('Invalid data format received from server');
+        throw new Error(`Invalid format. Keys: ${Object.keys(data).join(', ')}`);
       }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      addDebug(`ERROR: ${msg}`);
       console.error('❌ Error fetching database staff:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch data from database');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -96,15 +120,25 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
           <div className="text-red-300 text-sm font-semibold mb-2">
             Error Loading Database
           </div>
-          <div className="text-red-400 text-xs mb-3">
+          <div className="text-red-400 text-xs mb-3 font-mono break-all">
             {error}
           </div>
           <button
             onClick={fetchDatabaseStaff}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-xs rounded transition-colors"
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-xs rounded transition-colors mb-3"
           >
             Retry
           </button>
+          {debugInfo.length > 0 && (
+            <div className="mt-3 bg-black/60 border border-gray-600 rounded p-3">
+              <div className="text-yellow-400 text-xs font-semibold mb-2">🔍 Debug Trace:</div>
+              {debugInfo.map((line, i) => (
+                <div key={i} className="text-green-300 text-xs font-mono break-all leading-5">
+                  {line}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
