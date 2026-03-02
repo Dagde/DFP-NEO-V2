@@ -8216,6 +8216,13 @@ updates.forEach(update => {
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
                             }}
+                            onOpenInstructorProfile={(instructorName) => {
+                                const instructor = instructorsData.find(i => i.name === instructorName || i.fullName === instructorName);
+                                if (instructor) {
+                                    setSelectedPersonForProfile(instructor);
+                                    handleNavigation('Instructors');
+                                }
+                            }}
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {
@@ -8932,7 +8939,7 @@ updates.forEach(update => {
                                 const trainee = traineesData.find(t => t.name === traineeName || t.fullName === traineeName);
                                 if (trainee) {
                                     setSelectedPersonForProfile(trainee);
-                                    handleNavigation('Trainees');
+                                    handleNavigation('CourseRoster');
                                 }
                             }}
                         />;
