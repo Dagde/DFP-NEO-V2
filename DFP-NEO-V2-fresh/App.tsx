@@ -8,14 +8,13 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
-import { setCurrentUser } from './utils/auditLogger';
+import { setCurrentUser, logAudit } from './utils/auditLogger';
+import { debouncedAuditLog } from './utils/auditDebounce';
+import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
-   import { seedTestAuditLogs } from './utils/seedAuditLogs';
-   import { logAudit, setCurrentUser } from './utils/auditLogger';
-   import { debouncedAuditLog } from './utils/auditDebounce';
-   import DarkMessageModal from './components/DarkMessageModal';
+import DarkMessageModal from './components/DarkMessageModal';
 
 
 // Import types
