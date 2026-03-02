@@ -237,20 +237,20 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
                     <div className="flex items-center space-x-4">
                         <h1 className="text-2xl font-bold text-white">Trainee Roster</h1>
-                         <button
+                    </div>
+                    <div className="flex items-center gap-[1px]">
+                        <button
                             onClick={handleAddTraineeClick}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
                         >
                             Add Trainee
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirmation(true)}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
                         >
                             Delete Trainee
                         </button>
-                    </div>
-                    <div className="flex items-center gap-[1px]">
                         <ViewToggleButton label="Active Courses" value="active" />
                         <ViewToggleButton label="Archived Courses" value="archived" />
                            <AuditButton pageName="Trainee Roster" />
