@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "cd DFP-NEO-V2-fresh && vite",
+    "build": "cd DFP-NEO-V2-fresh && npm ci && npm run build",
+    "preview": "cd DFP-NEO-V2-fresh && vite preview",
     "git-sync": "node git-automation.js",
     "git-sync-once": "node git-sync-once.js",
     "git-pull": "node -e &quot;const git=require('./git-automation.js'); git.pullLatest();&quot;",
