@@ -282,6 +282,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const exp = priorExperience;
 
     const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Course Supervisor', 'Admin', 'Super Admin'], []);
+    const allRoles = useMemo(() => ['Course Leader', 'Section Leader', 'Squadron Leader', 'Flight Leader'], []);
 
     const callsignData = useMemo(() => personnelData.get(trainee.fullName), [personnelData, trainee.fullName]);
 
@@ -738,34 +739,59 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const buttonClasses = "w-full px-4 py-2 rounded-md transition-colors text-sm font-semibold shadow-md text-center";
 
     const permissionsWindow = (
-        <fieldset className="p-3 border border-gray-600 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
-            <div className="mt-1 min-h-[10rem] p-2">
-                {isEditing ? (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                        {allPermissions.map(perm => (
-                            <label key={perm} className="flex items-center space-x-3 cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={permissions.includes(perm)} 
-                                    onChange={e => handlePermissionChange(perm, e.target.checked)} 
-                                    className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
-                                />
-                                <span className="text-white">{perm}</span>
-                            </label>
-                        ))}
-                    </div>
-                ) : (
-                    <ul className="space-y-2 text-white list-disc list-inside">
-                        {(trainee.permissions && trainee.permissions.length > 0) ? (
-                            trainee.permissions.map(perm => <li key={perm}>{perm}</li>)
-                        ) : (
-                            <li className="list-none italic text-gray-500">No permissions assigned.</li>
-                        )}
-                    </ul>
-                )}
-            </div>
-        </fieldset>
+        <div className="grid grid-cols-2 gap-3">
+            <fieldset className="p-3 border border-gray-600 rounded-lg">
+                <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
+                <div className="mt-1 min-h-[10rem] p-2">
+                    {isEditing ? (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                            {allPermissions.map(perm => (
+                                <label key={perm} className="flex items-center space-x-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={permissions.includes(perm)} 
+                                        onChange={e => handlePermissionChange(perm, e.target.checked)} 
+                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                    />
+                                    <span className="text-white">{perm}</span>
+                                </label>
+                            ))}
+                        </div>
+                    ) : (
+                        <ul className="space-y-2 text-white list-disc list-inside">
+                            {(trainee.permissions && trainee.permissions.length > 0) ? (
+                                trainee.permissions.map(perm => <li key={perm}>{perm}</li>)
+                            ) : (
+                                <li className="list-none italic text-gray-500">No permissions assigned.</li>
+                            )}
+                        </ul>
+                    )}
+                </div>
+            </fieldset>
+            <fieldset className="p-3 border border-gray-600 rounded-lg">
+                <legend className="px-2 text-sm font-semibold text-gray-300">Roles</legend>
+                <div className="mt-1 min-h-[10rem] p-2">
+                    {isEditing ? (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                            {allRoles.map(role => (
+                                <label key={role} className="flex items-center space-x-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={false} 
+                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                    />
+                                    <span className="text-white">{role}</span>
+                                </label>
+                            ))}
+                        </div>
+                    ) : (
+                        <ul className="space-y-2 text-white list-disc list-inside">
+                            <li className="list-none italic text-gray-500">No roles assigned.</li>
+                        </ul>
+                    )}
+                </div>
+            </fieldset>
+        </div>
     );
 
     return (
@@ -956,17 +982,25 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           </div>
 
-                          {/* Permissions panel */}
-                          <div className="flex-shrink-0 w-36">
-                            <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                              <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
-                              <div className="space-y-1">
+                          {/* Permissions and Roles panels */}
+                          <div className="flex-shrink-0 w-36 flex flex-col gap-2">
+                            {/* Permissions panel */}
+                            <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
+                              <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
                                 {(trainee.permissions || []).length > 0
                                   ? (trainee.permissions || []).map(p => (
-                                      <div key={p} className="text-white text-[10px]">• {p}</div>
+                                      <div key={p} className="text-white text-[9px]">• {p}</div>
                                     ))
-                                  : <div className="text-gray-500 text-[10px] italic">None</div>
+                                  : <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
                                 }
+                              </div>
+                            </div>
+                            {/* Roles panel */}
+                            <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
+                              <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
+                                <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
                               </div>
                             </div>
                           </div>

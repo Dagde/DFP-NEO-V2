@@ -153,6 +153,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [isOFI, setIsOFI] = useState(instructor.isOFI || false);
 
   const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Scheduler', 'Course Supervisor', 'Admin', 'Super Admin'], []);
+  const allRoles = useMemo(() => ['CO', 'CFI', 'Exec', 'Fly Sup', 'TO', 'IRE', 'QFI', 'OFI', 'DFC', 'Contractor', 'Admin Staff'], []);
 
   const { primaryTrainees, secondaryTrainees } = useMemo(() => {
     if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
@@ -440,16 +441,69 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         ))}
                       </div>
                     </div>
-                    {/* Permissions */}
-                    <div className="bg-gray-700/30 rounded p-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {allPermissions.map(perm => (
-                          <label key={perm} className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">{perm}</span>
+                    {/* Permissions and Roles */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Permissions */}
+                      <div className="bg-gray-700/30 rounded p-3">
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {allPermissions.map(perm => (
+                            <label key={perm} className="flex items-center space-x-1 cursor-pointer">
+                              <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                              <span className="text-white text-xs">{perm}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Roles */}
+                      <div className="bg-gray-700/30 rounded p-3">
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Roles</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isCommandingOfficer} onChange={e => setIsCommandingOfficer(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">CO</span>
                           </label>
-                        ))}
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isCFI} onChange={e => setIsCFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">CFI</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isExecutive} onChange={e => setIsExecutive(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">Exec</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isFlyingSupervisor} onChange={e => setIsFlyingSupervisor(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">Fly Sup</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isTestingOfficer} onChange={e => setIsTestingOfficer(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">TO</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isIRE} onChange={e => setIsIRE(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">IRE</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isQFI} onChange={e => setIsQFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">QFI</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isOFI} onChange={e => setIsOFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">OFI</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isDeputyFlightCommander} onChange={e => setIsDeputyFlightCommander(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">DFC</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isContractor} onChange={e => setIsContractor(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">Contractor</span>
+                          </label>
+                          <label className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={isAdminStaff} onChange={e => setIsAdminStaff(e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">Admin Staff</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -499,16 +553,29 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     </div>
 
-                    {/* Permissions panel */}
-                    <div className="flex-shrink-0 w-36">
-                      <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
-                        <div className="space-y-1">
+                    {/* Permissions and Roles panels */}
+                    <div className="flex-shrink-0 w-36 flex flex-col gap-2">
+                      {/* Permissions panel */}
+                      <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
+                        <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
                           {(instructor.permissions || []).length > 0
                             ? (instructor.permissions || []).map(p => (
-                                <div key={p} className="text-white text-[10px]">• {p}</div>
+                                <div key={p} className="text-white text-[9px]">• {p}</div>
                               ))
-                            : <div className="text-gray-500 text-[10px] italic">None</div>
+                            : <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
+                          }
+                        </div>
+                      </div>
+                      {/* Roles panel */}
+                      <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
+                        <div className="grid grid-cols-2 gap-x-1 gap-y-0.5">
+                          {roleBadges.length > 0
+                            ? roleBadges.map(r => (
+                                <div key={r} className="text-white text-[9px]">• {r}</div>
+                              ))
+                            : <div className="text-gray-500 text-[9px] italic col-span-2">None</div>
                           }
                         </div>
                       </div>
