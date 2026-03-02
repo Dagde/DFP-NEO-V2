@@ -222,7 +222,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const ViewToggleButton: React.FC<{ label: string; value: 'active' | 'archived' }> = ({ label, value }) => (
         <button
             onClick={() => setView(value)}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${view === value ? 'active' : ''}`}
+            className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${view === value ? 'active' : ''}`}
         >
             {label}
         </button>
@@ -241,13 +241,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     <div className="flex items-center gap-[1px]">
                         <button
                             onClick={handleAddTraineeClick}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
                         >
                             Add Trainee
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirmation(true)}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
                         >
                             Delete Trainee
                         </button>
