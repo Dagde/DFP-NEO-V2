@@ -302,6 +302,7 @@ const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV'
 
 const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem }) => {
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
@@ -327,6 +328,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         });
     }, []);
 
+  // Select first item by default when syllabusDetails or selectedCourseType changes
   useEffect(() => {
     if (initialSelectedId) {
       const itemToSelect = syllabusDetails.find(item => item.code === initialSelectedId);
@@ -340,12 +342,25 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           }
       }
     } else {
-        if (selectedItem) {
+        // Default: select the first item in the filtered list
+        if (filteredSyllabusDetails.length > 0 && !selectedItem) {
+            setSelectedItem(filteredSyllabusDetails[0]);
+        } else if (selectedItem) {
              const updated = syllabusDetails.find(item => item.code === selectedItem.code);
              if (updated) setSelectedItem(updated);
         }
     }
-  }, [initialSelectedId, syllabusDetails, selectedItem, selectedCourseType]);
+  }, [initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+
+  // Reset selection when course type changes (select first item of new course)
+  useEffect(() => {
+    if (filteredSyllabusDetails.length > 0) {
+        setSelectedItem(filteredSyllabusDetails[0]);
+        setIsEditing(false);
+    } else {
+        setSelectedItem(null);
+    }
+  }, [selectedCourseType]);
 
   const handleEdit = () => {
     if (selectedItem) {
@@ -442,6 +457,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                           setSelectedItem(item);
                       }
                   }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
                   className={`w-full text-left p-2 rounded-md transition-colors text-sm ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
@@ -460,9 +477,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         {/* Right Column: Detail View */}
         <div className="w-3/4 overflow-y-auto">
           <div className="p-6 max-w-5xl mx-auto">
-            {selectedItem ? (
+            {(hoveredItem || selectedItem) ? (
                 <DetailView 
-                    item={selectedItem}
+                    item={hoveredItem || selectedItem}
                     isEditing={isEditing}
                     editedItem={editedItem}
                     onItemChange={setEditedItem}
