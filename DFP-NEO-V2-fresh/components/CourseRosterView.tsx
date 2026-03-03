@@ -48,6 +48,9 @@ const generateNewTraineeTemplate = (): Trainee => ({
     service: 'RAAF',
     unavailability: [],
     permissions: ['Trainee'],
+    traineeCallsign: '',
+    secondaryCallsign: '',
+    crew: 'N/A',
     priorExperience: {
         day: { p1: 0, p2: 0, dual: 0 },
         night: { p1: 0, p2: 0, dual: 0 },

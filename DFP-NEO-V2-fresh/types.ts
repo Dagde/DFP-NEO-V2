@@ -256,6 +256,8 @@ export interface Trainee {
   lmpType?: string;
   
      traineeCallsign?: string;
+  secondaryCallsign?: string;
+  crew?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
 }

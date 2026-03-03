@@ -276,6 +276,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [flight, setFlight] = useState(trainee.flight || '');
     const [phoneNumber, setPhoneNumber] = useState(trainee.phoneNumber || '');
     const [email, setEmail] = useState(trainee.email || '');
+    const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
+    const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
+    const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
     
     const [priorExperience, setPriorExperience] = useState<LogbookExperience>(trainee.priorExperience || initialExperience);
@@ -540,6 +543,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             flight,
             phoneNumber,
             email,
+            service,
+            traineeCallsign,
+            secondaryCallsign,
+            crew,
             permissions,
             priorExperience
         };
@@ -914,8 +921,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
                               {(['FLTLT','FLGOFF','PLTOFF','WOFF','FSGT','SGT','CPL','LAC','AC','OCdt','CDT'] as TraineeRank[]).map(r => <option key={r} value={r}>{r}</option>)}
                             </Dropdown>
-                            <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
-                              <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
+                            <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
+                              <option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
                             </Dropdown>
                             <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
                               {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
@@ -925,9 +932,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </Dropdown>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
+                              <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
+                            </Dropdown>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
                             <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
                             <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <InputField label="Callsign" value={traineeCallsign} onChange={e => setTraineeCallsign(e.target.value)} />
+                            <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
+                            <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
                           </div>
                           <div className="bg-gray-700/30 rounded p-3">
                             <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
@@ -967,7 +984,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div><span className="text-gray-400 block text-[10px]">Course</span><span className={`font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || 'bg-gray-500'}`}>{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
                               {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
