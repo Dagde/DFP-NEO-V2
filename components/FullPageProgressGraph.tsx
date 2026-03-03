@@ -185,7 +185,7 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
                         onClick={onClose}
                         className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                     >
-                        ← Minimize
+                        ← Minimise
                     </button>
                     <h1 className="text-2xl font-bold text-white">Course Progress Graphs</h1>
                 </div>
