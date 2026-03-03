@@ -449,7 +449,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                     d={`M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`} 
                     fill="none" 
                     stroke="#6b7280" 
-                    strokeWidth="2" 
+                    strokeWidth="1" 
                 />
 
                 {/* Axis labels */}
@@ -484,7 +484,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                         x2={line.x2} 
                         y2={line.y2} 
                         stroke={line.color} 
-                        strokeWidth="2" 
+                        strokeWidth="1" 
                         strokeDasharray={line.dash}
                     />
                 ))}
@@ -495,7 +495,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                         d={averagePath} 
                         fill="none" 
                         stroke="#60a5fa" 
-                        strokeWidth="2.5"
+                        strokeWidth="1"
                     />
                 )}
 
@@ -556,13 +556,13 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                 <g transform={`translate(${PADDING.left + 15}, ${PADDING.top - 30})`}>
                     <text x="0" y="0" fontSize="10" fill="#d1d5db" fontWeight="bold">Reference Lines:</text>
                     
-                    <line x1="100" y1="-3" x2="120" y2="-3" stroke="#f87171" strokeWidth="2" strokeDasharray="8 4" />
+                    <line x1="100" y1="-3" x2="120" y2="-3" stroke="#f87171" strokeWidth="1" strokeDasharray="8 4" />
                     <text x="125" y="0" fontSize="9" fill="#9ca3af">3.5/wk</text>
                     
-                    <line x1="170" y1="-3" x2="190" y2="-3" stroke="#fbbf24" strokeWidth="2" />
+                    <line x1="170" y1="-3" x2="190" y2="-3" stroke="#fbbf24" strokeWidth="1" />
                     <text x="195" y="0" fontSize="9" fill="#9ca3af">4.0/wk</text>
                     
-                    <line x1="240" y1="-3" x2="260" y2="-3" stroke="#4ade80" strokeWidth="2" strokeDasharray="8 4" />
+                    <line x1="240" y1="-3" x2="260" y2="-3" stroke="#4ade80" strokeWidth="1" strokeDasharray="8 4" />
                     <text x="265" y="0" fontSize="9" fill="#9ca3af">4.5/wk</text>
 
                     <text x="320" y="0" fontSize="10" fill="#d1d5db" fontWeight="bold">Progress:</text>
@@ -573,7 +573,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                     <circle cx="430" cy="-3" r="3" fill="#f87171" stroke="#1f2937" strokeWidth="1.5" />
                     <text x="435" y="0" fontSize="9" fill="#9ca3af">Lowest</text>
                     
-                    <line x1="480" y1="-3" x2="495" y2="-3" stroke="#60a5fa" strokeWidth="2.5" />
+                    <line x1="480" y1="-3" x2="495" y2="-3" stroke="#60a5fa" strokeWidth="1" />
                     <text x="500" y="0" fontSize="9" fill="#9ca3af">Average</text>
                 </g>
             </svg>

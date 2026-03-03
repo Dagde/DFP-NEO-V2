@@ -149,7 +149,7 @@ const CourseProgressGraph: React.FC<CourseProgressGraphProps> = ({ startDate, gr
 
             {/* Pace Lines */}
             {paceLines.map((line, index) => (
-                <line key={`pace-${index}`} {...line} stroke={line.color} strokeWidth="2" />
+                <line key={`pace-${index}`} {...line} stroke={line.color} strokeWidth="1" />
             ))}
 
             {/* Today Line */}
@@ -158,7 +158,7 @@ const CourseProgressGraph: React.FC<CourseProgressGraphProps> = ({ startDate, gr
             {/* Trainee Points */}
             <g>
                 {traineePoints.map(point => (
-                    <circle key={point.name} cx={todayX} cy={eventsToY!(point.eventsCompleted)} r="5" fill={traineeColor} stroke="#1f2937" strokeWidth="2">
+                    <circle key={point.name} cx={todayX} cy={eventsToY!(point.eventsCompleted)} r="5" fill={traineeColor} stroke="#1f2937" strokeWidth="1">
                         <title>{`${point.name}: ${point.eventsCompleted} events`}</title>
                     </circle>
                 ))}
