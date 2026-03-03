@@ -8136,6 +8136,19 @@ updates.forEach(update => {
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
                             }}
+                            onArchiveTrainee={(trainee) => {
+                                // Remove from active trainees
+                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
+                                // Add to archived trainees
+                                setArchivedTraineesData(prev => [...prev, trainee]);
+                                // Log audit for archiving
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'archive',
+                                    description: `Archived trainee from roster`,
+                                    changes: `Archived: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+                                });
+                            }}
                             date={date}
                             onDateChange={handleDateChange}
                             eventsForStaffTraineeSchedule={eventsForStaffTraineeSchedule}
@@ -8214,6 +8227,19 @@ updates.forEach(update => {
                                     action: 'delete',
                                     description: `Deleted trainee from roster`,
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+                                });
+                            }}
+                            onArchiveTrainee={(trainee) => {
+                                // Remove from active trainees
+                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
+                                // Add to archived trainees
+                                setArchivedTraineesData(prev => [...prev, trainee]);
+                                // Log audit for archiving
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'archive',
+                                    description: `Archived trainee from roster`,
+                                    changes: `Archived: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
                             }}
                             onOpenInstructorProfile={(instructorName) => {

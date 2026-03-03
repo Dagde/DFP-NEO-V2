@@ -33,6 +33,7 @@ interface CourseRosterViewProps {
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
        onDeleteTrainee: (trainee: Trainee) => void;
+   onArchiveTrainee?: (trainee: Trainee) => void;
    onOpenInstructorProfile?: (instructorName: string) => void;
 }
 
@@ -335,6 +336,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     isOpen={showDeleteConfirmation}
                     onClose={() => setShowDeleteConfirmation(false)}
                     onConfirm={handleDeleteTrainee}
+                    onArchive={onArchiveTrainee}
                     traineesData={traineesData}
                     courseColors={courseColors}
                 />
