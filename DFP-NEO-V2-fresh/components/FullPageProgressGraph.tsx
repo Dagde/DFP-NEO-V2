@@ -177,13 +177,13 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
         : courseGraphData;
 
     return (
-        <div className="fixed inset-0 z-50 bg-gray-900 flex flex-col">
+        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             {/* Header */}
             <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors font-semibold"
+                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                     >
                         ← Minimize
                     </button>
