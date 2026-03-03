@@ -497,7 +497,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                 </button>
                 <button
                     onClick={toggleArchiveMode}
-                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md ${isArchiveMode ? 'text-red-500 bg-[#a0a0a0a0] animate-pulse-red' : 'btn-aluminium-brushed'}`}
+                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md ${isArchiveMode ? 'text-red-500 bg-[#a0a0a0a0] animate-pulse-red' : 'btn-aluminium-brushed'}`}
                 >
                     {isArchiveMode ? 'Done' : 'Archive Staff'}
                 </button>
