@@ -509,13 +509,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                 </button>
                 <div className="w-[6px]"></div>
                 <AuditButton pageName="Staff" />
-                <div className="w-px h-8 bg-gray-600 mx-2"></div>
-                <button
-                    onClick={onClose}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
-                >
-                    Back to Program
-                </button>
               </div>
             </div>
 
