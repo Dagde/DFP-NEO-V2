@@ -3473,7 +3473,34 @@ useEffect(() => {
     const currentUserPermission = getHighestPermission(currentUser?.permissions);
     const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
     const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
-    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
+    // Helper function to save courses to localStorage with school-specific key
+    const saveCoursesToStorage = (courses: Course[]) => {
+        const key = `dfp_courses_${school}`;
+        localStorage.setItem(key, JSON.stringify(courses.map(c => ({ name: c.name, startDate: c.startDate, gradDate: c.gradDate }))));
+    };
+
+    // Load courses from localStorage or use default data
+    const loadCoursesFromStorage = (): Course[] => {
+        const storedCoursesKey = `dfp_courses_${school}`;
+        const stored = localStorage.getItem(storedCoursesKey);
+        const defaultCourses = school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses;
+        if (stored) {
+            try {
+                const storedCourses = JSON.parse(stored);
+                // Merge with default courses to preserve any new properties
+                return defaultCourses.map(defaultCourse => {
+                    const stored = storedCourses.find((c: Course) => c.name === defaultCourse.name);
+                    return stored ? { ...defaultCourse, startDate: stored.startDate, gradDate: stored.gradDate } : defaultCourse;
+                });
+            } catch (e) {
+                console.error('Failed to parse stored courses:', e);
+                return defaultCourses;
+            }
+        }
+        return defaultCourses;
+    };
+    
+    const [courses, setCourses] = useState<Course[]>(loadCoursesFromStorage());
     const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
     const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
     const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
@@ -4830,7 +4857,25 @@ useEffect(() => {
         setInstructorsData(data.instructors);
         setTraineesData(data.trainees);
         setEvents(data.events);
-        setCourses(data.courses);
+        
+        // Load courses with saved dates from localStorage for the new school
+        const storedCoursesKey = `dfp_courses_${newSchool}`;
+        const stored = localStorage.getItem(storedCoursesKey);
+        let coursesToSet = data.courses;
+        if (stored) {
+            try {
+                const storedCourses = JSON.parse(stored);
+                // Merge with default courses to preserve any new properties
+                coursesToSet = data.courses.map(defaultCourse => {
+                    const stored = storedCourses.find((c: Course) => c.name === defaultCourse.name);
+                    return stored ? { ...defaultCourse, startDate: stored.startDate, gradDate: stored.gradDate } : defaultCourse;
+                });
+            } catch (e) {
+                console.error('Failed to parse stored courses:', e);
+            }
+        }
+        setCourses(coursesToSet);
+        
         setScores(data.scores);
         setPt051Assessments(data.pt051Assessments);
         setCourseColors(data.courseColors);
@@ -4869,7 +4914,12 @@ useEffect(() => {
             navyStart: data.navyStart,
             armyStart: data.armyStart
         };
-        setCourses(prev => [...prev, newCourse]);
+        setCourses(prev => {
+            const updatedCourses = [...prev, newCourse];
+            // Persist course dates to localStorage
+            saveCoursesToStorage(updatedCourses);
+            return updatedCourses;
+        });
         
         setSuccessMessage(`Course ${data.number} added successfully!`);
     };
@@ -4886,7 +4936,12 @@ useEffect(() => {
             setArchivedCourses(prev => ({ ...prev, [courseName]: color }));
             
             // Remove from courses array
-            setCourses(prev => prev.filter(c => c.name !== courseName));
+            setCourses(prev => {
+                const updatedCourses = prev.filter(c => c.name !== courseName);
+                // Persist course dates to localStorage
+                saveCoursesToStorage(updatedCourses);
+                return updatedCourses;
+            });
             
             setSuccessMessage(`Course ${courseName} archived successfully!`);
         } else {
@@ -4896,7 +4951,12 @@ useEffect(() => {
             setCourseColors(newActive);
             
             // Remove from courses array
-            setCourses(prev => prev.filter(c => c.name !== courseName));
+            setCourses(prev => {
+                const updatedCourses = prev.filter(c => c.name !== courseName);
+                // Persist course dates to localStorage
+                saveCoursesToStorage(updatedCourses);
+                return updatedCourses;
+            });
             
             setSuccessMessage(`Course ${courseName} deleted permanently!`);
         }
@@ -4927,7 +4987,12 @@ useEffect(() => {
         // Add back to courses array (recreate from mock data)
         const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
         if (courseFromMockData) {
-            setCourses(prev => [...prev, courseFromMockData]);
+            setCourses(prev => {
+                const updatedCourses = [...prev, courseFromMockData];
+                // Persist course dates to localStorage
+                saveCoursesToStorage(updatedCourses);
+                return updatedCourses;
+            });
         }
 
         setSuccessMessage(`Course ${courseName} unarchived successfully!`);
@@ -4940,7 +5005,12 @@ useEffect(() => {
         setArchivedCourses(newArchived);
 
         // Remove from courses array if it exists there
-        setCourses(prev => prev.filter(c => c.name !== courseName));
+        setCourses(prev => {
+            const updatedCourses = prev.filter(c => c.name !== courseName);
+            // Persist course dates to localStorage
+            saveCoursesToStorage(updatedCourses);
+            return updatedCourses;
+        });
 
         setSuccessMessage(`Course ${courseName} deleted permanently!`);
     };
@@ -6673,19 +6743,25 @@ updates.forEach(update => {
     };
 
     const handleUpdateGradDate = (courseName: string, newGradDate: string) => {
-        setCourses(prevCourses => 
-            prevCourses.map(course => 
+        setCourses(prevCourses => {
+            const updatedCourses = prevCourses.map(course => 
                 course.name === courseName ? { ...course, gradDate: newGradDate } : course
-            )
-        );
+            );
+            // Persist course dates to localStorage
+            saveCoursesToStorage(updatedCourses);
+            return updatedCourses;
+        });
     };
 
     const handleUpdateStartDate = (courseName: string, newStartDate: string) => {
-        setCourses(prevCourses => 
-            prevCourses.map(course => 
+        setCourses(prevCourses => {
+            const updatedCourses = prevCourses.map(course => 
                 course.name === courseName ? { ...course, startDate: newStartDate } : course
-            )
-        );
+            );
+            // Persist course dates to localStorage
+            saveCoursesToStorage(updatedCourses);
+            return updatedCourses;
+        });
     };
 
     const handleSetIsMultiSelectMode = (enabled: boolean) => {
