@@ -38,12 +38,12 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return '';
     }
     
-    // Get today's date in LOCAL timezone (not UTC)
-    // currentTime is already timezone-adjusted, so we can use it to get the local date
-    const localYear = currentTime.getFullYear();
-    const localMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
-    const localDay = String(currentTime.getDate()).padStart(2, '0');
-    const todayStr = `${localYear}-${localMonth}-${localDay}`;
+    // currentTime is timezone-adjusted (created by adding timezone offset to current time)
+    // Use UTC methods to get local time components from the adjusted time
+    const year = currentTime.getUTCFullYear();
+    const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(currentTime.getUTCDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
     
     // Only apply highlighting for the current date
     if (event.date !== todayStr) {
@@ -59,8 +59,9 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return 'text-green-400';
     }
 
-    // currentTime is timezone-adjusted, so getHours() and getMinutes() give us local time
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+    // currentTime is timezone-adjusted, so use UTC methods to get local time
+    // (just like the vertical time line does in ScheduleView)
+    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const endTime = event.startTime + event.duration;
     if (nowInHours >= endTime) {
         return ''; // Default text color for lapsed events on today's schedule
@@ -127,12 +128,13 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-red-400'; // Highest priority
     }
     
-    // Get today's date in LOCAL timezone (not UTC)
-    // currentTime is already timezone-adjusted, so we can use it to get the local date
-    const localYear = currentTime.getFullYear();
-    const localMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
-    const localDay = String(currentTime.getDate()).padStart(2, '0');
-    const todayStr = `${localYear}-${localMonth}-${localDay}`;
+    // currentTime is timezone-adjusted (created by adding timezone offset to current time)
+    // Use UTC methods to get local time components from the adjusted time
+    // (just like the vertical time line does in ScheduleView)
+    const year = currentTime.getUTCFullYear();
+    const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(currentTime.getUTCDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
 
     // Only apply auth highlighting for the current date
     if (event.date !== todayStr) {
@@ -145,8 +147,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-green-400';
     }
     
-    // currentTime is timezone-adjusted, so getHours() and getMinutes() give us local time
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+    // currentTime is timezone-adjusted, so use UTC methods to get local time
+    // (just like the vertical time line does in ScheduleView)
+    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const endTime = event.startTime + event.duration;
 
     // Lapsed status for today - no border required on main schedule
@@ -233,13 +236,14 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       
       // Check for event finish to stop highlighting unavailability on past events
-      // Use currentTime (timezone-adjusted) to get local date for comparison
-      const localYear = currentTime.getFullYear();
-      const localMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
-      const localDay = String(currentTime.getDate()).padStart(2, '0');
-      const localTodayStr = `${localYear}-${localMonth}-${localDay}`;
+      // currentTime is timezone-adjusted, so use UTC methods to get local time
+      // (just like the vertical time line does in ScheduleView)
+      const year = currentTime.getUTCFullYear();
+      const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(currentTime.getUTCDate()).padStart(2, '0');
+      const localTodayStr = `${year}-${month}-${day}`;
       
-      const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+      const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
       const eventEndTime = event.startTime + event.duration;
       const isEventFinished = nowInHours >= eventEndTime && event.date === localTodayStr;
 
