@@ -26,19 +26,20 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     const [averageAvailability, setAverageAvailability] = useState<number>(0);
     const [isDragging, setIsDragging] = useState(false);
 
-    // Load snapshots from localStorage on mount
+    // Load snapshots from localStorage on mount (only when date changes)
     useEffect(() => {
         const dateKey = formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
         if (stored) {
             const data = JSON.parse(stored);
-            setSnapshots(data.snapshots.map((s: any) => ({
+            const loadedSnapshots = data.snapshots.map((s: any) => ({
                 ...s,
                 timestamp: new Date(s.timestamp)
-            })));
-            setCurrentAvailable(data.snapshots[data.snapshots.length - 1]?.available || plannedAvailability);
+            }));
+            setSnapshots(loadedSnapshots);
+            const lastAvailable = loadedSnapshots[loadedSnapshots.length - 1]?.available ?? plannedAvailability;
+            setCurrentAvailable(lastAvailable);
         } else {
-            // Initialize with planned availability
             const initialSnapshot: AircraftAvailabilitySnapshot = {
                 timestamp: new Date(),
                 available: plannedAvailability,
@@ -48,21 +49,16 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
         }
-    }, [currentDate, plannedAvailability, totalAircraft]);
+    // Only re-run when date changes, not when plannedAvailability changes (avoids loop)
+    }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Sync panel when plannedAvailability changes from outside (e.g. schedule line updated)
-    useEffect(() => {
-        setCurrentAvailable(plannedAvailability);
-    }, [plannedAvailability]);
-
-    // Calculate average whenever snapshots change
+    // Calculate average whenever snapshots change (no onAvailabilityChange in deps to avoid loop)
     useEffect(() => {
         if (snapshots.length > 0) {
             const timeline = convertSnapshotsToTimeline(snapshots);
             const avg = calculateDailyAverageAvailability(timeline, dayFlyingStart.replace(':', ''), dayFlyingEnd.replace(':', ''));
             setAverageAvailability(avg);
 
-            // Create daily record
             const record: DailyAvailabilityRecord = {
                 date: formatDate(currentDate),
                 snapshots: snapshots,
@@ -71,13 +67,9 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
                 dayFlyingEnd
             };
 
-            // Save to localStorage
             localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
-
-            // Notify parent
-            onAvailabilityChange(record);
         }
-    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, onAvailabilityChange]);
+    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
     const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
         const newSnapshot: AircraftAvailabilitySnapshot = {
