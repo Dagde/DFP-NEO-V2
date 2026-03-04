@@ -109,12 +109,16 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value);
         setCurrentAvailable(value);
+        // Sync daily schedule line in real-time as slider moves
+        lastSetByPanel.current = value;
+        if (onUpdateCurrentAvailability) {
+            onUpdateCurrentAvailability(value);
+        }
     };
 
     const handleSliderRelease = () => {
-        if (currentAvailable !== (snapshots[snapshots.length - 1]?.available || 0)) {
-            handleAvailabilityChange(currentAvailable);
-        }
+        // Commit the change as a snapshot when slider is released
+        handleAvailabilityChange(currentAvailable);
     };
 
     const getAvailabilityColor = (available: number, total: number): string => {
@@ -158,9 +162,9 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
                         value={currentAvailable}
                         onChange={handleSliderChange}
                         onMouseDown={handleDragStart}
-                        onMouseUp={handleDragEnd}
+                        onMouseUp={handleSliderRelease}
                         onTouchStart={handleDragStart}
-                        onTouchEnd={handleDragEnd}
+                        onTouchEnd={handleSliderRelease}
                         onMouseLeave={handleSliderRelease}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                         style={{
