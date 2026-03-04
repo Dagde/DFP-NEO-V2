@@ -3580,7 +3580,7 @@ useEffect(() => {
     const [instructorRemediesForChoice, setInstructorRemediesForChoice] = useState<NeoInstructorRemedy[]>([]);
 
     // Aircraft Availability State
-    const [showAircraftAvailability, setShowAircraftAvailability] = useState(false);
+    const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
 
     // Navigation and Modals state
