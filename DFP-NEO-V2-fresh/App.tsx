@@ -117,6 +117,8 @@ import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } fro
 import { initializeData } from './lib/dataService';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
+import { syncDebugger } from './utils/syncDebugger';
+import SyncDebugPanel from './components/SyncDebugPanel';
 
 // --- PT-051 STRUCTURE ---
 const PT051_STRUCTURE = [
@@ -8033,7 +8035,7 @@ updates.forEach(update => {
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
                                console.log('Availability updated:', record);
                            }}
-                           onUpdatePlannedAvailability={(count: number) => { console.log('[App] onUpdatePlannedAvailability called with:', count); setAvailableAircraftCount(count); }}
+                           onUpdatePlannedAvailability={(count: number) => { syncDebugger.log('App', count, '📥 onUpdatePlannedAvailability → setAvailableAircraftCount', 'success'); setAvailableAircraftCount(count); }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
@@ -9263,7 +9265,7 @@ updates.forEach(update => {
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
                        availableAircraftCount={availableAircraftCount}
-                       onUpdateCurrentAvailability={(count: number) => { console.log('[App] onUpdateCurrentAvailability called with:', count); setAvailableAircraftCount(count); }}
+                       onUpdateCurrentAvailability={(count: number) => { syncDebugger.log('App', count, '📥 onUpdateCurrentAvailability → setAvailableAircraftCount', 'success'); setAvailableAircraftCount(count); }}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 
@@ -9884,6 +9886,9 @@ updates.forEach(update => {
                 </div>
             </div>
         )}
+
+        {/* Sync Debug Panel - floating overlay to trace aircraft availability sync */}
+        {isAuthenticated && <SyncDebugPanel />}
     </>
     );
 };

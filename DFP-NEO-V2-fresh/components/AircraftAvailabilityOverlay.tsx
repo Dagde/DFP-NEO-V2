@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
-
 import { logAudit } from '../utils/auditLogger';
+import { syncDebugger } from '../utils/syncDebugger';
 interface AircraftAvailabilityOverlayProps {
     currentDate: Date;
     totalAircraft: number;
@@ -76,13 +76,12 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
     useEffect(() => {
-        console.log('[Overlay] plannedAvailability changed to:', plannedAvailability, '| lastSetByOverlay:', lastSetByOverlay.current);
+        syncDebugger.log('Overlay', plannedAvailability, `plannedAvailability prop changed | lastSetByOverlay=${lastSetByOverlay.current}`);
         if (plannedAvailability !== lastSetByOverlay.current) {
-            console.log('[Overlay] Syncing line to:', plannedAvailability);
+            syncDebugger.log('Overlay', plannedAvailability, '✅ Syncing line to new value from outside', 'success');
             setCurrentAvailable(plannedAvailability);
-            // Don't update lastSetByOverlay here - this change came from outside
         } else {
-            console.log('[Overlay] Skipping sync - change came from overlay itself');
+            syncDebugger.log('Overlay', plannedAvailability, '⏭ Skipping - change came from overlay itself', 'warn');
         }
     }, [plannedAvailability]);
 
@@ -221,15 +220,14 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             setCurrentAvailable(snappedCount);
 
             // Sync with Settings panel slider
-            console.log('[Overlay] handleDragEnd - snappedCount:', snappedCount, '| valueChanged:', valueChanged, '| onUpdatePlannedAvailability exists:', !!onUpdatePlannedAvailability);
+            syncDebugger.log('Overlay', snappedCount, `handleDragEnd | valueChanged=${valueChanged} | callback exists=${!!onUpdatePlannedAvailability}`);
             if (valueChanged) {
-                // Mark this as an overlay-initiated change so the sync useEffect skips it
                 lastSetByOverlay.current = snappedCount;
                 if (onUpdatePlannedAvailability) {
-                    console.log('[Overlay] Calling onUpdatePlannedAvailability with:', snappedCount);
+                    syncDebugger.log('Overlay', snappedCount, '📤 Calling onUpdatePlannedAvailability (drag end)', 'success');
                     onUpdatePlannedAvailability(snappedCount);
                 } else {
-                    console.warn('[Overlay] onUpdatePlannedAvailability is NOT defined!');
+                    syncDebugger.log('Overlay', snappedCount, '❌ onUpdatePlannedAvailability is NOT defined!', 'error');
                 }
             }
             

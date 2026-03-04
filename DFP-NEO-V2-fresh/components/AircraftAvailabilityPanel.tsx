@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatTime, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
+import { syncDebugger } from '../utils/syncDebugger';
 
 interface AircraftAvailabilityPanelProps {
     currentDate: Date;
@@ -30,13 +31,12 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
     // Sync slider when plannedAvailability changes from OUTSIDE (e.g. schedule line dragged)
     useEffect(() => {
-        console.log('[Panel] plannedAvailability changed to:', plannedAvailability, '| lastSetByPanel:', lastSetByPanel.current);
+        syncDebugger.log('Panel', plannedAvailability, `plannedAvailability prop changed | lastSetByPanel=${lastSetByPanel.current}`);
         if (plannedAvailability !== lastSetByPanel.current) {
-            console.log('[Panel] Syncing slider to:', plannedAvailability);
+            syncDebugger.log('Panel', plannedAvailability, '✅ Syncing slider to new value from outside', 'success');
             setCurrentAvailable(plannedAvailability);
-            // Don't update lastSetByPanel here - this change came from outside
         } else {
-            console.log('[Panel] Skipping sync - change came from panel itself');
+            syncDebugger.log('Panel', plannedAvailability, '⏭ Skipping - change came from panel itself', 'warn');
         }
     }, [plannedAvailability]);
 
@@ -86,7 +86,7 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
     const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
-        console.log('[Panel] handleAvailabilityChange:', newAvailable, '| onUpdateCurrentAvailability exists:', !!onUpdateCurrentAvailability);
+        syncDebugger.log('Panel', newAvailable, `handleAvailabilityChange | callback exists=${!!onUpdateCurrentAvailability}`);
         const newSnapshot: AircraftAvailabilitySnapshot = {
             timestamp: new Date(),
             available: newAvailable,
@@ -96,14 +96,12 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
         setSnapshots(prev => [...prev, newSnapshot]);
         setCurrentAvailable(newAvailable);
-        // Track that this change came from the panel (not from outside)
         lastSetByPanel.current = newAvailable;
-        // Sync with daily schedule line
         if (onUpdateCurrentAvailability) {
-            console.log('[Panel] Calling onUpdateCurrentAvailability with:', newAvailable);
+            syncDebugger.log('Panel', newAvailable, '📤 Calling onUpdateCurrentAvailability (snapshot commit)', 'success');
             onUpdateCurrentAvailability(newAvailable);
         } else {
-            console.warn('[Panel] onUpdateCurrentAvailability is NOT defined in handleAvailabilityChange!');
+            syncDebugger.log('Panel', newAvailable, '❌ onUpdateCurrentAvailability is NOT defined!', 'error');
         }
     };
 
@@ -117,21 +115,18 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value);
-        console.log('[Panel] handleSliderChange:', value, '| onUpdateCurrentAvailability exists:', !!onUpdateCurrentAvailability);
         setCurrentAvailable(value);
-        // Sync daily schedule line in real-time as slider moves
         lastSetByPanel.current = value;
         if (onUpdateCurrentAvailability) {
-            console.log('[Panel] Calling onUpdateCurrentAvailability with:', value);
+            syncDebugger.log('Panel', value, '🎚 Slider moved → calling onUpdateCurrentAvailability', 'success');
             onUpdateCurrentAvailability(value);
         } else {
-            console.warn('[Panel] onUpdateCurrentAvailability is NOT defined!');
+            syncDebugger.log('Panel', value, '❌ Slider moved but onUpdateCurrentAvailability NOT defined!', 'error');
         }
     };
 
     const handleSliderRelease = () => {
-        console.log('[Panel] handleSliderRelease - currentAvailable:', currentAvailable);
-        // Commit the change as a snapshot when slider is released
+        syncDebugger.log('Panel', currentAvailable, '🖱 Slider released → committing snapshot');
         handleAvailabilityChange(currentAvailable);
     };
 

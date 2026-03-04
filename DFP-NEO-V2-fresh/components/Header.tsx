@@ -171,6 +171,9 @@ const Header: React.FC<HeaderProps> = ({
                                 <span className="text-center leading-tight truncate w-full px-1 text-center">
                                     {authUser.lastName || authUser.userId}
                                 </span>
+                                <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
+                                    {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : ''}
+                                </span>
                             </button>
                             {showUserMenu && (
                                 <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden" style={{ background: '#1a1f2e' }}>
