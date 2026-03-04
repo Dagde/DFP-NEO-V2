@@ -9,6 +9,7 @@ interface AircraftAvailabilityPanelProps {
     dayFlyingStart: string; // HH:mm
     dayFlyingEnd: string; // HH:mm
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
+    onUpdateCurrentAvailability?: (count: number) => void; // Syncs with daily schedule line
 }
 
 const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
@@ -17,7 +18,8 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     plannedAvailability,
     dayFlyingStart,
     dayFlyingEnd,
-    onAvailabilityChange
+    onAvailabilityChange,
+    onUpdateCurrentAvailability
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(plannedAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
@@ -47,6 +49,11 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
             setCurrentAvailable(plannedAvailability);
         }
     }, [currentDate, plannedAvailability, totalAircraft]);
+
+    // Sync panel when plannedAvailability changes from outside (e.g. schedule line updated)
+    useEffect(() => {
+        setCurrentAvailable(plannedAvailability);
+    }, [plannedAvailability]);
 
     // Calculate average whenever snapshots change
     useEffect(() => {
@@ -82,6 +89,10 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
         setSnapshots(prev => [...prev, newSnapshot]);
         setCurrentAvailable(newAvailable);
+        // Sync with daily schedule line
+        if (onUpdateCurrentAvailability) {
+            onUpdateCurrentAvailability(newAvailable);
+        }
     };
 
     const handleDragStart = () => {

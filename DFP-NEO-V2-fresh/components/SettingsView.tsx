@@ -84,6 +84,7 @@ interface SettingsViewProps {
     dayFlyingEnd?: string;
     totalAircraft?: number;
     availableAircraftCount?: number;
+    onUpdateCurrentAvailability?: (count: number) => void;
 }
 
 const FolderIcon = () => (
@@ -149,7 +150,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     dayFlyingStart,
     dayFlyingEnd,
     totalAircraft,
-    availableAircraftCount
+    availableAircraftCount,
+    onUpdateCurrentAvailability
 }) => {
     // --- STATE ---
     
@@ -1220,6 +1222,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
                                console.log('Daily availability record:', record);
                            }}
+                           onUpdateCurrentAvailability={onUpdateCurrentAvailability}
                        />
                    )}
                    <ACHistoryPage 

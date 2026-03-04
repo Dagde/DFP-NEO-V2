@@ -9262,6 +9262,7 @@ updates.forEach(update => {
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
                        availableAircraftCount={availableAircraftCount}
+                       onUpdateCurrentAvailability={setAvailableAircraftCount}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 

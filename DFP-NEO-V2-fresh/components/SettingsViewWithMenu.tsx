@@ -67,6 +67,7 @@ interface SettingsViewWithMenuProps {
     dayFlyingEnd: string;
     totalAircraft: number;
     availableAircraftCount: number;
+    onUpdateCurrentAvailability?: (count: number) => void;
 }
 
 type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'trainee-mockdata' | 'staff-combined-data' | 'data-sources';
