@@ -15,6 +15,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
   <style>
   @keyframes fade-in {
+  @keyframes pulse-red {
+    0%, 100% {
+      color: #ef4444; /* bright red-500 */
+    }
+    50% {
+      color: #991b1b; /* dull red-800 */
+    }
+  }
+  .animate-pulse-red {
+    animation: pulse-red 1s ease-in-out infinite;
+  }
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
   }
@@ -179,7 +190,7 @@
     );
   }
   </style>
-  <script type="module" crossorigin src="./assets/index-BV3JmmFR.js"></script>
+  <script type="module" crossorigin src="./assets/index-DWUDNkim.js"></script>
 </head>
     <body class="bg-gray-800 text-white">
       <div id="root"></div>

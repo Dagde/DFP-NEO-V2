@@ -283,6 +283,94 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================================
+// COURSES API
+// ============================================================
+
+// GET /api/courses - Fetch all courses
+app.get('/api/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { school } = req.query;
+
+    const courses = await db.course.findMany({
+      where: school ? { location: school } : undefined,
+      orderBy: { name: 'asc' }
+    });
+
+    console.log(`✅ GET /api/courses - returning ${courses.length} courses`);
+    res.json({ courses });
+  } catch (error) {
+    console.error('❌ GET /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to fetch courses', details: error.message });
+  }
+});
+
+// PUT /api/courses - Update or create a course (upsert)
+app.put('/api/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { name, startDate, endDate, color, raafCount, navyCount, armyCount, unit } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Course name is required' });
+    }
+
+    // Find existing course by name (or code)
+    const existingCourse = await db.course.findFirst({
+      where: {
+        OR: [
+          { name },
+          { code: name }
+        ]
+      }
+    });
+
+    let updatedCourse;
+
+    if (existingCourse) {
+      // Update existing course
+      updatedCourse = await db.course.update({
+        where: { id: existingCourse.id },
+        data: {
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+          ...(color && { color }),
+          ...(raafCount !== undefined && { raafCount }),
+          ...(navyCount !== undefined && { navyCount }),
+          ...(armyCount !== undefined && { armyCount }),
+          ...(unit && { unit })
+        }
+      });
+      console.log(`✅ PUT /api/courses - updated course: ${updatedCourse.name}`);
+    } else {
+      // Create new course (use school from query or default to ESL)
+      const { school } = req.query;
+      updatedCourse = await db.course.create({
+        data: {
+          name,
+          code: name, // Use name as code for simplicity
+          startDate: startDate || '2025-01-01',
+          endDate: endDate || '2025-12-31',
+          color: color || null,
+          raafCount: raafCount || 0,
+          navyCount: navyCount || 0,
+          armyCount: armyCount || 0,
+          unit: unit || 'ESL',
+          location: school === 'PEA' ? 'PEA' : 'ESL',
+          status: 'ACTIVE'
+        }
+      });
+      console.log(`✅ PUT /api/courses - created course: ${updatedCourse.name}`);
+    }
+
+    res.json({ success: true, course: updatedCourse });
+  } catch (error) {
+    console.error('❌ PUT /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to save course', details: error.message });
+  }
+});
+
+// ============================================================
 // SERVE STATIC VITE BUILD
 // ============================================================
 
