@@ -26,19 +26,6 @@
   .animate-pulse-red {
     animation: pulse-red 1s ease-in-out infinite;
   }
-  @keyframes pulse-neo-text {
-    0%, 100% {
-      color: #fb923c; /* orange-400 */
-      text-shadow: 0 0 4px rgba(251, 146, 60, 0.6);
-    }
-    50% {
-      color: #fdba74; /* orange-300 */
-      text-shadow: 0 0 8px rgba(251, 146, 60, 1);
-    }
-  }
-  .animate-pulse-neo-text {
-    animation: pulse-neo-text 1s ease-in-out infinite;
-  }
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
   }
@@ -58,6 +45,12 @@
     -moz-user-select: none;
     -ms-user-select: none;
   }
+  @keyframes pulse-neo-text {
+    0%, 100% { color: #fb923c; text-shadow: 0 0 4px rgba(251, 146, 60, 0.6); }
+    50% { color: #fdba74; text-shadow: 0 0 8px rgba(251, 146, 60, 1); }
+  }
+  .animate-pulse-neo-text { animation: pulse-neo-text 1s ease-in-out infinite; }
+  .neo-tile-text { color: #fb923c; }
   .btn-shape-fill {
     background-color: #9ca3af; /* gray-400 fallback */
     background-image: linear-gradient(to bottom, #e5e7eb, #b8bec7); /* light gray to mid gray */
@@ -194,9 +187,6 @@
     border-right-color: #909090;
     transform: none;
   }
-  .neo-tile-text {
-    color: #fb923c; /* orange-400 */
-  }
   .changed-bar-stripes {
     background: repeating-linear-gradient(
       135deg,
@@ -207,7 +197,7 @@
     );
   }
   </style>
-  <script type="module" crossorigin src="./assets/index-B_EU7yCj.js"></script>
+  <script type="module" crossorigin src="./assets/index-u2xEhVVs.js"></script>
 </head>
     <body class="bg-gray-800 text-white">
       <div id="root"></div>
