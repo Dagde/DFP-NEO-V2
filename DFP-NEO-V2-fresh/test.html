@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body {
+            background-color: #1f2937;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .success {
+            color: #10b981;
+            font-size: 20px;
+        }
+    </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>DFP - NEO Test Page</h1>
+        <p class="success">✅ HTML is working correctly</p>
+        <p>If you can see this page, the server is working.</p>
+        <p>Time: <span id="time"></span></p>
+        <div class="status-section">
+            <h2>Server Status Check</h2>
+            <p>Port: 5175</p>
+            <p>URL: http://localhost:5175</p>
+            <p>Proxy URL: https://5175-f72633d2-dc23-4f55-8beb-055c92153ef6.proxy.daytona.works</p>
+        </div>
+    </div>
+    <script>
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        console.log('Test page loaded successfully');
+    </script>
+</body>
+</html>

@@ -289,6 +289,7 @@ app.get('/api/health', (req, res) => {
 // GET /api/courses - Fetch all courses
 app.get('/api/courses', async (req, res) => {
   try {
+    console.log(`📡 GET /api/courses called - query:`, req.query);
     const db = await getPrisma();
     const { school } = req.query;
 
@@ -297,10 +298,15 @@ app.get('/api/courses', async (req, res) => {
       orderBy: { name: 'asc' }
     });
 
-    console.log(`✅ GET /api/courses - returning ${courses.length} courses`);
+    console.log(`✅ GET /api/courses - found ${courses.length} courses in database`);
+    courses.forEach(c => {
+      console.log(`   - ${c.name} (${c.code}): start=${c.startDate}, end=${c.endDate}, color=${c.color}`);
+    });
     res.json({ courses });
   } catch (error) {
     console.error('❌ GET /api/courses error:', error);
+    console.error('   Error details:', error.message);
+    console.error('   Stack trace:', error.stack);
     res.status(500).json({ error: 'Failed to fetch courses', details: error.message });
   }
 });
@@ -308,12 +314,17 @@ app.get('/api/courses', async (req, res) => {
 // PUT /api/courses - Update or create a course (upsert)
 app.put('/api/courses', async (req, res) => {
   try {
+    console.log(`📡 PUT /api/courses called - body:`, req.body);
+    console.log(`📡 PUT /api/courses - query:`, req.query);
     const db = await getPrisma();
     const { name, startDate, endDate, color, raafCount, navyCount, armyCount, unit } = req.body;
 
     if (!name) {
+      console.error('❌ PUT /api/courses - missing course name');
       return res.status(400).json({ error: 'Course name is required' });
     }
+
+    console.log(`🔍 PUT /api/courses - searching for course: ${name}`);
 
     // Find existing course by name (or code)
     const existingCourse = await db.course.findFirst({
@@ -328,6 +339,10 @@ app.put('/api/courses', async (req, res) => {
     let updatedCourse;
 
     if (existingCourse) {
+      console.log(`🔍 PUT /api/courses - found existing course: ${existingCourse.name} (id: ${existingCourse.id})`);
+      console.log(`   Current dates: start=${existingCourse.startDate}, end=${existingCourse.endDate}`);
+      console.log(`   New dates: start=${startDate}, end=${endDate}`);
+
       // Update existing course
       updatedCourse = await db.course.update({
         where: { id: existingCourse.id },
@@ -342,9 +357,12 @@ app.put('/api/courses', async (req, res) => {
         }
       });
       console.log(`✅ PUT /api/courses - updated course: ${updatedCourse.name}`);
+      console.log(`   Updated dates: start=${updatedCourse.startDate}, end=${updatedCourse.endDate}`);
     } else {
+      console.log(`🔍 PUT /api/courses - course not found, creating new course: ${name}`);
       // Create new course (use school from query or default to ESL)
       const { school } = req.query;
+      console.log(`   Creating with school: ${school}`);
       updatedCourse = await db.course.create({
         data: {
           name,
@@ -360,13 +378,15 @@ app.put('/api/courses', async (req, res) => {
           status: 'ACTIVE'
         }
       });
-      console.log(`✅ PUT /api/courses - created course: ${updatedCourse.name}`);
+      console.log(`✅ PUT /api/courses - created course: ${updatedCourse.name} (id: ${updatedCourse.id})`);
     }
 
     res.json({ success: true, course: updatedCourse });
   } catch (error) {
     console.error('❌ PUT /api/courses error:', error);
-    res.status(500).json({ error: 'Failed to save course', details: error.message });
+    console.error('   Error details:', error.message);
+    console.error('   Stack trace:', error.stack);
+    res.status(500).json({ error: 'Failed to save course', details: error.message, stack: error.stack });
   }
 });
 

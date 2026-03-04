@@ -3477,43 +3477,63 @@ useEffect(() => {
     // Save course dates to database
     const saveCourseToDatabase = async (courseName: string, startDate?: string, gradDate?: string) => {
         try {
+            console.log(`🔵 saveCourseToDatabase called - courseName: ${courseName}, startDate: ${startDate}, gradDate: ${gradDate}`);
             const course = courses.find(c => c.name === courseName);
-            if (!course) return;
+            if (!course) {
+                console.error(`❌ Course not found: ${courseName}`);
+                console.log(`   Available courses:`, courses.map(c => c.name));
+                return;
+            }
+
+            console.log(`🔵 Found course:`, course);
+            const requestBody = {
+                name: courseName,
+                startDate: startDate || course.startDate,
+                endDate: gradDate || course.gradDate,
+                color: course.color,
+                raafCount: course.raafStart,
+                navyCount: course.navyStart,
+                armyCount: course.armyStart
+            };
+            console.log(`🔵 Sending PUT /api/courses with body:`, requestBody);
 
             const response = await fetch('/api/courses', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: courseName,
-                    startDate: startDate || course.startDate,
-                    endDate: gradDate || course.gradDate,
-                    color: course.color,
-                    raafCount: course.raafStart,
-                    navyCount: course.navyStart,
-                    armyCount: course.armyStart
-                })
+                body: JSON.stringify(requestBody)
             });
 
+            console.log(`🔵 Response status: ${response.status}`);
+            const responseText = await response.text();
+            console.log(`🔵 Response body: ${responseText}`);
+
             if (!response.ok) {
-                console.error('Failed to save course to database:', await response.text());
+                console.error('❌ Failed to save course to database:', responseText);
+            } else {
+                console.log('✅ Course saved successfully');
             }
         } catch (error) {
-            console.error('Error saving course to database:', error);
+            console.error('❌ Error saving course to database:', error);
         }
     };
 
     // Load courses from database or use default data
     const loadCoursesFromDatabase = async (): Promise<Course[]> => {
         try {
+            console.log(`🔵 loadCoursesFromDatabase called - school: ${school}`);
             const response = await fetch(`/api/courses?school=${school}`);
+            console.log(`🔵 Response status: ${response.status}`);
+            
             const data = await response.json();
+            console.log(`🔵 Response data:`, data);
             
             if (data.courses && data.courses.length > 0) {
+                console.log(`✅ Found ${data.courses.length} courses in database`);
                 // Map database courses to frontend format
                 const defaultCourses = school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses;
-                return data.courses.map((dbCourse: any) => {
+                const mappedCourses = data.courses.map((dbCourse: any) => {
                     const defaultCourse = defaultCourses.find(c => c.name === dbCourse.name);
-                    return {
+                    const mapped = {
                         name: dbCourse.name,
                         color: dbCourse.color || defaultCourse?.color || 'bg-gray-400/50',
                         startDate: dbCourse.startDate,
@@ -3522,13 +3542,20 @@ useEffect(() => {
                         navyStart: dbCourse.navyCount || 0,
                         armyStart: dbCourse.armyCount || 0
                     };
+                    console.log(`   Mapped course: ${mapped.name} - start: ${mapped.startDate}, grad: ${mapped.gradDate}`);
+                    return mapped;
                 });
+                return mappedCourses;
+            } else {
+                console.log(`⚠️ No courses found in database, using defaults`);
             }
         } catch (error) {
-            console.error('Failed to load courses from database:', error);
+            console.error('❌ Failed to load courses from database:', error);
         }
         
-        return school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses;
+        const defaultCourses = school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses;
+        console.log(`🔵 Using default courses:`, defaultCourses.map(c => ({ name: c.name, start: c.startDate, grad: c.gradDate })));
+        return defaultCourses;
     };
     
     const [courses, setCourses] = useState<Course[]>(school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses);
@@ -6743,25 +6770,33 @@ updates.forEach(update => {
     };
 
     const handleUpdateGradDate = async (courseName: string, newGradDate: string) => {
+        console.log(`🟢 handleUpdateGradDate called - courseName: ${courseName}, newGradDate: ${newGradDate}`);
         setCourses(prevCourses => {
             const updatedCourses = prevCourses.map(course => 
                 course.name === courseName ? { ...course, gradDate: newGradDate } : course
             );
+            console.log(`🟢 Updated courses state for ${courseName}`);
             return updatedCourses;
         });
         // Save to database asynchronously
+        console.log(`🟢 Calling saveCourseToDatabase for ${courseName} with gradDate: ${newGradDate}`);
         await saveCourseToDatabase(courseName, undefined, newGradDate);
+        console.log(`🟢 saveCourseToDatabase completed for ${courseName}`);
     };
 
     const handleUpdateStartDate = async (courseName: string, newStartDate: string) => {
+        console.log(`🟢 handleUpdateStartDate called - courseName: ${courseName}, newStartDate: ${newStartDate}`);
         setCourses(prevCourses => {
             const updatedCourses = prevCourses.map(course => 
                 course.name === courseName ? { ...course, startDate: newStartDate } : course
             );
+            console.log(`🟢 Updated courses state for ${courseName}`);
             return updatedCourses;
         });
         // Save to database asynchronously
+        console.log(`🟢 Calling saveCourseToDatabase for ${courseName} with startDate: ${newStartDate}`);
         await saveCourseToDatabase(courseName, newStartDate, undefined);
+        console.log(`🟢 saveCourseToDatabase completed for ${courseName}`);
     };
 
     const handleSetIsMultiSelectMode = (enabled: boolean) => {
