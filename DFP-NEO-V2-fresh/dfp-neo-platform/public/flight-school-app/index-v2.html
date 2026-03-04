@@ -7,7 +7,7 @@
     <meta http-equiv="Expires" content="0" />
     <!-- Favicon removed to prevent 403 error -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flight School Scheduler - v1768485500-FIXED-V2</title>
+    <title>Flight School Scheduler - v2024-12-08-2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/suncalc@1.9.0/suncalc.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -15,6 +15,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
   <style>
   @keyframes fade-in {
+  @keyframes pulse-red {
+    0%, 100% {
+      color: #ef4444; /* bright red-500 */
+    }
+    50% {
+      color: #991b1b; /* dull red-800 */
+    }
+  }
+  .animate-pulse-red {
+    animation: pulse-red 1s ease-in-out infinite;
+  }
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
   }
@@ -161,13 +172,13 @@
     background-image: linear-gradient(to right, #e5e7eb, #ffffff, #e5e7eb);
   }
   .btn-aluminium-brushed.active, .btn-aluminium-brushed:active {
-    background-color: #a0a0a0;
-    background-image: none;
-    box-shadow: none;
-    border-color: #a0a0a0;
+    background-image: linear-gradient(to right, #9ca3af, #d1d5db, #9ca3af);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+    border-top-color: #9ca3af;
+    border-bottom-color: #d1d5db;
+    border-left-color: #9ca3af;
+    border-right-color: #9ca3af;
     transform: none;
-    color: #ffffff;
-    text-shadow: none;
   }
   .changed-bar-stripes {
     background: repeating-linear-gradient(
@@ -178,19 +189,8 @@
       #ef4444 8px
     );
   }
-  @keyframes pulse-red {
-    0%, 100% {
-      color: #ef4444; /* bright red-500 */
-    }
-    50% {
-      color: #991b1b; /* dull red-800 */
-    }
-  }
-  .animate-pulse-red {
-    animation: pulse-red 1s ease-in-out infinite;
-  }
   </style>
-  <script type="module" crossorigin src="./assets/index-DWUDNkim.js"></script>
+  <script type="module" crossorigin src="./assets/index-Dp4RZVxS.js"></script>
 </head>
     <body class="bg-gray-800 text-white">
       <div id="root"></div>
