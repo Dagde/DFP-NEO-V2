@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatTime, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
 
@@ -25,6 +25,15 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const [averageAvailability, setAverageAvailability] = useState<number>(0);
     const [isDragging, setIsDragging] = useState(false);
+    // Track last value set by THIS panel to avoid re-syncing our own updates
+    const lastSetByPanel = useRef<number>(plannedAvailability);
+
+    // Sync slider when plannedAvailability changes from OUTSIDE (e.g. schedule line dragged)
+    useEffect(() => {
+        if (plannedAvailability !== lastSetByPanel.current) {
+            setCurrentAvailable(plannedAvailability);
+        }
+    }, [plannedAvailability]);
 
     // Load snapshots from localStorage on mount (only when date changes)
     useEffect(() => {
@@ -81,6 +90,8 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
         setSnapshots(prev => [...prev, newSnapshot]);
         setCurrentAvailable(newAvailable);
+        // Track that this change came from the panel (not from outside)
+        lastSetByPanel.current = newAvailable;
         // Sync with daily schedule line
         if (onUpdateCurrentAvailability) {
             onUpdateCurrentAvailability(newAvailable);

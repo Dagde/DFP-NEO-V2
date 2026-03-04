@@ -8033,6 +8033,7 @@ updates.forEach(update => {
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
                                console.log('Availability updated:', record);
                            }}
+                           onUpdatePlannedAvailability={setAvailableAircraftCount}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {

@@ -14,6 +14,7 @@ interface AircraftAvailabilityOverlayProps {
     pixelsPerHour: number; // For time-based positioning
     startHour: number; // Start hour of timeline (usually 0)
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
+    onUpdatePlannedAvailability?: (count: number) => void; // Syncs with Settings panel
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
@@ -26,7 +27,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     rowHeight,
     pixelsPerHour,
     startHour,
-    onAvailabilityChange
+    onAvailabilityChange,
+    onUpdatePlannedAvailability
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(plannedAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
@@ -199,6 +201,11 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             });
             
             setCurrentAvailable(snappedCount);
+
+            // Sync with Settings panel slider
+            if (valueChanged && onUpdatePlannedAvailability) {
+                onUpdatePlannedAvailability(snappedCount);
+            }
             
                 // Log audit record for availability change
                 const changeDescription = `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${totalAircraft - snappedCount} aircraft unavailable)`;

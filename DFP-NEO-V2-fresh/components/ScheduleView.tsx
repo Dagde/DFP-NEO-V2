@@ -59,6 +59,7 @@ interface ScheduleViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
+  onUpdatePlannedAvailability?: (count: number) => void;
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
@@ -129,7 +130,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUpdatePlannedAvailability,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -961,6 +962,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                             startHour={START_HOUR}
                             onAvailabilityChange={onAvailabilityChange}
+                            onUpdatePlannedAvailability={onUpdatePlannedAvailability}
                         />
                     )}
                     
