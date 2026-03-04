@@ -30,8 +30,13 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
     // Sync slider when plannedAvailability changes from OUTSIDE (e.g. schedule line dragged)
     useEffect(() => {
+        console.log('[Panel] plannedAvailability changed to:', plannedAvailability, '| lastSetByPanel:', lastSetByPanel.current);
         if (plannedAvailability !== lastSetByPanel.current) {
+            console.log('[Panel] Syncing slider to:', plannedAvailability);
             setCurrentAvailable(plannedAvailability);
+            // Don't update lastSetByPanel here - this change came from outside
+        } else {
+            console.log('[Panel] Skipping sync - change came from panel itself');
         }
     }, [plannedAvailability]);
 
@@ -81,6 +86,7 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
     const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
+        console.log('[Panel] handleAvailabilityChange:', newAvailable, '| onUpdateCurrentAvailability exists:', !!onUpdateCurrentAvailability);
         const newSnapshot: AircraftAvailabilitySnapshot = {
             timestamp: new Date(),
             available: newAvailable,
@@ -94,7 +100,10 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         lastSetByPanel.current = newAvailable;
         // Sync with daily schedule line
         if (onUpdateCurrentAvailability) {
+            console.log('[Panel] Calling onUpdateCurrentAvailability with:', newAvailable);
             onUpdateCurrentAvailability(newAvailable);
+        } else {
+            console.warn('[Panel] onUpdateCurrentAvailability is NOT defined in handleAvailabilityChange!');
         }
     };
 
@@ -108,15 +117,20 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = parseInt(e.target.value);
+        console.log('[Panel] handleSliderChange:', value, '| onUpdateCurrentAvailability exists:', !!onUpdateCurrentAvailability);
         setCurrentAvailable(value);
         // Sync daily schedule line in real-time as slider moves
         lastSetByPanel.current = value;
         if (onUpdateCurrentAvailability) {
+            console.log('[Panel] Calling onUpdateCurrentAvailability with:', value);
             onUpdateCurrentAvailability(value);
+        } else {
+            console.warn('[Panel] onUpdateCurrentAvailability is NOT defined!');
         }
     };
 
     const handleSliderRelease = () => {
+        console.log('[Panel] handleSliderRelease - currentAvailable:', currentAvailable);
         // Commit the change as a snapshot when slider is released
         handleAvailabilityChange(currentAvailable);
     };
@@ -165,7 +179,6 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
                         onMouseUp={handleSliderRelease}
                         onTouchStart={handleDragStart}
                         onTouchEnd={handleSliderRelease}
-                        onMouseLeave={handleSliderRelease}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                         style={{
                             background: `linear-gradient(to right, ${

@@ -33,8 +33,11 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const [currentAvailable, setCurrentAvailable] = useState<number>(plannedAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const overlayRef = useRef<SVGSVGElement>(null);
+    // Track last value set by THIS overlay to avoid re-syncing our own updates
+    const lastSetByOverlay = useRef<number>(plannedAvailability);
 
-    // Load snapshots from localStorage on mount
+    // Load snapshots from localStorage on mount / date change ONLY
+    // NOTE: plannedAvailability intentionally excluded from deps to avoid resetting on every slider move
     useEffect(() => {
         const dateKey = formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
@@ -44,7 +47,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 ...s,
                 timestamp: new Date(s.timestamp)
             })));
-            setCurrentAvailable(data.snapshots[data.snapshots.length - 1]?.available || plannedAvailability);
+            const lastAvailable = data.snapshots[data.snapshots.length - 1]?.available ?? plannedAvailability;
+            setCurrentAvailable(lastAvailable);
+            lastSetByOverlay.current = lastAvailable;
         } else {
             // Initialize with planned availability at start of day (0001)
             const initialSnapshot: AircraftAvailabilitySnapshot = {
@@ -55,6 +60,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             };
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
+            lastSetByOverlay.current = plannedAvailability;
                 
                 // Log audit record for initial availability setup
                 const initialDescription = `Aircraft availability initialized at ${plannedAvailability} (${totalAircraft - plannedAvailability} aircraft unavailable)`;
@@ -66,7 +72,19 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     changes: initialDetails
                 });
         }
-    }, [currentDate, plannedAvailability, totalAircraft]);
+    }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
+    useEffect(() => {
+        console.log('[Overlay] plannedAvailability changed to:', plannedAvailability, '| lastSetByOverlay:', lastSetByOverlay.current);
+        if (plannedAvailability !== lastSetByOverlay.current) {
+            console.log('[Overlay] Syncing line to:', plannedAvailability);
+            setCurrentAvailable(plannedAvailability);
+            // Don't update lastSetByOverlay here - this change came from outside
+        } else {
+            console.log('[Overlay] Skipping sync - change came from overlay itself');
+        }
+    }, [plannedAvailability]);
 
     // Save and calculate average whenever snapshots change
     useEffect(() => {
@@ -203,8 +221,16 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             setCurrentAvailable(snappedCount);
 
             // Sync with Settings panel slider
-            if (valueChanged && onUpdatePlannedAvailability) {
-                onUpdatePlannedAvailability(snappedCount);
+            console.log('[Overlay] handleDragEnd - snappedCount:', snappedCount, '| valueChanged:', valueChanged, '| onUpdatePlannedAvailability exists:', !!onUpdatePlannedAvailability);
+            if (valueChanged) {
+                // Mark this as an overlay-initiated change so the sync useEffect skips it
+                lastSetByOverlay.current = snappedCount;
+                if (onUpdatePlannedAvailability) {
+                    console.log('[Overlay] Calling onUpdatePlannedAvailability with:', snappedCount);
+                    onUpdatePlannedAvailability(snappedCount);
+                } else {
+                    console.warn('[Overlay] onUpdatePlannedAvailability is NOT defined!');
+                }
             }
             
                 // Log audit record for availability change

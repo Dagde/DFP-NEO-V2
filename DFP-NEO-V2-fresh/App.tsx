@@ -8033,7 +8033,7 @@ updates.forEach(update => {
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
                                console.log('Availability updated:', record);
                            }}
-                           onUpdatePlannedAvailability={setAvailableAircraftCount}
+                           onUpdatePlannedAvailability={(count: number) => { console.log('[App] onUpdatePlannedAvailability called with:', count); setAvailableAircraftCount(count); }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
@@ -9263,7 +9263,7 @@ updates.forEach(update => {
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
                        availableAircraftCount={availableAircraftCount}
-                       onUpdateCurrentAvailability={setAvailableAircraftCount}
+                       onUpdateCurrentAvailability={(count: number) => { console.log('[App] onUpdateCurrentAvailability called with:', count); setAvailableAircraftCount(count); }}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 

@@ -1212,6 +1212,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {shouldShowSection('validation') && (
                 <div className="space-y-6">
                    {/* Aircraft Availability Panel - Daily Average */}
+                   {(() => { console.log('[SettingsView] AC History render - dayFlyingStart:', dayFlyingStart, 'dayFlyingEnd:', dayFlyingEnd, 'totalAircraft:', totalAircraft, 'availableAircraftCount:', availableAircraftCount, 'onUpdateCurrentAvailability exists:', !!onUpdateCurrentAvailability); return null; })()}
                    {dayFlyingStart && dayFlyingEnd && totalAircraft && availableAircraftCount !== undefined && (
                        <AircraftAvailabilityPanel
                            currentDate={new Date()}
@@ -1220,7 +1221,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            dayFlyingStart={dayFlyingStart}
                            dayFlyingEnd={dayFlyingEnd}
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
-                               console.log('Daily availability record:', record);
+                               console.log('[SettingsView] Daily availability record:', record);
                            }}
                            onUpdateCurrentAvailability={onUpdateCurrentAvailability}
                        />
