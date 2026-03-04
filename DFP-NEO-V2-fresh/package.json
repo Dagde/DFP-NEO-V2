@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp -r dist/* dfp-neo-platform/public/flight-school-app/ && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html",
+    "build": "vite build && cp -r dist/* dfp-neo-platform/public/flight-school-app/ && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html && node update_css.js",
     "preview": "vite preview",
     "start": "node server.js",
     "git-sync": "node git-automation.js",
