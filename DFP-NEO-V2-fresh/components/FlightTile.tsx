@@ -38,7 +38,12 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return '';
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Get today's date in LOCAL timezone (not UTC)
+    // currentTime is already timezone-adjusted, so we can use it to get the local date
+    const localYear = currentTime.getFullYear();
+    const localMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
+    const localDay = String(currentTime.getDate()).padStart(2, '0');
+    const todayStr = `${localYear}-${localMonth}-${localDay}`;
     
     // Only apply highlighting for the current date
     if (event.date !== todayStr) {
@@ -54,6 +59,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return 'text-green-400';
     }
 
+    // currentTime is timezone-adjusted, so getHours() and getMinutes() give us local time
     const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
     const endTime = event.startTime + event.duration;
     if (nowInHours >= endTime) {
@@ -121,7 +127,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-red-400'; // Highest priority
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Get today's date in LOCAL timezone (not UTC)
+    // currentTime is already timezone-adjusted, so we can use it to get the local date
+    const localYear = currentTime.getFullYear();
+    const localMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
+    const localDay = String(currentTime.getDate()).padStart(2, '0');
+    const todayStr = `${localYear}-${localMonth}-${localDay}`;
 
     // Only apply auth highlighting for the current date
     if (event.date !== todayStr) {
@@ -134,6 +145,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-green-400';
     }
     
+    // currentTime is timezone-adjusted, so getHours() and getMinutes() give us local time
     const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
     const endTime = event.startTime + event.duration;
 
@@ -221,9 +233,15 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       
       // Check for event finish to stop highlighting unavailability on past events
+      // Use currentTime (timezone-adjusted) to get local date for comparison
+      const localYear = currentTime.getFullYear();
+      const localMonth = String(currentTime.getMonth() + 1).padStart(2, '0');
+      const localDay = String(currentTime.getDate()).padStart(2, '0');
+      const localTodayStr = `${localYear}-${localMonth}-${localDay}`;
+      
       const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
       const eventEndTime = event.startTime + event.duration;
-      const isEventFinished = nowInHours >= eventEndTime && event.date === new Date().toISOString().split('T')[0];
+      const isEventFinished = nowInHours >= eventEndTime && event.date === localTodayStr;
 
       if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
           picClasses = 'font-bold truncate text-red-500';
