@@ -3674,7 +3674,7 @@ useEffect(() => {
     const [instructorRemediesForChoice, setInstructorRemediesForChoice] = useState<NeoInstructorRemedy[]>([]);
 
     // Aircraft Availability State
-    const [showAircraftAvailability, setShowAircraftAvailability] = useState(false);
+    const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
 
     // Navigation and Modals state
@@ -9261,6 +9261,7 @@ updates.forEach(update => {
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
+                       availableAircraftCount={availableAircraftCount}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 

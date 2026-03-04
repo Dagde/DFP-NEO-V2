@@ -22,6 +22,8 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
+import AircraftAvailabilityPanel from './AircraftAvailabilityPanel';
+import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 
 
 declare var XLSX: any;
@@ -77,6 +79,11 @@ interface SettingsViewProps {
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
     cancellationRecords?: CancellationRecord[];
     cancellationCodes?: CancellationCode[];
+    // Aircraft Availability Panel props
+    dayFlyingStart?: string;
+    dayFlyingEnd?: string;
+    totalAircraft?: number;
+    availableAircraftCount?: number;
 }
 
 const FolderIcon = () => (
@@ -138,7 +145,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setCourseColors,
     onUpdateTraineeLMPs,
     cancellationRecords,
-    cancellationCodes
+    cancellationCodes,
+    dayFlyingStart,
+    dayFlyingEnd,
+    totalAircraft,
+    availableAircraftCount
 }) => {
     // --- STATE ---
     
@@ -1198,6 +1209,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* AC History */}
                 {shouldShowSection('validation') && (
                 <div className="space-y-6">
+                   {/* Aircraft Availability Panel - Daily Average */}
+                   {dayFlyingStart && dayFlyingEnd && totalAircraft && availableAircraftCount !== undefined && (
+                       <AircraftAvailabilityPanel
+                           currentDate={new Date()}
+                           totalAircraft={totalAircraft}
+                           plannedAvailability={availableAircraftCount}
+                           dayFlyingStart={dayFlyingStart}
+                           dayFlyingEnd={dayFlyingEnd}
+                           onAvailabilityChange={(record: DailyAvailabilityRecord) => {
+                               console.log('Daily availability record:', record);
+                           }}
+                       />
+                   )}
                    <ACHistoryPage 
                        currentUserRole={currentUserPermission}
                        cancellationRecords={cancellationRecords || []}

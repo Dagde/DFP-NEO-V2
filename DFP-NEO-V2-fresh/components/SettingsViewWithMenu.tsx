@@ -62,6 +62,11 @@ interface SettingsViewWithMenuProps {
     cancellationCodes: CancellationCode[];
     showDepartureDensityOverlay: boolean;
     onUpdateShowDepartureDensityOverlay: (value: boolean) => void;
+    // Aircraft Availability Panel props
+    dayFlyingStart: string;
+    dayFlyingEnd: string;
+    totalAircraft: number;
+    availableAircraftCount: number;
 }
 
 type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'trainee-database' | 'staff-mockdata' | 'trainee-mockdata' | 'staff-combined-data' | 'data-sources';

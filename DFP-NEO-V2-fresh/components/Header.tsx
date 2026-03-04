@@ -123,7 +123,7 @@ const Header: React.FC<HeaderProps> = ({
                     {onToggleAircraftAvailability && (
                         <button
                           onClick={onToggleAircraftAvailability}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showAircraftAvailability ? 'active' : ''}`}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!showAircraftAvailability ? 'active' : ''}`}
                           title="Toggle aircraft availability"
                         >
                             <span className="text-center leading-tight">Aircraft<br/>Available</span>
