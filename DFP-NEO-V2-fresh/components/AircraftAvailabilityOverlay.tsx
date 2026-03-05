@@ -35,6 +35,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const overlayRef = useRef<SVGSVGElement>(null);
     // Track last value set by THIS overlay to avoid re-syncing our own updates
     const lastSetByOverlay = useRef<number>(plannedAvailability);
+    // Stable ref for onAvailabilityChange to avoid re-running snapshots effect on every render
+    const onAvailabilityChangeRef = useRef(onAvailabilityChange);
+    useEffect(() => { onAvailabilityChangeRef.current = onAvailabilityChange; }, [onAvailabilityChange]);
 
     // Load snapshots from localStorage on mount / date change ONLY
     // NOTE: plannedAvailability intentionally excluded from deps to avoid resetting on every slider move
@@ -86,6 +89,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     }, [plannedAvailability]);
 
     // Save and calculate average whenever snapshots change
+    // NOTE: onAvailabilityChange intentionally excluded from deps (use ref) to avoid re-render loop
     useEffect(() => {
         if (snapshots.length > 0) {
             // Convert snapshots to timeline format for calculation
@@ -107,9 +111,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             };
 
             localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
-            onAvailabilityChange(record);
+            onAvailabilityChangeRef.current(record);
         }
-    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, onAvailabilityChange]);
+    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate Y position for a given aircraft count (snap to lower grid line)
     const getYPosition = (aircraftCount: number): number => {
