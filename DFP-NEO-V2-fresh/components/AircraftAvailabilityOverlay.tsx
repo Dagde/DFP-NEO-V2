@@ -139,6 +139,15 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const [isDragging, setIsDragging] = useState(false);
     const [dragY, setDragY] = useState(0); // Store raw Y position during drag
     const [mouseX, setMouseX] = useState(0); // Store mouse X position for tooltip
+    // Refs to avoid stale closures in event listeners
+    const isDraggingRef = useRef(false);
+    const dragYRef = useRef(0);
+    const snapshotsRef = useRef(snapshots);
+    const rowHeightRef = useRef(rowHeight);
+    const totalAircraftRef = useRef(totalAircraft);
+    useEffect(() => { snapshotsRef.current = snapshots; }, [snapshots]);
+    useEffect(() => { rowHeightRef.current = rowHeight; }, [rowHeight]);
+    useEffect(() => { totalAircraftRef.current = totalAircraft; }, [totalAircraft]);
 
     // Handle drag start on the solid line
     const handleLineMouseDown = (e: React.MouseEvent) => {
@@ -148,66 +157,53 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
         
-        console.log('🖱️ DRAG START:', {
-            timestamp: new Date().toISOString(),
-            mouseY: y,
-            mouseX: x,
-            currentAvailable: currentAvailable,
-            snapshotsCount: snapshots.length,
-            snapshots: snapshots.map(s => ({
-                time: s.timestamp.toLocaleTimeString(),
-                available: s.available
-            }))
-        });
+        syncDebugger.log('Overlay', currentAvailable, `🖱 Drag start at y=${y.toFixed(0)}`);
         
+        isDraggingRef.current = true;
+        dragYRef.current = y;
         setIsDragging(true);
-        setDragY(y); // Initialize with current position
-        setMouseX(x); // Initialize mouse X position
+        setDragY(y);
+        setMouseX(x);
     };
 
     // Handle drag move - smooth movement with raw Y position
     const handleDragMove = (e: MouseEvent) => {
-        if (!isDragging || !overlayRef.current) return;
+        if (!isDraggingRef.current || !overlayRef.current) return;
 
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
         
-        // Store raw Y position and mouse X for smooth rendering
+        dragYRef.current = y;
         setDragY(y);
         setMouseX(x);
         
-        // Convert Y position to aircraft count (for tooltip display)
-        // Rows BELOW the line = available aircraft
-        // Rows ABOVE the line = unavailable aircraft
-        const rowsFromTop = y / rowHeight;
-        const exactCount = rowsFromTop; // Available = rows from top
-        const clampedCount = Math.max(0, Math.min(totalAircraft, exactCount));
-        
-        console.log('🔄 DRAGGING:', {
-            mouseY: y,
-            rowsFromTop: rowsFromTop.toFixed(2),
-            exactCount: exactCount.toFixed(2),
-            clampedCount: clampedCount.toFixed(2),
-            currentAvailable: currentAvailable.toFixed(2)
-        });
-        
+        const rowsFromTop = y / rowHeightRef.current;
+        const clampedCount = Math.max(0, Math.min(totalAircraftRef.current, rowsFromTop));
         setCurrentAvailable(clampedCount);
     };
 
     // Handle drag end - snap to nearest whole number based on final drag position
+    // Uses refs to avoid stale closure issues with event listeners
     const handleDragEnd = () => {
-        if (isDragging) {
+        if (isDraggingRef.current) {
+            isDraggingRef.current = false;
             setIsDragging(false);
             
+            // Use ref values to avoid stale closures
+            const finalDragY = dragYRef.current;
+            const currentRowHeight = rowHeightRef.current;
+            const currentTotalAircraft = totalAircraftRef.current;
+            const currentSnapshots = snapshotsRef.current;
+            
             // Calculate aircraft count from final drag Y position
-            const rowsFromTop = dragY / rowHeight;
+            const rowsFromTop = finalDragY / currentRowHeight;
             const exactCount = rowsFromTop;
             
             // Snap to nearest whole number
-            const snappedCount = Math.round(Math.max(0, Math.min(totalAircraft, exactCount)));
+            const snappedCount = Math.round(Math.max(0, Math.min(currentTotalAircraft, exactCount)));
             
-            const previousAvailability = snapshots[snapshots.length - 1]?.available || plannedAvailability;
+            const previousAvailability = currentSnapshots[currentSnapshots.length - 1]?.available || plannedAvailability;
             const valueChanged = snappedCount !== previousAvailability;
             
             console.log('✅ DRAG END:', {
@@ -221,12 +217,14 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 snapshotsBeforeUpdate: snapshots.length
             });
             
+            // ALWAYS update lastSetByOverlay BEFORE any state/prop changes
+            // This prevents the plannedAvailability sync useEffect from overwriting our drag result
+            lastSetByOverlay.current = snappedCount;
             setCurrentAvailable(snappedCount);
 
             // Sync with Settings panel slider
-            syncDebugger.log('Overlay', snappedCount, `handleDragEnd | valueChanged=${valueChanged} | callback exists=${!!onUpdatePlannedAvailability}`);
+            syncDebugger.log('Overlay', snappedCount, `handleDragEnd | valueChanged=${valueChanged} | lastSetByOverlay=${lastSetByOverlay.current} | callback exists=${!!onUpdatePlannedAvailability}`);
             if (valueChanged) {
-                lastSetByOverlay.current = snappedCount;
                 if (onUpdatePlannedAvailability) {
                     syncDebugger.log('Overlay', snappedCount, '📤 Calling onUpdatePlannedAvailability (drag end)', 'success');
                     onUpdatePlannedAvailability(snappedCount);
@@ -236,8 +234,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             }
             
                 // Log audit record for availability change
-                const changeDescription = `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${totalAircraft - snappedCount} aircraft unavailable)`;
-                const changeDetails = `Time: ${new Date().toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${totalAircraft}`;
+                const changeDescription = `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${currentTotalAircraft - snappedCount} aircraft unavailable)`;
+                const changeDetails = `Time: ${new Date().toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${currentTotalAircraft}`;
                 logAudit({
                     page: "Program Schedule",
                     action: "Edit",
@@ -277,7 +275,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 const newSnapshot: AircraftAvailabilitySnapshot = {
                     timestamp: snapshotTime,
                     available: snappedCount,
-                    total: totalAircraft,
+                    total: currentTotalAircraft,
                     notes: `Availability changed to ${snappedCount}`
                 };
                 
@@ -308,6 +306,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     };
 
     // Add global mouse event listeners for dragging
+    // Only depends on isDragging - handlers use refs to avoid stale closures
     useEffect(() => {
         if (isDragging) {
             window.addEventListener('mousemove', handleDragMove);
@@ -317,7 +316,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 window.removeEventListener('mouseup', handleDragEnd);
             };
         }
-    }, [isDragging, currentAvailable, totalAircraft, rowHeight, snapshots]);
+    }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Update component every minute to transition solid line to dashed as time passes
     const [, setCurrentTime] = useState(new Date());
