@@ -482,8 +482,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                 </div>
             ) : (
                 <div className="flex space-x-3">
-                    <button onClick={handleEdit} disabled={!selectedItem} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 shadow-md text-white rounded-md text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
-                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 shadow-md text-white rounded-md text-sm font-semibold">
+                    <button onClick={handleEdit} disabled={!selectedItem} className="w-[56px] h-[42px] bg-gray-600 hover:bg-gray-700 shadow-md text-white rounded-md text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
+                    <button onClick={onBack} className="w-[56px] h-[42px] bg-gray-600 hover:bg-gray-700 shadow-md text-white rounded-md text-sm font-semibold">
                         &larr; Back
                     </button>
                        <AuditButton pageName="Master LMP" />
