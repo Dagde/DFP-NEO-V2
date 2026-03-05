@@ -498,8 +498,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         <div className="w-1/4 border-r border-gray-700 overflow-hidden flex flex-col">
           {/* Sticky Header Row */}
           <div className="flex-shrink-0 flex gap-0 bg-gray-900">
-            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-500 text-center w-12 flex-shrink-0">Phase</div>
-            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-500 text-center w-12 flex-shrink-0">Module</div>
+            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-400 text-center w-12 flex-shrink-0">Phase</div>
+            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-400 text-center w-18 flex-shrink-0">Module</div>
             <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 flex-1 whitespace-nowrap overflow-hidden">Event</div>
           </div>
           
@@ -523,7 +523,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`text-center p-2 transition-colors text-sm border-r border-gray-500 w-12 flex-shrink-0 ${
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-400 w-12 flex-shrink-0 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
@@ -538,7 +538,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`text-center p-2 transition-colors text-sm border-r border-gray-500 w-12 flex-shrink-0 ${
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-400 w-18 flex-shrink-0 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
