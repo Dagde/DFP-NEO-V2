@@ -77,26 +77,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         }
     }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Track every render to see plannedAvailability changes
-    const renderCountRef = useRef(0);
-    renderCountRef.current += 1;
-    syncDebugger.log('Overlay', plannedAvailability, `RENDER #${renderCountRef.current} | planned=${plannedAvailability} | current=${currentAvailable} | lastSet=${lastSetByOverlay.current} | dragging=${isDraggingRef.current}`, 'info');
 
-    // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
-    useEffect(() => {
-        syncDebugger.log('Overlay', plannedAvailability, `SYNC EFFECT FIRED | planned=${plannedAvailability} | lastSet=${lastSetByOverlay.current} | dragging=${isDraggingRef.current}`, 'warn');
-        // Don't sync if we're currently dragging - drag end will handle it
-        if (isDraggingRef.current) {
-            syncDebugger.log('Overlay', plannedAvailability, '🚫 Skipping sync - drag in progress', 'warn');
-            return;
-        }
-        if (plannedAvailability !== lastSetByOverlay.current) {
-            syncDebugger.log('Overlay', plannedAvailability, '✅ Syncing line to new value from outside', 'success');
-            setCurrentAvailable(plannedAvailability);
-        } else {
-            syncDebugger.log('Overlay', plannedAvailability, '⏭ Skipping - change came from overlay itself', 'warn');
-        }
-    }, [plannedAvailability]);
 
     // Save and calculate average whenever snapshots change
     // NOTE: onAvailabilityChange intentionally excluded from deps (use ref) to avoid re-render loop
@@ -158,6 +139,22 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     useEffect(() => { snapshotsRef.current = snapshots; }, [snapshots]);
     useEffect(() => { rowHeightRef.current = rowHeight; }, [rowHeight]);
     useEffect(() => { totalAircraftRef.current = totalAircraft; }, [totalAircraft]);
+    // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
+    useEffect(() => {
+        syncDebugger.log('Overlay', plannedAvailability, `SYNC EFFECT FIRED | planned=${plannedAvailability} | lastSet=${lastSetByOverlay.current} | dragging=${isDragging}`, 'warn');
+        // Don't sync if we're currently dragging - drag end will handle it
+        if (isDraggingRef.current) {
+            syncDebugger.log('Overlay', plannedAvailability, '🚫 Skipping sync - drag in progress', 'warn');
+            return;
+        }
+        if (plannedAvailability !== lastSetByOverlay.current) {
+            syncDebugger.log('Overlay', plannedAvailability, '✅ Syncing line to new value from outside', 'success');
+            setCurrentAvailable(plannedAvailability);
+        } else {
+            syncDebugger.log('Overlay', plannedAvailability, '⏭ Skipping - change came from overlay itself', 'warn');
+        }
+    }, [plannedAvailability]);
+
 
     // Handle drag start on the solid line
     const handleLineMouseDown = (e: React.MouseEvent) => {
@@ -178,7 +175,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     // Handle drag move - smooth movement with raw Y position
     const handleDragMove = (e: MouseEvent) => {
-        if (!isDraggingRef.current || !overlayRef.current) return;
+        if (!isDragging || !overlayRef.current) return;
 
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
@@ -320,7 +317,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     // Add global mouse event listeners for dragging
     // Only depends on isDragging - handlers use refs to avoid stale closures
     useEffect(() => {
-        if (isDragging) {
+        if (isDraggingRef.current) {
             window.addEventListener('mousemove', handleDragMove);
             window.addEventListener('mouseup', handleDragEnd);
             return () => {
