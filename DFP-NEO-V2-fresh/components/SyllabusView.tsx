@@ -497,75 +497,73 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         {/* Left Column: List with 3 Columns */}
         <div className="w-1/4 border-r border-gray-700 overflow-hidden flex flex-col">
           {/* Sticky Header Row */}
-          <div className="flex-shrink-0 grid grid-cols-3 gap-0 bg-gray-900">
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-12">Phase</div>
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-12">Module</div>
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 flex-1">Event</div>
+          <div className="flex-shrink-0 flex gap-0 bg-gray-900">
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-12 flex-shrink-0">Phase</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-12 flex-shrink-0">Module</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 flex-1 whitespace-nowrap overflow-hidden">Event</div>
           </div>
           
           {/* Scrollable Data Rows */}
           <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-3 gap-0">
-              {filteredSyllabusDetails.map((item, index) => {
-                const totalItems = filteredSyllabusDetails.length;
-                const midPoint = Math.ceil(totalItems / 2);
-                const phaseNum = index < midPoint ? 1 : 2;
-                const moduleNum = Math.floor((index * 12) / totalItems) + 1;
-                const actualModule = Math.min(moduleNum, 12);
-                
-                return (
-                <React.Fragment key={item.id}>
-                  <button
-                    onClick={() => {
-                        if (!isEditing) {
-                            setSelectedItem(item);
-                        }
-                    }}
-                    onMouseEnter={() => setHoveredItem(item)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    disabled={isEditing}
-                    className={`col-span-1 text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-12 ${
-                        selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
-                    } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                  >
-                    {phaseNum}
-                  </button>
-                  <button
-                    onClick={() => {
-                        if (!isEditing) {
-                            setSelectedItem(item);
-                        }
-                    }}
-                    onMouseEnter={() => setHoveredItem(item)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    disabled={isEditing}
-                    className={`col-span-1 text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-12 ${
-                        selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
-                    } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                  >
-                    {actualModule}
-                  </button>
-                  <button
-                    onClick={() => {
-                        if (!isEditing) {
-                            setSelectedItem(item);
-                        }
-                    }}
-                    onMouseEnter={() => setHoveredItem(item)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    disabled={isEditing}
-                    className={`col-span-1 text-left p-2 transition-colors text-sm flex-1 ${
-                        selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
-                    } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                  >
-                    {item.code}
-                  </button>
-                </React.Fragment>
-              );})}
-              {filteredSyllabusDetails.length === 0 && (
-                  <div className="col-span-3 p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
-              )}
-            </div>
+            {filteredSyllabusDetails.map((item, index) => {
+              const totalItems = filteredSyllabusDetails.length;
+              const midPoint = Math.ceil(totalItems / 2);
+              const phaseNum = index < midPoint ? 1 : 2;
+              const moduleNum = Math.floor((index * 12) / totalItems) + 1;
+              const actualModule = Math.min(moduleNum, 12);
+              
+              return (
+              <div key={item.id} className="flex gap-0">
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-12 flex-shrink-0 ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {phaseNum}
+                </button>
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-12 flex-shrink-0 ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {actualModule}
+                </button>
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`text-left p-2 transition-colors text-sm flex-1 whitespace-nowrap overflow-hidden text-ellipsis ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {item.code}
+                </button>
+              </div>
+            );})}
+            {filteredSyllabusDetails.length === 0 && (
+                <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
+            )}
           </div>
         </div>
 
