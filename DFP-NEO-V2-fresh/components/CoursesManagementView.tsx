@@ -164,7 +164,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-auto">
+        <div className="flex-1 flex flex-col bg-gray-900 h-full overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
                 <div className="flex justify-between items-center">
@@ -190,7 +190,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-6 overflow-y-auto">
                 {Object.keys(groupedCourses).length === 0 ? (
                     <div className="bg-gray-800 rounded-lg p-8 text-center">
                         <p className="text-gray-400 text-lg mb-4">No courses available</p>
