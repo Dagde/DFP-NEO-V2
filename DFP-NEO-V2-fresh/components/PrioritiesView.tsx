@@ -447,79 +447,79 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
            </div>
 
            <div className="section-build-factors">
-
-            <div className="space-y-6">
-                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
-                    <div className="p-4 flex justify-between items-center">
-                        <h2 className="text-lg font-semibold text-gray-200">Build Factors</h2>
-                    </div>
-                     <div className="p-4 border-t border-gray-700 space-y-4">
-                        <div>
-                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-gray-400">Available Aircraft</label>
-                            <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
-                        </div>
-                        <div>
-                            <label htmlFor="ftd-count" className="block text-sm font-medium text-gray-400">FTD Available</label>
-                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
-                        </div>
-                        <div>
-                            <label htmlFor="cpt-count" className="block text-sm font-medium text-gray-400">CPT Available</label>
-                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400">Day Flying Window</label>
-                            <div className="flex items-center space-x-2 mt-1">
-                                <select value={flyingStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`); onUpdateFlyingStartTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                                <span className="text-gray-400">to</span>
-                                <select value={flyingEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`); onUpdateFlyingEndTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                           <div>
-                               <label className="block text-sm font-medium text-gray-400">FTD Operating Window</label>
-                               <div className="flex items-center space-x-2 mt-1">
-                                   <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                       {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                   </select>
-                                   <span className="text-gray-400">to</span>
-                                   <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                       {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                   </select>
-                               </div>
-                           </div>
-                         <div>
-                            <label className="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-5 w-5 bg-gray-700 rounded accent-sky-500" />
-                                <span className="font-semibold text-sky-400">Allow Night Flying</span>
-                            </label>
-                        </div>
-                         {allowNightFlying && (
-                             <div className="pl-8 space-y-2">
-                                <label className="block text-sm font-medium text-gray-400">Night Flying Window</label>
-                                <div className="flex items-center space-x-2">
-                                    <select value={commenceNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                        {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
-                                    <span className="text-gray-400">to</span>
-                                    <select value={ceaseNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCeaseNightFlying(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                        {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                         )}
-                         <div>
-                            <label className="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" checked={programWithPrimaries} onChange={(e) => { logAudit("Priorities", "Edit", "Updated program with primaries", `${programWithPrimaries} → ${e.target.checked}`); onUpdateProgramWithPrimaries(e.target.checked); }} className="h-5 w-5 bg-gray-700 rounded accent-sky-500" />
-                                <span className="font-semibold text-sky-400">Program with Primaries</span>
-                            </label>
-                        </div>
-                    </div>
+            <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
+                <div className="px-3 py-2 border-b border-gray-700">
+                    <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">Build Factors</h2>
                 </div>
+                <div className="p-3 space-y-2">
 
+                    {/* Aircraft counts row */}
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="flex items-center gap-1">
+                            <label htmlFor="aircraft-count" className="text-xs text-gray-400 whitespace-nowrap w-[90px] shrink-0">Aircraft Avail</label>
+                            <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center"/>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <label htmlFor="ftd-count" className="text-xs text-gray-400 whitespace-nowrap w-[60px] shrink-0">FTD Avail</label>
+                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center"/>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <label htmlFor="cpt-count" className="text-xs text-gray-400 whitespace-nowrap w-[60px] shrink-0">CPT Avail</label>
+                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center"/>
+                        </div>
+                    </div>
 
+                    {/* Day Flying Window */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400 whitespace-nowrap w-[110px] shrink-0">Day Flying Window</label>
+                        <select value={flyingStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`); onUpdateFlyingStartTime(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
+                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                        <span className="text-gray-500 text-xs">to</span>
+                        <select value={flyingEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`); onUpdateFlyingEndTime(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
+                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                    </div>
+
+                    {/* FTD Operating Window */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-400 whitespace-nowrap w-[110px] shrink-0">FTD Op Window</label>
+                        <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
+                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                        <span className="text-gray-500 text-xs">to</span>
+                        <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
+                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                    </div>
+
+                    {/* Checkboxes row */}
+                    <div className="flex items-center gap-4 pt-1">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-4 w-4 bg-gray-700 rounded accent-sky-500" />
+                            <span className="text-xs font-semibold text-sky-400">Allow Night Flying</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={programWithPrimaries} onChange={(e) => { logAudit("Priorities", "Edit", "Updated program with primaries", `${programWithPrimaries} → ${e.target.checked}`); onUpdateProgramWithPrimaries(e.target.checked); }} className="h-4 w-4 bg-gray-700 rounded accent-sky-500" />
+                            <span className="text-xs font-semibold text-sky-400">Program with Primaries</span>
+                        </label>
+                    </div>
+
+                    {/* Night Flying Window (conditional) */}
+                    {allowNightFlying && (
+                        <div className="flex items-center gap-2 pl-6">
+                            <label className="text-xs text-gray-400 whitespace-nowrap w-[110px] shrink-0">Night Flying Window</label>
+                            <select value={commenceNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
+                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                            <span className="text-gray-500 text-xs">to</span>
+                            <select value={ceaseNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCeaseNightFlying(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
+                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                        </div>
+                    )}
+
+                </div>
             </div>
         </div>
                    
