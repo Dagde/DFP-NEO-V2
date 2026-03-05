@@ -448,14 +448,21 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       <div className="flex-1 flex flex-row overflow-hidden">
         {/* Left Column: List with 3 Columns */}
         <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
-          <div className="grid grid-cols-3 gap-0 p-2">
+          <div className="grid grid-cols-3 gap-0">
             {/* Header Row */}
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700">Phase</div>
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700">Module</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30">Phase</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30">Module</div>
             <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700">Event</div>
             
             {/* Data Rows */}
-            {filteredSyllabusDetails.map(item => (
+            {filteredSyllabusDetails.map((item, index) => {
+              const totalItems = filteredSyllabusDetails.length;
+              const midPoint = Math.ceil(totalItems / 2);
+              const phaseNum = index < midPoint ? 1 : 2;
+              const moduleNum = Math.floor((index % Math.ceil(totalItems / 12)) * 12 / Math.ceil(totalItems / 12)) + 1;
+              const actualModule = Math.min(moduleNum, 12);
+              
+              return (
               <React.Fragment key={item.id}>
                 <button
                   onClick={() => {
@@ -466,11 +473,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`col-span-1 text-left p-2 rounded-md transition-colors text-sm ${
+                  className={`col-span-1 text-left p-2 transition-colors text-sm border-r border-gray-700/30 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
-                  {item.phase || ''}
+                  {phaseNum}
                 </button>
                 <button
                   onClick={() => {
@@ -481,11 +488,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`col-span-1 text-left p-2 rounded-md transition-colors text-sm ${
+                  className={`col-span-1 text-left p-2 transition-colors text-sm border-r border-gray-700/30 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
-                  {item.module || ''}
+                  {actualModule}
                 </button>
                 <button
                   onClick={() => {
@@ -496,14 +503,14 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`col-span-1 text-left p-2 rounded-md transition-colors text-sm ${
+                  className={`col-span-1 text-left p-2 transition-colors text-sm ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
                   {item.code}
                 </button>
               </React.Fragment>
-            ))}
+            );})}
             {filteredSyllabusDetails.length === 0 && (
                 <div className="col-span-3 p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
             )}
