@@ -1499,7 +1499,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
     return (
         <>
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                     <div className={`p-2 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
                         <div className="flex items-center space-x-4">
@@ -1529,6 +1529,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     <div className="flex-1 flex flex-row overflow-hidden">
                         {/* Left Button Panel */}
                         <div className="w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
+                            <div className="flex-grow" /> {/* Spacer */}
                             {!isEditing && (
                                 <>
                                     <button
@@ -1552,13 +1553,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <span className="text-center leading-tight">PT-051</span>
                                         </button>
                                     )}
+                                    <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                        <span className="text-center leading-tight">Edit</span>
+                                    </button>
                                 </>
-                            )}
-                            <div className="flex-grow" /> {/* Spacer */}
-                            {!isEditing && (
-                                <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
-                                    <span className="text-center leading-tight">Edit</span>
-                                </button>
                             )}
                         </div>
 
