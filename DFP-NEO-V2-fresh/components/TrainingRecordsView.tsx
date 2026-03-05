@@ -13,6 +13,7 @@ interface TrainingRecordsViewProps {
     onDeleteCourse: (courseName: string, archive: boolean) => void;
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
+    onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
     archivedTraineesData: Trainee[];
@@ -35,6 +36,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onDeleteCourse,
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
+    onUpdateCourseDates,
     traineesData,
     instructorsData,
     archivedTraineesData,
@@ -96,6 +98,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onDeleteCourse={onDeleteCourse}
                         onNavigateToCourseRoster={onNavigateToCourseRoster}
                         onNavigateToArchivedCourses={onNavigateToArchivedCourses}
+                        onUpdateCourseDates={onUpdateCourseDates}
                     />
                 )}
                 {activeTab === 'export' && (

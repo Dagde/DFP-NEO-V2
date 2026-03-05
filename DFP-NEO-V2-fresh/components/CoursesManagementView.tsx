@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Course } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
+import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface CoursesManagementViewProps {
@@ -11,6 +12,7 @@ interface CoursesManagementViewProps {
     onDeleteCourse: (courseName: string, archive: boolean) => void;
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
+    onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
 }
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
@@ -20,9 +22,12 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onAddCourse,
     onDeleteCourse,
     onNavigateToCourseRoster,
-    onNavigateToArchivedCourses
+    onNavigateToArchivedCourses,
+    onUpdateCourseDates
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
+    const [showEditFlyout, setShowEditFlyout] = useState(false);
+    const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
     const [pinInput, setPinInput] = useState('');
     const [showPinDialog, setShowPinDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
@@ -73,6 +78,17 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const handleDeleteClick = async (courseName: string) => {
         setCourseToDelete(courseName);
         setShowPinDialog(true);
+    };
+
+    const handleEditClick = (course: Course) => {
+        setCourseToEdit(course);
+        setShowEditFlyout(true);
+    };
+
+    const handleUpdateCourseDates = (startDate: string, gradDate: string) => {
+        if (courseToEdit) {
+            onUpdateCourseDates(courseToEdit.name, startDate, gradDate);
+        }
     };
 
     const handlePinSubmit = async () => {
@@ -126,18 +142,32 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                             {course.name}
                         </h3>
                     </div>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(course.name);
-                        }}
-                        className="text-red-400 hover:text-red-300 transition-colors p-1"
-                        title="Delete Course"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(course);
+                            }}
+                            className="text-sky-400 hover:text-sky-300 transition-colors p-1"
+                            title="Edit Course Dates"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(course.name);
+                            }}
+                            className="text-red-400 hover:text-red-300 transition-colors p-1"
+                            title="Delete Course"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="space-y-2 text-sm text-gray-300">
@@ -229,6 +259,20 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                         setShowAddCourseFlyout(false);
                     }}
                     existingCourses={courseColors}
+                />
+            )}
+
+            {/* Edit Course Flyout */}
+            {showEditFlyout && courseToEdit && (
+                <EditCourseFlyout
+                    courseName={courseToEdit.name}
+                    startDate={courseToEdit.startDate}
+                    gradDate={courseToEdit.gradDate}
+                    onClose={() => {
+                        setShowEditFlyout(false);
+                        setCourseToEdit(null);
+                    }}
+                    onSave={handleUpdateCourseDates}
                 />
             )}
 

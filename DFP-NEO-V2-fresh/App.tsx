@@ -6801,6 +6801,21 @@ updates.forEach(update => {
         console.log(`🟢 saveCourseToDatabase completed for ${courseName}`);
     };
 
+    const handleUpdateCourseDates = async (courseName: string, startDate: string, gradDate: string) => {
+        console.log(`🔢 handleUpdateCourseDates called - courseName: ${courseName}, startDate: ${startDate}, gradDate: ${gradDate}`);
+        setCourses(prevCourses => {
+            const updatedCourses = prevCourses.map(course => 
+                course.name === courseName ? { ...course, startDate, gradDate } : course
+            );
+            console.log(`🔢 Updated courses state for ${courseName}`);
+            return updatedCourses;
+        });
+        // Save to database asynchronously
+        console.log(`🔢 Calling saveCourseToDatabase for ${courseName} with both dates`);
+        await saveCourseToDatabase(courseName, startDate, gradDate);
+        console.log(`🔢 saveCourseToDatabase completed for ${courseName}`);
+    };
+
     const handleSetIsMultiSelectMode = (enabled: boolean) => {
         setIsMultiSelectMode(enabled);
         if (!enabled) {
@@ -8700,6 +8715,7 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                    onUpdateCourseDates={handleUpdateCourseDates}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}
