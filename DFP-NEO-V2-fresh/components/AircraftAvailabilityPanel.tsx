@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatTime, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
-import { syncDebugger } from '../utils/syncDebugger';
 
 interface AircraftAvailabilityPanelProps {
     currentDate: Date;
@@ -33,14 +32,11 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     // NOTE: Only update local display - do NOT call onUpdateCurrentAvailability here
     // Calling it would create a feedback loop: Overlay -> App -> Panel -> App -> Overlay (bounce-back)
     useEffect(() => {
-        syncDebugger.log('Panel', plannedAvailability, `plannedAvailability prop changed | lastSetByPanel=${lastSetByPanel.current}`);
         if (plannedAvailability !== lastSetByPanel.current) {
-            syncDebugger.log('Panel', plannedAvailability, '✅ Syncing slider display to new value from outside (no callback)', 'success');
             lastSetByPanel.current = plannedAvailability; // Mark as acknowledged to prevent re-fire
             setCurrentAvailable(plannedAvailability);
             // DO NOT call onUpdateCurrentAvailability here - that would cause a feedback loop
         } else {
-            syncDebugger.log('Panel', plannedAvailability, '⏭ Skipping - change came from panel itself', 'warn');
         }
     }, [plannedAvailability]);
 
@@ -90,7 +86,6 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
     const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
-        syncDebugger.log('Panel', newAvailable, `handleAvailabilityChange | callback exists=${!!onUpdateCurrentAvailability}`);
         const newSnapshot: AircraftAvailabilitySnapshot = {
             timestamp: new Date(),
             available: newAvailable,
@@ -102,10 +97,8 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         setCurrentAvailable(newAvailable);
         lastSetByPanel.current = newAvailable;
         if (onUpdateCurrentAvailability) {
-            syncDebugger.log('Panel', newAvailable, '📤 Calling onUpdateCurrentAvailability (snapshot commit)', 'success');
             onUpdateCurrentAvailability(newAvailable);
         } else {
-            syncDebugger.log('Panel', newAvailable, '❌ onUpdateCurrentAvailability is NOT defined!', 'error');
         }
     };
 
@@ -122,15 +115,12 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         setCurrentAvailable(value);
         lastSetByPanel.current = value;
         if (onUpdateCurrentAvailability) {
-            syncDebugger.log('Panel', value, '🎚 Slider moved → calling onUpdateCurrentAvailability', 'success');
             onUpdateCurrentAvailability(value);
         } else {
-            syncDebugger.log('Panel', value, '❌ Slider moved but onUpdateCurrentAvailability NOT defined!', 'error');
         }
     };
 
     const handleSliderRelease = () => {
-        syncDebugger.log('Panel', currentAvailable, '🖱 Slider released → committing snapshot');
         handleAvailabilityChange(currentAvailable);
     };
 

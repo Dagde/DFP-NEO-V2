@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
 import { logAudit } from '../utils/auditLogger';
-import { syncDebugger } from '../utils/syncDebugger';
 interface AircraftAvailabilityOverlayProps {
     currentDate: Date;
     totalAircraft: number;
@@ -143,17 +142,13 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     useEffect(() => { totalAircraftRef.current = totalAircraft; }, [totalAircraft]);
     // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
     useEffect(() => {
-        syncDebugger.log('Overlay', plannedAvailability, `SYNC EFFECT FIRED | planned=${plannedAvailability} | lastSet=${lastSetByOverlay.current} | dragging=${isDragging}`, 'warn');
         // Don't sync if we're currently dragging - drag end will handle it
         if (isDraggingRef.current) {
-            syncDebugger.log('Overlay', plannedAvailability, '🚫 Skipping sync - drag in progress', 'warn');
             return;
         }
         if (plannedAvailability !== lastSetByOverlay.current) {
-            syncDebugger.log('Overlay', plannedAvailability, '✅ Syncing line to new value from outside', 'success');
             setCurrentAvailable(plannedAvailability);
         } else {
-            syncDebugger.log('Overlay', plannedAvailability, '⏭ Skipping - change came from overlay itself', 'warn');
         }
     }, [plannedAvailability]);
 
@@ -166,7 +161,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
         
-        syncDebugger.log('Overlay', currentAvailable, `🖱 Drag start at y=${y.toFixed(0)}`);
         
         isDraggingRef.current = true;
         dragYRef.current = y;
@@ -205,7 +199,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             const currentTotalAircraft = totalAircraftRef.current;
             const currentSnapshots = snapshotsRef.current;
 
-            syncDebugger.log('Overlay', 0, `DRAG END FIRED | dragY=${finalDragY.toFixed(1)} | rowH=${currentRowHeight} | total=${currentTotalAircraft} | snapshots=${currentSnapshots.length}`, 'warn');
             
             // Calculate aircraft count from final drag Y position
             const rowsFromTop = finalDragY / currentRowHeight;
@@ -235,13 +228,10 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             setCurrentAvailable(snappedCount);
 
             // Sync with Settings panel slider
-            syncDebugger.log('Overlay', snappedCount, `handleDragEnd | valueChanged=${valueChanged} | lastSetByOverlay=${lastSetByOverlay.current} | callback exists=${!!onUpdatePlannedAvailability}`);
             if (valueChanged) {
                 if (onUpdatePlannedAvailability) {
-                    syncDebugger.log('Overlay', snappedCount, '📤 Calling onUpdatePlannedAvailability (drag end)', 'success');
                     onUpdatePlannedAvailability(snappedCount);
                 } else {
-                    syncDebugger.log('Overlay', snappedCount, '❌ onUpdatePlannedAvailability is NOT defined!', 'error');
                 }
             }
             
