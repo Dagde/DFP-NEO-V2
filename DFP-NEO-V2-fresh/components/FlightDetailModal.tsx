@@ -1500,7 +1500,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
         <>
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
                 <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-                    <div className={`p-4 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
+                    <div className={`p-2 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
                         <div className="flex items-center space-x-4">
                             {isEditing && eventType === 'flight' && (
@@ -1856,10 +1856,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         </div>
                         
                         {/* Button Panel */}
-                        <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center space-y-1">
+                        <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
                             {!isEditing && (
                                 <>
-                                    <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50">
+                                    <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50 mb-[1px]">
                                         <label className="block text-[10px] font-semibold text-gray-400">Conflict?</label>
                                         {isConflict ? (
                                             <p className="text-lg font-bold text-red-500">YES</p>
@@ -1869,32 +1869,32 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     </div>
                                     <button
                                         onClick={() => onNeoClick(event)}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                     >
                                         <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                     </button>
                                     <button
                                         onClick={handleTraineeScoresClick}
                                         disabled={!traineeObject}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50 disabled:cursor-not-allowed mb-[1px]"
                                     >
                                         <span className="text-center leading-tight">Trainee<br/>Scores</span>
                                     </button>
                                     <button
                                         onClick={handleLmpClick}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                     >
                                         <span className="text-center leading-tight">LMP</span>
                                     </button>
                                     {event.type === 'flight' && (
-                                        <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                        <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                             <span className="text-center leading-tight">Auth</span>
                                         </button>
                                     )}
                                     {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
                                         <button
                                             onClick={handleCompleteClick}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                         >
                                             <span className="text-center leading-tight">Complete</span>
                                         </button>
@@ -1902,13 +1902,13 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     {traineeObject && (
                                         <button
                                             onClick={handlePt051Click}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                         >
                                             <span className="text-center leading-tight">PT-051</span>
                                         </button>
                                     )}
                                     {event.type === 'flight' && (
-                                        <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                        <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                             <span className="text-center leading-tight">Post<br/>Flight</span>
                                         </button>
                                     )}
@@ -1917,15 +1917,15 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             <div className="flex-grow" /> {/* Spacer */}
                             {isEditing ? (
                                    <>
-                                <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                     <span className="text-center leading-tight">Save</span>
                                 </button>
-                                       <button onClick={handleVisualAdjust} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                       <button onClick={handleVisualAdjust} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[15px]">
                                            <span className="text-center leading-tight">Visual<br/>Adjust</span>
                                        </button>
                                    </>
                             ) : (
-                                <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[15px]">
                                     <span className="text-center leading-tight">Edit</span>
                                 </button>
                             )}
