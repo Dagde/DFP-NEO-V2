@@ -1499,7 +1499,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
     return (
         <>
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl border border-gray-700 transform transition-all animate-fade-in flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
+                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                     <div className={`p-4 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
                         <div className="flex items-center space-x-4">
@@ -1856,60 +1856,60 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         </div>
                         
                         {/* Button Panel */}
-                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
+                        <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center space-y-1">
                             {!isEditing && (
                                 <>
-                                    <div className="p-3 border border-gray-600 rounded-lg text-center">
-                                        <label className="block text-sm font-semibold text-gray-400">Conflict?</label>
+                                    <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50">
+                                        <label className="block text-[10px] font-semibold text-gray-400">Conflict?</label>
                                         {isConflict ? (
-                                            <p className="text-2xl font-bold text-red-500">YES</p>
+                                            <p className="text-lg font-bold text-red-500">YES</p>
                                         ) : (
-                                            <p className="text-2xl font-bold text-green-500">NO</p>
+                                            <p className="text-lg font-bold text-green-500">NO</p>
                                         )}
                                     </div>
                                     <button
                                         onClick={() => onNeoClick(event)}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-orange-brushed"
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                                     >
-                                        NEO
+                                        <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                     </button>
                                     <button
                                         onClick={handleTraineeScoresClick}
                                         disabled={!traineeObject}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Trainee Scores
+                                        <span className="text-center leading-tight">Trainee<br/>Scores</span>
                                     </button>
                                     <button
                                         onClick={handleLmpClick}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                                     >
-                                        LMP
+                                        <span className="text-center leading-tight">LMP</span>
                                     </button>
                                     {event.type === 'flight' && (
-                                        <button onClick={handleAuthClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed">
-                                            Auth
+                                        <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                            <span className="text-center leading-tight">Auth</span>
                                         </button>
                                     )}
                                     {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
                                         <button
                                             onClick={handleCompleteClick}
-                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                                         >
-                                            Complete
+                                            <span className="text-center leading-tight">Complete</span>
                                         </button>
                                     )}
                                     {traineeObject && (
                                         <button
                                             onClick={handlePt051Click}
-                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                                         >
-                                            PT-051
+                                            <span className="text-center leading-tight">PT-051</span>
                                         </button>
                                     )}
                                     {event.type === 'flight' && (
-                                        <button onClick={handlePostFlightClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-shape-fill">
-                                            Post Flight
+                                        <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                            <span className="text-center leading-tight">Post<br/>Flight</span>
                                         </button>
                                     )}
                                 </>
@@ -1917,11 +1917,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             <div className="flex-grow" /> {/* Spacer */}
                             {isEditing ? (
                                    <>
-                                <button onClick={handleSave} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-sky-600 hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save</button>
-                                       <button onClick={handleVisualAdjust} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-purple-600 hover:bg-purple-700">Visual Adjust</button>
+                                <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                    <span className="text-center leading-tight">Save</span>
+                                </button>
+                                       <button onClick={handleVisualAdjust} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                           <span className="text-center leading-tight">Visual<br/>Adjust</span>
+                                       </button>
                                    </>
                             ) : (
-                                <button onClick={() => setIsEditing(true)} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-gray-600 hover:bg-gray-700">Edit</button>
+                                <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                    <span className="text-center leading-tight">Edit</span>
+                                </button>
                             )}
                         </div>
                     </div>
