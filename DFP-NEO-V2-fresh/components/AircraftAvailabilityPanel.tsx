@@ -30,11 +30,15 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     const lastSetByPanel = useRef<number>(plannedAvailability);
 
     // Sync slider when plannedAvailability changes from OUTSIDE (e.g. schedule line dragged)
+    // NOTE: Only update local display - do NOT call onUpdateCurrentAvailability here
+    // Calling it would create a feedback loop: Overlay -> App -> Panel -> App -> Overlay (bounce-back)
     useEffect(() => {
         syncDebugger.log('Panel', plannedAvailability, `plannedAvailability prop changed | lastSetByPanel=${lastSetByPanel.current}`);
         if (plannedAvailability !== lastSetByPanel.current) {
-            syncDebugger.log('Panel', plannedAvailability, '✅ Syncing slider to new value from outside', 'success');
+            syncDebugger.log('Panel', plannedAvailability, '✅ Syncing slider display to new value from outside (no callback)', 'success');
+            lastSetByPanel.current = plannedAvailability; // Mark as acknowledged to prevent re-fire
             setCurrentAvailable(plannedAvailability);
+            // DO NOT call onUpdateCurrentAvailability here - that would cause a feedback loop
         } else {
             syncDebugger.log('Panel', plannedAvailability, '⏭ Skipping - change came from panel itself', 'warn');
         }
