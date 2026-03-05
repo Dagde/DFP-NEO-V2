@@ -175,15 +175,15 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     <div className="flex gap-3">
                         <button
                             onClick={onNavigateToArchivedCourses}
-                            className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors border border-gray-600"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                         >
-                            Archived Courses
+                            <span className="text-center leading-tight">Archived<br/>Courses</span>
                         </button>
                         <button
                             onClick={() => setShowAddCourseFlyout(true)}
-                            className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                         >
-                            + Add Course
+                            <span className="text-center leading-tight" style={{color: "#22c55e"}}>+ Add<br/>Course</span>
                         </button>
                     </div>
                 </div>
