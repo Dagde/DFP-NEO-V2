@@ -1527,6 +1527,41 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     </div>
 
                     <div className="flex-1 flex flex-row overflow-hidden">
+                        {/* Left Button Panel */}
+                        <div className="w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
+                            {!isEditing && (
+                                <>
+                                    <button
+                                        onClick={handleTraineeScoresClick}
+                                        disabled={!traineeObject}
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="text-center leading-tight">Trainee<br/>Scores</span>
+                                    </button>
+                                    <button
+                                        onClick={handleLmpClick}
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                    >
+                                        <span className="text-center leading-tight">LMP</span>
+                                    </button>
+                                    {traineeObject && (
+                                        <button
+                                            onClick={handlePt051Click}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                        >
+                                            <span className="text-center leading-tight">PT-051</span>
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                            <div className="flex-grow" /> {/* Spacer */}
+                            {!isEditing && (
+                                <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                    <span className="text-center leading-tight">Edit</span>
+                                </button>
+                            )}
+                        </div>
+
                         {/* Main Content */}
                         <div className="flex-1 overflow-y-auto p-6">
                             {isEditing ? (
@@ -1855,7 +1890,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             )}
                         </div>
                         
-                        {/* Button Panel */}
+                        {/* Right Button Panel */}
                         <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
                             {!isEditing && (
                                 <>
@@ -1873,19 +1908,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     >
                                         <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                     </button>
-                                    <button
-                                        onClick={handleTraineeScoresClick}
-                                        disabled={!traineeObject}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50 disabled:cursor-not-allowed mb-[1px]"
-                                    >
-                                        <span className="text-center leading-tight">Trainee<br/>Scores</span>
-                                    </button>
-                                    <button
-                                        onClick={handleLmpClick}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                    >
-                                        <span className="text-center leading-tight">LMP</span>
-                                    </button>
                                     {event.type === 'flight' && (
                                         <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                             <span className="text-center leading-tight">Auth</span>
@@ -1897,14 +1919,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                         >
                                             <span className="text-center leading-tight">Complete</span>
-                                        </button>
-                                    )}
-                                    {traineeObject && (
-                                        <button
-                                            onClick={handlePt051Click}
-                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                        >
-                                            <span className="text-center leading-tight">PT-051</span>
                                         </button>
                                     )}
                                     {event.type === 'flight' && (
@@ -1924,11 +1938,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                            <span className="text-center leading-tight">Visual<br/>Adjust</span>
                                        </button>
                                    </>
-                            ) : (
-                                <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[15px]">
-                                    <span className="text-center leading-tight">Edit</span>
-                                </button>
-                            )}
+                            ) : null}
                                 <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
                                     <span className="text-center leading-tight">Close</span>
                                 </button>
