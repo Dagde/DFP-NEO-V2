@@ -1499,7 +1499,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
     return (
         <>
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                     <div className={`p-4 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
                         <div className="flex items-center space-x-4">
@@ -1929,11 +1929,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-center leading-tight">Edit</span>
                                 </button>
                             )}
+                                <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                    <span className="text-center leading-tight">Close</span>
+                                </button>
                         </div>
-                    </div>
-                    
-                    <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end flex-shrink-0">
-                        <button onClick={onClose} className="px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm">Close</button>
                     </div>
                 </div>
             </div>
