@@ -255,7 +255,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       
       return (
       <div>
-          <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : 'FTD'}</h3>
+          <h3 className="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2">{type === 'flight' ? 'Flights' : 'FTD'}</h3>
           <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                   <thead className="text-xs text-gray-400 uppercase">
@@ -400,12 +400,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
            <div className="section-course-priority grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
-                <div className="p-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
+                <div className="px-3 py-2 border-b border-gray-700 flex justify-between items-center">
+                    <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">Course Priority</h2>
                     <span className="text-xs text-gray-500">Last updated: {courseTimestamp}</span>
                 </div>
-                <div className="p-4 border-t border-gray-700">
-                    <ul className="space-y-2">
+                <div className="p-3">
+                    <ul className="space-y-1">
                         {coursePriorities.map((course, index) => (
                             <li
                                 key={course}
@@ -414,14 +414,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 onDragEnter={() => handleCourseDragEnter(index)}
                                 onDragEnd={handleCourseDragEnd}
                                 onDragOver={(e) => e.preventDefault()}
-                                className="p-3 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
+                                className="py-1.5 px-2 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
                             >
-                                <div className="flex items-center space-x-3">
-                                    <span className="font-mono text-gray-500">{index + 1}</span>
-                                    <span className="font-semibold">{course}</span>
+                                <div className="flex items-center space-x-2">
+                                    <span className="font-mono text-xs text-gray-500">{index + 1}</span>
+                                    <span className="text-xs font-semibold">{course}</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <span className={`font-mono w-12 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
+                                    <span className={`font-mono text-xs w-10 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
                                     <div className="flex flex-col">
                                         <ArrowButton direction="up" onClick={() => handlePercentageChange(course, 'increase')} disabled={(coursePercentages.get(course) ?? 0) >= 100} />
                                         <ArrowButton direction="down" onClick={() => handlePercentageChange(course, 'decrease')} disabled={(coursePercentages.get(course) ?? 0) <= 5} />
@@ -430,12 +430,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             </li>
                         ))}
                     </ul>
-                     <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                    <div className={`mt-2 p-1.5 rounded text-center text-xs font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
                         Total: {totalPercentage}%
                     </div>
                     <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
-                        <p className="font-semibold mb-1">ℹ️ Weighted Priority System:</p>
-                        <ul className="list-disc list-inside space-y-1 text-blue-200">
+                        <p className="font-semibold mb-1">&#9432;&#65039; Weighted Priority System:</p>
+                        <ul className="list-disc list-inside space-y-0.5 text-blue-200 text-xs">
                             <li>Percentages are auto-normalized to 100%</li>
                             <li>Minimum percentage per course: 5%</li>
                             <li>Higher % = more events (biased allocation)</li>
@@ -507,7 +507,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
                     {/* Night Flying Window (conditional) */}
                     {allowNightFlying && (
-                        <div className="flex items-center gap-2 pl-6">
+                        <div className="flex items-center gap-2">
                             <label className="text-xs text-gray-400 whitespace-nowrap w-[110px] shrink-0">Night Flying Window</label>
                             <select value={commenceNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="flex-1 bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-sky-500 text-center">
                                 {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -523,22 +523,30 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             </div>
         </div>
                    
-        <div className="section-sct-requests bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">SCT Requests</h2>
-            <div className="space-y-6">
+        <div className="section-sct-requests bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+            <div className="px-3 py-2 border-b border-gray-700">
+                <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">SCT Requests</h2>
+            </div>
+            <div className="p-3 space-y-4">
                 <SctRequestTable type="flight" requests={sctFlights} />
                 <SctRequestTable type="ftd" requests={sctFtds} />
             </div>
         </div>
 
-        <div className="section-highest-priority bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Highest Priority Events</h2>
-            <PriorityEventTable events={standardPriorityEvents} />
+        <div className="section-highest-priority bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+            <div className="px-3 py-2 border-b border-gray-700">
+                <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">Highest Priority Events</h2>
+            </div>
+            <div className="p-3">
+                <PriorityEventTable events={standardPriorityEvents} />
+            </div>
         </div>
 
-        <div className="section-remedial-queue bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-            <h2 className="text-xl font-semibold text-sky-400 mb-4">Remedial Priority Queue</h2>
-            <div className="overflow-x-auto">
+        <div className="section-remedial-queue bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+            <div className="px-3 py-2 border-b border-gray-700">
+                <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">Remedial Priority Queue</h2>
+            </div>
+            <div className="p-3 overflow-x-auto">
               <table className="min-w-full text-sm">
                   <thead className="text-xs text-gray-400 uppercase">
                       <tr>
