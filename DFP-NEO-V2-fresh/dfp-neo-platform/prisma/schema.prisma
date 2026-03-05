@@ -268,6 +268,24 @@ model Score {
   trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
 }
 
+model AircraftAvailabilityHistory {
+  id              String   @id @default(cuid())
+  date            String   // ISO date string YYYY-MM-DD
+  dailyAverage    Float    // Average aircraft available for that day
+  plannedCount    Int      // Planned availability count set at start of day
+  actualCount     Int?     // Actual count at end of day (if recorded)
+  totalAircraft   Int      // Total aircraft in fleet
+  availabilityPct Float    // Percentage available (dailyAverage / totalAircraft * 100)
+  recordedBy      String?  // userId who recorded
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([date])
+  @@index([date])
+  @@index([createdAt])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

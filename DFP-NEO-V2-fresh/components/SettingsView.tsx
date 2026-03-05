@@ -85,6 +85,7 @@ interface SettingsViewProps {
     totalAircraft?: number;
     availableAircraftCount?: number;
     onUpdateCurrentAvailability?: (count: number) => void;
+    currentUserId?: string | number;
 }
 
 const FolderIcon = () => (
@@ -151,7 +152,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     dayFlyingEnd,
     totalAircraft,
     availableAircraftCount,
-    onUpdateCurrentAvailability
+    onUpdateCurrentAvailability,
+    currentUserId,
 }) => {
     // --- STATE ---
     
@@ -1229,6 +1231,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    <ACHistoryPage 
                        currentUserRole={currentUserPermission}
                        cancellationRecords={cancellationRecords || []}
+                       currentUserId={currentUserId ? String(currentUserId) : undefined}
                    />
                 </div>
                 )}

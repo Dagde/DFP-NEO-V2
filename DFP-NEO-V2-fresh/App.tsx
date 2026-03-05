@@ -3678,6 +3678,37 @@ useEffect(() => {
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
 
+    // Record daily aircraft availability to the database whenever availableAircraftCount changes
+    // Uses a debounce-style approach: records once per day per unique count
+    React.useEffect(() => {
+        const recordDailyAvailability = async () => {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const totalFleet = 24; // matches totalAircraft={24} in SettingsViewWithMenu call
+                const pct = (availableAircraftCount / totalFleet) * 100;
+                await fetch('/api/aircraft-availability-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: today,
+                        dailyAverage: availableAircraftCount,
+                        plannedCount: availableAircraftCount,
+                        totalAircraft: totalFleet,
+                        availabilityPct: pct,
+                        recordedBy: String(currentUserId || ''),
+                    }),
+                });
+            } catch (err) {
+                // Non-critical: silently ignore recording errors
+                console.warn('[ACHistory] Failed to record daily availability:', err);
+            }
+        };
+        // Only record if authenticated and count is a valid positive number
+        if (isAuthenticated && availableAircraftCount > 0) {
+            recordDailyAvailability();
+        }
+    }, [availableAircraftCount, isAuthenticated]);
+
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -9281,6 +9312,7 @@ updates.forEach(update => {
                        totalAircraft={24}
                        availableAircraftCount={availableAircraftCount}
                        onUpdateCurrentAvailability={(count: number) => { setAvailableAircraftCount(count); }}
+                       currentUserId={currentUserId}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 

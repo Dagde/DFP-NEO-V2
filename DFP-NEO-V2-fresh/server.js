@@ -391,6 +391,85 @@ app.put('/api/courses', async (req, res) => {
 });
 
 // ============================================================
+// AIRCRAFT AVAILABILITY HISTORY ENDPOINTS
+// ============================================================
+
+// GET /api/aircraft-availability-history
+app.get('/api/aircraft-availability-history', async (req, res) => {
+  try {
+    const { startDate, endDate, limit } = req.query;
+    const where = {};
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) where.date.gte = startDate;
+      if (endDate) where.date.lte = endDate;
+    }
+    const records = await db.aircraftAvailabilityHistory.findMany({
+      where,
+      orderBy: { date: 'asc' },
+      take: limit ? parseInt(limit) : undefined,
+    });
+    console.log(`✅ GET /api/aircraft-availability-history - returning ${records.length} records`);
+    res.json({ records });
+  } catch (error) {
+    console.error('❌ GET /api/aircraft-availability-history error:', error);
+    res.status(500).json({ error: 'Failed to fetch aircraft availability history', details: error.message });
+  }
+});
+
+// POST /api/aircraft-availability-history
+app.post('/api/aircraft-availability-history', async (req, res) => {
+  try {
+    const { date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct, recordedBy, notes } = req.body;
+    if (!date || dailyAverage === undefined || plannedCount === undefined || totalAircraft === undefined) {
+      return res.status(400).json({ error: 'Missing required fields: date, dailyAverage, plannedCount, totalAircraft' });
+    }
+    // Upsert: update if record for this date exists, otherwise create
+    const record = await db.aircraftAvailabilityHistory.upsert({
+      where: { date },
+      update: {
+        dailyAverage: parseFloat(dailyAverage),
+        plannedCount: parseInt(plannedCount),
+        actualCount: actualCount !== undefined ? parseInt(actualCount) : null,
+        totalAircraft: parseInt(totalAircraft),
+        availabilityPct: parseFloat(availabilityPct || ((dailyAverage / totalAircraft) * 100)),
+        recordedBy: recordedBy || null,
+        notes: notes || null,
+        updatedAt: new Date(),
+      },
+      create: {
+        date,
+        dailyAverage: parseFloat(dailyAverage),
+        plannedCount: parseInt(plannedCount),
+        actualCount: actualCount !== undefined ? parseInt(actualCount) : null,
+        totalAircraft: parseInt(totalAircraft),
+        availabilityPct: parseFloat(availabilityPct || ((dailyAverage / totalAircraft) * 100)),
+        recordedBy: recordedBy || null,
+        notes: notes || null,
+      },
+    });
+    console.log(`✅ POST /api/aircraft-availability-history - upserted record for date: ${date}`);
+    res.json({ success: true, record });
+  } catch (error) {
+    console.error('❌ POST /api/aircraft-availability-history error:', error);
+    res.status(500).json({ error: 'Failed to save aircraft availability history', details: error.message });
+  }
+});
+
+// DELETE /api/aircraft-availability-history/:id
+app.delete('/api/aircraft-availability-history/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.aircraftAvailabilityHistory.delete({ where: { id } });
+    console.log(`✅ DELETE /api/aircraft-availability-history/${id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/aircraft-availability-history error:', error);
+    res.status(500).json({ error: 'Failed to delete aircraft availability history record', details: error.message });
+  }
+});
+
+// ============================================================
 // SERVE STATIC VITE BUILD
 // ============================================================
 

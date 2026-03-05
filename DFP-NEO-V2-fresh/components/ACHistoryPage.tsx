@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CancellationCodesTable from './CancellationCodesTable';
 import ACHistoryAnalytics from './ACHistoryAnalytics';
+import ACHistoryAircraftAvailability from './ACHistoryAircraftAvailability';
 import RecentCancellationsTable from './RecentCancellationsTable';
 import { CancellationCode, CancellationRecord } from '../types';
 import { initialCancellationCodes } from '../data/cancellationCodes';
@@ -8,11 +9,13 @@ import { initialCancellationCodes } from '../data/cancellationCodes';
 interface ACHistoryPageProps {
   currentUserRole: string;
   cancellationRecords: CancellationRecord[];
+  currentUserId?: string;
 }
 
 const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   currentUserRole,
   cancellationRecords,
+  currentUserId,
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
@@ -158,6 +161,11 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       <ACHistoryAnalytics
         cancellationRecords={cancellationRecords}
         cancellationCodes={cancellationCodes}
+      />
+
+      {/* AC History - Aircraft Availability */}
+      <ACHistoryAircraftAvailability
+        currentUserId={currentUserId}
       />
     </div>
   );
