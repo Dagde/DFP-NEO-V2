@@ -14,9 +14,9 @@ interface SyllabusViewProps {
 
 // Reusable components for view mode
 const DetailCard: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
-    <div className={`bg-gray-700/50 p-2 rounded-lg ${className}`}>
-        <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">{label}</label>
-        <div className="mt-1 text-xs font-semibold text-white">{value}</div>
+    <div className={`bg-gray-700/50 p-1 rounded-lg ${className}`}>
+        <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">{label}</label>
+        <div className="mt-0.5 text-[10px] font-semibold text-white">{value}</div>
     </div>
 );
 
@@ -116,40 +116,40 @@ const DetailView: React.FC<{
             )}
         </div>
         
-        <fieldset className="p-4 border border-gray-700 rounded-lg">
+        <fieldset className="p-3 border border-gray-700 rounded-lg">
             <legend className="px-2 text-xs font-semibold text-gray-300">Core Details</legend>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
                 {isEditing ? (
                     <>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                             <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Dual/Solo</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Dual/Solo</label>
                              <select
                                 value={currentItem.sortieType || 'Dual'}
                                 onChange={(e) => handleFieldChange('sortieType', e.target.value as 'Dual' | 'Solo')}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             >
                                 <option>Dual</option>
                                 <option>Solo</option>
                             </select>
                         </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                             <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Day/Night</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Day/Night</label>
                              <select
                                 value={currentItem.dayNight}
                                 onChange={(e) => handleFieldChange('dayNight', e.target.value as 'Day' | 'Night' | 'Day/Night')}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             >
                                 <option>Day</option>
                                 <option>Night</option>
                                 <option>Day/Night</option>
                             </select>
                         </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                             <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Type</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Type</label>
                              <select
                                 value={getDisplayType(currentItem)}
                                 onChange={handleTypeChange}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             >
                                 <option>Flight</option>
                                 <option>FTD</option>
@@ -157,81 +157,105 @@ const DetailView: React.FC<{
                                 <option>Ground</option>
                             </select>
                         </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                               <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Cct Only</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                               <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Cct Only</label>
                                <select
                                   value={currentItem.cctOnly || (currentItem.code === 'BGF10' ? 'YES' : 'NO')}
                                   onChange={(e) => handleFieldChange('cctOnly', e.target.value as 'YES' | 'NO')}
-                                  className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                  className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                               >
                                   <option>NO</option>
                                   <option>YES</option>
                               </select>
                            </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                               <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">TWR DI Reqd</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                               <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">TWR DI Reqd</label>
                                <select
                                   value={currentItem.twrDiReqd || (currentItem.code === 'BGF11' || currentItem.code === 'BGF18' ? 'YES' : 'NO')}
                                   onChange={(e) => handleFieldChange('twrDiReqd', e.target.value as 'YES' | 'NO')}
-                                  className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                  className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                               >
                                   <option>NO</option>
                                   <option>YES</option>
                               </select>
                            </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Event Hours</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Total Event Hrs</label>
                             <input
                                 type="number"
                                 step="0.1"
                                 value={currentItem.totalEventHours}
                                 onChange={(e) => handleFieldChange('totalEventHours', parseFloat(e.target.value) || 0)}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             />
                         </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Flight/Sim Hours</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Flight/Sim Hrs</label>
                             <input
                                 type="number"
                                 step="0.1"
                                 value={currentItem.flightOrSimHours}
                                 onChange={(e) => handleFieldChange('flightOrSimHours', parseFloat(e.target.value) || 0)}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             />
                         </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Pre-Flight Time (mins)</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Pre-Flight (min)</label>
                             <input
                                 type="number"
                                 step="1"
                                 value={Math.round(currentItem.preFlightTime * 60)}
                                 onChange={(e) => handleFieldChange('preFlightTime', Number(e.target.value) / 60)}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             />
                         </div>
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Post-Flight Time (mins)</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Post-Flight (min)</label>
                             <input
                                 type="number"
                                 step="1"
                                 value={Math.round(currentItem.postFlightTime * 60)}
                                 onChange={(e) => handleFieldChange('postFlightTime', Number(e.target.value) / 60)}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             />
                         </div>
-                        <EditableField label="Code" value={currentItem.code} onChange={(val) => handleFieldChange('code', val)} />
-                        <div className="bg-gray-700/50 p-2 rounded-lg">
-                            <label className="block text-[10px] font-medium text-gray-400 uppercase tracking-wider">Course</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Code</label>
+                            <input
+                                type="text"
+                                value={currentItem.code}
+                                onChange={(e) => handleFieldChange('code', e.target.value)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Course</label>
                             <input
                                 type="text"
                                 value={(currentItem.courses || []).join(', ')}
                                 onChange={(e) => handleFieldChange('courses', e.target.value.split(', ').filter(c => c.trim()))}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-xs"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                                 placeholder="Enter courses separated by commas"
                             />
                         </div>
-                        <EditableField label="Phase" value={currentItem.phase} onChange={(val) => handleFieldChange('phase', val)} />
-                        <EditableField label="Module" value={currentItem.module} onChange={(val) => handleFieldChange('module', val)} />
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Phase</label>
+                            <input
+                                type="text"
+                                value={currentItem.phase}
+                                onChange={(e) => handleFieldChange('phase', e.target.value)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Module</label>
+                            <input
+                                type="text"
+                                value={currentItem.module}
+                                onChange={(e) => handleFieldChange('module', e.target.value)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
                     </>
                 ) : (
                     <>
@@ -240,10 +264,10 @@ const DetailView: React.FC<{
                         <DetailCard label="Type" value={getDisplayType(item)} />
                         <DetailCard label="Cct Only" value={item.cctOnly || (item.code === 'BGF10' ? 'YES' : 'NO')} />
                         <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || (item.code === 'BGF11' || item.code === 'BGF18' ? 'YES' : 'NO')} />
-                        <DetailCard label="Total Event Hours" value={<>{item.totalEventHours.toFixed(1)} <span className="text-xs font-normal">hrs</span></>} />
-                        <DetailCard label="Flight/Sim Hours" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-xs font-normal">hrs</span></>} />
-                        <DetailCard label="Pre-Flight Time" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-xs font-normal">mins</span></>} />
-                        <DetailCard label="Post-Flight Time" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-xs font-normal">mins</span></>} />
+                        <DetailCard label="Total Event Hrs" value={<>{item.totalEventHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
+                        <DetailCard label="Flight/Sim Hrs" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
+                        <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
+                        <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Code" value={item.code} />
                         <DetailCard label="Course" value={(item.courses || []).join(", ") || "None"} />
                         <DetailCard label="Phase" value={item.phase} />
@@ -474,8 +498,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         <div className="w-1/4 border-r border-gray-700 overflow-hidden flex flex-col">
           {/* Sticky Header Row */}
           <div className="flex-shrink-0 grid grid-cols-3 gap-0 bg-gray-900">
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-16">Phase</div>
-            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-16">Module</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-12">Phase</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700/30 text-center w-12">Module</div>
             <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700 flex-1">Event</div>
           </div>
           
@@ -500,7 +524,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     onMouseEnter={() => setHoveredItem(item)}
                     onMouseLeave={() => setHoveredItem(null)}
                     disabled={isEditing}
-                    className={`col-span-1 text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-16 ${
+                    className={`col-span-1 text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-12 ${
                         selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                     } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                   >
@@ -515,7 +539,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     onMouseEnter={() => setHoveredItem(item)}
                     onMouseLeave={() => setHoveredItem(null)}
                     disabled={isEditing}
-                    className={`col-span-1 text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-16 ${
+                    className={`col-span-1 text-center p-2 transition-colors text-sm border-r border-gray-700/30 w-12 ${
                         selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                     } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                   >
