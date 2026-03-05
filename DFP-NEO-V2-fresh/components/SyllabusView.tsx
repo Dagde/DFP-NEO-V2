@@ -446,11 +446,17 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
 
       {/* Main Content */}
       <div className="flex-1 flex flex-row overflow-hidden">
-        {/* Left Column: List */}
+        {/* Left Column: List with 3 Columns */}
         <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
-          <ul className="p-2 space-y-1">
+          <div className="grid grid-cols-3 gap-0 p-2">
+            {/* Header Row */}
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700">Phase</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700">Module</div>
+            <div className="font-semibold text-gray-400 text-xs uppercase tracking-wider p-2 border-b border-gray-700">Event</div>
+            
+            {/* Data Rows */}
             {filteredSyllabusDetails.map(item => (
-              <li key={item.id}>
+              <React.Fragment key={item.id}>
                 <button
                   onClick={() => {
                       if (!isEditing) {
@@ -460,18 +466,48 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`w-full text-left p-2 rounded-md transition-colors text-sm ${
+                  className={`col-span-1 text-left p-2 rounded-md transition-colors text-sm ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {item.phase || ''}
+                </button>
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`col-span-1 text-left p-2 rounded-md transition-colors text-sm ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {item.module || ''}
+                </button>
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`col-span-1 text-left p-2 rounded-md transition-colors text-sm ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
                   {item.code}
                 </button>
-              </li>
+              </React.Fragment>
             ))}
             {filteredSyllabusDetails.length === 0 && (
-                <li className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</li>
+                <div className="col-span-3 p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
             )}
-          </ul>
+          </div>
         </div>
 
         {/* Right Column: Detail View */}
