@@ -435,8 +435,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
           {/* Sticky Header */}
           <div className="sticky top-0 bg-gray-900 z-10 border-b border-gray-700 px-2 py-2 flex">
-            <div className="flex-shrink-0 w-12 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-700">Phase</div>
-            <div className="flex-shrink-0 w-14 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-700 px-1">Module</div>
+            <div className="flex-shrink-0 w-12 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-600">Phase</div>
+            <div className="flex-shrink-0 w-16 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-600 px-1">Module</div>
             <div className="flex-1 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2">Event</div>
           </div>
           {/* List Items */}
@@ -461,8 +461,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                         selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                     } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                   >
-                    <div className="flex-shrink-0 w-12 text-center text-sm border-r border-gray-700">{phaseNum}</div>
-                    <div className="flex-shrink-0 w-14 text-center text-sm border-r border-gray-700 px-1">{actualModule}</div>
+                    <div className="flex-shrink-0 w-12 text-center text-sm border-r border-gray-600">{phaseNum}</div>
+                    <div className="flex-shrink-0 w-16 text-center text-sm border-r border-gray-600 px-1">{actualModule}</div>
                     <div className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis px-2">{item.code}</div>
                   </button>
                 </div>

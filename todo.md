@@ -15,3 +15,5 @@
 - [x] Make column dividers more prominent (changed from border-gray-700/30 to border-gray-500)
 - [x] Reduce heading text size (changed from text-xs to text-[10px])
 - [x] Build and push changes to GitHub
+- [x] Make Module column wider (w-14) to fit "Module" heading without cutoff
+- [x] Match column divider color to Core Details border (border-gray-700)
