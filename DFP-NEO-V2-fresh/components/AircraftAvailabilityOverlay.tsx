@@ -77,9 +77,19 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         }
     }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Track every render to see plannedAvailability changes
+    const renderCountRef = useRef(0);
+    renderCountRef.current += 1;
+    syncDebugger.log('Overlay', plannedAvailability, `RENDER #${renderCountRef.current} | planned=${plannedAvailability} | current=${currentAvailable} | lastSet=${lastSetByOverlay.current} | dragging=${isDraggingRef.current}`, 'info');
+
     // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
     useEffect(() => {
-        syncDebugger.log('Overlay', plannedAvailability, `plannedAvailability prop changed | lastSetByOverlay=${lastSetByOverlay.current}`);
+        syncDebugger.log('Overlay', plannedAvailability, `SYNC EFFECT FIRED | planned=${plannedAvailability} | lastSet=${lastSetByOverlay.current} | dragging=${isDraggingRef.current}`, 'warn');
+        // Don't sync if we're currently dragging - drag end will handle it
+        if (isDraggingRef.current) {
+            syncDebugger.log('Overlay', plannedAvailability, '🚫 Skipping sync - drag in progress', 'warn');
+            return;
+        }
         if (plannedAvailability !== lastSetByOverlay.current) {
             syncDebugger.log('Overlay', plannedAvailability, '✅ Syncing line to new value from outside', 'success');
             setCurrentAvailable(plannedAvailability);
@@ -195,6 +205,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             const currentRowHeight = rowHeightRef.current;
             const currentTotalAircraft = totalAircraftRef.current;
             const currentSnapshots = snapshotsRef.current;
+
+            syncDebugger.log('Overlay', 0, `DRAG END FIRED | dragY=${finalDragY.toFixed(1)} | rowH=${currentRowHeight} | total=${currentTotalAircraft} | snapshots=${currentSnapshots.length}`, 'warn');
             
             // Calculate aircraft count from final drag Y position
             const rowsFromTop = finalDragY / currentRowHeight;
