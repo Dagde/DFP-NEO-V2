@@ -235,6 +235,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         });
     }, [date]);
 
+    // Memoize currentDate so AircraftAvailabilityOverlay doesn't remount on every render
+    // (new Date(date) creates a new object reference each render, triggering the localStorage load effect)
+    const currentDateObj = useMemo(() => new Date(date), [date]);
+
     useEffect(() => {
         const scrollContainer = scrollContainerRef.current;
         if (!scrollContainer) return;
@@ -952,7 +956,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     {/* Aircraft Availability Overlay */}
                     {showAircraftAvailability && plannedAvailability !== undefined && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && (
                         <AircraftAvailabilityOverlay
-                            currentDate={new Date(date)}
+                            currentDate={currentDateObj}
                             totalAircraft={airframeCount}
                             plannedAvailability={plannedAvailability}
                             dayFlyingStart={dayFlyingStart}

@@ -52,6 +52,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             })));
             const lastAvailable = data.snapshots[data.snapshots.length - 1]?.available ?? plannedAvailability;
             setCurrentAvailable(lastAvailable);
+            console.log('[LAST_SET] SET TO', lastAvailable, '(from localStorage load)');
             lastSetByOverlay.current = lastAvailable;
         } else {
             // Initialize with planned availability at start of day (0001)
@@ -63,6 +64,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             };
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
+            console.log('[LAST_SET] SET TO', plannedAvailability, '(from initial snapshot)');
             lastSetByOverlay.current = plannedAvailability;
                 
                 // Log audit record for initial availability setup
@@ -75,7 +77,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     changes: initialDetails
                 });
         }
-    }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentDate.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps - use string to avoid new Date() reference changes
 
 
 
@@ -228,6 +230,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             
             // ALWAYS update lastSetByOverlay BEFORE any state/prop changes
             // This prevents the plannedAvailability sync useEffect from overwriting our drag result
+            console.log('[LAST_SET] SET TO', snappedCount, '(from drag end)');
             lastSetByOverlay.current = snappedCount;
             setCurrentAvailable(snappedCount);
 
