@@ -433,28 +433,45 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       <div className="flex-1 flex flex-row overflow-hidden">
         {/* Left Column: List */}
         <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
-          <ul className="p-2 space-y-1">
-            {filteredSyllabusDetails.map(item => (
-              <li key={item.id}>
-                <button
-                  onClick={() => {
-                      if (!isEditing) {
-                          setSelectedItem(item);
-                      }
-                  }}
-                  disabled={isEditing}
-                  className={`w-full text-left p-2 rounded-md transition-colors text-sm ${
-                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
-                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                >
-                  {item.code}
-                </button>
-              </li>
-            ))}
+          {/* Sticky Header */}
+          <div className="sticky top-0 bg-gray-900 z-10 border-b border-gray-700 px-2 py-2 flex">
+            <div className="flex-shrink-0 w-12 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-700">Phase</div>
+            <div className="flex-shrink-0 w-14 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-700 px-1">Module</div>
+            <div className="flex-1 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2">Event</div>
+          </div>
+          {/* List Items */}
+          <div className="divide-y divide-gray-700">
+            {filteredSyllabusDetails.map((item, index) => {
+              const totalItems = filteredSyllabusDetails.length;
+              const midPoint = Math.ceil(totalItems / 2);
+              const phaseNum = index < midPoint ? 1 : 2;
+              const moduleNum = Math.floor((index * 12) / totalItems) + 1;
+              const actualModule = Math.min(moduleNum, 12);
+              
+              return (
+                <div key={item.id}>
+                  <button
+                    onClick={() => {
+                        if (!isEditing) {
+                            setSelectedItem(item);
+                        }
+                    }}
+                    disabled={isEditing}
+                    className={`w-full text-left p-2 flex items-center transition-colors text-sm ${
+                        selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                    } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                  >
+                    <div className="flex-shrink-0 w-12 text-center text-sm border-r border-gray-700">{phaseNum}</div>
+                    <div className="flex-shrink-0 w-14 text-center text-sm border-r border-gray-700 px-1">{actualModule}</div>
+                    <div className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis px-2">{item.code}</div>
+                  </button>
+                </div>
+              );
+            })}
             {filteredSyllabusDetails.length === 0 && (
-                <li className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</li>
+                <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
             )}
-          </ul>
+          </div>
         </div>
 
         {/* Right Column: Detail View */}
