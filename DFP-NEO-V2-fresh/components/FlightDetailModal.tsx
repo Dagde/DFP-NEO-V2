@@ -1499,7 +1499,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
     return (
         <>
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                     <div className={`p-4 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
                         <div className="flex items-center space-x-4">
@@ -1520,7 +1520,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-sm font-semibold text-white">Add Deployment</span>
                                 </label>
                             )}
-                            <button onClick={() => setShowCancelConfirm(true)} className="px-4 py-1 text-sm font-semibold rounded-md btn-red-brushed" aria-label="Delete Event">
+                            <button onClick={() => setShowCancelConfirm(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
                                 Delete
                             </button>
                         </div>
