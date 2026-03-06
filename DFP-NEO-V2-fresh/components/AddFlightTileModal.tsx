@@ -22,15 +22,37 @@ const formatTime = (time: number): string => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-const convertTimeToDecimal = (timeStr: string): number => {
-  if (!timeStr) return 0;
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  if (isNaN(hours) || isNaN(minutes)) return 0;
-  return hours + minutes / 60;
-};
+// ─── Inline select styled to blend into the tile ─────────────────────────────
+interface TileSelectProps {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
 
-// ─── Enlarged Interactive Flight Tile ────────────────────────────────────────
+const TileSelect: React.FC<TileSelectProps> = ({ value, onChange, options, placeholder, className = '', style }) => (
+  <select
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    className={`bg-transparent border-0 outline-none cursor-pointer appearance-none w-full ${className}`}
+    style={style}
+  >
+    <option value="" disabled style={{ fontStyle: 'italic', color: '#888', background: '#1e293b' }}>
+      {placeholder}
+    </option>
+    {options.map(o => (
+      <option key={o.value} value={o.value} style={{ background: '#1e293b', color: '#fff' }}>
+        {o.label}
+      </option>
+    ))}
+  </select>
+);
+
+// ─── The enlarged interactive flight tile ─────────────────────────────────────
 interface FlightTilePreviewProps {
+  flightType: 'Dual' | 'Solo';
   instructor: string;
   student: string;
   flightNumber: string;
@@ -38,17 +60,15 @@ interface FlightTilePreviewProps {
   duration: number;
   area: string;
   aircraftNumber: string;
-  flightType: 'Dual' | 'Solo';
   color: string;
-  // Dropdown options
-  instructorOptions: { name: string; rank: string }[];
-  traineeOptions: { name: string; rank: string }[];
-  syllabusOptions: string[];
-  areaOptions: string[];
-  aircraftOptions: string[];
-  timeOptions: { value: number; label: string }[];
-  durationOptions: number[];
-  // Handlers
+  instructorOptions: { value: string; label: string }[];
+  traineeOptions: { value: string; label: string }[];
+  syllabusOptions: { value: string; label: string }[];
+  areaOptions: { value: string; label: string }[];
+  aircraftOptions: { value: string; label: string }[];
+  timeOptions: { value: string; label: string }[];
+  durationOptions: { value: string; label: string }[];
+  onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
   onInstructorChange: (v: string) => void;
   onStudentChange: (v: string) => void;
   onFlightNumberChange: (v: string) => void;
@@ -56,180 +76,178 @@ interface FlightTilePreviewProps {
   onDurationChange: (v: number) => void;
   onAreaChange: (v: string) => void;
   onAircraftChange: (v: string) => void;
-  onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
 }
 
-const selectClass =
-  'bg-transparent border-0 border-b border-white/40 text-white text-sm font-semibold focus:outline-none focus:border-white/80 cursor-pointer w-full appearance-none text-center hover:border-white/60 transition-colors';
+const TILE_FONT = 13;
+const SMALL_FONT = 11;
 
 const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
-  instructor, student, flightNumber, startTime, duration, area, aircraftNumber, flightType, color,
+  flightType, instructor, student, flightNumber, startTime, duration, area, aircraftNumber, color,
   instructorOptions, traineeOptions, syllabusOptions, areaOptions, aircraftOptions, timeOptions, durationOptions,
-  onInstructorChange, onStudentChange, onFlightNumberChange, onStartTimeChange, onDurationChange,
-  onAreaChange, onAircraftChange, onFlightTypeChange,
+  onFlightTypeChange, onInstructorChange, onStudentChange, onFlightNumberChange,
+  onStartTimeChange, onDurationChange, onAreaChange, onAircraftChange,
 }) => {
-  const endTime = startTime + duration;
+  const picValue = flightType === 'Solo' ? student : instructor;
+  const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
+  const picOnChange = flightType === 'Solo' ? onStudentChange : onInstructorChange;
+  const picPlaceholder = flightType === 'Solo' ? 'Surname, First (N)' : 'Surname, First (N)';
+
+  const dimStyle = { color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' as const };
+  const activeStyle = { color: '#fff' };
 
   return (
     <div
-      className={`relative rounded-lg shadow-2xl border-2 border-white/20 ${color} overflow-visible`}
-      style={{ width: '100%', minHeight: 140 }}
+      className={`relative rounded-sm shadow-2xl overflow-hidden ${color}`}
+      style={{ width: '100%', height: 76, fontSize: TILE_FONT }}
     >
-      {/* Top time bar */}
-      <div className="flex justify-between items-center px-3 pt-1.5 pb-0.5 border-b border-white/20">
-        <span className="font-mono text-white/70 text-xs">{formatTime(startTime)}</span>
-        <span className="font-mono text-white/50 text-xs">→</span>
-        <span className="font-mono text-white/70 text-xs">{formatTime(endTime)}</span>
+      {/* ── Time stamp top-left ── */}
+      <div
+        className="absolute top-px left-1 font-mono text-white/60 pointer-events-none"
+        style={{ fontSize: TILE_FONT * 0.75, lineHeight: 1 }}
+      >
+        {formatTime(startTime)}
       </div>
 
-      {/* Main tile body */}
-      <div className="flex items-stretch px-3 py-2 gap-3">
+      {/* ── Dual / Solo toggle top-right ── */}
+      <div className="absolute top-0.5 right-1 flex gap-1 z-10">
+        {(['Dual', 'Solo'] as const).map(ft => (
+          <button
+            key={ft}
+            type="button"
+            onClick={() => onFlightTypeChange(ft)}
+            className={`px-1.5 py-px rounded text-[10px] font-bold transition-all leading-tight ${
+              flightType === ft
+                ? 'bg-white/30 text-white'
+                : 'bg-white/10 text-white/40 hover:bg-white/20'
+            }`}
+          >
+            {ft}
+          </button>
+        ))}
+      </div>
 
-        {/* Left: Crew */}
-        <div className="flex-1 flex flex-col justify-center gap-2 min-w-0">
-          {/* Flight type toggle */}
-          <div className="flex gap-1 mb-1">
-            {(['Dual', 'Solo'] as const).map(ft => (
-              <button
-                key={ft}
-                type="button"
-                onClick={() => onFlightTypeChange(ft)}
-                className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${
-                  flightType === ft
-                    ? 'bg-white/30 text-white'
-                    : 'bg-white/10 text-white/50 hover:bg-white/20'
-                }`}
-              >
-                {ft}
-              </button>
-            ))}
-          </div>
-
-          {/* Instructor / PIC */}
-          <div className="relative">
-            <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">
-              {flightType === 'Solo' ? 'Pilot (Solo)' : 'Instructor'}
-            </div>
-            <select
-              value={flightType === 'Solo' ? student : instructor}
-              onChange={e => flightType === 'Solo' ? onStudentChange(e.target.value) : onInstructorChange(e.target.value)}
-              className={selectClass}
+      {/* ── Main body ── */}
+      <div
+        className="flex items-center justify-between h-full w-full px-2"
+        style={{ paddingTop: 16, paddingBottom: 16 }}
+      >
+        {/* Left: PIC + Student */}
+        <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
+          {/* PIC */}
+          <TileSelect
+            value={picValue}
+            onChange={picOnChange}
+            options={picOptions}
+            placeholder={picPlaceholder}
+            className="font-semibold"
+            style={{
+              fontSize: TILE_FONT,
+              lineHeight: '1.3',
+              ...(picValue ? activeStyle : dimStyle),
+            }}
+          />
+          {/* Student / SOLO badge */}
+          {flightType === 'Dual' ? (
+            <TileSelect
+              value={student}
+              onChange={onStudentChange}
+              options={traineeOptions}
+              placeholder="Surname, First (N)"
+              style={{
+                fontSize: TILE_FONT,
+                lineHeight: '1.3',
+                ...(student ? { color: 'rgba(255,255,255,0.8)' } : dimStyle),
+              }}
+            />
+          ) : (
+            <span
+              className="px-1.5 py-0.5 rounded-sm font-bold text-yellow-100 bg-yellow-500/20 inline-block"
+              style={{ fontSize: SMALL_FONT }}
             >
-              <option value="">— Select —</option>
-              {flightType === 'Solo'
-                ? traineeOptions.map(t => (
-                    <option key={t.name} value={t.name}>{t.rank} {t.name}</option>
-                  ))
-                : instructorOptions.map(i => (
-                    <option key={i.name} value={i.name}>{i.rank} {i.name}</option>
-                  ))
-              }
-            </select>
-          </div>
-
-          {/* Student (only for Dual) */}
-          {flightType === 'Dual' && (
-            <div className="relative">
-              <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Student</div>
-              <select
-                value={student}
-                onChange={e => onStudentChange(e.target.value)}
-                className={`${selectClass} text-white/80`}
-              >
-                <option value="">— Select —</option>
-                {traineeOptions.map(t => (
-                  <option key={t.name} value={t.name}>{t.rank} {t.name}</option>
-                ))}
-              </select>
-            </div>
+              SOLO
+            </span>
           )}
         </div>
 
-        {/* Divider */}
-        <div className="w-px bg-white/20 self-stretch" />
-
-        {/* Right: Event details */}
-        <div className="flex flex-col justify-between gap-2" style={{ minWidth: 130 }}>
-          {/* Syllabus / Flight Number */}
-          <div>
-            <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Syllabus Item</div>
+        {/* Right: [dur] flightNumber */}
+        <div
+          className="flex flex-col items-end justify-start pl-1 flex-shrink-0"
+          style={{ minWidth: 'fit-content', paddingTop: 2 }}
+        >
+          <div className="font-mono text-white/80 text-right whitespace-nowrap flex items-center gap-0.5">
+            <span style={{ fontSize: SMALL_FONT }} className="text-white/50">[</span>
+            <select
+              value={String(duration)}
+              onChange={e => onDurationChange(parseFloat(e.target.value))}
+              className="bg-transparent border-0 outline-none cursor-pointer appearance-none font-mono text-center"
+              style={{ fontSize: SMALL_FONT, width: 30, color: 'rgba(255,255,255,0.8)', fontStyle: 'italic' }}
+            >
+              {durationOptions.map(o => (
+                <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>
+              ))}
+            </select>
+            <span style={{ fontSize: SMALL_FONT }} className="text-white/50">]</span>
             <select
               value={flightNumber}
               onChange={e => onFlightNumberChange(e.target.value)}
-              className={`${selectClass} font-mono text-sky-300`}
+              className="bg-transparent border-0 outline-none cursor-pointer appearance-none font-mono"
+              style={{
+                fontSize: TILE_FONT,
+                minWidth: 56,
+                ...(flightNumber ? { color: 'rgba(255,255,255,0.9)' } : { color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' }),
+              }}
             >
-              <option value="">— Select —</option>
-              {syllabusOptions.map(s => (
-                <option key={s} value={s}>{s}</option>
+              <option value="" disabled style={{ fontStyle: 'italic', color: '#888', background: '#1e293b' }}>FLT#</option>
+              {syllabusOptions.map(o => (
+                <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>
               ))}
             </select>
-          </div>
-
-          {/* Start Time + Duration */}
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Start</div>
-              <select
-                value={startTime}
-                onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-                className={selectClass}
-              >
-                {timeOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1">
-              <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Dur (hr)</div>
-              <select
-                value={duration}
-                onChange={e => onDurationChange(parseFloat(e.target.value))}
-                className={selectClass}
-              >
-                {durationOptions.map(d => (
-                  <option key={d} value={d}>{d.toFixed(1)}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Area + Aircraft */}
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">Area</div>
-              <select
-                value={area}
-                onChange={e => onAreaChange(e.target.value)}
-                className={`${selectClass} text-yellow-300`}
-              >
-                {areaOptions.map(a => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1">
-              <div className="text-white/50 text-[10px] uppercase tracking-wider mb-0.5">A/C #</div>
-              <select
-                value={aircraftNumber}
-                onChange={e => onAircraftChange(e.target.value)}
-                className={`${selectClass} font-mono`}
-              >
-                {aircraftOptions.map(n => (
-                  <option key={n} value={n}>#{n}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom bar: aircraft number + area display */}
-      <div className="flex justify-between items-center px-3 pb-1.5 pt-0.5 border-t border-white/20">
-        <span className="font-mono text-white/60 text-xs">#{aircraftNumber}</span>
-        <span className="font-mono text-sky-300 text-xs font-bold">{flightNumber || '—'}</span>
-        <span className={`text-xs font-bold ${['A','B','C','D','E','F','G','H'].includes(area) ? 'text-white/70' : 'text-yellow-300'}`}>
-          {area}
-        </span>
+      {/* ── Bottom-left: #aircraft ── */}
+      <div
+        className="absolute bottom-0.5 left-1 font-mono flex items-center"
+        style={{ fontSize: SMALL_FONT, lineHeight: 1, opacity: 0.8 }}
+      >
+        <span className="text-white/40">#</span>
+        <select
+          value={aircraftNumber}
+          onChange={e => onAircraftChange(e.target.value)}
+          className="bg-transparent border-0 outline-none cursor-pointer appearance-none font-mono text-white/80"
+          style={{ fontSize: SMALL_FONT, width: 34, fontStyle: 'italic' }}
+        >
+          {aircraftOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── Bottom-right: start time + area ── */}
+      <div className="absolute bottom-0.5 right-1 flex items-center gap-1">
+        <select
+          value={String(startTime)}
+          onChange={e => onStartTimeChange(parseFloat(e.target.value))}
+          className="bg-transparent border-0 outline-none cursor-pointer appearance-none font-mono text-white/50"
+          style={{ fontSize: SMALL_FONT, width: 38, fontStyle: 'italic' }}
+        >
+          {timeOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>
+          ))}
+        </select>
+        <select
+          value={area}
+          onChange={e => onAreaChange(e.target.value)}
+          className={`bg-transparent border-0 outline-none cursor-pointer appearance-none font-sans font-light ${
+            ['A','B','C','D','E','F','G','H'].includes(area) ? 'text-white/70' : 'text-yellow-300'
+          }`}
+          style={{ fontSize: TILE_FONT, width: 26, opacity: 0.9, fontStyle: 'italic' }}
+        >
+          {areaOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e293b' }}>{o.label}</option>
+          ))}
+        </select>
       </div>
     </div>
   );
@@ -240,59 +258,61 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   onClose, onSave, instructors, trainees, syllabusDetails, school,
   traineesData, instructorsData, courseColors, date, traineeLMPs,
 }) => {
-  // ── State ──
   const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di'>('lmp_event');
   const [flightType, setFlightType] = useState<'Dual' | 'Solo'>('Dual');
   const [instructor, setInstructor] = useState('');
   const [student, setStudent] = useState('');
   const [flightNumber, setFlightNumber] = useState('');
   const [startTime, setStartTime] = useState(8.0);
-  const [duration, setDuration] = useState(1.0);
+  const [duration, setDuration] = useState(1.5);
   const [area, setArea] = useState('A');
   const [aircraftNumber, setAircraftNumber] = useState('001');
   const [locationType, setLocationType] = useState<'Local' | 'Land Away'>('Local');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
-  // ── Derived colour from student's course ──
   const tileColor = useMemo(() => {
-    const name = flightType === 'Solo' ? student : student;
-    if (!name) return 'bg-sky-700';
-    const trainee = traineesData.find(t => t.fullName === name || t.name === name);
+    if (!student) return 'bg-sky-700';
+    const trainee = traineesData.find(t => t.fullName === student || t.name === student);
     if (!trainee?.course) return 'bg-sky-700';
     return courseColors[trainee.course] || 'bg-sky-700';
-  }, [student, flightType, traineesData, courseColors]);
+  }, [student, traineesData, courseColors]);
 
-  // ── Options ──
-  const areas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
-  const aircraftOptions = Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0'));
+  const areas = ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'];
+  const areaOptions = areas.map(a => ({ value: a, label: a }));
+
+  const aircraftOptions = useMemo(() =>
+    Array.from({ length: 49 }, (_, i) => {
+      const n = String(i + 1).padStart(3, '0');
+      return { value: n, label: n };
+    }), []);
 
   const timeOptions = useMemo(() => {
-    const opts: { value: number; label: string }[] = [];
+    const opts: { value: string; label: string }[] = [];
     for (let h = 6; h <= 23; h++) {
       for (let m = 0; m < 60; m += 15) {
         const val = h + m / 60;
-        opts.push({ value: val, label: formatTime(val) });
+        opts.push({ value: String(val), label: formatTime(val) });
       }
     }
     return opts;
   }, []);
 
   const durationOptions = useMemo(() => {
-    const opts: number[] = [];
-    for (let d = 0.5; d <= 4.0; d += 0.1) {
-      opts.push(Math.round(d * 10) / 10);
+    const opts: { value: string; label: string }[] = [];
+    for (let d = 0.5; d <= 4.0; d = Math.round((d + 0.1) * 10) / 10) {
+      opts.push({ value: String(d), label: d.toFixed(1) });
     }
     return opts;
   }, []);
 
   const instructorOptions = useMemo(() =>
-    instructorsData.map(i => ({ name: i.name, rank: i.rank || '' })),
+    instructorsData.map(i => ({ value: i.name, label: `${i.rank ? i.rank + ' ' : ''}${i.name}` })),
     [instructorsData]
   );
 
   const traineeOptions = useMemo(() =>
-    traineesData.map(t => ({ name: t.fullName || t.name, rank: t.rank || '' })),
+    traineesData.map(t => ({ value: t.fullName || t.name, label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}` })),
     [traineesData]
   );
 
@@ -302,37 +322,33 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       .map(d => d.id || d.code || '')
       .filter(Boolean);
     const unique = Array.from(new Set(flightItems)).sort();
-    if (eventCategory === 'sct') return ['SCT FORM', ...unique];
-    return unique;
+    const base = eventCategory === 'sct' ? ['SCT FORM', ...unique] : unique;
+    return base.map(s => ({ value: s, label: s }));
   }, [syllabusDetails, eventCategory]);
 
-  // Auto-set flightType from LMP when student + flightNumber change
   useEffect(() => {
     if (!student || !flightNumber || !traineeLMPs) return;
     const lmp = traineeLMPs.get(student);
     if (!lmp) return;
     const item = lmp.find(i => i.id === flightNumber || i.code === flightNumber);
-    if (item?.sortieType) setFlightType(item.sortieType);
+    if (item?.sortieType) setFlightType(item.sortieType as 'Dual' | 'Solo');
   }, [student, flightNumber, traineeLMPs]);
 
-  // ── Validation & Save ──
   const handleSave = () => {
     const errs: string[] = [];
     if (!flightNumber) errs.push('Syllabus item is required.');
     if (flightType === 'Dual' && !instructor) errs.push('Instructor is required for Dual flights.');
-    if (!student && flightType === 'Dual') errs.push('Student is required for Dual flights.');
+    if (flightType === 'Dual' && !student) errs.push('Student is required for Dual flights.');
     if (flightType === 'Solo' && !student) errs.push('Pilot is required for Solo flights.');
-    if (!startTime) errs.push('Start time is required.');
     if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
     if (errs.length > 0) { setErrors(errs); return; }
 
-    const eventType = 'flight';
     const pilot = flightType === 'Solo' ? student : instructor;
 
     const newEvent: ScheduleEvent = {
       id: uuidv4(),
       date,
-      type: eventType,
+      type: 'flight',
       eventCategory,
       flightType,
       flightNumber,
@@ -367,7 +383,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={onClose}>
       <div
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-2xl flex flex-col max-h-[90vh] animate-fade-in"
+        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-lg flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -380,9 +396,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-          {/* ── Event Category ── */}
+          {/* Event Category */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
             <div className="flex flex-wrap gap-2">
@@ -391,7 +407,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   key={key}
                   type="button"
                   onClick={() => setEventCategory(key as any)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     eventCategory === key
                       ? 'bg-sky-600 text-white ring-2 ring-sky-400'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -403,12 +419,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           </div>
 
-          {/* ── Enlarged Interactive Flight Tile ── */}
+          {/* Flight Tile */}
           <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Flight Tile — click any field to edit
-            </label>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Flight Tile</label>
             <FlightTilePreview
+              flightType={flightType}
               instructor={instructor}
               student={student}
               flightNumber={flightNumber}
@@ -416,15 +431,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               duration={duration}
               area={area}
               aircraftNumber={aircraftNumber}
-              flightType={flightType}
               color={tileColor}
               instructorOptions={instructorOptions}
               traineeOptions={traineeOptions}
               syllabusOptions={syllabusOptions}
-              areaOptions={areas}
+              areaOptions={areaOptions}
               aircraftOptions={aircraftOptions}
               timeOptions={timeOptions}
               durationOptions={durationOptions}
+              onFlightTypeChange={setFlightType}
               onInstructorChange={setInstructor}
               onStudentChange={setStudent}
               onFlightNumberChange={setFlightNumber}
@@ -432,17 +447,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onDurationChange={setDuration}
               onAreaChange={setArea}
               onAircraftChange={setAircraftNumber}
-              onFlightTypeChange={setFlightType}
             />
           </div>
 
-          {/* ── Additional Fields ── */}
-          <div className="border-t border-gray-700 pt-5">
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Additional Details</label>
+          {/* Additional Fields */}
+          <div className="border-t border-gray-700 pt-4">
             <div className="grid grid-cols-2 gap-4">
-              {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Location Type</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
                 <select
                   value={locationType}
                   onChange={e => setLocationType(e.target.value as 'Local' | 'Land Away')}
@@ -452,30 +464,26 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   <option value="Land Away">Land Away</option>
                 </select>
               </div>
-
-              {/* Date display */}
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Date</label>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
                 <div className="w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono">
                   {date}
                 </div>
               </div>
             </div>
-
-            {/* Notes */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-400 mb-1">Notes (optional)</label>
+            <div className="mt-3">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 rows={2}
-                placeholder="Any additional notes..."
+                placeholder="Optional notes..."
                 className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 resize-none"
               />
             </div>
           </div>
 
-          {/* ── Errors ── */}
+          {/* Errors */}
           {errors.length > 0 && (
             <div className="bg-red-900/30 border border-red-700 rounded-lg p-3">
               {errors.map((e, i) => (
