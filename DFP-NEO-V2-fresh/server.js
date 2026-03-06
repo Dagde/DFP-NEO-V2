@@ -434,20 +434,34 @@ app.put('/api/courses', async (req, res) => {
 // ============================================================
 
 // GET /api/aircraft-availability-history
+// Uses raw SQL to avoid Prisma client model dependency
 app.get('/api/aircraft-availability-history', async (req, res) => {
   try {
+    const db = await getPrisma();
     const { startDate, endDate, limit } = req.query;
-    const where = {};
-    if (startDate || endDate) {
-      where.date = {};
-      if (startDate) where.date.gte = startDate;
-      if (endDate) where.date.lte = endDate;
+
+    let query = `SELECT * FROM "AircraftAvailabilityHistory"`;
+    const conditions = [];
+    const params = [];
+
+    if (startDate) {
+      params.push(startDate);
+      conditions.push(`"date" >= $${params.length}`);
     }
-    const records = await db.aircraftAvailabilityHistory.findMany({
-      where,
-      orderBy: { date: 'asc' },
-      take: limit ? parseInt(limit) : undefined,
-    });
+    if (endDate) {
+      params.push(endDate);
+      conditions.push(`"date" <= $${params.length}`);
+    }
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    query += ` ORDER BY "date" ASC`;
+    if (limit) {
+      params.push(parseInt(limit));
+      query += ` LIMIT $${params.length}`;
+    }
+
+    const records = await db.$queryRawUnsafe(query, ...params);
     console.log(`✅ GET /api/aircraft-availability-history - returning ${records.length} records`);
     res.json({ records });
   } catch (error) {
@@ -457,36 +471,51 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
 });
 
 // POST /api/aircraft-availability-history
+// Uses raw SQL INSERT ... ON CONFLICT to upsert without Prisma model
 app.post('/api/aircraft-availability-history', async (req, res) => {
   try {
+    const db = await getPrisma();
     const { date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct, recordedBy, notes } = req.body;
     if (!date || dailyAverage === undefined || plannedCount === undefined || totalAircraft === undefined) {
       return res.status(400).json({ error: 'Missing required fields: date, dailyAverage, plannedCount, totalAircraft' });
     }
-    // Upsert: update if record for this date exists, otherwise create
-    const record = await db.aircraftAvailabilityHistory.upsert({
-      where: { date },
-      update: {
-        dailyAverage: parseFloat(dailyAverage),
-        plannedCount: parseInt(plannedCount),
-        actualCount: actualCount !== undefined ? parseInt(actualCount) : null,
-        totalAircraft: parseInt(totalAircraft),
-        availabilityPct: parseFloat(availabilityPct || ((dailyAverage / totalAircraft) * 100)),
-        recordedBy: recordedBy || null,
-        notes: notes || null,
-        updatedAt: new Date(),
-      },
-      create: {
-        date,
-        dailyAverage: parseFloat(dailyAverage),
-        plannedCount: parseInt(plannedCount),
-        actualCount: actualCount !== undefined ? parseInt(actualCount) : null,
-        totalAircraft: parseInt(totalAircraft),
-        availabilityPct: parseFloat(availabilityPct || ((dailyAverage / totalAircraft) * 100)),
-        recordedBy: recordedBy || null,
-        notes: notes || null,
-      },
-    });
+
+    const id = `aah_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const avgPct = parseFloat(availabilityPct || ((parseFloat(dailyAverage) / parseInt(totalAircraft)) * 100));
+    const now = new Date().toISOString();
+
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AircraftAvailabilityHistory"
+        ("id", "date", "dailyAverage", "plannedCount", "actualCount", "totalAircraft", "availabilityPct", "recordedBy", "notes", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT ("date") DO UPDATE SET
+        "dailyAverage"    = EXCLUDED."dailyAverage",
+        "plannedCount"    = EXCLUDED."plannedCount",
+        "actualCount"     = EXCLUDED."actualCount",
+        "totalAircraft"   = EXCLUDED."totalAircraft",
+        "availabilityPct" = EXCLUDED."availabilityPct",
+        "recordedBy"      = EXCLUDED."recordedBy",
+        "notes"           = EXCLUDED."notes",
+        "updatedAt"       = EXCLUDED."updatedAt"
+    `,
+      id,
+      date,
+      parseFloat(dailyAverage),
+      parseInt(plannedCount),
+      actualCount !== undefined && actualCount !== null ? parseInt(actualCount) : null,
+      parseInt(totalAircraft),
+      avgPct,
+      recordedBy || null,
+      notes || null,
+      now,
+      now
+    );
+
+    // Fetch the upserted record to return it
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1`, date
+    );
+    const record = rows[0] || null;
     console.log(`✅ POST /api/aircraft-availability-history - upserted record for date: ${date}`);
     res.json({ success: true, record });
   } catch (error) {
@@ -498,8 +527,9 @@ app.post('/api/aircraft-availability-history', async (req, res) => {
 // DELETE /api/aircraft-availability-history/:id
 app.delete('/api/aircraft-availability-history/:id', async (req, res) => {
   try {
+    const db = await getPrisma();
     const { id } = req.params;
-    await db.aircraftAvailabilityHistory.delete({ where: { id } });
+    await db.$executeRawUnsafe(`DELETE FROM "AircraftAvailabilityHistory" WHERE "id" = $1`, id);
     console.log(`✅ DELETE /api/aircraft-availability-history/${id}`);
     res.json({ success: true });
   } catch (error) {
