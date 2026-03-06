@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,116 +22,49 @@ const formatTime = (time: number): string => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-// ─── Invisible inline select — blends into tile text ─────────────────────────
-// Renders as plain text visually; clicking opens native dropdown
-interface InlineSelectProps {
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-  placeholder: string;
-  bold?: boolean;
-  dim?: boolean;         // white/60 style
-  mono?: boolean;
-  fontSize?: number;
-  color?: string;
-  minWidth?: number;
-  italic?: boolean;
-}
+// ─── Flight Tile Preview — exact replica of reference, 4× scaled ─────────────
+// Reference tile measurements (approximate px from screenshot):
+//   tile height:        ~38px  → ×4 = 152px
+//   tile border-radius: ~4px   → ×4 = 16px
+//   horiz padding:      ~6px   → ×4 = 24px
+//   vert padding:       ~4px   → ×4 = 16px
+//   time font:          ~9px   → ×4 = 36px  (but capped for readability at 18px)
+//   name font:          ~10px  → ×4 = 40px  (capped at 20px)
+//   right info font:    ~10px  → ×4 = 40px  (capped at 20px)
+//   bottom font:        ~9px   → ×4 = 36px  (capped at 18px)
+//   btn font:           ~8px   → ×4 = 32px  (capped at 16px)
+//   left name indent:   ~15%   → same %
 
-const InlineSelect: React.FC<InlineSelectProps> = ({
-  value, onChange, options, placeholder,
-  bold, dim, mono, fontSize = 14, color, minWidth = 60, italic,
-}) => {
-  const baseColor = color || (value ? (dim ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.95)') : 'rgba(255,255,255,0.38)');
-  return (
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        outline: 'none',
-        cursor: 'pointer',
-        appearance: 'none',
-        WebkitAppearance: 'none',
-        MozAppearance: 'none',
-        fontFamily: mono ? 'ui-monospace, SFMono-Regular, monospace' : 'inherit',
-        fontWeight: bold ? 700 : 400,
-        fontStyle: italic ? 'italic' : 'normal',
-        fontSize: `${fontSize}px`,
-        color: baseColor,
-        minWidth: `${minWidth}px`,
-        padding: 0,
-        margin: 0,
-        lineHeight: 'inherit',
-      }}
-    >
-      <option value="" disabled style={{ background: '#2d1b69', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-        {placeholder}
-      </option>
-      {options.map(o => (
-        <option key={o.value} value={o.value} style={{ background: '#2d1b69', color: '#fff', fontStyle: 'normal' }}>
-          {o.label}
-        </option>
-      ))}
-    </select>
-  );
-};
+const S = 4; // scale factor
 
-// ─── Inline text input — blends into tile text ────────────────────────────────
-interface InlineInputProps {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  bold?: boolean;
-  mono?: boolean;
-  fontSize?: number;
-  color?: string;
-  width?: number;
-  dim?: boolean;
-}
+// Scaled values
+const TILE_H        = 38  * S;  // 152px
+const TILE_RADIUS   = 4   * S;  // 16px
+const PAD_H         = 6   * S;  // 24px
+const PAD_V         = 4   * S;  // 16px
+const TIME_FONT     = 9   * S;  // 36px
+const NAME_FONT     = 10  * S;  // 40px
+const RIGHT_FONT    = 10  * S;  // 40px
+const BOT_FONT      = 9   * S;  // 36px
+const BTN_FONT      = 8   * S;  // 32px
+const BTN_PAD_V     = 1   * S;  // 4px
+const BTN_PAD_H     = 5   * S;  // 20px
+const BTN_RADIUS    = 3   * S;  // 12px
+const BTN_GAP       = 2   * S;  // 8px
+const NAME_INDENT   = '15%';
+const NAME_GAP      = 3   * S;  // 12px gap between two name lines
+const RIGHT_GAP     = 4   * S;  // 16px gap between right lines
 
-const InlineInput: React.FC<InlineInputProps> = ({
-  value, onChange, placeholder, bold, mono, fontSize = 14, color, width = 80, dim,
-}) => {
-  const baseColor = color || (value ? (dim ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.95)') : 'rgba(255,255,255,0.38)');
-  return (
-    <input
-      type="text"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        outline: 'none',
-        fontFamily: mono ? 'ui-monospace, SFMono-Regular, monospace' : 'inherit',
-        fontWeight: bold ? 700 : 400,
-        fontSize: `${fontSize}px`,
-        color: baseColor,
-        width: `${width}px`,
-        padding: 0,
-        margin: 0,
-        lineHeight: 'inherit',
-      }}
-    />
-  );
-};
-
-// ─── The Flight Tile — exact replica of Screenshot 1, scaled up ───────────────
 interface FlightTilePreviewProps {
-  // values
   flightType: 'Dual' | 'Solo';
   startTime: number;
-  picName: string;       // top name line (instructor or solo pilot)
-  studentName: string;   // bottom name line
+  picName: string;
+  studentName: string;
   duration: number;
-  flightNumber: string;  // e.g. BGF19
-  area: string;          // e.g. A
-  callsign: string;      // e.g. ROLR
-  aircraftNumber: string;// e.g. 053
-  color: string;         // tailwind bg class
-  // options
+  flightNumber: string;
+  area: string;
+  aircraftNumber: string;
+  color: string; // tailwind bg class
   instructorOptions: { value: string; label: string }[];
   traineeOptions: { value: string; label: string }[];
   syllabusOptions: { value: string; label: string }[];
@@ -139,7 +72,6 @@ interface FlightTilePreviewProps {
   aircraftOptions: { value: string; label: string }[];
   timeOptions: { value: string; label: string }[];
   durationOptions: { value: string; label: string }[];
-  // handlers
   onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
   onStartTimeChange: (v: number) => void;
   onPicNameChange: (v: string) => void;
@@ -147,134 +79,149 @@ interface FlightTilePreviewProps {
   onDurationChange: (v: number) => void;
   onFlightNumberChange: (v: string) => void;
   onAreaChange: (v: string) => void;
-  onCallsignChange: (v: string) => void;
   onAircraftChange: (v: string) => void;
 }
 
+// Shared style for all invisible inline selects inside the tile
+const inlineSelectStyle = (
+  fontSize: number,
+  color: string,
+  width: number | string,
+  fontWeight: number = 400,
+  fontStyle: 'normal' | 'italic' = 'normal',
+  mono: boolean = false,
+  textAlign: 'left' | 'right' | 'center' = 'left',
+): React.CSSProperties => ({
+  background: 'transparent',
+  border: 'none',
+  outline: 'none',
+  cursor: 'pointer',
+  appearance: 'none' as any,
+  WebkitAppearance: 'none' as any,
+  MozAppearance: 'none' as any,
+  fontFamily: mono
+    ? 'ui-monospace, SFMono-Regular, "Courier New", monospace'
+    : 'inherit',
+  fontWeight,
+  fontStyle,
+  fontSize,
+  color,
+  width: typeof width === 'number' ? `${width}px` : width,
+  padding: 0,
+  margin: 0,
+  lineHeight: 1.2,
+  textAlign,
+});
+
 const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   flightType, startTime, picName, studentName, duration, flightNumber,
-  area, callsign, aircraftNumber, color,
+  area, aircraftNumber, color,
   instructorOptions, traineeOptions, syllabusOptions, areaOptions,
   aircraftOptions, timeOptions, durationOptions,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
-  onDurationChange, onFlightNumberChange, onAreaChange, onCallsignChange, onAircraftChange,
+  onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange,
 }) => {
-  // Scale factor: real tile is ~40px tall, we want ~88px → scale ≈ 2.2×
-  // All measurements below are the scaled-up values
-  const SCALE = 2.2;
-
-  // Typography sizes (matching Screenshot 1 proportions, scaled up)
-  const timeFont    = Math.round(9  * SCALE);  // 09:25 top-left
-  const picFont     = Math.round(11 * SCALE);  // Green, Olivia (N) — bold
-  const studentFont = Math.round(10 * SCALE);  // Edwards, Ava (N)
-  const rightTopFont= Math.round(10 * SCALE);  // [1.5]  BGF19
-  const rightBotFont= Math.round(9  * SCALE);  // A  ROLR  053
-  const btnFont     = Math.round(8  * SCALE);  // Dual / Solo buttons
-
-  // Padding (scaled)
-  const padH = Math.round(6 * SCALE);   // horizontal padding
-  const padV = Math.round(4 * SCALE);   // vertical padding
-
-  // Tile height (scaled from ~40px real)
-  const tileH = Math.round(40 * SCALE);
-
-  // Dual/Solo button style
-  const btnBase: React.CSSProperties = {
-    fontSize: btnFont,
-    fontWeight: 700,
-    padding: `${Math.round(1 * SCALE)}px ${Math.round(5 * SCALE)}px`,
-    borderRadius: Math.round(3 * SCALE),
-    cursor: 'pointer',
-    border: 'none',
-    lineHeight: 1.2,
-    transition: 'background 0.15s',
-  };
-
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
+
+  // Colours matching the reference screenshot exactly
+  const timeColor     = 'rgba(255,255,255,0.95)';  // bright white — time top-left
+  const nameColor     = (v: string) => v ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.45)';
+  const rightColor    = (v: string) => v ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.45)';
+  const botColor      = (v: string) => v ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)';
+  const bracketColor  = 'rgba(255,255,255,0.70)';
+  const durBoldColor  = 'rgba(255,255,255,0.95)';  // [1.5] — bold white
 
   return (
     <div
-      className={`relative rounded-sm ${color}`}
+      className={color}
       style={{
+        position: 'relative',
         width: '100%',
-        height: tileH,
-        borderRadius: Math.round(3 * SCALE),
+        height: TILE_H,
+        borderRadius: TILE_RADIUS,
         overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+        flexShrink: 0,
       }}
     >
-      {/* ── Top-left: start time (09:25 style) ── */}
+      {/* ── TOP-LEFT: start time ── */}
+      {/* We show the formatted time as a visible label, with an invisible select on top */}
       <div
         style={{
           position: 'absolute',
-          top: Math.round(2 * SCALE),
-          left: Math.round(4 * SCALE),
-          fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-          fontSize: timeFont,
-          color: 'rgba(255,255,255,0.65)',
+          top: PAD_V,
+          left: PAD_H,
+          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+          fontSize: TIME_FONT,
+          fontWeight: 400,
+          color: timeColor,
           lineHeight: 1,
           pointerEvents: 'none',
-          zIndex: 2,
+          zIndex: 1,
+          whiteSpace: 'nowrap',
         }}
       >
         {formatTime(startTime)}
       </div>
-      {/* Invisible time select overlaid on top of the time display */}
+      {/* Invisible select overlay for time */}
       <select
         value={String(startTime)}
         onChange={e => onStartTimeChange(parseFloat(e.target.value))}
         style={{
           position: 'absolute',
-          top: Math.round(2 * SCALE),
-          left: Math.round(4 * SCALE),
-          width: Math.round(32 * SCALE),
-          height: timeFont + 4,
+          top: PAD_V,
+          left: PAD_H,
+          width: TIME_FONT * 3,
+          height: TIME_FONT + 4,
           opacity: 0,
           cursor: 'pointer',
-          zIndex: 3,
+          zIndex: 5,
         }}
       >
         {timeOptions.map(o => (
-          <option key={o.value} value={o.value} style={{ background: '#2d1b69' }}>{o.label}</option>
+          <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
         ))}
       </select>
 
-      {/* ── Top-right: Dual / Solo buttons ── */}
+      {/* ── TOP-RIGHT: Dual / Solo buttons ── */}
       <div
         style={{
           position: 'absolute',
-          top: Math.round(3 * SCALE),
-          right: Math.round(4 * SCALE),
+          top: PAD_V,
+          right: PAD_H,
           display: 'flex',
-          gap: Math.round(2 * SCALE),
-          zIndex: 4,
+          gap: BTN_GAP,
+          zIndex: 5,
         }}
       >
-        <button
-          type="button"
-          onClick={() => onFlightTypeChange('Dual')}
-          style={{
-            ...btnBase,
-            background: flightType === 'Dual' ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.10)',
-            color: flightType === 'Dual' ? '#fff' : 'rgba(255,255,255,0.45)',
-          }}
-        >
-          Dual
-        </button>
-        <button
-          type="button"
-          onClick={() => onFlightTypeChange('Solo')}
-          style={{
-            ...btnBase,
-            background: flightType === 'Solo' ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.10)',
-            color: flightType === 'Solo' ? '#fff' : 'rgba(255,255,255,0.45)',
-          }}
-        >
-          Solo
-        </button>
+        {(['Dual', 'Solo'] as const).map(ft => (
+          <button
+            key={ft}
+            type="button"
+            onClick={() => onFlightTypeChange(ft)}
+            style={{
+              fontSize: BTN_FONT,
+              fontWeight: 700,
+              padding: `${BTN_PAD_V}px ${BTN_PAD_H}px`,
+              borderRadius: BTN_RADIUS,
+              border: 'none',
+              cursor: 'pointer',
+              lineHeight: 1.2,
+              background: flightType === ft
+                ? 'rgba(0,0,0,0.30)'
+                : 'rgba(255,255,255,0.15)',
+              color: flightType === ft
+                ? 'rgba(255,255,255,1)'
+                : 'rgba(255,255,255,0.60)',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+          >
+            {ft}
+          </button>
+        ))}
       </div>
 
-      {/* ── Main body: left names | right flight info ── */}
+      {/* ── MAIN BODY: left names | right flight info ── */}
       <div
         style={{
           position: 'absolute',
@@ -285,168 +232,227 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingLeft: padH,
-          paddingRight: padH,
-          paddingTop: padV,
-          paddingBottom: padV,
+          paddingLeft: PAD_H,
+          paddingRight: PAD_H,
+          // Push content down slightly to clear the time stamp
+          paddingTop: TIME_FONT + PAD_V + 4 * S,
+          paddingBottom: BOT_FONT + PAD_V + 2 * S,
         }}
       >
-        {/* Left: two name lines */}
+        {/* LEFT: two name lines, indented */}
         <div
           style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            gap: Math.round(2 * SCALE),
-            paddingLeft: Math.round(10 * SCALE), // matches real tile's ~10% left indent
+            gap: NAME_GAP,
+            paddingLeft: NAME_INDENT,
             minWidth: 0,
             overflow: 'hidden',
           }}
         >
-          {/* Line 1: PIC name — bold, white */}
-          <div style={{ display: 'flex', alignItems: 'baseline', overflow: 'hidden' }}>
-            <InlineSelect
-              value={picName}
-              onChange={onPicNameChange}
-              options={picOptions}
-              placeholder="Surname, First (N)"
-              bold
-              fontSize={picFont}
-              minWidth={Math.round(120 * SCALE / 2.2)}
-            />
-          </div>
-          {/* Line 2: Student name — normal weight, white/80 */}
-          <div style={{ display: 'flex', alignItems: 'baseline', overflow: 'hidden' }}>
-            {flightType === 'Dual' ? (
-              <InlineSelect
-                value={studentName}
-                onChange={onStudentNameChange}
-                options={traineeOptions}
-                placeholder="Surname, First (N)"
-                dim
-                fontSize={studentFont}
-                minWidth={Math.round(120 * SCALE / 2.2)}
-              />
-            ) : (
-              <span
-                style={{
-                  fontSize: studentFont * 0.85,
-                  fontWeight: 700,
-                  color: 'rgba(255,220,80,0.9)',
-                  background: 'rgba(255,200,0,0.18)',
-                  padding: `${Math.round(1 * SCALE)}px ${Math.round(4 * SCALE)}px`,
-                  borderRadius: Math.round(2 * SCALE),
-                }}
-              >
-                SOLO
-              </span>
-            )}
-          </div>
+          {/* Line 1: PIC / Instructor */}
+          <select
+            value={picName}
+            onChange={e => onPicNameChange(e.target.value)}
+            style={inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 400, 'italic')}
+          >
+            <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+              Surname, First (N)
+            </option>
+            {picOptions.map(o => (
+              <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Line 2: Student (Dual) or SOLO badge */}
+          {flightType === 'Dual' ? (
+            <select
+              value={studentName}
+              onChange={e => onStudentNameChange(e.target.value)}
+              style={inlineSelectStyle(NAME_FONT, nameColor(studentName), '100%', 400, 'italic')}
+            >
+              <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+                Surname, First (N)
+              </option>
+              {traineeOptions.map(o => (
+                <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span
+              style={{
+                fontSize: NAME_FONT * 0.75,
+                fontWeight: 700,
+                color: 'rgba(255,220,60,0.95)',
+                background: 'rgba(255,200,0,0.20)',
+                padding: `${2 * S}px ${4 * S}px`,
+                borderRadius: 2 * S,
+                display: 'inline-block',
+                lineHeight: 1.2,
+              }}
+            >
+              SOLO
+            </span>
+          )}
         </div>
 
-        {/* Right: two info lines */}
+        {/* RIGHT: [dur] flightnum on top, area+time on bottom */}
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-end',
             justifyContent: 'center',
-            gap: Math.round(2 * SCALE),
+            gap: RIGHT_GAP,
             flexShrink: 0,
-            paddingLeft: Math.round(4 * SCALE),
+            paddingLeft: PAD_H,
           }}
         >
-          {/* Right line 1: [1.5]  BGF19 */}
+          {/* Right line 1: [ 1.5 ]  FLT# */}
           <div
             style={{
               display: 'flex',
               alignItems: 'baseline',
-              gap: Math.round(3 * SCALE),
-              fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-              fontSize: rightTopFont,
-              color: 'rgba(255,255,255,0.85)',
+              gap: 2 * S,
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: rightTopFont * 0.9 }}>[</span>
+            <span style={{
+              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+              fontSize: RIGHT_FONT,
+              color: bracketColor,
+              lineHeight: 1.2,
+            }}>[ </span>
+            {/* Duration — bold white */}
             <select
               value={String(duration)}
               onChange={e => onDurationChange(parseFloat(e.target.value))}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                cursor: 'pointer',
-                appearance: 'none',
-                WebkitAppearance: 'none',
-                fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-                fontSize: rightTopFont * 0.9,
-                color: 'rgba(255,255,255,0.85)',
-                width: Math.round(22 * SCALE),
-                padding: 0,
-                textAlign: 'center',
-              }}
+              style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
             >
               {durationOptions.map(o => (
-                <option key={o.value} value={o.value} style={{ background: '#2d1b69' }}>{o.label}</option>
+                <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
               ))}
             </select>
-            <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: rightTopFont * 0.9 }}>]</span>
-            <InlineSelect
+            <span style={{
+              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+              fontSize: RIGHT_FONT,
+              color: bracketColor,
+              lineHeight: 1.2,
+            }}> ]</span>
+            {/* Flight number — italic */}
+            <select
               value={flightNumber}
-              onChange={onFlightNumberChange}
-              options={syllabusOptions}
-              placeholder="BGF19"
-              mono
-              bold
-              fontSize={rightTopFont}
-              minWidth={Math.round(40 * SCALE)}
-            />
-          </div>
-
-          {/* Right line 2: A  ROLR  053 */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: Math.round(4 * SCALE),
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {/* Area letter */}
-            <InlineSelect
-              value={area}
-              onChange={onAreaChange}
-              options={areaOptions}
-              placeholder="A"
-              fontSize={rightBotFont}
-              color={['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.75)' : 'rgba(255,220,80,0.9)'}
-              minWidth={Math.round(14 * SCALE)}
-            />
-            {/* Callsign */}
-            <InlineInput
-              value={callsign}
-              onChange={onCallsignChange}
-              placeholder="ROLR"
-              mono
-              fontSize={rightBotFont}
-              dim
-              width={Math.round(32 * SCALE)}
-            />
-            {/* Aircraft number */}
-            <InlineSelect
-              value={aircraftNumber}
-              onChange={onAircraftChange}
-              options={aircraftOptions}
-              placeholder="053"
-              mono
-              dim
-              fontSize={rightBotFont}
-              minWidth={Math.round(24 * SCALE)}
-            />
+              onChange={e => onFlightNumberChange(e.target.value)}
+              style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
+            >
+              <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+                FLT#
+              </option>
+              {syllabusOptions.map(o => (
+                <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+      </div>
+
+      {/* ── BOTTOM-LEFT: #aircraft ── */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: PAD_V,
+          left: PAD_H,
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 1 * S,
+          zIndex: 2,
+        }}
+      >
+        <span style={{
+          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+          fontSize: BOT_FONT,
+          color: 'rgba(255,255,255,0.70)',
+          lineHeight: 1,
+        }}>#</span>
+        <select
+          value={aircraftNumber}
+          onChange={e => onAircraftChange(e.target.value)}
+          style={inlineSelectStyle(BOT_FONT, botColor(aircraftNumber), BOT_FONT * 2.2, 400, 'normal', true)}
+        >
+          {aircraftOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── BOTTOM-RIGHT: time + area ── */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: PAD_V,
+          right: PAD_H,
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 3 * S,
+          zIndex: 2,
+        }}
+      >
+        {/* Start time repeated bottom-right (as per reference) */}
+        <div style={{ position: 'relative' }}>
+          <span style={{
+            fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+            fontSize: BOT_FONT,
+            color: 'rgba(255,255,255,0.70)',
+            lineHeight: 1,
+            pointerEvents: 'none',
+          }}>
+            {formatTime(startTime)}
+          </span>
+          {/* Invisible select overlay */}
+          <select
+            value={String(startTime)}
+            onChange={e => onStartTimeChange(parseFloat(e.target.value))}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer',
+              zIndex: 5,
+            }}
+          >
+            {timeOptions.map(o => (
+              <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        {/* Area */}
+        <select
+          value={area}
+          onChange={e => onAreaChange(e.target.value)}
+          style={inlineSelectStyle(
+            BOT_FONT,
+            ['A','B','C','D','E','F','G','H'].includes(area)
+              ? 'rgba(255,255,255,0.80)'
+              : 'rgba(255,220,60,0.95)',
+            BOT_FONT * 1.4,
+            400, 'normal', false
+          )}
+        >
+          {areaOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
+          ))}
+        </select>
       </div>
     </div>
   );
@@ -459,28 +465,26 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di'>('lmp_event');
   const [flightType, setFlightType] = useState<'Dual' | 'Solo'>('Dual');
-  const [picName, setPicName] = useState('');       // instructor (Dual) or pilot (Solo)
+  const [picName, setPicName] = useState('');
   const [studentName, setStudentName] = useState('');
   const [flightNumber, setFlightNumber] = useState('');
-  const [startTime, setStartTime] = useState(9.0 + 25/60); // 09:25 default like screenshot
+  const [startTime, setStartTime] = useState(8.0);
   const [duration, setDuration] = useState(1.5);
   const [area, setArea] = useState('A');
-  const [callsign, setCallsign] = useState('');
   const [aircraftNumber, setAircraftNumber] = useState('001');
   const [locationType, setLocationType] = useState<'Local' | 'Land Away'>('Local');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
-  // Tile colour from student's course
+  // Tile colour from student's course (default sky-blue matching reference)
   const tileColor = useMemo(() => {
     const name = flightType === 'Solo' ? picName : studentName;
-    if (!name) return 'bg-purple-700'; // default purple like screenshot
+    if (!name) return 'bg-sky-500';
     const trainee = traineesData.find(t => t.fullName === name || t.name === name);
-    if (!trainee?.course) return 'bg-purple-700';
-    return courseColors[trainee.course] || 'bg-purple-700';
+    if (!trainee?.course) return 'bg-sky-500';
+    return courseColors[trainee.course] || 'bg-sky-500';
   }, [picName, studentName, flightType, traineesData, courseColors]);
 
-  // Options
   const areas = ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'];
   const areaOptions = areas.map(a => ({ value: a, label: a }));
 
@@ -529,7 +533,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return base.map(s => ({ value: s, label: s }));
   }, [syllabusDetails, eventCategory]);
 
-  // Auto-set flightType from LMP
   useEffect(() => {
     const name = flightType === 'Solo' ? picName : studentName;
     if (!name || !flightNumber || !traineeLMPs) return;
@@ -548,10 +551,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
     if (errs.length > 0) { setErrors(errs); return; }
 
-    const instructor = flightType === 'Dual' ? picName : '';
-    const student    = flightType === 'Dual' ? studentName : '';
-    const pilot      = flightType === 'Solo' ? picName : picName;
-
     const newEvent: ScheduleEvent = {
       id: uuidv4(),
       date,
@@ -559,17 +558,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       eventCategory,
       flightType,
       flightNumber,
-      instructor,
-      student,
-      pilot,
+      instructor: flightType === 'Dual' ? picName : '',
+      student: flightType === 'Dual' ? studentName : '',
+      pilot: picName,
       startTime,
       duration,
       area,
       aircraftNumber,
-      callsign,
       locationType,
       color: tileColor,
-      resourceId: flightType === 'Dual' ? picName : picName,
+      resourceId: picName,
       notes,
       group: '',
       groupTraineeIds: [],
@@ -591,7 +589,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={onClose}>
       <div
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-xl flex flex-col max-h-[90vh]"
+        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-2xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -627,7 +625,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           </div>
 
-          {/* ── The Flight Tile ── */}
+          {/* Flight Tile label + tile */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Flight Tile</label>
             <FlightTilePreview
@@ -638,7 +636,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               duration={duration}
               flightNumber={flightNumber}
               area={area}
-              callsign={callsign}
               aircraftNumber={aircraftNumber}
               color={tileColor}
               instructorOptions={instructorOptions}
@@ -655,7 +652,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onDurationChange={setDuration}
               onFlightNumberChange={setFlightNumber}
               onAreaChange={setArea}
-              onCallsignChange={setCallsign}
               onAircraftChange={setAircraftNumber}
             />
           </div>
