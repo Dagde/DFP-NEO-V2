@@ -23,25 +23,20 @@ const formatTime = (time: number): string => {
 };
 
 // ─── Flight Tile Preview — exact replica of reference, 4× scaled ─────────────
-const S = 4; // scale factor
+const S = 4; // scale factor (kept for reference, not used for sizing)
 
-// Scaled values (large interactive tile)
-const TILE_H        = 38  * S;  // 152px
-const TILE_RADIUS   = 4   * S;  // 16px
-const PAD_H         = 6   * S;  // 24px
-const PAD_V         = 4   * S;  // 16px
-const TIME_FONT     = 9   * S;  // 36px
-const NAME_FONT     = 10  * S;  // 40px
-const RIGHT_FONT    = 10  * S;  // 40px
-const BOT_FONT      = 9   * S;  // 36px
-const BTN_FONT      = 8   * S;  // 32px
-const BTN_PAD_V     = 1   * S;  // 4px
-const BTN_PAD_H     = 5   * S;  // 20px
-const BTN_RADIUS    = 3   * S;  // 12px
-const BTN_GAP       = 2   * S;  // 8px
+// Large interactive tile — 50% of original 4× scale, all text 20px
+const TILE_H        = Math.round(38 * S * 0.5);  // 76px (50% of 152px)
+const TILE_RADIUS   = 8;
+const PAD_H         = 12;
+const PAD_V         = 6;
+const TIME_FONT     = 20;
+const NAME_FONT     = 20;
+const RIGHT_FONT    = 20;
+const BOT_FONT      = 20;
 const NAME_INDENT   = '15%';
-const NAME_GAP      = 3   * S;  // 12px gap between two name lines
-const RIGHT_GAP     = 4   * S;  // 16px gap between right lines
+const NAME_GAP      = 6;
+const RIGHT_GAP     = 6;
 
 // ─── Real-size tile constants (matching actual schedule tile) ─────────────────
 const RT_H          = 38;   // px — same as real tile
@@ -312,42 +307,44 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         ))}
       </select>
 
-      {/* ── TOP-RIGHT: Dual / Solo buttons ── */}
+      {/* ── TOP-RIGHT: [duration] FLT# ── */}
       <div
         style={{
           position: 'absolute',
           top: PAD_V,
           right: PAD_H,
           display: 'flex',
-          gap: BTN_GAP,
+          alignItems: 'baseline',
+          gap: 4,
           zIndex: 5,
+          whiteSpace: 'nowrap',
         }}
       >
-        {(['Dual', 'Solo'] as const).map(ft => (
-          <button
-            key={ft}
-            type="button"
-            onClick={() => onFlightTypeChange(ft)}
-            style={{
-              fontSize: BTN_FONT,
-              fontWeight: 700,
-              padding: `${BTN_PAD_V}px ${BTN_PAD_H}px`,
-              borderRadius: BTN_RADIUS,
-              border: 'none',
-              cursor: 'pointer',
-              lineHeight: 1.2,
-              background: flightType === ft
-                ? 'rgba(0,0,0,0.30)'
-                : 'rgba(255,255,255,0.15)',
-              color: flightType === ft
-                ? 'rgba(255,255,255,1)'
-                : 'rgba(255,255,255,0.60)',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-          >
-            {ft}
-          </button>
-        ))}
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}>[ </span>
+        <select
+          value={String(duration)}
+          onChange={e => onDurationChange(parseFloat(e.target.value))}
+          style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
+        >
+          {durationOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
+          ))}
+        </select>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
+        <select
+          value={flightNumber}
+          onChange={e => onFlightNumberChange(e.target.value)}
+          style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
+        >
+          <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+            FLT#
+          </option>
+          {syllabusOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* ── MAIN BODY: left names | right flight info ── */}
@@ -363,9 +360,8 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           justifyContent: 'space-between',
           paddingLeft: PAD_H,
           paddingRight: PAD_H,
-          // Push content down slightly to clear the time stamp
-          paddingTop: TIME_FONT + PAD_V + 4 * S,
-          paddingBottom: BOT_FONT + PAD_V + 2 * S,
+          paddingTop: TIME_FONT + PAD_V + 2,
+          paddingBottom: BOT_FONT + PAD_V + 2,
         }}
       >
         {/* LEFT: two name lines, indented */}
@@ -420,8 +416,8 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                 fontWeight: 700,
                 color: 'rgba(255,220,60,0.95)',
                 background: 'rgba(255,200,0,0.20)',
-                padding: `${2 * S}px ${4 * S}px`,
-                borderRadius: 2 * S,
+                padding: `4px 8px`,
+                borderRadius: 4,
                 display: 'inline-block',
                 lineHeight: 1.2,
               }}
@@ -431,67 +427,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           )}
         </div>
 
-        {/* RIGHT: [dur] flightnum on top, area+time on bottom */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-            gap: RIGHT_GAP,
-            flexShrink: 0,
-            paddingLeft: PAD_H,
-          }}
-        >
-          {/* Right line 1: [ 1.5 ]  FLT# */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 2 * S,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-              fontSize: RIGHT_FONT,
-              color: bracketColor,
-              lineHeight: 1.2,
-            }}>[ </span>
-            {/* Duration — bold white */}
-            <select
-              value={String(duration)}
-              onChange={e => onDurationChange(parseFloat(e.target.value))}
-              style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
-            >
-              {durationOptions.map(o => (
-                <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
-              ))}
-            </select>
-            <span style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-              fontSize: RIGHT_FONT,
-              color: bracketColor,
-              lineHeight: 1.2,
-            }}> ]</span>
-            {/* Flight number — italic */}
-            <select
-              value={flightNumber}
-              onChange={e => onFlightNumberChange(e.target.value)}
-              style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
-            >
-              <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-                FLT#
-              </option>
-              {syllabusOptions.map(o => (
-                <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
-      </div>
 
       {/* ── BOTTOM-LEFT: #aircraft ── */}
       <div
@@ -501,7 +437,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           left: PAD_H,
           display: 'flex',
           alignItems: 'baseline',
-          gap: 1 * S,
+          gap: 2,
           zIndex: 2,
         }}
       >
@@ -530,7 +466,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           right: PAD_H,
           display: 'flex',
           alignItems: 'baseline',
-          gap: 3 * S,
+          gap: 8,
           zIndex: 2,
         }}
       >
