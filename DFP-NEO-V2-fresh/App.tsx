@@ -63,6 +63,7 @@ import CourseRosterView from './components/CourseRosterView';
 import HateSheetView from './components/HateSheetView';
 import ScoreDetailView from './components/ScoreDetailView';
 import { EventDetailModal } from './components/FlightDetailModal';
+import AddFlightTileModal from './components/AddFlightTileModal';
 import ConflictModal from './components/ConflictModal';
 import AddGroundEventFlyout from './components/AddGroundEventFlyout';
 import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
@@ -3722,6 +3723,7 @@ useEffect(() => {
     const [showAddRemedialPackage, setShowAddRemedialPackage] = useState(false);
     const [selectedTraineeForRemedial, setSelectedTraineeForRemedial] = useState<Trainee | null>(null);
     const [isAddingTile, setIsAddingTile] = useState(false);
+    const [showAddFlightTileModal, setShowAddFlightTileModal] = useState(false);
 
     const [selectedTraineeForHateSheet, setSelectedTraineeForHateSheet] = useState<Trainee | null>(null);
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
@@ -9547,9 +9549,7 @@ updates.forEach(update => {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
                     onAddTile={() => {
-                        // Debug alert removed - Add Tile functionality working correctly
-                        setIsAddingTile(true);
-                        handleOpenModal(null, { type: 'flight' });
+                        setShowAddFlightTileModal(true);
                     }}
                     onAddGroundEvent={() => setShowAddGroundEvent(true)}
                     showValidation={showValidation}
@@ -9802,6 +9802,24 @@ updates.forEach(update => {
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
                     traineesData={traineesData}
+                />
+            )}
+            {showAddFlightTileModal && (
+                <AddFlightTileModal
+                    onClose={() => setShowAddFlightTileModal(false)}
+                    onSave={(events) => {
+                        events.forEach(event => handleSaveEvent([event]));
+                        setShowAddFlightTileModal(false);
+                    }}
+                    instructors={instructorsData.map(i => i.name)}
+                    trainees={traineesData.map(t => t.fullName || t.name)}
+                    syllabusDetails={syllabusDetails}
+                    school={school}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
+                    courseColors={courseColors}
+                    date={date}
+                    traineeLMPs={traineeLMPs}
                 />
             )}
             {showAuthFlyout && eventForAuth && 

@@ -3,10 +3,10 @@
 ## Tasks
 
 - [x] Review existing files (ACHistoryPage, ACHistoryAnalytics, schema, server.js, App.tsx)
-- [ ] Add AircraftAvailabilityHistory model to Prisma schema
-- [ ] Add API endpoints to server.js (GET/POST aircraft availability history)
-- [ ] Create ACHistoryAircraftAvailability.tsx component with graph + time period selectors
-- [ ] Add component to ACHistoryPage.tsx below ACHistoryAnalytics
-- [ ] Wire up data recording in App.tsx (save daily average when availability changes)
-- [ ] Build and verify no TypeScript errors
-- [ ] Commit and push
+- [x] Add AircraftAvailabilityHistory model to Prisma schema
+- [x] Add API endpoints to server.js (GET/POST/DELETE aircraft availability history)
+- [x] Create ACHistoryAircraftAvailability.tsx component with graph + time period selectors
+- [x] Add component to ACHistoryPage.tsx below ACHistoryAnalytics
+- [x] Wire up data recording in App.tsx (save daily average when availability changes)
+- [x] Build and verify no TypeScript errors
+- [x] Commit and push
