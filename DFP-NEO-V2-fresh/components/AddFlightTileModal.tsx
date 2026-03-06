@@ -23,21 +23,9 @@ const formatTime = (time: number): string => {
 };
 
 // ─── Flight Tile Preview — exact replica of reference, 4× scaled ─────────────
-// Reference tile measurements (approximate px from screenshot):
-//   tile height:        ~38px  → ×4 = 152px
-//   tile border-radius: ~4px   → ×4 = 16px
-//   horiz padding:      ~6px   → ×4 = 24px
-//   vert padding:       ~4px   → ×4 = 16px
-//   time font:          ~9px   → ×4 = 36px  (but capped for readability at 18px)
-//   name font:          ~10px  → ×4 = 40px  (capped at 20px)
-//   right info font:    ~10px  → ×4 = 40px  (capped at 20px)
-//   bottom font:        ~9px   → ×4 = 36px  (capped at 18px)
-//   btn font:           ~8px   → ×4 = 32px  (capped at 16px)
-//   left name indent:   ~15%   → same %
-
 const S = 4; // scale factor
 
-// Scaled values
+// Scaled values (large interactive tile)
 const TILE_H        = 38  * S;  // 152px
 const TILE_RADIUS   = 4   * S;  // 16px
 const PAD_H         = 6   * S;  // 24px
@@ -54,6 +42,147 @@ const BTN_GAP       = 2   * S;  // 8px
 const NAME_INDENT   = '15%';
 const NAME_GAP      = 3   * S;  // 12px gap between two name lines
 const RIGHT_GAP     = 4   * S;  // 16px gap between right lines
+
+// ─── Real-size tile constants (matching actual schedule tile) ─────────────────
+const RT_H          = 38;   // px — same as real tile
+const RT_RADIUS     = 4;
+const RT_PAD_H      = 6;
+const RT_PAD_V      = 4;
+const RT_TIME_FONT  = 9;
+const RT_NAME_FONT  = 10;
+const RT_RIGHT_FONT = 10;
+const RT_BOT_FONT   = 9;
+const RT_NAME_INDENT = '15%';
+const RT_NAME_GAP   = 3;
+const RT_RIGHT_GAP  = 4;
+
+// ─── Real-size read-only tile (synced preview) ────────────────────────────────
+interface RealTilePreviewProps {
+  flightType: 'Dual' | 'Solo';
+  startTime: number;
+  picName: string;
+  studentName: string;
+  duration: number;
+  flightNumber: string;
+  area: string;
+  aircraftNumber: string;
+  color: string;
+}
+
+const RealTilePreview: React.FC<RealTilePreviewProps> = ({
+  flightType, startTime, picName, studentName, duration, flightNumber, area, aircraftNumber, color,
+}) => {
+  const timeColor    = 'rgba(255,255,255,0.95)';
+  const nameColor    = (v: string) => v ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.35)';
+  const rightColor   = (v: string) => v ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.35)';
+  const botColor     = (v: string) => v ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)';
+  const bracketColor = 'rgba(255,255,255,0.70)';
+  const durBoldColor = 'rgba(255,255,255,0.95)';
+
+  const picLabel = picName || 'Surname, First (N)';
+  const studentLabel = studentName || 'Surname, First (N)';
+
+  return (
+    <div
+      className={color}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: RT_H,
+        borderRadius: RT_RADIUS,
+        overflow: 'hidden',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
+        flexShrink: 0,
+        pointerEvents: 'none', // read-only
+      }}
+    >
+      {/* TOP-LEFT: time */}
+      <div style={{
+        position: 'absolute', top: RT_PAD_V, left: RT_PAD_H,
+        fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+        fontSize: RT_TIME_FONT, fontWeight: 400, color: timeColor,
+        lineHeight: 1, whiteSpace: 'nowrap',
+      }}>
+        {formatTime(startTime)}
+      </div>
+
+      {/* MAIN BODY: names left, flight info right */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        paddingLeft: RT_PAD_H, paddingRight: RT_PAD_H,
+        paddingTop: RT_TIME_FONT + RT_PAD_V + 4,
+        paddingBottom: RT_BOT_FONT + RT_PAD_V + 2,
+      }}>
+        {/* LEFT: two name lines */}
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          justifyContent: 'center', gap: RT_NAME_GAP,
+          paddingLeft: RT_NAME_INDENT, minWidth: 0, overflow: 'hidden',
+        }}>
+          <div style={{
+            fontSize: RT_NAME_FONT, fontStyle: 'italic',
+            color: nameColor(picName), lineHeight: 1.2,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {picLabel}
+          </div>
+          {flightType === 'Dual' ? (
+            <div style={{
+              fontSize: RT_NAME_FONT, fontStyle: 'italic',
+              color: nameColor(studentName), lineHeight: 1.2,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {studentLabel}
+            </div>
+          ) : (
+            <span style={{
+              fontSize: RT_NAME_FONT * 0.75, fontWeight: 700,
+              color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)',
+              padding: '1px 3px', borderRadius: 2, display: 'inline-block', lineHeight: 1.2,
+            }}>SOLO</span>
+          )}
+        </div>
+
+        {/* RIGHT: [dur] flightnum */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+          justifyContent: 'center', gap: RT_RIGHT_GAP, flexShrink: 0, paddingLeft: RT_PAD_H,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, whiteSpace: 'nowrap' }}>
+            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, color: bracketColor, lineHeight: 1.2 }}>[ </span>
+            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, fontWeight: 700, color: durBoldColor, lineHeight: 1.2 }}>{duration.toFixed(1)}</span>
+            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, color: bracketColor, lineHeight: 1.2 }}> ]</span>
+            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, fontStyle: 'italic', color: rightColor(flightNumber), lineHeight: 1.2, marginLeft: 2 }}>
+              {flightNumber || 'FLT#'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM-LEFT: #aircraft */}
+      <div style={{
+        position: 'absolute', bottom: RT_PAD_V, left: RT_PAD_H,
+        display: 'flex', alignItems: 'baseline', gap: 1, zIndex: 2,
+      }}>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: 'rgba(255,255,255,0.70)', lineHeight: 1 }}>#</span>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: botColor(aircraftNumber), lineHeight: 1 }}>{aircraftNumber || '---'}</span>
+      </div>
+
+      {/* BOTTOM-RIGHT: time + area */}
+      <div style={{
+        position: 'absolute', bottom: RT_PAD_V, right: RT_PAD_H,
+        display: 'flex', alignItems: 'baseline', gap: RT_RIGHT_GAP, zIndex: 2,
+      }}>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: 'rgba(255,255,255,0.70)', lineHeight: 1 }}>{formatTime(startTime)}</span>
+        <span style={{
+          fontSize: RT_BOT_FONT, lineHeight: 1,
+          color: ['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
+        }}>{area}</span>
+      </div>
+    </div>
+  );
+};
 
 interface FlightTilePreviewProps {
   flightType: 'Dual' | 'Solo';
@@ -623,6 +752,22 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Real-size synced tile preview */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Live Preview (actual size)</label>
+            <RealTilePreview
+              flightType={flightType}
+              startTime={startTime}
+              picName={picName}
+              studentName={studentName}
+              duration={duration}
+              flightNumber={flightNumber}
+              area={area}
+              aircraftNumber={aircraftNumber}
+              color={tileColor}
+            />
           </div>
 
           {/* Flight Tile label + tile */}
