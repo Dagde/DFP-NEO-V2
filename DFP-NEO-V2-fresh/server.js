@@ -32,8 +32,47 @@ async function getPrisma() {
     prisma = new PrismaClient();
     await prisma.$connect();
     console.log('✅ Prisma connected to database');
+    // Ensure AircraftAvailabilityHistory table exists (create if missing)
+    await ensureAircraftAvailabilityTable(prisma);
   }
   return prisma;
+}
+
+// Create AircraftAvailabilityHistory table if it doesn't exist
+async function ensureAircraftAvailabilityTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AircraftAvailabilityHistory" (
+        "id"              TEXT NOT NULL,
+        "date"            TEXT NOT NULL,
+        "dailyAverage"    DOUBLE PRECISION NOT NULL,
+        "plannedCount"    INTEGER NOT NULL,
+        "actualCount"     INTEGER,
+        "totalAircraft"   INTEGER NOT NULL,
+        "availabilityPct" DOUBLE PRECISION NOT NULL,
+        "recordedBy"      TEXT,
+        "notes"           TEXT,
+        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "AircraftAvailabilityHistory_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_date_key"
+      ON "AircraftAvailabilityHistory"("date");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_date_idx"
+      ON "AircraftAvailabilityHistory"("date");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_createdAt_idx"
+      ON "AircraftAvailabilityHistory"("createdAt");
+    `);
+    console.log('✅ AircraftAvailabilityHistory table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure AircraftAvailabilityHistory table:', err.message);
+  }
 }
 
 // ============================================================
