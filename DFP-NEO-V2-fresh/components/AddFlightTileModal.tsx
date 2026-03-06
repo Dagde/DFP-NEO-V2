@@ -381,7 +381,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           <select
             value={picName}
             onChange={e => onPicNameChange(e.target.value)}
-            style={inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 400, 'italic')}
+            style={{ ...inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 400, 'italic'), marginTop: -6 }}
           >
             <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
               Surname, First (N)
