@@ -661,7 +661,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       aircraftNumber,
       locationType,
       color: tileColor,
-      resourceId: picName,
+      resourceId: '', // Will be assigned by handleSaveEvents
       notes,
       group: '',
       groupTraineeIds: [],

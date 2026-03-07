@@ -12,4 +12,4 @@
 - [x] Add useEffect in AddFlightTileModal to auto-populate callsign when picName changes
 - [x] Add useEffect to reset form when eventCategory changes
 - [x] Add useEffect to set flightType to 'Solo' when eventCategory is 'sct' or 'twr_di'
-- [ ] Commit and push changes
+- [x] Commit and push changes
