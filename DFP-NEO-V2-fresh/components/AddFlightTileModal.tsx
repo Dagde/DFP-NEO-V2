@@ -35,7 +35,7 @@ const NAME_FONT     = 20;
 const RIGHT_FONT    = 20;
 const BOT_FONT      = 20;
 const NAME_INDENT   = '15%';
-const NAME_GAP      = 6;
+const NAME_GAP      = 9;
 const RIGHT_GAP     = 6;
 
 // ─── Real-size tile constants (matching actual schedule tile) ─────────────────
