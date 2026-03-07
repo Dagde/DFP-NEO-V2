@@ -35,7 +35,7 @@ const NAME_FONT     = 20;
 const RIGHT_FONT    = 20;
 const BOT_FONT      = 20;
 const NAME_INDENT   = '15%';
-const NAME_GAP      = 9;
+const NAME_GAP      = 12;
 const RIGHT_GAP     = 6;
 
 // ─── Real-size tile constants (matching actual schedule tile) ─────────────────
@@ -344,7 +344,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
         >
           <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-            FLT#
+            EVENT
           </option>
           {syllabusOptions.map(o => (
             <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
@@ -388,7 +388,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           <select
             value={picName}
             onChange={e => onPicNameChange(e.target.value)}
-            style={{ ...inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 400, 'italic'), marginTop: -6 }}
+            style={{ ...inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 700, 'italic'), marginTop: -6 }}
           >
             <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
               Surname, First (N)
