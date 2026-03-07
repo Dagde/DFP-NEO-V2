@@ -455,32 +455,6 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     overflowY: 'auto',
                   }}
                 >
-                  {/* SOLO option - first, no cascading */}
-                  <div
-                    onClick={() => {
-                      onPicNameChange('SOLO');
-                      onShowPicDropdownChange(false);
-                      onHoveredPicUnitChange(null);
-                      onHoveredPicLayer2Change(null);
-                    }}
-                    style={{
-                      padding: '10px 12px',
-                      color: '#ffd43b',
-                      backgroundColor: hoveredPicUnit === 'SOLO' ? 'rgba(255,212,59,0.2)' : 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      borderBottom: '1px solid rgba(255,255,255,0.2)',
-                    }}
-                    onMouseEnter={() => onHoveredPicUnitChange('SOLO')}
-                    onMouseLeave={() => onHoveredPicUnitChange(null)}
-                  >
-                    SOLO
-                    <span style={{ fontSize: 10, opacity: 0.8, color: '#ffd43b' }}>SELECT</span>
-                  </div>
                   {allUnits.map(unit => (
                     <div
                       key={unit}
@@ -502,7 +476,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     </div>
                   ))}
                 </div>
-                {/* Column 2: STAFF or Courses (not shown for SOLO) */}
+                {/* Column 2: STAFF or Courses */}
                 <div
                   style={{
                     width: 140,
@@ -512,7 +486,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     backgroundColor: 'rgba(0,0,0,0.1)',
                   }}
                 >
-                  {hoveredPicUnit && hoveredPicUnit !== 'SOLO' ? (
+                  {hoveredPicUnit ? (
                     getLayer2OptionsForUnit(hoveredPicUnit).map(option => (
                       <div
                         key={option}
@@ -575,7 +549,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     ))
                   ) : (
                     <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      {hoveredPicUnit === 'SOLO' ? 'SOLO selected' : hoveredPicUnit ? 'Select STAFF or course' : 'Select unit'}
+                      {hoveredPicUnit ? 'Select STAFF or course' : 'Select unit'}
                     </div>
                   )}
                 </div>
@@ -1077,10 +1051,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setErrors([]);
   }, [eventCategory]);
 
-  // Default to Solo for SCT and TWR DI event categories
+  // Default to Solo for SCT and TWR DI event categories, Dual for others
   useEffect(() => {
     if (eventCategory === 'sct' || eventCategory === 'twr_di') {
       setFlightType('Solo');
+    } else {
+      setFlightType('Dual');
     }
   }, [eventCategory]);
 
