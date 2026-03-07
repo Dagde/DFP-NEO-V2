@@ -216,6 +216,10 @@ interface FlightTilePreviewProps {
   sortedUnits: string[];
   showPicDropdown: boolean;
   hoveredUnit: string | null;
+  traineesByCourse: Map<string, Trainee[]>;
+  sortedCourses: string[];
+  showStudentDropdown: boolean;
+  hoveredCourse: string | null;
   onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
   onStartTimeChange: (v: number) => void;
   onPicNameChange: (v: string) => void;
@@ -227,6 +231,8 @@ interface FlightTilePreviewProps {
   onCallsignChange: (v: string) => void;
   onShowPicDropdownChange: (v: boolean) => void;
   onHoveredUnitChange: (v: string | null) => void;
+  onShowStudentDropdownChange: (v: boolean) => void;
+  onHoveredCourseChange: (v: string | null) => void;
 }
 
 // Shared style for all invisible inline selects inside the tile
@@ -266,9 +272,11 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   instructorOptions, traineeOptions, syllabusOptions, areaOptions,
   aircraftOptions, timeOptions, durationOptions,
   instructorsByUnit, sortedUnits, showPicDropdown, hoveredUnit,
+  traineesByCourse, sortedCourses, showStudentDropdown, hoveredCourse,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
   onShowPicDropdownChange, onHoveredUnitChange,
+  onShowStudentDropdownChange, onHoveredCourseChange,
 }) => {
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
 
@@ -540,20 +548,112 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
 
           {/* Line 2: Student (Dual) or SOLO badge */}
           {flightType === 'Dual' ? (
-            <select
-              value={studentName}
-              onChange={e => onStudentNameChange(e.target.value)}
-              style={inlineSelectStyle(NAME_FONT, nameColor(studentName), '100%', 400, 'italic')}
-            >
-              <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-                Surname, First (N)
-              </option>
-              {traineeOptions.map(o => (
-                <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            <div style={{ position: 'relative' }}>
+              {/* Student name display - triggers dropdown */}
+              <div
+                onClick={() => setShowStudentDropdown(!showStudentDropdown)}
+                style={{
+                  fontSize: NAME_FONT,
+                  fontWeight: 400,
+                  fontStyle: 'italic',
+                  color: nameColor(studentName),
+                  cursor: 'pointer',
+                  padding: '2px 4px',
+                  borderRadius: 2,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+              >
+                {studentName || 'Surname, First (N)'}
+              </div>
+
+              {/* Cascading dropdown: Courses -> Trainees */}
+              {showStudentDropdown && (
+                <div
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    zIndex: 100,
+                    display: 'flex',
+                    width: 400,
+                    maxHeight: 320,
+                    backgroundColor: '#1e3a5f',
+                    borderRadius: 6,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                    overflow: 'hidden',
+                    marginTop: 4,
+                  }}
+                >
+                  {/* Courses column */}
+                  <div
+                    style={{
+                      width: 140,
+                      maxHeight: 320,
+                      overflowY: 'auto',
+                      borderRight: '1px solid rgba(255,255,255,0.1)',
+                      padding: 4,
+                    }}
+                  >
+                    {sortedCourses.map(course => (
+                      <div
+                        key={course}
+                        onClick={() => setHoveredCourse(course)}
+                        onMouseEnter={() => setHoveredCourse(course)}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: hoveredCourse === course ? '#fff' : 'rgba(255,255,255,0.7)',
+                          padding: '8px 10px',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          backgroundColor: hoveredCourse === course ? 'rgba(255,255,255,0.15)' : 'transparent',
+                          transition: 'background 0.1s, color 0.1s',
+                        }}
+                      >
+                        {course}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Trainees column */}
+                  <div
+                    style={{
+                      flex: 1,
+                      maxHeight: 320,
+                      overflowY: 'auto',
+                      padding: 4,
+                    }}
+                  >
+                    {hoveredCourse && traineesByCourse.get(hoveredCourse)?.map(trainee => (
+                      <div
+                        key={trainee.fullName || trainee.name}
+                        onClick={() => {
+                          onStudentNameChange(trainee.fullName || trainee.name);
+                          setShowStudentDropdown(false);
+                          setHoveredCourse(null);
+                        }}
+                        onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                        onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 400,
+                          color: '#fff',
+                          padding: '8px 10px',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          transition: 'background 0.1s',
+                        }}
+                      >
+                        {trainee.rank ? trainee.rank + ' ' : ''}{trainee.fullName || trainee.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <span
               style={{
@@ -678,6 +778,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [errors, setErrors] = useState<string[]>([]);
   const [showPicDropdown, setShowPicDropdown] = useState(false);
   const [hoveredUnit, setHoveredUnit] = useState<string | null>(null);
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
+  const [hoveredCourse, setHoveredCourse] = useState<string | null>(null);
 
   // Tile colour from student's course (default sky-blue matching reference)
   const tileColor = useMemo(() => {
@@ -742,6 +844,23 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     traineesData.map(t => ({ value: t.fullName || t.name, label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}` })),
     [traineesData]
   );
+
+  // Group trainees by course for cascading dropdown
+  const traineesByCourse = useMemo(() => {
+    const grouped = new Map<string, typeof traineesData>();
+    traineesData.forEach(trainee => {
+      const course = trainee.course || 'Unassigned';
+      if (!grouped.has(course)) {
+        grouped.set(course, []);
+      }
+      grouped.get(course)!.push(trainee);
+    });
+    return grouped;
+  }, [traineesData]);
+
+  const sortedCourses = useMemo(() => {
+    return Array.from(traineesByCourse.keys()).sort();
+  }, [traineesByCourse]);
 
   const syllabusOptions = useMemo(() => {
     const flightItems = syllabusDetails
@@ -902,6 +1021,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               sortedUnits={sortedUnits}
               showPicDropdown={showPicDropdown}
               hoveredUnit={hoveredUnit}
+              traineesByCourse={traineesByCourse}
+              sortedCourses={sortedCourses}
+              showStudentDropdown={showStudentDropdown}
+              hoveredCourse={hoveredCourse}
               onFlightTypeChange={setFlightType}
               onStartTimeChange={setStartTime}
               onPicNameChange={setPicName}
@@ -913,6 +1036,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onCallsignChange={setCallsign}
               onShowPicDropdownChange={setShowPicDropdown}
               onHoveredUnitChange={setHoveredUnit}
+              onShowStudentDropdownChange={setShowStudentDropdown}
+              onHoveredCourseChange={setHoveredCourse}
             />
           </div>
 
