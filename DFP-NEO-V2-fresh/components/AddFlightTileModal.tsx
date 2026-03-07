@@ -140,10 +140,10 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
           )}
         </div>
 
-        {/* RIGHT: [dur] flightnum on top, area below */}
+        {/* RIGHT: [dur] flightnum */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-          justifyContent: 'center', gap: 2, flexShrink: 0, paddingLeft: RT_PAD_H,
+          justifyContent: 'center', gap: RT_RIGHT_GAP, flexShrink: 0, paddingLeft: RT_PAD_H,
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, whiteSpace: 'nowrap' }}>
             <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, color: bracketColor, lineHeight: 1.2 }}>[ </span>
@@ -153,10 +153,6 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
               {flightNumber || 'FLT#'}
             </span>
           </div>
-          <span style={{
-            fontSize: RT_RIGHT_FONT, lineHeight: 1.2, textAlign: 'right',
-            color: ['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
-          }}>{area}</span>
         </div>
       </div>
 
@@ -169,10 +165,15 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
         <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: botColor(aircraftNumber), lineHeight: 1 }}>{aircraftNumber || '---'}</span>
       </div>
 
-      {/* BOTTOM-RIGHT: callsign */}
+      {/* BOTTOM-RIGHT: area + callsign */}
       <div style={{
-        position: 'absolute', bottom: RT_PAD_V, right: RT_PAD_H, zIndex: 2,
+        position: 'absolute', bottom: RT_PAD_V, right: RT_PAD_H,
+        display: 'flex', alignItems: 'baseline', gap: RT_RIGHT_GAP, zIndex: 2,
       }}>
+        <span style={{
+          fontSize: RT_BOT_FONT, lineHeight: 1,
+          color: ['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
+        }}>{area}</span>
         <span style={{
           fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
           fontSize: RT_BOT_FONT, fontStyle: 'italic', lineHeight: 1,
@@ -313,62 +314,42 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         ))}
       </select>
 
-      {/* ── TOP-RIGHT: [duration] FLT# on top, Area directly below ── */}
+      {/* ── TOP-RIGHT: [duration] FLT# ── */}
       <div
         style={{
           position: 'absolute',
           top: PAD_V,
           right: PAD_H,
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 2,
+          alignItems: 'baseline',
+          gap: 4,
           zIndex: 5,
+          whiteSpace: 'nowrap',
         }}
       >
-        {/* Row 1: [dur] FLT# */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, whiteSpace: 'nowrap' }}>
-          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}>[ </span>
-          <select
-            value={String(duration)}
-            onChange={e => onDurationChange(parseFloat(e.target.value))}
-            style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
-          >
-            {durationOptions.map(o => (
-              <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
-            ))}
-          </select>
-          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
-          <select
-            value={flightNumber}
-            onChange={e => onFlightNumberChange(e.target.value)}
-            style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
-          >
-            <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-              FLT#
-            </option>
-            {syllabusOptions.map(o => (
-              <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        {/* Row 2: Area — directly below [dur] FLT# */}
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}>[ </span>
         <select
-          value={area}
-          onChange={e => onAreaChange(e.target.value)}
-          style={inlineSelectStyle(
-            RIGHT_FONT,
-            ['A','B','C','D','E','F','G','H'].includes(area)
-              ? 'rgba(255,255,255,0.80)'
-              : 'rgba(255,220,60,0.95)',
-            RIGHT_FONT * 1.4,
-            400, 'normal', false, 'right'
-          )}
+          value={String(duration)}
+          onChange={e => onDurationChange(parseFloat(e.target.value))}
+          style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
         >
-          {areaOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
+          {durationOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
+          ))}
+        </select>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
+        <select
+          value={flightNumber}
+          onChange={e => onFlightNumberChange(e.target.value)}
+          style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
+        >
+          <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+            FLT#
+          </option>
+          {syllabusOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
+              {o.label}
+            </option>
           ))}
         </select>
       </div>
@@ -484,15 +465,36 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         </select>
       </div>
 
-      {/* ── BOTTOM-RIGHT: callsign ── */}
+      {/* ── BOTTOM-RIGHT: area + callsign ── */}
       <div
         style={{
           position: 'absolute',
           bottom: PAD_V,
           right: PAD_H,
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 6,
           zIndex: 2,
         }}
       >
+        {/* Area — left of callsign, below [1.5] */}
+        <select
+          value={area}
+          onChange={e => onAreaChange(e.target.value)}
+          style={inlineSelectStyle(
+            BOT_FONT,
+            ['A','B','C','D','E','F','G','H'].includes(area)
+              ? 'rgba(255,255,255,0.80)'
+              : 'rgba(255,220,60,0.95)',
+            BOT_FONT * 1.4,
+            400, 'normal', false
+          )}
+        >
+          {areaOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
+          ))}
+        </select>
+        {/* Callsign */}
         <input
           type="text"
           value={callsign}
