@@ -1,19 +1,15 @@
-# DFP-NEO-V2 Syllabus View Updates
+# Add Flight Tile Modal Fixes
 
-## Completed Tasks
-- [x] Add Phase and Module columns to the left of Event column
-- [x] Add faint column separator lines
-- [x] Evenly divide events into Phase 1 and Phase 2
-- [x] Evenly divide events into 12 Modules
-- [x] Make column headings sticky (visible when scrolling)
-- [x] Center numbers in Phase and Module columns
-- [x] Reduce Phase/Module column widths, increase Event column width
-- [x] Reduce text size in Core Details section
-- [x] Reorganize Core Details to 2 lines (Dual/Solo on top, Post-Flight Time on second line)
-- [x] Align headings with column borders
-- [x] Make event titles fit on one line
-- [x] Make column dividers more prominent (changed from border-gray-700/30 to border-gray-500)
-- [x] Reduce heading text size (changed from text-xs to text-[10px])
-- [x] Build and push changes to GitHub
-- [x] Make Module column wider (w-14) to fit "Module" heading without cutoff
-- [x] Match column divider color to Core Details border (border-gray-700)
+## Issues to Fix
+1. [x] Auto-populate callsign from Captain's profile (callsignNumber field)
+2. [x] Fix "Add to Schedule" button - calling `handleSaveEvent` instead of `handleSaveEvents`
+3. [x] Reset form data when event category changes
+4. [x] Default to SOLO for SCT and TWR DI event categories
+
+## Implementation Plan
+- [x] Read and understand current code structure
+- [x] Fix App.tsx - change `handleSaveEvent` to `handleSaveEvents`
+- [x] Add useEffect in AddFlightTileModal to auto-populate callsign when picName changes
+- [x] Add useEffect to reset form when eventCategory changes
+- [x] Add useEffect to set flightType to 'Solo' when eventCategory is 'sct' or 'twr_di'
+- [ ] Commit and push changes

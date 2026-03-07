@@ -9808,7 +9808,7 @@ updates.forEach(update => {
                 <AddFlightTileModal
                     onClose={() => setShowAddFlightTileModal(false)}
                     onSave={(events) => {
-                        events.forEach(event => handleSaveEvent([event]));
+                        handleSaveEvents(events);
                         setShowAddFlightTileModal(false);
                     }}
                     instructors={instructorsData.map(i => i.name)}

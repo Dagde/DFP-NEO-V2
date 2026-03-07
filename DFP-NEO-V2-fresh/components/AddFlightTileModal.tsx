@@ -605,6 +605,37 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (item?.sortieType) setFlightType(item.sortieType as 'Dual' | 'Solo');
   }, [picName, studentName, flightNumber, traineeLMPs]);
 
+  // Auto-populate callsign from Captain's profile (primary callsign)
+  useEffect(() => {
+    if (!picName) return;
+    const instructor = instructorsData.find(i => i.name === picName);
+    if (instructor?.callsignNumber) {
+      // Format callsign as 3-digit string (e.g., "001", "023", "105")
+      setCallsign(String(instructor.callsignNumber).padStart(3, '0'));
+    }
+  }, [picName, instructorsData]);
+
+  // Reset form data when event category changes
+  useEffect(() => {
+    setPicName('');
+    setStudentName('');
+    setFlightNumber('');
+    setStartTime(8.0);
+    setDuration(1.5);
+    setArea('A');
+    setAircraftNumber('001');
+    setCallsign('CALLSGN');
+    setNotes('');
+    setErrors([]);
+  }, [eventCategory]);
+
+  // Default to Solo for SCT and TWR DI event categories
+  useEffect(() => {
+    if (eventCategory === 'sct' || eventCategory === 'twr_di') {
+      setFlightType('Solo');
+    }
+  }, [eventCategory]);
+
   const handleSave = () => {
     const errs: string[] = [];
     if (!flightNumber) errs.push('Syllabus item is required.');
