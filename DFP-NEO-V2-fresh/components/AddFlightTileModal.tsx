@@ -421,26 +421,33 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                   top: '100%',
                   left: 0,
                   zIndex: 1000,
-                  width: 160,
+                  width: 400,
                   backgroundColor: '#1e3a5f',
                   borderRadius: 8,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                  maxHeight: 350,
-                  overflow: 'visible',
+                  maxHeight: 280,
+                  display: 'flex',
+                  flexDirection: 'row',
                 }}
               >
-                {sortedUnits.map(unit => (
-                  <div
-                    key={unit}
-                    onMouseEnter={() => onHoveredUnitChange(unit)}
-                    onMouseLeave={() => onHoveredUnitChange(null)}
-                    style={{ position: 'relative' }}
-                  >
+                {/* Left panel: Units list */}
+                <div
+                  style={{
+                    width: 140,
+                    borderRight: '1px solid rgba(255,255,255,0.2)',
+                    maxHeight: 280,
+                    overflowY: 'auto',
+                  }}
+                >
+                  {sortedUnits.map(unit => (
                     <div
+                      key={unit}
+                      onMouseEnter={() => onHoveredUnitChange(unit)}
+                      onClick={() => onHoveredUnitChange(unit)}
                       style={{
-                        padding: '8px 12px',
+                        padding: '10px 12px',
                         color: hoveredUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
-                        backgroundColor: hoveredUnit === unit ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        backgroundColor: hoveredUnit === unit ? 'rgba(255,255,255,0.15)' : 'transparent',
                         cursor: 'pointer',
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -449,47 +456,48 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       }}
                     >
                       {unit}
-                      <span style={{ fontSize: 10 }}>▶</span>
+                      <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
                     </div>
-                    {hoveredUnit === unit && (
+                  ))}
+                </div>
+                {/* Right panel: Staff list */}
+                <div
+                  style={{
+                    flex: 1,
+                    maxHeight: 280,
+                    overflowY: 'auto',
+                    backgroundColor: 'rgba(0,0,0,0.2)',
+                  }}
+                >
+                  {hoveredUnit ? (
+                    (instructorsByUnit.get(hoveredUnit) || []).map(inst => (
                       <div
-                        style={{
-                          position: 'absolute',
-                          left: '100%',
-                          top: 0,
-                          width: 240,
-                          backgroundColor: '#2a4a6f',
-                          borderRadius: 8,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                          maxHeight: 350,
-                          overflow: 'visible',
+                        key={inst.name}
+                        onClick={() => {
+                          onPicNameChange(inst.name);
+                          onShowPicDropdownChange(false);
+                          onHoveredUnitChange(null);
                         }}
+                        style={{
+                          padding: '10px 12px',
+                          color: '#fff',
+                          backgroundColor: 'transparent',
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                        onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                       >
-                        {(instructorsByUnit.get(unit) || []).map(inst => (
-                          <div
-                            key={inst.name}
-                            onClick={() => {
-                              onPicNameChange(inst.name);
-                              onShowPicDropdownChange(false);
-                            }}
-                            style={{
-                              padding: '8px 12px',
-                              color: '#fff',
-                              backgroundColor: 'transparent',
-                              cursor: 'pointer',
-                              fontSize: 14,
-                              whiteSpace: 'nowrap',
-                            }}
-                            onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                            onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                          >
-                            {inst.rank ? `${inst.rank} ` : ''}{inst.name}
-                          </div>
-                        ))}
+                        {inst.rank ? `${inst.rank} ` : ''}{inst.name}
                       </div>
-                    )}
-                  </div>
-                ))}
+                    ))
+                  ) : (
+                    <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center' }}>
+                      Select a unit to view staff
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             {showPicDropdown && flightType === 'Solo' && (
