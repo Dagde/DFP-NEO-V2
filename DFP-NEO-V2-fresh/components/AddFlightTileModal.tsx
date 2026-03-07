@@ -421,12 +421,12 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                   top: '100%',
                   left: 0,
                   zIndex: 1000,
-                  minWidth: 200,
+                  width: 160,
                   backgroundColor: '#1e3a5f',
                   borderRadius: 8,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                   maxHeight: 350,
-                  overflowY: 'auto',
+                  overflow: 'visible',
                 }}
               >
                 {sortedUnits.map(unit => (
@@ -457,12 +457,12 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                           position: 'absolute',
                           left: '100%',
                           top: 0,
-                          minWidth: 220,
+                          width: 240,
                           backgroundColor: '#2a4a6f',
                           borderRadius: 8,
                           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                          maxHeight: 300,
-                          overflowY: 'auto',
+                          maxHeight: 350,
+                          overflow: 'visible',
                         }}
                       >
                         {(instructorsByUnit.get(unit) || []).map(inst => (
@@ -499,11 +499,11 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                   top: '100%',
                   left: 0,
                   zIndex: 1000,
-                  minWidth: 200,
+                  width: 280,
                   backgroundColor: '#1e3a5f',
                   borderRadius: 8,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                  maxHeight: 300,
+                  maxHeight: 350,
                   overflowY: 'auto',
                 }}
               >
