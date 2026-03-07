@@ -22,6 +22,16 @@ const formatTime = (time: number): string => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+// Format date as DD Mmm YY (e.g., "06 Jun 25")
+const formatDate = (dateStr: string): string => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const date = new Date(dateStr + 'T00:00:00');
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = months[date.getMonth()];
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day} ${month} ${year}`;
+};
+
 // ─── Flight Tile Preview — exact replica of reference, 4× scaled ─────────────
 const S = 4; // scale factor (kept for reference, not used for sizing)
 
@@ -202,6 +212,10 @@ interface FlightTilePreviewProps {
   timeOptions: { value: string; label: string }[];
   durationOptions: { value: string; label: string }[];
   callsign: string;
+  instructorsByUnit: Map<string, Instructor[]>;
+  sortedUnits: string[];
+  showPicDropdown: boolean;
+  hoveredUnit: string | null;
   onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
   onStartTimeChange: (v: number) => void;
   onPicNameChange: (v: string) => void;
@@ -211,6 +225,8 @@ interface FlightTilePreviewProps {
   onAreaChange: (v: string) => void;
   onAircraftChange: (v: string) => void;
   onCallsignChange: (v: string) => void;
+  onShowPicDropdownChange: (v: boolean) => void;
+  onHoveredUnitChange: (v: string | null) => void;
 }
 
 // Shared style for all invisible inline selects inside the tile
@@ -249,8 +265,10 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   area, aircraftNumber, color, callsign,
   instructorOptions, traineeOptions, syllabusOptions, areaOptions,
   aircraftOptions, timeOptions, durationOptions,
+  instructorsByUnit, sortedUnits, showPicDropdown, hoveredUnit,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
+  onShowPicDropdownChange, onHoveredUnitChange,
 }) => {
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
 
@@ -384,21 +402,132 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
             overflow: 'hidden',
           }}
         >
-          {/* Line 1: PIC / Instructor */}
-          <select
-            value={picName}
-            onChange={e => onPicNameChange(e.target.value)}
-            style={{ ...inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 700, 'italic'), marginTop: -6 }}
-          >
-            <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-              Surname, First (N)
-            </option>
-            {picOptions.map(o => (
-              <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+          {/* Line 1: PIC / Instructor with cascading dropdown */}
+          <div style={{ position: 'relative', marginTop: -6 }}>
+            <div
+              onClick={() => onShowPicDropdownChange(!showPicDropdown)}
+              style={{
+                ...inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 700, 'italic'),
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              {picName || 'Surname, First (N)'}
+            </div>
+            {showPicDropdown && flightType === 'Dual' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  zIndex: 1000,
+                  minWidth: 200,
+                  backgroundColor: '#1e3a5f',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                  overflow: 'hidden',
+                }}
+              >
+                {sortedUnits.map(unit => (
+                  <div
+                    key={unit}
+                    onMouseEnter={() => onHoveredUnitChange(unit)}
+                    onMouseLeave={() => onHoveredUnitChange(null)}
+                    style={{ position: 'relative' }}
+                  >
+                    <div
+                      style={{
+                        padding: '8px 12px',
+                        color: hoveredUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
+                        backgroundColor: hoveredUnit === unit ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: 14,
+                      }}
+                    >
+                      {unit}
+                      <span style={{ fontSize: 10 }}>▶</span>
+                    </div>
+                    {hoveredUnit === unit && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: '100%',
+                          top: 0,
+                          minWidth: 220,
+                          backgroundColor: '#2a4a6f',
+                          borderRadius: 8,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                          maxHeight: 300,
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {(instructorsByUnit.get(unit) || []).map(inst => (
+                          <div
+                            key={inst.name}
+                            onClick={() => {
+                              onPicNameChange(inst.name);
+                              onShowPicDropdownChange(false);
+                            }}
+                            style={{
+                              padding: '8px 12px',
+                              color: '#fff',
+                              backgroundColor: 'transparent',
+                              cursor: 'pointer',
+                              fontSize: 14,
+                              whiteSpace: 'nowrap',
+                            }}
+                            onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                            onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                          >
+                            {inst.rank ? `${inst.rank} ` : ''}{inst.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {showPicDropdown && flightType === 'Solo' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  zIndex: 1000,
+                  minWidth: 200,
+                  backgroundColor: '#1e3a5f',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                  maxHeight: 300,
+                  overflowY: 'auto',
+                }}
+              >
+                {traineeOptions.map(o => (
+                  <div
+                    key={o.value}
+                    onClick={() => {
+                      onPicNameChange(o.value);
+                      onShowPicDropdownChange(false);
+                    }}
+                    style={{
+                      padding: '8px 12px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                    }}
+                    onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                    onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
+                  >
+                    {o.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Line 2: Student (Dual) or SOLO badge */}
           {flightType === 'Dual' ? (
@@ -538,6 +667,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [callsign, setCallsign] = useState('CALLSGN');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
+  const [showPicDropdown, setShowPicDropdown] = useState(false);
+  const [hoveredUnit, setHoveredUnit] = useState<string | null>(null);
 
   // Tile colour from student's course (default sky-blue matching reference)
   const tileColor = useMemo(() => {
@@ -580,6 +711,23 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     instructorsData.map(i => ({ value: i.name, label: `${i.rank ? i.rank + ' ' : ''}${i.name}` })),
     [instructorsData]
   );
+
+  // Group instructors by unit for cascading dropdown
+  const instructorsByUnit = useMemo(() => {
+    const grouped = new Map<string, typeof instructorsData>();
+    instructorsData.forEach(inst => {
+      const unit = inst.unit || 'Unassigned';
+      if (!grouped.has(unit)) {
+        grouped.set(unit, []);
+      }
+      grouped.get(unit)!.push(inst);
+    });
+    return grouped;
+  }, [instructorsData]);
+
+  const sortedUnits = useMemo(() => {
+    return Array.from(instructorsByUnit.keys()).sort();
+  }, [instructorsByUnit]);
 
   const traineeOptions = useMemo(() =>
     traineesData.map(t => ({ value: t.fullName || t.name, label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}` })),
@@ -741,6 +889,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               timeOptions={timeOptions}
               durationOptions={durationOptions}
               callsign={callsign}
+              instructorsByUnit={instructorsByUnit}
+              sortedUnits={sortedUnits}
+              showPicDropdown={showPicDropdown}
+              hoveredUnit={hoveredUnit}
               onFlightTypeChange={setFlightType}
               onStartTimeChange={setStartTime}
               onPicNameChange={setPicName}
@@ -750,6 +902,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onAreaChange={setArea}
               onAircraftChange={setAircraftNumber}
               onCallsignChange={setCallsign}
+              onShowPicDropdownChange={setShowPicDropdown}
+              onHoveredUnitChange={setHoveredUnit}
             />
           </div>
 
@@ -770,7 +924,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
                 <div className="w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono">
-                  {date}
+                  {formatDate(date)}
                 </div>
               </div>
             </div>
@@ -797,16 +951,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700 flex-shrink-0">
+        <div className="flex justify-end gap-[1px] px-6 py-4 border-t border-gray-700 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm font-semibold"
+            className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-500 transition-colors text-sm font-semibold shadow-lg"
+            className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
           >
             Add to Schedule
           </button>
