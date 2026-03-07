@@ -610,10 +610,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (!picName) return;
     const instructor = instructorsData.find(i => i.name === picName);
     if (instructor?.callsignNumber) {
-      // Format callsign as 3-digit string (e.g., "001", "023", "105")
-      setCallsign(String(instructor.callsignNumber).padStart(3, '0'));
+      // Format full callsign with prefix (e.g., "ROLR042", "VIPR023")
+      const prefix = school === 'ESL' ? 'ROLR' : 'VIPR';
+      setCallsign(`${prefix}${String(instructor.callsignNumber).padStart(3, '0')}`);
     }
-  }, [picName, instructorsData]);
+  }, [picName, instructorsData, school]);
 
   // Reset form data when event category changes
   useEffect(() => {
