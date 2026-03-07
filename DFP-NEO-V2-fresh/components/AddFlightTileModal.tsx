@@ -212,19 +212,18 @@ interface FlightTilePreviewProps {
   timeOptions: { value: string; label: string }[];
   durationOptions: { value: string; label: string }[];
   callsign: string;
-  // 3-layer cascading dropdown props for PIC (instructors)
-  instructorsByUnitAndFlight: Map<string, Map<string, Instructor[]>>;
+  // 3-layer cascading dropdown props
   allUnits: string[];
-  getSortedFlightsForUnit: (unit: string) => string[];
+  getLayer2OptionsForUnit: (unit: string) => string[];
+  getNamesForUnitAndSelection: (unit: string, selection: string) => { name: string; label: string; type: 'instructor' | 'trainee' }[];
+  // PIC dropdown state
   showPicDropdown: boolean;
   hoveredPicUnit: string | null;
-  hoveredPicFlight: string | null;
-  // 3-layer cascading dropdown props for Student (trainees)
-  traineesByUnitAndCourse: Map<string, Map<string, Trainee[]>>;
-  getSortedCoursesForUnit: (unit: string) => string[];
+  hoveredPicLayer2: string | null;
+  // Student dropdown state
   showStudentDropdown: boolean;
   hoveredStudentUnit: string | null;
-  hoveredStudentCourse: string | null;
+  hoveredStudentLayer2: string | null;
   onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
   onStartTimeChange: (v: number) => void;
   onPicNameChange: (v: string) => void;
@@ -236,10 +235,10 @@ interface FlightTilePreviewProps {
   onCallsignChange: (v: string) => void;
   onShowPicDropdownChange: (v: boolean) => void;
   onHoveredPicUnitChange: (v: string | null) => void;
-  onHoveredPicFlightChange: (v: string | null) => void;
+  onHoveredPicLayer2Change: (v: string | null) => void;
   onShowStudentDropdownChange: (v: boolean) => void;
   onHoveredStudentUnitChange: (v: string | null) => void;
-  onHoveredStudentCourseChange: (v: string | null) => void;
+  onHoveredStudentLayer2Change: (v: string | null) => void;
 }
 
 // Shared style for all invisible inline selects inside the tile
@@ -278,12 +277,13 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   area, aircraftNumber, color, callsign,
   instructorOptions, traineeOptions, syllabusOptions, areaOptions,
   aircraftOptions, timeOptions, durationOptions,
-  instructorsByUnitAndFlight, allUnits, getSortedFlightsForUnit, showPicDropdown, hoveredPicUnit, hoveredPicFlight,
-  traineesByUnitAndCourse, getSortedCoursesForUnit, showStudentDropdown, hoveredStudentUnit, hoveredStudentCourse,
+  allUnits, getLayer2OptionsForUnit, getNamesForUnitAndSelection,
+  showPicDropdown, hoveredPicUnit, hoveredPicLayer2,
+  showStudentDropdown, hoveredStudentUnit, hoveredStudentLayer2,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
-  onShowPicDropdownChange, onHoveredPicUnitChange, onHoveredPicFlightChange,
-  onShowStudentDropdownChange, onHoveredStudentUnitChange, onHoveredStudentCourseChange,
+  onShowPicDropdownChange, onHoveredPicUnitChange, onHoveredPicLayer2Change,
+  onShowStudentDropdownChange, onHoveredStudentUnitChange, onHoveredStudentLayer2Change,
 }) => {
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
 
@@ -418,6 +418,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           }}
         >
           {/* Line 1: PIC / Instructor with 3-layer cascading dropdown */}
+          {/* Structure: Unit → STAFF or Course → Names */}
           <div style={{ position: 'relative', marginTop: -6 }}>
             <div
               onClick={() => onShowPicDropdownChange(!showPicDropdown)}
@@ -429,7 +430,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
             >
               {picName || 'Surname, First (N)'}
             </div>
-            {showPicDropdown && flightType === 'Dual' && (
+            {showPicDropdown && (
               <div
                 style={{
                   position: 'absolute',
@@ -454,7 +455,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     overflowY: 'auto',
                   }}
                 >
-                  {allUnits.filter(unit => instructorsByUnitAndFlight.has(unit)).map(unit => (
+                  {allUnits.map(unit => (
                     <div
                       key={unit}
                       onMouseEnter={() => onHoveredPicUnitChange(unit)}
@@ -475,7 +476,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     </div>
                   ))}
                 </div>
-                {/* Column 2: Flights/Staff groups */}
+                {/* Column 2: STAFF or Courses */}
                 <div
                   style={{
                     width: 140,
@@ -486,23 +487,24 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                   }}
                 >
                   {hoveredPicUnit ? (
-                    getSortedFlightsForUnit(hoveredPicUnit).map(flight => (
+                    getLayer2OptionsForUnit(hoveredPicUnit).map(option => (
                       <div
-                        key={flight}
-                        onMouseEnter={() => onHoveredPicFlightChange(flight)}
-                        onClick={() => onHoveredPicFlightChange(flight)}
+                        key={option}
+                        onMouseEnter={() => onHoveredPicLayer2Change(option)}
+                        onClick={() => onHoveredPicLayer2Change(option)}
                         style={{
                           padding: '10px 12px',
-                          color: hoveredPicFlight === flight ? '#fff' : 'rgba(255,255,255,0.8)',
-                          backgroundColor: hoveredPicFlight === flight ? 'rgba(255,255,255,0.15)' : 'transparent',
+                          color: hoveredPicLayer2 === option ? '#fff' : 'rgba(255,255,255,0.8)',
+                          backgroundColor: hoveredPicLayer2 === option ? 'rgba(255,255,255,0.15)' : 'transparent',
                           cursor: 'pointer',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           fontSize: 13,
+                          fontWeight: option === 'STAFF' ? 600 : 400,
                         }}
                       >
-                        {flight}
+                        {option}
                         <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
                       </div>
                     ))
@@ -512,7 +514,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     </div>
                   )}
                 </div>
-                {/* Column 3: Instructors list */}
+                {/* Column 3: Names (Staff or Trainees) */}
                 <div
                   style={{
                     flex: 1,
@@ -521,15 +523,15 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     backgroundColor: 'rgba(0,0,0,0.2)',
                   }}
                 >
-                  {hoveredPicUnit && hoveredPicFlight ? (
-                    (instructorsByUnitAndFlight.get(hoveredPicUnit)?.get(hoveredPicFlight) || []).map(inst => (
+                  {hoveredPicUnit && hoveredPicLayer2 ? (
+                    getNamesForUnitAndSelection(hoveredPicUnit, hoveredPicLayer2).map(person => (
                       <div
-                        key={inst.name}
+                        key={person.name}
                         onClick={() => {
-                          onPicNameChange(inst.name);
+                          onPicNameChange(person.name);
                           onShowPicDropdownChange(false);
                           onHoveredPicUnitChange(null);
-                          onHoveredPicFlightChange(null);
+                          onHoveredPicLayer2Change(null);
                         }}
                         style={{
                           padding: '10px 12px',
@@ -542,136 +544,12 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                         onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
                         onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                       >
-                        {inst.rank ? `${inst.rank} ` : ''}{inst.name}
+                        {person.label}
                       </div>
                     ))
                   ) : (
                     <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      Select flight
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-            {showPicDropdown && flightType === 'Solo' && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  zIndex: 1000,
-                  width: 540,
-                  backgroundColor: '#1e3a5f',
-                  borderRadius: 8,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                  maxHeight: 320,
-                  display: 'flex',
-                  flexDirection: 'row',
-                }}
-              >
-                {/* Column 1: Units list */}
-                <div
-                  style={{
-                    width: 120,
-                    borderRight: '1px solid rgba(255,255,255,0.2)',
-                    maxHeight: 320,
-                    overflowY: 'auto',
-                  }}
-                >
-                  {allUnits.filter(unit => traineesByUnitAndCourse.has(unit)).map(unit => (
-                    <div
-                      key={unit}
-                      onMouseEnter={() => onHoveredPicUnitChange(unit)}
-                      onClick={() => onHoveredPicUnitChange(unit)}
-                      style={{
-                        padding: '10px 12px',
-                        color: hoveredPicUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
-                        backgroundColor: hoveredPicUnit === unit ? 'rgba(255,255,255,0.15)' : 'transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: 13,
-                      }}
-                    >
-                      {unit}
-                      <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Column 2: Courses */}
-                <div
-                  style={{
-                    width: 140,
-                    borderRight: '1px solid rgba(255,255,255,0.2)',
-                    maxHeight: 320,
-                    overflowY: 'auto',
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                  }}
-                >
-                  {hoveredPicUnit ? (
-                    getSortedCoursesForUnit(hoveredPicUnit).map(course => (
-                      <div
-                        key={course}
-                        onMouseEnter={() => onHoveredPicFlightChange(course)}
-                        onClick={() => onHoveredPicFlightChange(course)}
-                        style={{
-                          padding: '10px 12px',
-                          color: hoveredPicFlight === course ? '#fff' : 'rgba(255,255,255,0.8)',
-                          backgroundColor: hoveredPicFlight === course ? 'rgba(255,255,255,0.15)' : 'transparent',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          fontSize: 13,
-                        }}
-                      >
-                        {course}
-                        <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      Select unit
-                    </div>
-                  )}
-                </div>
-                {/* Column 3: Trainees list */}
-                <div
-                  style={{
-                    flex: 1,
-                    maxHeight: 320,
-                    overflowY: 'auto',
-                    backgroundColor: 'rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {hoveredPicUnit && hoveredPicFlight ? (
-                    (traineesByUnitAndCourse.get(hoveredPicUnit)?.get(hoveredPicFlight) || []).map(trainee => (
-                      <div
-                        key={trainee.fullName || trainee.name}
-                        onClick={() => {
-                          onPicNameChange(trainee.fullName || trainee.name);
-                          onShowPicDropdownChange(false);
-                          onHoveredPicUnitChange(null);
-                          onHoveredPicFlightChange(null);
-                        }}
-                        style={{
-                          padding: '10px 12px',
-                          color: '#fff',
-                          backgroundColor: 'transparent',
-                          cursor: 'pointer',
-                          fontSize: 13,
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                        onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                      >
-                        {trainee.rank ? `${trainee.rank} ` : ''}{trainee.fullName || trainee.name}
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      Select course
+                      {hoveredPicUnit ? 'Select STAFF or course' : 'Select unit'}
                     </div>
                   )}
                 </div>
@@ -680,6 +558,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           </div>
 
           {/* Line 2: Student (Dual) or SOLO badge */}
+          {/* Structure: Unit → STAFF or Course → Names (same as PIC dropdown) */}
           {flightType === 'Dual' ? (
             <div style={{ position: 'relative' }}>
               {/* Student name display - triggers dropdown */}
@@ -701,7 +580,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                 {studentName || 'Surname, First (N)'}
               </div>
 
-              {/* 3-layer cascading dropdown: Units -> Courses -> Trainees */}
+              {/* 3-layer cascading dropdown: Units -> STAFF/Courses -> Names */}
               {showStudentDropdown && (
                 <div
                   onClick={e => e.stopPropagation()}
@@ -729,7 +608,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       overflowY: 'auto',
                     }}
                   >
-                    {allUnits.filter(unit => traineesByUnitAndCourse.has(unit)).map(unit => (
+                    {allUnits.map(unit => (
                       <div
                         key={unit}
                         onMouseEnter={() => onHoveredStudentUnitChange(unit)}
@@ -751,7 +630,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     ))}
                   </div>
 
-                  {/* Column 2: Courses list */}
+                  {/* Column 2: STAFF or Courses */}
                   <div
                     style={{
                       width: 140,
@@ -762,23 +641,24 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     }}
                   >
                     {hoveredStudentUnit ? (
-                      getSortedCoursesForUnit(hoveredStudentUnit).map(course => (
+                      getLayer2OptionsForUnit(hoveredStudentUnit).map(option => (
                         <div
-                          key={course}
-                          onMouseEnter={() => onHoveredStudentCourseChange(course)}
-                          onClick={() => onHoveredStudentCourseChange(course)}
+                          key={option}
+                          onMouseEnter={() => onHoveredStudentLayer2Change(option)}
+                          onClick={() => onHoveredStudentLayer2Change(option)}
                           style={{
                             padding: '10px 12px',
-                            color: hoveredStudentCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
-                            backgroundColor: hoveredStudentCourse === course ? 'rgba(255,255,255,0.15)' : 'transparent',
+                            color: hoveredStudentLayer2 === option ? '#fff' : 'rgba(255,255,255,0.8)',
+                            backgroundColor: hoveredStudentLayer2 === option ? 'rgba(255,255,255,0.15)' : 'transparent',
                             cursor: 'pointer',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             fontSize: 13,
+                            fontWeight: option === 'STAFF' ? 600 : 400,
                           }}
                         >
-                          {course}
+                          {option}
                           <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
                         </div>
                       ))
@@ -789,7 +669,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     )}
                   </div>
 
-                  {/* Column 3: Trainees list */}
+                  {/* Column 3: Names (Staff or Trainees) */}
                   <div
                     style={{
                       flex: 1,
@@ -798,18 +678,16 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       backgroundColor: 'rgba(0,0,0,0.2)',
                     }}
                   >
-                    {hoveredStudentUnit && hoveredStudentCourse ? (
-                      (traineesByUnitAndCourse.get(hoveredStudentUnit)?.get(hoveredStudentCourse) || []).map(trainee => (
+                    {hoveredStudentUnit && hoveredStudentLayer2 ? (
+                      getNamesForUnitAndSelection(hoveredStudentUnit, hoveredStudentLayer2).map(person => (
                         <div
-                          key={trainee.fullName || trainee.name}
+                          key={person.name}
                           onClick={() => {
-                            onStudentNameChange(trainee.fullName || trainee.name);
+                            onStudentNameChange(person.name);
                             onShowStudentDropdownChange(false);
                             onHoveredStudentUnitChange(null);
-                            onHoveredStudentCourseChange(null);
+                            onHoveredStudentLayer2Change(null);
                           }}
-                          onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                          onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                           style={{
                             padding: '10px 12px',
                             color: '#fff',
@@ -818,13 +696,15 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                             fontSize: 13,
                             whiteSpace: 'nowrap',
                           }}
+                          onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
+                          onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
                         >
-                          {trainee.rank ? trainee.rank + ' ' : ''}{trainee.fullName || trainee.name}
+                          {person.label}
                         </div>
                       ))
                     ) : (
                       <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                        Select course
+                        {hoveredStudentUnit ? 'Select STAFF or course' : 'Select unit'}
                       </div>
                     )}
                   </div>
@@ -955,10 +835,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [errors, setErrors] = useState<string[]>([]);
   const [showPicDropdown, setShowPicDropdown] = useState(false);
   const [hoveredPicUnit, setHoveredPicUnit] = useState<string | null>(null);
-  const [hoveredPicFlight, setHoveredPicFlight] = useState<string | null>(null);
+  const [hoveredPicLayer2, setHoveredPicLayer2] = useState<string | null>(null);
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [hoveredStudentUnit, setHoveredStudentUnit] = useState<string | null>(null);
-  const [hoveredStudentCourse, setHoveredStudentCourse] = useState<string | null>(null);
+  const [hoveredStudentLayer2, setHoveredStudentLayer2] = useState<string | null>(null);
 
   // Tile colour from student's course (default sky-blue matching reference)
   const tileColor = useMemo(() => {
@@ -1002,7 +882,68 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     [instructorsData]
   );
 
-  // Group instructors by unit for cascading dropdown (3-layer: Unit → Flight → Instructors)
+  // Combined 3-layer structure: Unit → "STAFF" or Course → Names
+  // Layer 1: Units (1FTS, CFS)
+  // Layer 2: "STAFF" or Courses (ADF301, ADF302, etc.)
+  // Layer 3: Staff list (if STAFF) or Trainees (if course)
+
+  // Get all unique units from both instructors and trainees
+  const allUnits = useMemo(() => {
+    const units = new Set<string>();
+    instructorsData.forEach(inst => units.add(inst.unit || 'Unassigned'));
+    traineesData.forEach(trainee => units.add(trainee.unit || 'Unassigned'));
+    return Array.from(units).sort();
+  }, [instructorsData, traineesData]);
+
+  // Get Layer 2 options for a unit: ["STAFF", ...courses]
+  const getLayer2OptionsForUnit = (unit: string): string[] => {
+    const options: string[] = [];
+    
+    // Check if unit has instructors (add STAFF option)
+    const hasInstructors = instructorsData.some(inst => (inst.unit || 'Unassigned') === unit);
+    if (hasInstructors) {
+      options.push('STAFF');
+    }
+    
+    // Get unique courses for this unit from trainees
+    const courses = new Set<string>();
+    traineesData.forEach(trainee => {
+      if ((trainee.unit || 'Unassigned') === unit && trainee.course) {
+        courses.add(trainee.course);
+      }
+    });
+    options.push(...Array.from(courses).sort());
+    
+    return options;
+  };
+
+  // Get Layer 3 names based on unit and selection (STAFF or course)
+  const getNamesForUnitAndSelection = (unit: string, selection: string): { name: string; label: string; type: 'instructor' | 'trainee' }[] => {
+    if (selection === 'STAFF') {
+      // Return instructors for this unit
+      return instructorsData
+        .filter(inst => (inst.unit || 'Unassigned') === unit)
+        .map(inst => ({
+          name: inst.name,
+          label: `${inst.rank ? inst.rank + ' ' : ''}${inst.name}`,
+          type: 'instructor' as const
+        }));
+    } else {
+      // Return trainees for this unit and course
+      return traineesData
+        .filter(trainee => 
+          (trainee.unit || 'Unassigned') === unit && 
+          trainee.course === selection
+        )
+        .map(trainee => ({
+          name: trainee.fullName || trainee.name,
+          label: `${trainee.rank ? trainee.rank + ' ' : ''}${trainee.fullName || trainee.name}`,
+          type: 'trainee' as const
+        }));
+    }
+  };
+
+  // Legacy support - keep for reference but not used in new dropdown
   const instructorsByUnitAndFlight = useMemo(() => {
     const grouped = new Map<string, Map<string, typeof instructorsData>>();
     instructorsData.forEach(inst => {
@@ -1019,17 +960,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return grouped;
   }, [instructorsData]);
 
-  const sortedUnits = useMemo(() => {
-    return Array.from(instructorsByUnitAndFlight.keys()).sort();
-  }, [instructorsByUnitAndFlight]);
-
-  // Get sorted flights for a given unit
-  const getSortedFlightsForUnit = (unit: string): string[] => {
-    const unitMap = instructorsByUnitAndFlight.get(unit);
-    return unitMap ? Array.from(unitMap.keys()).sort() : [];
-  };
-
-  // Group trainees by unit and course for cascading dropdown (3-layer: Unit → Course → Trainees)
   const traineesByUnitAndCourse = useMemo(() => {
     const grouped = new Map<string, Map<string, typeof traineesData>>();
     traineesData.forEach(trainee => {
@@ -1045,20 +975,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     });
     return grouped;
   }, [traineesData]);
-
-  // Get sorted courses for a given unit
-  const getSortedCoursesForUnit = (unit: string): string[] => {
-    const unitMap = traineesByUnitAndCourse.get(unit);
-    return unitMap ? Array.from(unitMap.keys()).sort() : [];
-  };
-
-  // Get all unique units from both instructors and trainees
-  const allUnits = useMemo(() => {
-    const units = new Set<string>();
-    instructorsByUnitAndFlight.forEach((_, unit) => units.add(unit));
-    traineesByUnitAndCourse.forEach((_, unit) => units.add(unit));
-    return Array.from(units).sort();
-  }, [instructorsByUnitAndFlight, traineesByUnitAndCourse]);
 
   const traineeOptions = useMemo(() =>
     traineesData.map(t => ({ value: t.fullName || t.name, label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}` })),
@@ -1220,17 +1136,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               timeOptions={timeOptions}
               durationOptions={durationOptions}
               callsign={callsign}
-              instructorsByUnitAndFlight={instructorsByUnitAndFlight}
               allUnits={allUnits}
-              getSortedFlightsForUnit={getSortedFlightsForUnit}
+              getLayer2OptionsForUnit={getLayer2OptionsForUnit}
+              getNamesForUnitAndSelection={getNamesForUnitAndSelection}
               showPicDropdown={showPicDropdown}
               hoveredPicUnit={hoveredPicUnit}
-              hoveredPicFlight={hoveredPicFlight}
-              traineesByUnitAndCourse={traineesByUnitAndCourse}
-              getSortedCoursesForUnit={getSortedCoursesForUnit}
+              hoveredPicLayer2={hoveredPicLayer2}
               showStudentDropdown={showStudentDropdown}
               hoveredStudentUnit={hoveredStudentUnit}
-              hoveredStudentCourse={hoveredStudentCourse}
+              hoveredStudentLayer2={hoveredStudentLayer2}
               onFlightTypeChange={setFlightType}
               onStartTimeChange={setStartTime}
               onPicNameChange={setPicName}
@@ -1242,10 +1156,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onCallsignChange={setCallsign}
               onShowPicDropdownChange={setShowPicDropdown}
               onHoveredPicUnitChange={setHoveredPicUnit}
-              onHoveredPicFlightChange={setHoveredPicFlight}
+              onHoveredPicLayer2Change={setHoveredPicLayer2}
               onShowStudentDropdownChange={setShowStudentDropdown}
               onHoveredStudentUnitChange={setHoveredStudentUnit}
-              onHoveredStudentCourseChange={setHoveredStudentCourse}
+              onHoveredStudentLayer2Change={setHoveredStudentLayer2}
             />
           </div>
 
