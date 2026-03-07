@@ -61,11 +61,12 @@ interface RealTilePreviewProps {
   flightNumber: string;
   area: string;
   aircraftNumber: string;
+  callsign: string;
   color: string;
 }
 
 const RealTilePreview: React.FC<RealTilePreviewProps> = ({
-  flightType, startTime, picName, studentName, duration, flightNumber, area, aircraftNumber, color,
+  flightType, startTime, picName, studentName, duration, flightNumber, area, aircraftNumber, callsign, color,
 }) => {
   const timeColor    = 'rgba(255,255,255,0.95)';
   const nameColor    = (v: string) => v ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.35)';
@@ -139,10 +140,10 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
           )}
         </div>
 
-        {/* RIGHT: [dur] flightnum */}
+        {/* RIGHT: [dur] flightnum on top, area below */}
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-          justifyContent: 'center', gap: RT_RIGHT_GAP, flexShrink: 0, paddingLeft: RT_PAD_H,
+          justifyContent: 'center', gap: 2, flexShrink: 0, paddingLeft: RT_PAD_H,
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, whiteSpace: 'nowrap' }}>
             <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, color: bracketColor, lineHeight: 1.2 }}>[ </span>
@@ -152,6 +153,10 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
               {flightNumber || 'FLT#'}
             </span>
           </div>
+          <span style={{
+            fontSize: RT_RIGHT_FONT, lineHeight: 1.2, textAlign: 'right',
+            color: ['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
+          }}>{area}</span>
         </div>
       </div>
 
@@ -164,16 +169,15 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
         <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: botColor(aircraftNumber), lineHeight: 1 }}>{aircraftNumber || '---'}</span>
       </div>
 
-      {/* BOTTOM-RIGHT: time + area */}
+      {/* BOTTOM-RIGHT: callsign */}
       <div style={{
-        position: 'absolute', bottom: RT_PAD_V, right: RT_PAD_H,
-        display: 'flex', alignItems: 'baseline', gap: RT_RIGHT_GAP, zIndex: 2,
+        position: 'absolute', bottom: RT_PAD_V, right: RT_PAD_H, zIndex: 2,
       }}>
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: 'rgba(255,255,255,0.70)', lineHeight: 1 }}>{formatTime(startTime)}</span>
         <span style={{
-          fontSize: RT_BOT_FONT, lineHeight: 1,
-          color: ['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
-        }}>{area}</span>
+          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+          fontSize: RT_BOT_FONT, fontStyle: 'italic', lineHeight: 1,
+          color: callsign && callsign !== 'CALLSGN' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)',
+        }}>{callsign || 'CALLSGN'}</span>
       </div>
     </div>
   );
@@ -196,6 +200,7 @@ interface FlightTilePreviewProps {
   aircraftOptions: { value: string; label: string }[];
   timeOptions: { value: string; label: string }[];
   durationOptions: { value: string; label: string }[];
+  callsign: string;
   onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
   onStartTimeChange: (v: number) => void;
   onPicNameChange: (v: string) => void;
@@ -204,6 +209,7 @@ interface FlightTilePreviewProps {
   onFlightNumberChange: (v: string) => void;
   onAreaChange: (v: string) => void;
   onAircraftChange: (v: string) => void;
+  onCallsignChange: (v: string) => void;
 }
 
 // Shared style for all invisible inline selects inside the tile
@@ -239,11 +245,11 @@ const inlineSelectStyle = (
 
 const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   flightType, startTime, picName, studentName, duration, flightNumber,
-  area, aircraftNumber, color,
+  area, aircraftNumber, color, callsign,
   instructorOptions, traineeOptions, syllabusOptions, areaOptions,
   aircraftOptions, timeOptions, durationOptions,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
-  onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange,
+  onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
 }) => {
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
 
@@ -307,42 +313,62 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         ))}
       </select>
 
-      {/* ── TOP-RIGHT: [duration] FLT# ── */}
+      {/* ── TOP-RIGHT: [duration] FLT# on top, Area directly below ── */}
       <div
         style={{
           position: 'absolute',
           top: PAD_V,
           right: PAD_H,
           display: 'flex',
-          alignItems: 'baseline',
-          gap: 4,
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 2,
           zIndex: 5,
-          whiteSpace: 'nowrap',
         }}
       >
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}>[ </span>
-        <select
-          value={String(duration)}
-          onChange={e => onDurationChange(parseFloat(e.target.value))}
-          style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
-        >
-          {durationOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
-          ))}
-        </select>
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
-        <select
-          value={flightNumber}
-          onChange={e => onFlightNumberChange(e.target.value)}
-          style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
-        >
-          <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-            FLT#
-          </option>
-          {syllabusOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
-              {o.label}
+        {/* Row 1: [dur] FLT# */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}>[ </span>
+          <select
+            value={String(duration)}
+            onChange={e => onDurationChange(parseFloat(e.target.value))}
+            style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
+          >
+            {durationOptions.map(o => (
+              <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
+            ))}
+          </select>
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
+          <select
+            value={flightNumber}
+            onChange={e => onFlightNumberChange(e.target.value)}
+            style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
+          >
+            <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+              FLT#
             </option>
+            {syllabusOptions.map(o => (
+              <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* Row 2: Area — directly below [dur] FLT# */}
+        <select
+          value={area}
+          onChange={e => onAreaChange(e.target.value)}
+          style={inlineSelectStyle(
+            RIGHT_FONT,
+            ['A','B','C','D','E','F','G','H'].includes(area)
+              ? 'rgba(255,255,255,0.80)'
+              : 'rgba(255,220,60,0.95)',
+            RIGHT_FONT * 1.4,
+            400, 'normal', false, 'right'
+          )}
+        >
+          {areaOptions.map(o => (
+            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
           ))}
         </select>
       </div>
@@ -458,66 +484,35 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         </select>
       </div>
 
-      {/* ── BOTTOM-RIGHT: time + area ── */}
+      {/* ── BOTTOM-RIGHT: callsign ── */}
       <div
         style={{
           position: 'absolute',
           bottom: PAD_V,
           right: PAD_H,
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 8,
           zIndex: 2,
         }}
       >
-        {/* Start time repeated bottom-right (as per reference) */}
-        <div style={{ position: 'relative' }}>
-          <span style={{
+        <input
+          type="text"
+          value={callsign}
+          onChange={e => onCallsignChange(e.target.value)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
             fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
             fontSize: BOT_FONT,
-            color: 'rgba(255,255,255,0.70)',
+            color: callsign && callsign !== 'CALLSGN' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)',
+            fontStyle: 'italic',
             lineHeight: 1,
-            pointerEvents: 'none',
-          }}>
-            {formatTime(startTime)}
-          </span>
-          {/* Invisible select overlay */}
-          <select
-            value={String(startTime)}
-            onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              opacity: 0,
-              cursor: 'pointer',
-              zIndex: 5,
-            }}
-          >
-            {timeOptions.map(o => (
-              <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-        {/* Area */}
-        <select
-          value={area}
-          onChange={e => onAreaChange(e.target.value)}
-          style={inlineSelectStyle(
-            BOT_FONT,
-            ['A','B','C','D','E','F','G','H'].includes(area)
-              ? 'rgba(255,255,255,0.80)'
-              : 'rgba(255,220,60,0.95)',
-            BOT_FONT * 1.4,
-            400, 'normal', false
-          )}
-        >
-          {areaOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
-          ))}
-        </select>
+            textAlign: 'right',
+            width: BOT_FONT * 5,
+            padding: 0,
+            cursor: 'text',
+          }}
+          placeholder="CALLSGN"
+        />
       </div>
     </div>
   );
@@ -538,6 +533,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [area, setArea] = useState('A');
   const [aircraftNumber, setAircraftNumber] = useState('001');
   const [locationType, setLocationType] = useState<'Local' | 'Land Away'>('Local');
+  const [callsign, setCallsign] = useState('CALLSGN');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -702,6 +698,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               flightNumber={flightNumber}
               area={area}
               aircraftNumber={aircraftNumber}
+              callsign={callsign}
               color={tileColor}
             />
           </div>
@@ -726,6 +723,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               aircraftOptions={aircraftOptions}
               timeOptions={timeOptions}
               durationOptions={durationOptions}
+              callsign={callsign}
               onFlightTypeChange={setFlightType}
               onStartTimeChange={setStartTime}
               onPicNameChange={setPicName}
@@ -734,6 +732,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onFlightNumberChange={setFlightNumber}
               onAreaChange={setArea}
               onAircraftChange={setAircraftNumber}
+              onCallsignChange={setCallsign}
             />
           </div>
 
