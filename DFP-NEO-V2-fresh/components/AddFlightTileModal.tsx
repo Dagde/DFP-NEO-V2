@@ -288,7 +288,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         width: '100%',
         height: TILE_H,
         borderRadius: TILE_RADIUS,
-        overflow: 'hidden',
+        overflow: 'visible',
         boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
         flexShrink: 0,
       }}
@@ -399,7 +399,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
             gap: NAME_GAP,
             paddingLeft: NAME_INDENT,
             minWidth: 0,
-            overflow: 'hidden',
+            overflow: 'visible',
           }}
         >
           {/* Line 1: PIC / Instructor with cascading dropdown */}
@@ -425,7 +425,8 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                   backgroundColor: '#1e3a5f',
                   borderRadius: 8,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                  overflow: 'hidden',
+                  maxHeight: 350,
+                  overflowY: 'auto',
                 }}
               >
                 {sortedUnits.map(unit => (
