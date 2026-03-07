@@ -455,6 +455,32 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     overflowY: 'auto',
                   }}
                 >
+                  {/* SOLO option - first, no cascading */}
+                  <div
+                    onClick={() => {
+                      onPicNameChange('SOLO');
+                      onShowPicDropdownChange(false);
+                      onHoveredPicUnitChange(null);
+                      onHoveredPicLayer2Change(null);
+                    }}
+                    style={{
+                      padding: '10px 12px',
+                      color: '#ffd43b',
+                      backgroundColor: hoveredPicUnit === 'SOLO' ? 'rgba(255,212,59,0.2)' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      borderBottom: '1px solid rgba(255,255,255,0.2)',
+                    }}
+                    onMouseEnter={() => onHoveredPicUnitChange('SOLO')}
+                    onMouseLeave={() => onHoveredPicUnitChange(null)}
+                  >
+                    SOLO
+                    <span style={{ fontSize: 10, opacity: 0.8, color: '#ffd43b' }}>SELECT</span>
+                  </div>
                   {allUnits.map(unit => (
                     <div
                       key={unit}
@@ -476,7 +502,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     </div>
                   ))}
                 </div>
-                {/* Column 2: STAFF or Courses */}
+                {/* Column 2: STAFF or Courses (not shown for SOLO) */}
                 <div
                   style={{
                     width: 140,
@@ -486,7 +512,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     backgroundColor: 'rgba(0,0,0,0.1)',
                   }}
                 >
-                  {hoveredPicUnit ? (
+                  {hoveredPicUnit && hoveredPicUnit !== 'SOLO' ? (
                     getLayer2OptionsForUnit(hoveredPicUnit).map(option => (
                       <div
                         key={option}
@@ -549,7 +575,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     ))
                   ) : (
                     <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      {hoveredPicUnit ? 'Select STAFF or course' : 'Select unit'}
+                      {hoveredPicUnit === 'SOLO' ? 'SOLO selected' : hoveredPicUnit ? 'Select STAFF or course' : 'Select unit'}
                     </div>
                   )}
                 </div>
@@ -608,6 +634,32 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       overflowY: 'auto',
                     }}
                   >
+                    {/* SOLO option - first, no cascading */}
+                    <div
+                      onClick={() => {
+                        onStudentNameChange('SOLO');
+                        onShowStudentDropdownChange(false);
+                        onHoveredStudentUnitChange(null);
+                        onHoveredStudentLayer2Change(null);
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        color: '#ffd43b',
+                        backgroundColor: hoveredStudentUnit === 'SOLO' ? 'rgba(255,212,59,0.2)' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        borderBottom: '1px solid rgba(255,255,255,0.2)',
+                      }}
+                      onMouseEnter={() => onHoveredStudentUnitChange('SOLO')}
+                      onMouseLeave={() => onHoveredStudentUnitChange(null)}
+                    >
+                      SOLO
+                      <span style={{ fontSize: 10, opacity: 0.8, color: '#ffd43b' }}>SELECT</span>
+                    </div>
                     {allUnits.map(unit => (
                       <div
                         key={unit}
@@ -630,7 +682,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     ))}
                   </div>
 
-                  {/* Column 2: STAFF or Courses */}
+                  {/* Column 2: STAFF or Courses (not shown for SOLO) */}
                   <div
                     style={{
                       width: 140,
@@ -640,7 +692,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       backgroundColor: 'rgba(0,0,0,0.1)',
                     }}
                   >
-                    {hoveredStudentUnit ? (
+                    {hoveredStudentUnit && hoveredStudentUnit !== 'SOLO' ? (
                       getLayer2OptionsForUnit(hoveredStudentUnit).map(option => (
                         <div
                           key={option}
@@ -704,7 +756,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       ))
                     ) : (
                       <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                        {hoveredStudentUnit ? 'Select STAFF or course' : 'Select unit'}
+                        {hoveredStudentUnit === 'SOLO' ? 'SOLO selected' : hoveredStudentUnit ? 'Select STAFF or course' : 'Select unit'}
                       </div>
                     )}
                   </div>
