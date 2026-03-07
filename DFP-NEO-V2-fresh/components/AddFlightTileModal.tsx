@@ -688,23 +688,6 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           </div>
 
-          {/* Real-size synced tile preview */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Live Preview (actual size)</label>
-            <RealTilePreview
-              flightType={flightType}
-              startTime={startTime}
-              picName={picName}
-              studentName={studentName}
-              duration={duration}
-              flightNumber={flightNumber}
-              area={area}
-              aircraftNumber={aircraftNumber}
-              callsign={callsign}
-              color={tileColor}
-            />
-          </div>
-
           {/* Flight Tile label + tile */}
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Flight Tile</label>
