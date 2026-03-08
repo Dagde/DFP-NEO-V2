@@ -1155,9 +1155,30 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       }
     });
 
-    // Sort events within each course
+    // Sort events within each course using natural/numeric sort
+    // This ensures BGF1, BGF2, BGF3...BGF9, BGF10, BGF11 (not BGF1, BGF10, BGF11...BGF2)
+    const naturalSort = (a: string, b: string): number => {
+      // Extract leading letters and trailing numbers
+      const parse = (s: string): { letters: string; num: number } => {
+        const match = s.match(/^([A-Za-z]*)(\d*)$/);
+        if (match) {
+          return { letters: match[1].toUpperCase(), num: match[2] ? parseInt(match[2], 10) : 0 };
+        }
+        return { letters: s.toUpperCase(), num: 0 };
+      };
+      const aParsed = parse(a);
+      const bParsed = parse(b);
+      
+      // First compare letters
+      const letterCompare = aParsed.letters.localeCompare(bParsed.letters);
+      if (letterCompare !== 0) return letterCompare;
+      
+      // Then compare numbers
+      return aParsed.num - bParsed.num;
+    };
+    
     grouped.forEach((items, course) => {
-      grouped.set(course, items.sort((a, b) => (a.code || a.id || '').localeCompare(b.code || b.id || '')));
+      grouped.set(course, items.sort((a, b) => naturalSort(a.code || a.id || '', b.code || b.id || '')));
     });
 
     return grouped;
