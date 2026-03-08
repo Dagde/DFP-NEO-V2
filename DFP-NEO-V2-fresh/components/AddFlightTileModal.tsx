@@ -240,6 +240,14 @@ interface FlightTilePreviewProps {
   onShowStudentDropdownChange: (v: boolean) => void;
   onHoveredStudentUnitChange: (v: string | null) => void;
   onHoveredStudentLayer2Change: (v: string | null) => void;
+  // Event dropdown props
+  showEventDropdown: boolean;
+  hoveredCourse: string | null;
+  courseOptions: string[];
+  getEventsForCourse: (course: string) => SyllabusItemDetail[];
+  getNextLMPEvent: SyllabusItemDetail | null;
+  onShowEventDropdownChange: (v: boolean) => void;
+  onHoveredCourseChange: (v: string | null) => void;
 }
 
 // Shared style for all invisible inline selects inside the tile
@@ -285,6 +293,9 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
   onShowPicDropdownChange, onHoveredPicUnitChange, onHoveredPicLayer2Change,
   onShowStudentDropdownChange, onHoveredStudentUnitChange, onHoveredStudentLayer2Change,
+  // Event dropdown props
+  showEventDropdown, hoveredCourse, courseOptions, getEventsForCourse, getNextLMPEvent,
+  onShowEventDropdownChange, onHoveredCourseChange,
 }) => {
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
 
@@ -375,7 +386,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         {/* Event dropdown - 2-layer cascading */}
         <div style={{ position: 'relative' }}>
           <div
-            onClick={() => setShowEventDropdown(!showEventDropdown)}
+            onClick={() => onShowEventDropdownChange(!showEventDropdown)}
             style={{
               ...inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true),
               cursor: 'pointer',
@@ -416,12 +427,12 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                     key={course}
                     onClick={() => {
                       if (course === 'SCT') {
-                        setFlightNumber('SCT');
-                        setShowEventDropdown(false);
-                        setHoveredCourse(null);
+                        onFlightNumberChange('SCT');
+                        onShowEventDropdownChange(false);
+                        onHoveredCourseChange(null);
                       }
                     }}
-                    onMouseEnter={() => setHoveredCourse(course)}
+                    onMouseEnter={() => onHoveredCourseChange(course)}
                     style={{
                       padding: '10px 12px',
                       color: hoveredCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
@@ -457,9 +468,9 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
                       <div
                         key={eventCode}
                         onClick={() => {
-                          setFlightNumber(eventCode);
-                          setShowEventDropdown(false);
-                          setHoveredCourse(null);
+                          onFlightNumberChange(eventCode);
+                          onShowEventDropdownChange(false);
+                          onHoveredCourseChange(null);
                         }}
                         style={{
                           padding: '10px 12px',
@@ -1419,6 +1430,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onShowStudentDropdownChange={setShowStudentDropdown}
               onHoveredStudentUnitChange={setHoveredStudentUnit}
               onHoveredStudentLayer2Change={setHoveredStudentLayer2}
+              // Event dropdown props
+              showEventDropdown={showEventDropdown}
+              hoveredCourse={hoveredCourse}
+              courseOptions={courseOptions}
+              getEventsForCourse={getEventsForCourse}
+              getNextLMPEvent={getNextLMPEvent}
+              onShowEventDropdownChange={setShowEventDropdown}
+              onHoveredCourseChange={setHoveredCourse}
             />
           </div>
 
