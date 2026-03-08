@@ -1319,48 +1319,65 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   const handleSave = () => {
     console.log('[AddFlightTileModal] handleSave CALLED');
+    console.log('[AddFlightTileModal] isDeploy:', isDeploy);
     const errs: string[] = [];
-    if (!flightNumber) errs.push('Syllabus item is required.');
-    if (flightType === 'Dual' && !picName) errs.push('Instructor is required for Dual flights.');
-    if (flightType === 'Dual' && !studentName) errs.push('Student is required for Dual flights.');
-    if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
-    if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
-    if (isDeploy && (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)) {
-      errs.push('Deployment start/end date and time are required.');
+
+    // If deployment tile is checked, only validate deployment fields
+    if (isDeploy) {
+      if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime) {
+        errs.push('Deployment start/end date and time are required.');
+      }
+      console.log('[AddFlightTileModal] Deployment validation errors:', errs);
+      if (errs.length > 0) { setErrors(errs); return; }
+    } else {
+      // Normal flight tile validation
+      if (!flightNumber) errs.push('Syllabus item is required.');
+      if (flightType === 'Dual' && !picName) errs.push('Instructor is required for Dual flights.');
+      if (flightType === 'Dual' && !studentName) errs.push('Student is required for Dual flights.');
+      if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
+      if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
+      console.log('[AddFlightTileModal] Flight validation errors:', errs);
+      if (errs.length > 0) { setErrors(errs); return; }
     }
-    console.log('[AddFlightTileModal] Validation errors:', errs);
-    if (errs.length > 0) { setErrors(errs); return; }
 
-    const newEvent: ScheduleEvent = {
-      id: uuidv4(),
-      date,
-      type: 'flight',
-      eventCategory,
-      flightType,
-      flightNumber,
-      instructor: flightType === 'Dual' ? picName : '',
-      student: flightType === 'Dual' ? studentName : '',
-      pilot: picName,
-      startTime,
-      duration,
-      area,
-      aircraftNumber,
-      locationType,
-      color: tileColor,
-      resourceId: '', // Will be assigned by handleSaveEvents
-      notes,
-      group: '',
-      groupTraineeIds: [],
-      attendees: [],
-      isDeploy: isDeploy || undefined,
-      deploymentStartDate: isDeploy ? deploymentStartDate : undefined,
-      deploymentStartTime: isDeploy ? deploymentStartTime : undefined,
-      deploymentEndDate: isDeploy ? deploymentEndDate : undefined,
-      deploymentEndTime: isDeploy ? deploymentEndTime : undefined,
-      deploymentAircraftCount: isDeploy ? deploymentAircraftCount : undefined,
-    } as any;
+    // Determine if we should create a flight tile
+    // Only create flight tile if flightNumber is provided OR if isDeploy is false
+    const shouldCreateFlightTile = !isDeploy || (flightNumber && picName);
 
-    const eventsToSave: ScheduleEvent[] = [newEvent];
+    const eventsToSave: ScheduleEvent[] = [];
+
+    // Create flight tile if needed
+    if (shouldCreateFlightTile) {
+      const newEvent: ScheduleEvent = {
+        id: uuidv4(),
+        date,
+        type: 'flight',
+        eventCategory,
+        flightType,
+        flightNumber,
+        instructor: flightType === 'Dual' ? picName : '',
+        student: flightType === 'Dual' ? studentName : '',
+        pilot: picName,
+        startTime,
+        duration,
+        area,
+        aircraftNumber,
+        locationType,
+        color: tileColor,
+        resourceId: '', // Will be assigned by handleSaveEvents
+        notes,
+        group: '',
+        groupTraineeIds: [],
+        attendees: [],
+        isDeploy: isDeploy || undefined,
+        deploymentStartDate: isDeploy ? deploymentStartDate : undefined,
+        deploymentStartTime: isDeploy ? deploymentStartTime : undefined,
+        deploymentEndDate: isDeploy ? deploymentEndDate : undefined,
+        deploymentEndTime: isDeploy ? deploymentEndTime : undefined,
+        deploymentAircraftCount: isDeploy ? deploymentAircraftCount : undefined,
+      } as any;
+      eventsToSave.push(newEvent);
+    }
 
     // Create Deployment Tiles if isDeploy is true
     console.log('[AddFlightTileModal] handleSave called');
