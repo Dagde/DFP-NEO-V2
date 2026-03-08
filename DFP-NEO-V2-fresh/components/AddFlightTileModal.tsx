@@ -249,6 +249,8 @@ interface FlightTilePreviewProps {
   getNextLMPEvent: SyllabusItemDetail | null;
   onShowEventDropdownChange: (v: boolean) => void;
   onHoveredCourseChange: (v: string | null) => void;
+  // Event category for disabling dropdown on LMP Currency
+  eventCategory: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di';
 }
 
 // Shared style for all invisible inline selects inside the tile
@@ -297,6 +299,8 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
   // Event dropdown props
   showEventDropdown, hoveredCourse, courseOptions, getEventsForCourse, getNextLMPEvent,
   onShowEventDropdownChange, onHoveredCourseChange,
+  // Event category for disabling dropdown on LMP Currency
+  eventCategory,
 }) => {
   const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
 
@@ -387,16 +391,21 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         {/* Event dropdown - 2-layer cascading */}
         <div style={{ position: 'relative' }}>
           <div
-            onClick={() => onShowEventDropdownChange(!showEventDropdown)}
+            onClick={() => {
+              // Disable dropdown for LMP Currency - CURR is auto-set
+              if (eventCategory === 'lmp_currency') return;
+              onShowEventDropdownChange(!showEventDropdown);
+            }}
             style={{
               ...inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true),
-              cursor: 'pointer',
+              cursor: eventCategory === 'lmp_currency' ? 'default' : 'pointer',
               minWidth: 80,
+              opacity: eventCategory === 'lmp_currency' ? 0.9 : 1,
             }}
           >
             {flightNumber || 'EVENT'}
           </div>
-          {showEventDropdown && (
+          {showEventDropdown && eventCategory !== 'lmp_currency' && (
             <div
               onClick={e => e.stopPropagation()}
               style={{
@@ -1314,6 +1323,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       setFlightType('Solo');
     } else {
       setFlightType('Dual');
+    }
+  }, [eventCategory]);
+
+  // Auto-set CURR for LMP Currency category
+  useEffect(() => {
+    if (eventCategory === 'lmp_currency') {
+      setFlightNumber('CURR');
     }
   }, [eventCategory]);
 

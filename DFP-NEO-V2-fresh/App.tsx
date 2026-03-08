@@ -5262,7 +5262,8 @@ useEffect(() => {
     };
 
     // Helper function to add currency event to trainee's Individual LMP
-    const addCurrencyEventToTraineeLMP = (traineeFullName: string, currencyEventId: string) => {
+    // Inserts "Currency" event after the last completed event but before the next uncompleted event
+    const addCurrencyEventToTraineeLMP = (traineeFullName: string) => {
         setTraineeLMPs(prev => {
             const newLMPs = new Map(prev);
             const traineeLMP: SyllabusItemDetail[] | undefined = newLMPs.get(traineeFullName);
@@ -5272,45 +5273,48 @@ useEffect(() => {
                 return prev;
             }
             
-            // Find the base event in the syllabus
-            const baseEvent = syllabusDetails.find(item => item.id === currencyEventId);
-            if (!baseEvent) {
-                console.warn(`Currency event ${currencyEventId} not found in syllabus`);
+            // Check if Currency event already exists
+            const currencyEventExists = traineeLMP.some(item => item.id === 'CURR' || item.code === 'CURR');
+            if (currencyEventExists) {
+                console.log(`Currency event already exists in ${traineeFullName}'s LMP`);
                 return prev;
             }
             
-            // Create currency version with -CUR suffix
+            // Get completed events from scores
+            const traineeScores = scores?.get(traineeFullName) || [];
+            const completedEventIds = new Set(traineeScores.map(s => s.event));
+            
+            // Find the index of the last completed event in the LMP
+            let lastCompletedIndex = -1;
+            for (let i = traineeLMP.length - 1; i >= 0; i--) {
+                const item = traineeLMP[i];
+                if (completedEventIds.has(item.id) || completedEventIds.has(item.code)) {
+                    lastCompletedIndex = i;
+                    break;
+                }
+            }
+            
+            // Create the Currency event
             const currencyEvent: SyllabusItemDetail = {
-                ...baseEvent,
-                id: `${baseEvent.id}-CUR`,
-                code: `${baseEvent.code}-CUR`,
-                eventDescription: `${baseEvent.eventDescription} (Currency)`,
+                id: 'CURR',
+                code: 'CURR',
+                eventDescription: 'Currency',
+                type: 'Flight',
+                courses: [],
+                prerequisites: [],
             };
             
-            // Find the index of the base event in the trainee's LMP
-            const baseEventIndex = traineeLMP.findIndex(item => item.id === currencyEventId);
+            // Insert after the last completed event, or at the beginning if no completed events
+            const insertIndex = lastCompletedIndex >= 0 ? lastCompletedIndex + 1 : 0;
             
-            if (baseEventIndex === -1) {
-                console.warn(`Base event ${currencyEventId} not found in trainee's LMP`);
-                return prev;
-            }
-            
-            // Check if currency event already exists
-            const currencyEventExists = traineeLMP.some(item => item.id === `${currencyEventId}-CUR`);
-            if (currencyEventExists) {
-                console.log(`Currency event ${currencyEventId}-CUR already exists in trainee's LMP`);
-                return prev;
-            }
-            
-            // Insert currency event right after the base event
             const updatedLMP = [
-                ...traineeLMP.slice(0, baseEventIndex + 1),
+                ...traineeLMP.slice(0, insertIndex),
                 currencyEvent,
-                ...traineeLMP.slice(baseEventIndex + 1)
+                ...traineeLMP.slice(insertIndex)
             ];
             
             newLMPs.set(traineeFullName, updatedLMP);
-            console.log(`Added currency event ${currencyEvent.id} to ${traineeFullName}'s Individual LMP`);
+            console.log(`Added Currency event to ${traineeFullName}'s Individual LMP at index ${insertIndex}`);
             
             return newLMPs;
         });
@@ -5529,18 +5533,18 @@ useEffect(() => {
     
         // Handle LMP Currency events - add to trainee's Individual LMP
         eventsToSave.forEach(event => {
-            if (event.eventCategory === 'lmp_currency' && event.flightNumber) {
+            if (event.eventCategory === 'lmp_currency') {
                 // Get trainee name from the event
                 const traineeName = event.flightType === 'Dual' ? event.student : event.pilot;
                 
                 if (traineeName) {
-                    addCurrencyEventToTraineeLMP(traineeName, event.flightNumber);
+                    addCurrencyEventToTraineeLMP(traineeName);
                 } else if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
                     // Handle group events - add currency to all trainees in the group
                     event.groupTraineeIds.forEach(traineeId => {
                         const trainee = traineesData.find(t => t.idNumber === traineeId);
                         if (trainee) {
-                            addCurrencyEventToTraineeLMP(trainee.fullName, event.flightNumber);
+                            addCurrencyEventToTraineeLMP(trainee.fullName);
                         }
                     });
                 }
