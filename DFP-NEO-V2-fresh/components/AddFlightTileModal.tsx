@@ -1421,7 +1421,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           type: 'deployment',
           startTime: deployStartHour,
           duration: deployDuration,
-          resourceId: 'Deployed',
+          resourceId: '', // Empty so handleSaveEvents assigns correct 'Deployed N' resourceId
           color: 'bg-gray-600/30',
           flightNumber: 'DEPLOYMENT',
           flightType: 'Dual',
