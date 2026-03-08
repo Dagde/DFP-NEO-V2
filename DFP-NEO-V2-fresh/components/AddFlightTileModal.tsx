@@ -1361,7 +1361,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const eventsToSave: ScheduleEvent[] = [newEvent];
 
     // Create Deployment Tiles if isDeploy is true
+    console.log('[AddFlightTileModal] handleSave called');
+    console.log('[AddFlightTileModal] isDeploy:', isDeploy);
+    console.log('[AddFlightTileModal] deploymentStartDate:', deploymentStartDate);
+    console.log('[AddFlightTileModal] deploymentStartTime:', deploymentStartTime);
+    console.log('[AddFlightTileModal] deploymentEndDate:', deploymentEndDate);
+    console.log('[AddFlightTileModal] deploymentEndTime:', deploymentEndTime);
+    console.log('[AddFlightTileModal] deploymentAircraftCount:', deploymentAircraftCount);
+
     if (isDeploy && deploymentStartDate && deploymentStartTime && deploymentEndDate && deploymentEndTime) {
+      console.log('[AddFlightTileModal] Creating deployment tiles...');
+
       // Parse deployment times
       const parseTimeStringToHours = (timeStr: string): number => {
         const [hours, minutes] = timeStr.split(':').map(Number);
@@ -1377,6 +1387,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const daysDifference = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       let deployDuration = (daysDifference * 24) + (deployEndHour - deployStartHour);
       if (deployDuration <= 0) deployDuration = 1;
+
+      console.log('[AddFlightTileModal] deployStartHour:', deployStartHour);
+      console.log('[AddFlightTileModal] deployEndHour:', deployEndHour);
+      console.log('[AddFlightTileModal] deployDuration:', deployDuration);
 
       // Create deployment tiles for each aircraft
       for (let i = 0; i < deploymentAircraftCount; i++) {
@@ -1403,9 +1417,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           deploymentEndTime,
           deploymentAircraftCount,
         } as any;
+        console.log('[AddFlightTileModal] Created deployment tile:', deploymentTile.id);
         eventsToSave.push(deploymentTile);
       }
     }
+
+    console.log('[AddFlightTileModal] Total events to save:', eventsToSave.length);
+    console.log('[AddFlightTileModal] Events:', eventsToSave.map(e => ({ id: e.id, type: e.type, date: e.date })));
 
     onSave(eventsToSave);
     onClose();
