@@ -394,14 +394,37 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         // Render deployment tile with subtle styling - all on one line
         const startTime = event.deploymentStartTime?.replace(/:/g, '') || '';
         const endTime = event.deploymentEndTime?.replace(/:/g, '') || '';
-        const timeRange = startTime && endTime ? `${startTime}-${endTime}` : '';
+        
+        // Format dates as "9 Mar" style
+        const formatDate = (dateStr?: string) => {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const day = date.getDate();
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const month = months[date.getMonth()];
+            return `${day} ${month}`;
+        };
+        
+        const startDateFormatted = formatDate(event.deploymentStartDate);
+        const endDateFormatted = formatDate(event.deploymentEndDate);
+        
+        // Build the display string: "0800, 9 Mar - 1700, 12 Mar"
+        let deployText = '';
+        if (startTime) {
+            deployText = startTime;
+            if (startDateFormatted) deployText += `, ${startDateFormatted}`;
+        }
+        if (endTime) {
+            deployText += ' - ' + endTime;
+            if (endDateFormatted) deployText += `, ${endDateFormatted}`;
+        }
         
         return (
             <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
                 <div className="overflow-hidden text-center whitespace-nowrap">
                     <span className="text-white/80 font-medium text-sm">DEPLOYED</span>
-                    {timeRange && (
-                        <span className="text-white/60 text-xs ml-2">{timeRange}</span>
+                    {deployText && (
+                        <span className="text-white/60 text-xs ml-2">{deployText}</span>
                     )}
                 </div>
             </div>

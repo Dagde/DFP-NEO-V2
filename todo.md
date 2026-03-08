@@ -1,9 +1,7 @@
 # Todo List
 
 ## Tasks
-[x] Fix deployment tile text display - make it all on one line (not cut off)
-[x] Change Add Deployment time inputs to military 24-hour format
+[ ] Update deployment tile to include dates in the format "Deployed 0800, 9 Mar - 1700, 12 Mar"
 
-## Completed
-- Modified FlightTile.tsx to show deployment tile text on one line: "DEPLOYED 1430-1630" format
-- Updated AddFlightTileModal.tsx labels to show "Start Time (24hr)" and "End Time (24hr)"
+## In Progress
+- Reading current deployment tile code to understand available date fields
