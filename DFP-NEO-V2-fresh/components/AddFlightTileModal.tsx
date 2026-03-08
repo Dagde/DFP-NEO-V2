@@ -1412,10 +1412,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       console.log('[AddFlightTileModal] deployDuration:', deployDuration);
 
       // Create deployment tiles for each aircraft
+      // Use the current schedule date (date prop) so the tile appears in the daily view
+      // The deployment start/end dates are stored as metadata for reference
       for (let i = 0; i < deploymentAircraftCount; i++) {
         const deploymentTile: ScheduleEvent = {
           id: `deployment-${uuidv4()}-${i}`,
-          date: deploymentStartDate,
+          date: date, // Use current schedule date so it appears in the daily view
           type: 'deployment',
           startTime: deployStartHour,
           duration: deployDuration,
@@ -1436,7 +1438,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           deploymentEndTime,
           deploymentAircraftCount,
         } as any;
-        console.log('[AddFlightTileModal] Created deployment tile:', deploymentTile.id);
+        console.log('[AddFlightTileModal] Created deployment tile:', deploymentTile.id, 'for date:', date);
         eventsToSave.push(deploymentTile);
       }
     }
