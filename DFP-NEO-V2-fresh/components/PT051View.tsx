@@ -756,29 +756,29 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <span className="text-xs text-gray-300 font-mono uppercase">{saveStatus === 'Saved' ? 'All changes saved' : saveStatus}</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
                     {/* Show Edit button if this is a saved assessment */}
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
                             // Enable editing mode - you could add state to track this
                             console.log('Editing mode enabled for PT-051:', initialAssessment.id);
-                        }} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold shadow-md">
-                            ✏️ Edit Assessment
+                        }} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
+                            Edit
                         </button>
                     )}
-                    <button onClick={handleManualSaveAndExit} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md">
+                    <button onClick={handleManualSaveAndExit} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
                         Save & Exit
                     </button>
                     {assessment.id && onDeleteAssessment && (
                         <button 
                             onClick={handleDeleteAssessment} 
-                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold shadow-md"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
                         >
-                            🗑️ Delete Assessment
+                            Delete
                         </button>
                     )}
-                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md">
-                        &larr; Back to Summary
+                    <button onClick={onBack} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
+                        Back
                        <AuditButton pageName="PT-051 Assessment" />
                     </button>
                 </div>
