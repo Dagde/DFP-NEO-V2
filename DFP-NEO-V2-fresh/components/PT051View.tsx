@@ -756,7 +756,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <span className="text-xs text-gray-300 font-mono uppercase">{saveStatus === 'Saved' ? 'All changes saved' : saveStatus}</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                     {/* Show Edit button if this is a saved assessment */}
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
@@ -766,21 +766,27 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             Edit
                         </button>
                     )}
+                    <div className="w-[1px] h-[55px]"></div>
                     <button onClick={handleManualSaveAndExit} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
                         Save & Exit
                     </button>
                     {assessment.id && onDeleteAssessment && (
-                        <button 
-                            onClick={handleDeleteAssessment} 
-                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
-                        >
-                            Delete
-                        </button>
+                        <>
+                            <div className="w-[1px] h-[55px]"></div>
+                            <button 
+                                onClick={handleDeleteAssessment} 
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
+                            >
+                                Delete
+                            </button>
+                        </>
                     )}
+                    <div className="w-[1px] h-[55px]"></div>
                     <button onClick={onBack} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
-                        Back
-                       <AuditButton pageName="PT-051 Assessment" />
+                        <span className="leading-tight text-center">Back to<br/>Summary</span>
                     </button>
+                    <div className="w-[8px]"></div>
+                    <AuditButton pageName="PT-051 Assessment" />
                 </div>
             </div>
 
