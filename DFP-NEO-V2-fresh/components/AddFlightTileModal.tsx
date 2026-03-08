@@ -1318,6 +1318,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [eventCategory]);
 
   const handleSave = () => {
+    console.log('[AddFlightTileModal] handleSave CALLED');
     const errs: string[] = [];
     if (!flightNumber) errs.push('Syllabus item is required.');
     if (flightType === 'Dual' && !picName) errs.push('Instructor is required for Dual flights.');
@@ -1327,6 +1328,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (isDeploy && (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)) {
       errs.push('Deployment start/end date and time are required.');
     }
+    console.log('[AddFlightTileModal] Validation errors:', errs);
     if (errs.length > 0) { setErrors(errs); return; }
 
     const newEvent: ScheduleEvent = {
