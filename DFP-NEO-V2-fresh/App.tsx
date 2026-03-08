@@ -9820,6 +9820,7 @@ updates.forEach(update => {
                     courseColors={courseColors}
                     date={date}
                     traineeLMPs={traineeLMPs}
+                    scores={scores}
                 />
             )}
             {showAuthFlyout && eventForAuth && 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor } from '../types';
+import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AddFlightTileModalProps {
@@ -14,6 +14,7 @@ interface AddFlightTileModalProps {
   courseColors: { [key: string]: string };
   date: string;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
+  scores?: Map<string, Score[]>;
 }
 
 const formatTime = (time: number): string => {
@@ -959,7 +960,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   onClose, onSave, instructors, trainees, syllabusDetails, school,
-  traineesData, instructorsData, courseColors, date, traineeLMPs,
+  traineesData, instructorsData, courseColors, date, traineeLMPs, scores,
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di'>('lmp_event');
   const [flightType, setFlightType] = useState<'Dual' | 'Solo'>('Dual');
@@ -1198,18 +1199,56 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   // Get the next uncompleted event for a trainee from their LMP
+  // Uses the same logic as computeNextEventsForTrainee in App.tsx
   const getNextLMPEvent = useMemo(() => {
+    // Only compute for LMP Event category
+    if (eventCategory !== 'lmp_event') return null;
+
+    // Get the trainee name (for Solo, picName is the trainee; for Dual, studentName is the trainee)
     const name = flightType === 'Solo' ? picName : studentName;
     if (!name || !traineeLMPs) return null;
 
     const lmp = traineeLMPs.get(name);
     if (!lmp || lmp.length === 0) return null;
 
-    // Find the first uncompleted event (next on LMP)
-    // Assuming LMP is ordered and we need to check completion status
-    // For now, return the first event that hasn't been completed
-    return lmp[0]; // This would need actual completion tracking
-  }, [picName, studentName, flightType, traineeLMPs]);
+    // Get completed events from scores
+    const traineeScores = scores?.get(name) || [];
+    const completedEventIds = new Set(traineeScores.map(s => s.event));
+
+    // Find the first event that:
+    // 1. Is not already completed
+    // 2. Has all prerequisites met
+    for (let i = 0; i < lmp.length; i++) {
+      const item = lmp[i];
+
+      // Skip completed events
+      if (completedEventIds.has(item.id) || completedEventIds.has(item.code)) {
+        continue;
+      }
+
+      // Skip remedial events for now (they have special handling)
+      if (item.isRemedial) {
+        continue;
+      }
+
+      // Check prerequisites - all must be completed
+      const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+
+      if (prereqsMet) {
+        return item;
+      }
+    }
+
+    // If no event found with met prerequisites, return the first uncompleted event
+    for (let i = 0; i < lmp.length; i++) {
+      const item = lmp[i];
+      if (!completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
+        return item;
+      }
+    }
+
+    return null;
+  }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
 
   // Legacy syllabusOptions for backward compatibility
   const syllabusOptions = useMemo(() => {
