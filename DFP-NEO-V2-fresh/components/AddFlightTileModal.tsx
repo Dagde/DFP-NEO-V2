@@ -1619,7 +1619,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Start Time</label>
+                    <label className="block text-xs text-gray-400 mb-1">Start Time (24hr)</label>
                     <input
                       type="time"
                       value={deploymentStartTime}
@@ -1637,7 +1637,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">End Time</label>
+                    <label className="block text-xs text-gray-400 mb-1">End Time (24hr)</label>
                     <input
                       type="time"
                       value={deploymentEndTime}

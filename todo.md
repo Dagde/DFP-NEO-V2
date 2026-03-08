@@ -1,13 +1,9 @@
-# Add Flight Tile Modal Improvements
+# Todo List
 
 ## Tasks
-1. [x] Date format: Change to DD Mmm YY (e.g., "06 Jun 25")
-2. [x] Buttons: Match Add Staff/Archive Staff button style (btn-aluminium-brushed class)
-3. [x] Top name dropdown: Two-level cascading dropdown (Unit -> Staff)
+[x] Fix deployment tile text display - make it all on one line (not cut off)
+[x] Change Add Deployment time inputs to military 24-hour format
 
-## Implementation Plan
-- [x] Research button styles and data structure
-- [x] Implement date formatting function
-- [x] Update button styles
-- [x] Create cascading dropdown component for top name
-- [x] Test and commit
+## Completed
+- Modified FlightTile.tsx to show deployment tile text on one line: "DEPLOYED 1430-1630" format
+- Updated AddFlightTileModal.tsx labels to show "Start Time (24hr)" and "End Time (24hr)"

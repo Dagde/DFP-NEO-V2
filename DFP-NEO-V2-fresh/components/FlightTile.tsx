@@ -391,19 +391,18 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
     
     if (event.type === 'deployment') {
-        // Render deployment tile with subtle styling
+        // Render deployment tile with subtle styling - all on one line
+        const startTime = event.deploymentStartTime?.replace(/:/g, '') || '';
+        const endTime = event.deploymentEndTime?.replace(/:/g, '') || '';
+        const timeRange = startTime && endTime ? `${startTime}-${endTime}` : '';
+        
         return (
             <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
-                <div className="overflow-hidden text-center">
-                    <div className="text-white/80 font-medium text-sm">
-                        DEPLOYMENT
-                    </div>
-                    <div className="font-mono text-white/60 truncate">
-                        deployed
-                    </div>
-                    <div className="text-xs text-white/50 mt-1">
-                        {event.deploymentStartTime?.replace(/:/g, '')} - {event.deploymentEndTime?.replace(/:/g, '')}
-                    </div>
+                <div className="overflow-hidden text-center whitespace-nowrap">
+                    <span className="text-white/80 font-medium text-sm">DEPLOYED</span>
+                    {timeRange && (
+                        <span className="text-white/60 text-xs ml-2">{timeRange}</span>
+                    )}
                 </div>
             </div>
         );
