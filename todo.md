@@ -1,8 +1,7 @@
 # Todo List
 
 ## Tasks
-[ ] Set EVENT field to "CURR" when Event Category is "LMP Currency"
-[ ] Insert "Currency" event into trainee's Individual LMP after last completed event but before next uncompleted event
+[ ] Fix PT-051 error when clicking on Currency event - "n.totalEventHours is undefined"
 
 ## In Progress
-- Understanding current LMP event handling and Individual LMP structure
+- Investigating the error related to totalEventHours property on Currency event

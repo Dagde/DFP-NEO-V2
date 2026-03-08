@@ -5294,14 +5294,30 @@ useEffect(() => {
                 }
             }
             
-            // Create the Currency event
+            // Create the Currency event with all required fields
             const currencyEvent: SyllabusItemDetail = {
                 id: 'CURR',
                 code: 'CURR',
                 eventDescription: 'Currency',
                 type: 'Flight',
-                courses: [],
+                phase: 'Currency',
+                module: 'Currency',
+                dayNight: 'Day',
                 prerequisites: [],
+                prerequisitesGround: [],
+                prerequisitesFlying: [],
+                eventDetailsCommon: [],
+                eventDetailsSortie: [],
+                totalEventHours: 1.5,
+                flightOrSimHours: 1.5,
+                duration: 1.5,
+                preFlightTime: 0.5,
+                postFlightTime: 0.25,
+                methodOfDelivery: ['Flight'],
+                methodOfAssessment: ['Flight Assessment'],
+                resourcesPhysical: [],
+                resourcesHuman: [],
+                courses: [],
             };
             
             // Insert after the last completed event, or at the beginning if no completed events
