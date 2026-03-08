@@ -125,7 +125,7 @@ const RealTilePreview: React.FC<RealTilePreviewProps> = ({
           flex: 1, display: 'flex', flexDirection: 'column',
           justifyContent: 'center', gap: RT_NAME_GAP,
           paddingLeft: RT_NAME_INDENT, minWidth: 0, overflow: 'hidden',
-          marginTop: 3,
+          marginTop: 6,
         }}>
           <div style={{
             fontSize: RT_NAME_FONT, fontStyle: 'italic',
@@ -420,7 +420,7 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         >
           {/* Line 1: PIC / Instructor with 3-layer cascading dropdown */}
           {/* Structure: Unit → STAFF or Course → Names */}
-          <div style={{ position: 'relative', marginTop: -3 }}>
+          <div style={{ position: 'relative', marginTop: 0 }}>
             <div
               onClick={() => onShowPicDropdownChange(!showPicDropdown)}
               style={{
