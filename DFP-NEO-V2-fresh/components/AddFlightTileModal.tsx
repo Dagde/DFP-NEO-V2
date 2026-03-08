@@ -1198,7 +1198,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return syllabusByCourse.get(course) || [];
   };
 
-  // Get the next uncompleted event for a trainee from their LMP
+  // Get the next uncompleted FLIGHT event for a trainee from their LMP
+  // Skips non-flight events (Ground School, FTD) to find the next actual flight
   // Uses the same logic as computeNextEventsForTrainee in App.tsx
   const getNextLMPEvent = useMemo(() => {
     // Only compute for LMP Event category
@@ -1215,11 +1216,23 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const traineeScores = scores?.get(name) || [];
     const completedEventIds = new Set(traineeScores.map(s => s.event));
 
-    // Find the first event that:
-    // 1. Is not already completed
-    // 2. Has all prerequisites met
+    // Helper to check if an item is a Flight event
+    const isFlightEvent = (item: SyllabusItemDetail): boolean => {
+      return item.type === 'Flight' || item.type === 'flight' ||
+             (!item.type && !item.id?.includes('FTD') && !item.id?.includes('CPT') && !item.id?.includes('GS'));
+    };
+
+    // Find the first FLIGHT event that:
+    // 1. Is a Flight event (not Ground School, FTD, etc.)
+    // 2. Is not already completed
+    // 3. Has all prerequisites met
     for (let i = 0; i < lmp.length; i++) {
       const item = lmp[i];
+
+      // Skip non-flight events - we only want to highlight the next FLIGHT
+      if (!isFlightEvent(item)) {
+        continue;
+      }
 
       // Skip completed events
       if (completedEventIds.has(item.id) || completedEventIds.has(item.code)) {
@@ -1239,10 +1252,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       }
     }
 
-    // If no event found with met prerequisites, return the first uncompleted event
+    // If no flight event found with met prerequisites, return the first uncompleted flight event
     for (let i = 0; i < lmp.length; i++) {
       const item = lmp[i];
-      if (!completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
+      if (isFlightEvent(item) && !completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
         return item;
       }
     }
