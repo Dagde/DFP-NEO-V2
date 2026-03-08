@@ -372,20 +372,123 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
           ))}
         </select>
         <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
-        <select
-          value={flightNumber}
-          onChange={e => onFlightNumberChange(e.target.value)}
-          style={inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true)}
-        >
-          <option value="" disabled style={{ background: '#1e3a5f', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-            EVENT
-          </option>
-          {syllabusOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', color: '#fff', fontStyle: 'normal' }}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        {/* Event dropdown - 2-layer cascading */}
+        <div style={{ position: 'relative' }}>
+          <div
+            onClick={() => setShowEventDropdown(!showEventDropdown)}
+            style={{
+              ...inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true),
+              cursor: 'pointer',
+              minWidth: 80,
+            }}
+          >
+            {flightNumber || 'EVENT'}
+          </div>
+          {showEventDropdown && (
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                zIndex: 1000,
+                display: 'flex',
+                width: 400,
+                maxHeight: 320,
+                backgroundColor: '#1e3a5f',
+                borderRadius: 6,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                overflow: 'hidden',
+                marginTop: 4,
+              }}
+            >
+              {/* Column 1: Courses */}
+              <div
+                style={{
+                  width: 120,
+                  borderRight: '1px solid rgba(255,255,255,0.2)',
+                  maxHeight: 320,
+                  overflowY: 'auto',
+                }}
+              >
+                {courseOptions.map(course => (
+                  <div
+                    key={course}
+                    onClick={() => {
+                      if (course === 'SCT') {
+                        setFlightNumber('SCT');
+                        setShowEventDropdown(false);
+                        setHoveredCourse(null);
+                      }
+                    }}
+                    onMouseEnter={() => setHoveredCourse(course)}
+                    style={{
+                      padding: '10px 12px',
+                      color: hoveredCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
+                      backgroundColor: hoveredCourse === course ? 'rgba(255,255,255,0.15)' : 'transparent',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: 13,
+                      fontWeight: course === 'SCT' ? 600 : 400,
+                    }}
+                  >
+                    {course}
+                    {course !== 'SCT' && <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>}
+                    {course === 'SCT' && <span style={{ fontSize: 10, opacity: 0.8, color: '#ffd43b' }}>SELECT</span>}
+                  </div>
+                ))}
+              </div>
+              {/* Column 2: Events within course */}
+              <div
+                style={{
+                  flex: 1,
+                  maxHeight: 320,
+                  overflowY: 'auto',
+                  backgroundColor: 'rgba(0,0,0,0.1)',
+                }}
+              >
+                {hoveredCourse && hoveredCourse !== 'SCT' ? (
+                  getEventsForCourse(hoveredCourse).map(event => {
+                    const eventCode = event.code || event.id || '';
+                    const isNextLMP = getNextLMPEvent?.code === eventCode || getNextLMPEvent?.id === eventCode;
+                    return (
+                      <div
+                        key={eventCode}
+                        onClick={() => {
+                          setFlightNumber(eventCode);
+                          setShowEventDropdown(false);
+                          setHoveredCourse(null);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          color: isNextLMP ? '#22c55e' : '#fff',
+                          backgroundColor: isNextLMP ? 'rgba(34, 197, 94, 0.2)' : 'transparent',
+                          cursor: 'pointer',
+                          fontSize: 13,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = isNextLMP ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255,255,255,0.1)'}
+                        onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = isNextLMP ? 'rgba(34, 197, 94, 0.2)' : 'transparent'}
+                        title={event.eventDescription || eventCode}
+                      >
+                        {eventCode}
+                        {isNextLMP && <span style={{ marginLeft: 6, fontSize: 10, color: '#22c55e' }}>NEXT</span>}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
+                    {hoveredCourse === 'SCT' ? 'SCT selected' : 'Select a course'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── MAIN BODY: left names | right flight info ── */}
@@ -872,6 +975,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [hoveredStudentUnit, setHoveredStudentUnit] = useState<string | null>(null);
   const [hoveredStudentLayer2, setHoveredStudentLayer2] = useState<string | null>(null);
+  // Event dropdown state
+  const [showEventDropdown, setShowEventDropdown] = useState(false);
+  const [hoveredCourse, setHoveredCourse] = useState<string | null>(null);
 
   // Tile colour from student's course (default sky-blue matching reference)
   const tileColor = useMemo(() => {
@@ -1014,6 +1120,66 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     [traineesData]
   );
 
+  // Group syllabus items by course for 2-layer cascading dropdown
+  const syllabusByCourse = useMemo(() => {
+    const grouped = new Map<string, SyllabusItemDetail[]>();
+
+    // Filter for flight items only
+    const flightItems = syllabusDetails.filter(d =>
+      d.type === 'Flight' || d.type === 'flight' || (!d.type && !d.id?.includes('FTD') && !d.id?.includes('CPT'))
+    );
+
+    // Group by course
+    flightItems.forEach(item => {
+      const courses = item.courses || [];
+      if (courses.length === 0) {
+        // Items without course go to "Other"
+        if (!grouped.has('Other')) grouped.set('Other', []);
+        grouped.get('Other')!.push(item);
+      } else {
+        courses.forEach(course => {
+          if (!grouped.has(course)) grouped.set(course, []);
+          grouped.get(course)!.push(item);
+        });
+      }
+    });
+
+    // Sort events within each course
+    grouped.forEach((items, course) => {
+      grouped.set(course, items.sort((a, b) => (a.code || a.id || '').localeCompare(b.code || b.id || '')));
+    });
+
+    return grouped;
+  }, [syllabusDetails]);
+
+  // Get unique course names sorted
+  const courseOptions = useMemo(() => {
+    const courses = Array.from(syllabusByCourse.keys()).sort();
+    // Add SCT as a special option at the beginning
+    return ['SCT', ...courses.filter(c => c !== 'SCT')];
+  }, [syllabusByCourse]);
+
+  // Get events for a specific course
+  const getEventsForCourse = (course: string): SyllabusItemDetail[] => {
+    if (course === 'SCT') return []; // SCT has no second level
+    return syllabusByCourse.get(course) || [];
+  };
+
+  // Get the next uncompleted event for a trainee from their LMP
+  const getNextLMPEvent = useMemo(() => {
+    const name = flightType === 'Solo' ? picName : studentName;
+    if (!name || !traineeLMPs) return null;
+
+    const lmp = traineeLMPs.get(name);
+    if (!lmp || lmp.length === 0) return null;
+
+    // Find the first uncompleted event (next on LMP)
+    // Assuming LMP is ordered and we need to check completion status
+    // For now, return the first event that hasn't been completed
+    return lmp[0]; // This would need actual completion tracking
+  }, [picName, studentName, flightType, traineeLMPs]);
+
+  // Legacy syllabusOptions for backward compatibility
   const syllabusOptions = useMemo(() => {
     const flightItems = syllabusDetails
       .filter(d => d.type === 'Flight' || d.type === 'flight' || (!d.type && !d.id?.includes('FTD') && !d.id?.includes('CPT')))
