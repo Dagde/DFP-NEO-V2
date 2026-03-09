@@ -33,12 +33,23 @@ const formatTime = (time: number): string => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+// Helper to get local date string from timezone-adjusted currentTime
+// IMPORTANT: Use this instead of new Date().toISOString() to ensure consistent timezone handling
+const getLocalDateStringFromAdjustedTime = (date: Date): string => {
+    // The date parameter is already timezone-adjusted, so use UTC methods to extract local components
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date): string => {
     if (event.type !== 'flight') {
         return '';
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
+    const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
     
     // Only apply highlighting for the current date
     if (event.date !== todayStr) {
@@ -121,7 +132,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-red-400'; // Highest priority
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
+    const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
 
     // Only apply auth highlighting for the current date
     if (event.date !== todayStr) {
