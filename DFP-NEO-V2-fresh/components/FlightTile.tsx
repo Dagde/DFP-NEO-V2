@@ -65,7 +65,8 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return 'text-green-400';
     }
 
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+    // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
+    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const endTime = event.startTime + event.duration;
     if (nowInHours >= endTime) {
         return ''; // Default text color for lapsed events on today's schedule
@@ -146,7 +147,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-green-400';
     }
     
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+    // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
+    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const endTime = event.startTime + event.duration;
 
     // Lapsed status for today - no border required on main schedule
@@ -233,9 +235,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       
       // Check for event finish to stop highlighting unavailability on past events
-      const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+      // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
+      const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
       const eventEndTime = event.startTime + event.duration;
-      const isEventFinished = nowInHours >= eventEndTime && event.date === new Date().toISOString().split('T')[0];
+      const isEventFinished = nowInHours >= eventEndTime && event.date === getLocalDateStringFromAdjustedTime(currentTime);
 
       if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
           picClasses = 'font-bold truncate text-red-500';
