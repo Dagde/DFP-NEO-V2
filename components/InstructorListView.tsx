@@ -607,9 +607,15 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     traineesData={traineesData}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
+                        console.log('🔍 [SCT DEBUG] onRequestSct callback triggered in InstructorListView');
+                        console.log('🔍 [SCT DEBUG] onRequestSct exists:', !!onRequestSct);
+                        console.log('🔍 [SCT DEBUG] selectedInstructor:', selectedInstructor?.name);
                         if (onRequestSct) {
-                            onRequestSct(isAddingNew && newInstructorTemplate ? newInstructorTemplate : selectedInstructor!);
-                            handleCloseProfile();
+                            const instructorToPass = isAddingNew && newInstructorTemplate ? newInstructorTemplate : selectedInstructor!;
+                            console.log('🔍 [SCT DEBUG] Calling onRequestSct with instructor:', instructorToPass?.name);
+                            onRequestSct(instructorToPass);
+                            // Don't close the profile immediately - let the SCT modal appear
+                            // handleCloseProfile();
                         }
                     }}
                 />
