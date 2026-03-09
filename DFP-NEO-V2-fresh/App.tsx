@@ -3383,10 +3383,10 @@ useEffect(() => {
 
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
-    // Set current user for audit logging (fallback only if not already set by session)
+    // Set current user for audit logging - always update when currentUserName changes
     useEffect(() => {
-        if (currentUser && currentUserName === 'Bloggs, Joe') {
-            const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
+        if (currentUser && currentUserName) {
+            const userString = `${currentUser.rank ? currentUser.rank + ' ' : ''}${currentUser.name}`.trim();
             setCurrentUser(userString);
         }
     }, [currentUser, currentUserName]);
