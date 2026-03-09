@@ -28,7 +28,7 @@ declare var XLSX: any;
 
 interface SettingsViewProps {
     hideHeader?: boolean;
-    activeSection?: string;
+    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
     locations: string[];
     onUpdateLocations: (locations: string[]) => void;
     units: string[];
@@ -67,7 +67,7 @@ interface SettingsViewProps {
     cptTurnaround: number;
     onUpdateCptTurnaround: (value: number) => void;
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
-    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
+    scoringMatrixActiveTab?: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
     formationCallsigns: FormationCallsign[];
@@ -78,6 +78,268 @@ interface SettingsViewProps {
     cancellationRecords?: CancellationRecord[];
     cancellationCodes?: CancellationCode[];
 }
+
+// ─── Inline Scoring Matrix Component ────────────────────────────────────────
+const INITIAL_ELEMENTS_LIST_INLINE = [
+    'Generic Flying Elements',
+    'Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks',
+    'Stationary', 'Visual', 'Effects of Control', 'Trimming', 'Straight and Level',
+    'Level medium Turn', 'Level Steep turn', 'Visual - Initial & Pitch', 'Landing',
+    'Crosswind', 'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'
+];
+
+interface ScoringMatrixInlineProps {
+    activeTab: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
+    phraseBank: PhraseBank;
+    onUpdatePhraseBank: (newBank: PhraseBank) => void;
+}
+
+const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank }) => {
+    const [showAddElementFlyout, setShowAddElementFlyout] = useState(false);
+    const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
+    const [newElementName, setNewElementName] = useState('');
+    const [selectedToDelete, setSelectedToDelete] = useState<Set<string>>(new Set());
+
+    const [flightElements, setFlightElements] = useState<string[]>(() => {
+        const customElements = Object.keys(phraseBank).filter(key =>
+            !['Airmanship', 'Preparation', 'Technique'].includes(key) && !INITIAL_ELEMENTS_LIST_INLINE.includes(key)
+        );
+        return [...INITIAL_ELEMENTS_LIST_INLINE, ...customElements];
+    });
+
+    const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
+
+    const currentDimension = activeTab === 'Elements' ? selectedElement : activeTab;
+
+    const handlePhraseChange = (grade: number, index: number, value: string) => {
+        const currentPhrases = (phraseBank && phraseBank[currentDimension]) || {};
+        const gradePhrases = currentPhrases[grade] || [];
+        const newGradePhrases = [...gradePhrases];
+        newGradePhrases[index] = value;
+        onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: newGradePhrases } });
+    };
+
+    const handleAddPhrase = (grade: number) => {
+        const currentPhrases = (phraseBank && phraseBank[currentDimension]) || {};
+        const gradePhrases = currentPhrases[grade] || [];
+        onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: [...gradePhrases, ''] } });
+    };
+
+    const handleDeletePhrase = (grade: number, index: number) => {
+        const currentPhrases = (phraseBank && phraseBank[currentDimension]) || {};
+        const gradePhrases = currentPhrases[grade] || [];
+        onUpdatePhraseBank({ ...phraseBank, [currentDimension]: { ...currentPhrases, [grade]: gradePhrases.filter((_, i) => i !== index) } });
+    };
+
+    const handleSaveNewElement = () => {
+        const name = newElementName.trim();
+        if (!name) return;
+        if (flightElements.includes(name)) { alert('An element with this name already exists.'); return; }
+        setFlightElements(prev => [...prev, name]);
+        onUpdatePhraseBank({ ...phraseBank, [name]: { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [] } });
+        setSelectedElement(name);
+        setNewElementName('');
+        setShowAddElementFlyout(false);
+    };
+
+    const handleDeleteElements = () => {
+        if (selectedToDelete.size === 0) { alert('Please select at least one element to delete.'); return; }
+        const newFlightElements = flightElements.filter(el => !selectedToDelete.has(el));
+        setFlightElements(newFlightElements);
+        const newPhraseBank = { ...phraseBank };
+        selectedToDelete.forEach(el => { delete newPhraseBank[el]; });
+        onUpdatePhraseBank(newPhraseBank);
+        if (selectedToDelete.has(selectedElement)) setSelectedElement(newFlightElements[0] || 'Generic Flying Elements');
+        setSelectedToDelete(new Set());
+        setShowDeleteElementFlyout(false);
+    };
+
+    const getGradeColor = (grade: number) => {
+        if (grade >= 4) return 'border-green-500/30 bg-green-900/10';
+        if (grade >= 2) return 'border-yellow-500/30 bg-yellow-900/10';
+        return 'border-red-500/30 bg-red-900/10';
+    };
+
+    const getGradeLabel = (grade: number) => {
+        switch(grade) {
+            case 5: return '5 - Excellent';
+            case 4: return '4 - High Satisfactory';
+            case 3: return '3 - Satisfactory';
+            case 2: return '2 - Low Satisfactory';
+            case 1: return '1 - Marginal';
+            case 0: return '0 - Unsatisfactory';
+            default: return String(grade);
+        }
+    };
+
+    return (
+        <div className="flex overflow-hidden" style={{ minHeight: '600px' }}>
+            {/* Elements sidebar - only shown when Elements tab is active */}
+            {activeTab === 'Elements' && (
+                <div className="w-56 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
+                    <div className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center">
+                        <span>Flight Elements</span>
+                        <div className="flex space-x-1">
+                            <button
+                                onClick={() => setShowDeleteElementFlyout(true)}
+                                className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+                                title="Delete flight element(s)"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                            <button
+                                onClick={() => setShowAddElementFlyout(true)}
+                                className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+                                title="Add new flight element"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {flightElements.map((el) => (
+                        <button
+                            key={el}
+                            onClick={() => setSelectedElement(el)}
+                            className={`text-left px-4 py-3 border-l-4 transition-colors font-medium text-sm ${
+                                selectedElement === el
+                                    ? 'border-sky-500 bg-gray-700 text-white'
+                                    : 'border-transparent text-gray-400 hover:bg-gray-700/50 hover:text-gray-200'
+                            }`}
+                        >
+                            {el}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Phrase editing area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-900">
+                <div className="mb-4">
+                    <h3 className="text-2xl font-bold text-sky-400">{currentDimension}</h3>
+                    <p className="text-gray-400 text-sm">Define standardized phrases for each grade level.</p>
+                </div>
+
+                {[5, 4, 3, 2, 1, 0].map(grade => (
+                    <div key={grade} className={`border rounded-lg overflow-hidden ${getGradeColor(grade)}`}>
+                        <div className="px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center">
+                            <span className="text-white opacity-90">{getGradeLabel(grade)}</span>
+                            <button
+                                onClick={() => handleAddPhrase(grade)}
+                                className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
+                            >
+                                + Add Phrase
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-2">
+                            {(phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade]) ? (
+                                phraseBank[currentDimension][grade].map((phrase, idx) => (
+                                    <div key={idx} className="flex items-start space-x-2 group">
+                                        <textarea
+                                            value={phrase}
+                                            onChange={(e) => handlePhraseChange(grade, idx, e.target.value)}
+                                            rows={1}
+                                            className="flex-1 bg-gray-800 border border-gray-600 rounded p-2 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
+                                            style={{ minHeight: '38px', height: 'auto' }}
+                                            onInput={(e) => {
+                                                const target = e.currentTarget;
+                                                target.style.height = 'auto';
+                                                target.style.height = `${target.scrollHeight}px`;
+                                            }}
+                                        />
+                                        <button
+                                            onClick={() => handleDeletePhrase(grade, idx)}
+                                            className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Delete phrase"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-gray-500 italic pl-1">No phrases defined.</p>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Add Element Flyout */}
+            {showAddElementFlyout && (
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onClick={() => setShowAddElementFlyout(false)}>
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-700 bg-gray-900/50">
+                            <h2 className="text-xl font-bold text-white">Add New Flight Element</h2>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400">Element Name</label>
+                                <input
+                                    type="text"
+                                    value={newElementName}
+                                    onChange={e => setNewElementName(e.target.value)}
+                                    autoFocus
+                                    onKeyDown={e => { if (e.key === 'Enter') handleSaveNewElement(); }}
+                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                />
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
+                            <button onClick={() => setShowAddElementFlyout(false)} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
+                            <button onClick={handleSaveNewElement} disabled={!newElementName.trim()} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Element Flyout */}
+            {showDeleteElementFlyout && (
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onClick={() => setShowDeleteElementFlyout(false)}>
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-gray-700 bg-gray-900/50">
+                            <h2 className="text-xl font-bold text-white">Delete Flight Elements</h2>
+                        </div>
+                        <div className="p-6 flex-1 overflow-y-auto">
+                            {flightElements.length > 0 ? (
+                                <ul className="space-y-2">
+                                    {flightElements.map(element => (
+                                        <li key={element}>
+                                            <label className="flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedToDelete.has(element)}
+                                                    onChange={() => {
+                                                        const newSet = new Set(selectedToDelete);
+                                                        if (newSet.has(element)) newSet.delete(element); else newSet.add(element);
+                                                        setSelectedToDelete(newSet);
+                                                    }}
+                                                    className="h-4 w-4 accent-red-500 bg-gray-600"
+                                                />
+                                                <span className="text-sm text-gray-300">{element}</span>
+                                            </label>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-gray-500 text-center italic">No elements to delete.</p>
+                            )}
+                        </div>
+                        <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
+                            <button onClick={() => setShowDeleteElementFlyout(false)} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
+                            <button onClick={handleDeleteElements} disabled={selectedToDelete.size === 0} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Delete Selected</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+// ─────────────────────────────────────────────────────────────────────────────
 
 const FolderIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sky-400 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -127,6 +389,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     onUpdateCptTurnaround,
     currentUserPermission,
     activeSection = 'scoring-matrix',
+    scoringMatrixActiveTab,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
     timezoneOffset,
@@ -1261,28 +1524,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 )}
 
-                {/* Scoring Matrix Window */}
+                {/* Scoring Matrix - Inline Content */}
                 {shouldShowSection('scoring-matrix') && (
-                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6">
-                        <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                            <h2 className="text-lg font-semibold text-gray-200">Scoring Matrix</h2>
-                        </div>
-                        <div className="p-4 grid grid-cols-2 gap-3">
-                            <button onClick={() => handleOpenScoringMatrix('Airmanship')} className="px-3 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-sky-700 hover:text-white transition-colors text-sm font-medium border border-gray-600">
-                                Airmanship
-                            </button>
-                            <button onClick={() => handleOpenScoringMatrix('Preparation')} className="px-3 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-sky-700 hover:text-white transition-colors text-sm font-medium border border-gray-600">
-                                Preparation
-                            </button>
-                            <button onClick={() => handleOpenScoringMatrix('Technique')} className="px-3 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-sky-700 hover:text-white transition-colors text-sm font-medium border border-gray-600">
-                                Technique
-                            </button>
-                            <button onClick={() => handleOpenScoringMatrix('Elements')} className="px-3 py-2 bg-gray-700 text-gray-200 rounded-md hover:bg-sky-700 hover:text-white transition-colors text-sm font-medium border border-gray-600">
-                                Elements
-                            </button>
-                        </div>
-                    </div>
-                   )}
+                    <ScoringMatrixInline
+                        activeTab={scoringMatrixActiveTab || 'Airmanship'}
+                        phraseBank={phraseBank}
+                        onUpdatePhraseBank={handleUpdatePhraseBank}
+                    />
+                )}
 
                     {/* Location Window */}
                    {shouldShowSection('location') && (

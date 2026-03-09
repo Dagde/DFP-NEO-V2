@@ -26,7 +26,7 @@ interface SettingsViewWithMenuProps {
     onReplaceTrainees: (trainees: Trainee[]) => void;
     onUpdateSyllabus: (syllabus: SyllabusItemDetail[]) => void;
     onShowSuccess: (message: string) => void;
-        onNavigateToProfile?: (user: any) => void;
+    onNavigateToProfile?: (user: any) => void;
     eventLimits: EventLimits;
     onUpdateEventLimits: (limits: EventLimits) => void;
     phraseBank: PhraseBank;
@@ -62,56 +62,79 @@ interface SettingsViewWithMenuProps {
     cancellationCodes: CancellationCode[];
 }
 
-type SettingsCategory = 'airmanship' | 'preparation' | 'technique' | 'elements';
-
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data' | 'data-sources' | 'trainee-database' | 'trainee-mockdata';
-
-const categoryConfig: Record<SettingsCategory, { label: string; sections: SettingsSection[] }> = {
-    airmanship: {
-        label: 'Airmanship',
-        sections: ['scoring-matrix', 'currencies', 'sct-events', 'event-limits']
-    },
-    preparation: {
-        label: 'Preparation',
-        sections: ['data-loaders', 'data-sources', 'user-list', 'staff-database', 'trainee-database', 'staff-mockdata', 'trainee-mockdata', 'staff-combined-data']
-    },
-    technique: {
-        label: 'Technique',
-        sections: ['duty-turnaround', 'business-rules', 'permissions']
-    },
-    elements: {
-        label: 'Elements',
-        sections: ['validation', 'timezone', 'location', 'units']
-    }
-};
+type SettingsSection =
+    | 'scoring-matrix'
+    | 'currencies'
+    | 'sct-events'
+    | 'event-limits'
+    | 'duty-turnaround'
+    | 'business-rules'
+    | 'permissions'
+    | 'data-loaders'
+    | 'data-sources'
+    | 'user-list'
+    | 'staff-database'
+    | 'trainee-database'
+    | 'staff-mockdata'
+    | 'trainee-mockdata'
+    | 'staff-combined-data'
+    | 'validation'
+    | 'timezone'
+    | 'location'
+    | 'units';
 
 const sectionLabels: Record<SettingsSection, string> = {
-    'validation': 'AC History',
-    'timezone': 'Timezone',
     'scoring-matrix': 'Scoring Matrix',
-    'location': 'Location',
-    'units': 'Units',
-    'duty-turnaround': 'Duty & Turnaround',
-    'sct-events': 'SCT Events',
     'currencies': 'Currencies',
+    'sct-events': 'SCT Events',
+    'event-limits': 'Event Limits',
+    'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
+    'permissions': 'Permissions',
     'data-loaders': 'Data Loaders',
     'data-sources': 'Data Sources',
-    'event-limits': 'Event Limits',
-    'permissions': 'Permissions',
     'user-list': 'User List',
     'staff-database': 'Staff Database',
     'trainee-database': 'Trainee Database',
     'staff-mockdata': 'Staff MockData',
     'trainee-mockdata': 'Trainee MockData',
-    'staff-combined-data': 'Staff Combined Data'
+    'staff-combined-data': 'Staff Combined Data',
+    'validation': 'AC History',
+    'timezone': 'Timezone',
+    'location': 'Location',
+    'units': 'Units',
 };
 
+// All sections in order for the left menu
+const allSections: SettingsSection[] = [
+    'scoring-matrix',
+    'currencies',
+    'sct-events',
+    'event-limits',
+    'duty-turnaround',
+    'business-rules',
+    'permissions',
+    'data-loaders',
+    'data-sources',
+    'user-list',
+    'staff-database',
+    'trainee-database',
+    'staff-mockdata',
+    'trainee-mockdata',
+    'staff-combined-data',
+    'validation',
+    'timezone',
+    'location',
+    'units',
+];
+
+type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
+
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
-    const [activeCategory, setActiveCategory] = useState<SettingsCategory>('airmanship');
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
+    const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>('Airmanship');
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
@@ -122,12 +145,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     React.useEffect(() => {
         setFilteredTraineeMockdata(props.traineesData);
     }, [props.traineesData]);
-
-    // Update active section when category changes
-    React.useEffect(() => {
-        const firstSection = categoryConfig[activeCategory].sections[0];
-        setActiveSection(firstSection);
-    }, [activeCategory]);
 
     const handleDeleteFromMockdata = (idNumber: number) => {
         setFilteredMockdata(prev => prev.filter(instructor => instructor.idNumber !== idNumber));
@@ -140,99 +157,125 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     };
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden bg-gray-900">
-            {/* Top Tabs */}
-            <div className="bg-gray-800 border-b border-gray-700 flex-shrink-0">
-                <div className="flex">
-                    {(Object.keys(categoryConfig) as SettingsCategory[]).map((category) => (
+        <div className="flex-1 flex overflow-hidden bg-gray-900">
+            {/* Left Menu - all sections */}
+            <div className="w-48 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
+                <nav className="flex-1 overflow-y-auto py-2">
+                    {allSections.map((section) => (
                         <button
-                            key={category}
-                            onClick={() => setActiveCategory(category)}
-                            className={`px-6 py-3 text-sm font-medium transition-all border-b-2 ${
-                                activeCategory === category
-                                    ? 'text-sky-400 border-sky-400 bg-gray-750'
-                                    : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-gray-750'
+                            key={section}
+                            onClick={() => setActiveSection(section)}
+                            className={`w-full text-left px-4 py-2 text-sm transition-all ${
+                                activeSection === section
+                                    ? 'bg-sky-600 text-white'
+                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                             }`}
                         >
-                            {categoryConfig[category].label}
+                            {sectionLabels[section]}
                         </button>
                     ))}
+                </nav>
+
+                {/* Audit Button at Bottom */}
+                <div className="p-2 border-t border-gray-700">
+                    <AuditButton pageName="Settings" />
                 </div>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
-                {/* Secondary Left Menu */}
-                <div className="w-40 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
-                    <nav className="flex-1 overflow-y-auto py-2">
-                        {categoryConfig[activeCategory].sections.map((section) => (
-                            <button
-                                key={section}
-                                onClick={() => setActiveSection(section)}
-                                className={`w-full text-left px-4 py-2 text-sm transition-all ${
-                                    activeSection === section
-                                        ? 'bg-sky-600 text-white'
-                                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                }`}
-                            >
-                                {sectionLabels[section]}
-                            </button>
-                        ))}
-                    </nav>
-                    
-                    {/* Audit Button at Bottom */}
-                    <div className="p-2 border-t border-gray-700">
-                        <AuditButton pageName="Settings" />
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto bg-gray-900">
+                <div className="p-6">
+                    {/* Section Header */}
+                    <div className="mb-6">
+                        <h2 className="text-2xl font-bold text-white mb-3">
+                            {sectionLabels[activeSection]}
+                        </h2>
+                        {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
+                            <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
+                                <strong>Read-Only Mode</strong>
+                            </div>
+                        )}
                     </div>
-                </div>
 
-                {/* Main Content */}
-                <div className="flex-1 overflow-y-auto bg-gray-900">
-                    <div className="p-6">
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-white mb-3">
-                                {sectionLabels[activeSection]}
-                            </h2>
-                            {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
-                                <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2 inline-block">
-                                    <strong>Read-Only Mode</strong>
+                    {/* Scoring Matrix - with internal Airmanship/Preparation/Technique/Elements tabs */}
+                    {activeSection === 'scoring-matrix' && (
+                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
+                            {/* Internal tabs for Scoring Matrix */}
+                            <div className="border-b border-gray-700">
+                                <div className="flex">
+                                    {(['Airmanship', 'Preparation', 'Technique', 'Elements'] as ScoringMatrixTab[]).map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setScoringMatrixTab(tab)}
+                                            className={`px-6 py-3 text-sm font-medium transition-all border-b-2 ${
+                                                scoringMatrixTab === tab
+                                                    ? 'text-sky-400 border-sky-400'
+                                                    : 'text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500'
+                                            }`}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+                            {/* Scoring Matrix content - pass the active tab to SettingsView */}
+                            <div className="p-4">
+                                <SettingsView
+                                    {...props}
+                                    hideHeader={true}
+                                    activeSection="scoring-matrix"
+                                    scoringMatrixActiveTab={scoringMatrixTab}
+                                />
+                            </div>
                         </div>
+                    )}
+
+                    {/* All other sections rendered via SettingsView */}
+                    {activeSection !== 'scoring-matrix' &&
+                     activeSection !== 'user-list' &&
+                     activeSection !== 'staff-database' &&
+                     activeSection !== 'staff-mockdata' &&
+                     activeSection !== 'staff-combined-data' &&
+                     activeSection !== 'trainee-database' &&
+                     activeSection !== 'trainee-mockdata' &&
+                     activeSection !== 'data-sources' && (
                         <SettingsView {...props} hideHeader={true} activeSection={activeSection} />
-                        {activeSection === 'user-list' && (
-                            <UserListSection
-                                currentUserPermission={props.currentUserPermission}
-                                onShowSuccess={props.onShowSuccess}
-                                onNavigateToProfile={props.onNavigateToProfile}
-                            />
-                        )}
-                        {activeSection === 'staff-database' && (
-                            <StaffDatabaseTable />
-                        )}
-                        {activeSection === 'staff-mockdata' && (
-                            <StaffMockDataTable 
-                                instructorsData={filteredMockdata}
-                                onDeleteFromMockdata={handleDeleteFromMockdata}
-                            />
-                        )}
-                        {activeSection === 'staff-combined-data' && (
-                            <StaffCombinedDataTable instructorsData={props.instructorsData} />
-                        )}
-                        {activeSection === 'trainee-database' && (
-                            <TraineeDatabaseTable />
-                        )}
-                        {activeSection === 'trainee-mockdata' && (
-                            <TraineeMockDataTable
-                                traineesData={filteredTraineeMockdata}
-                                onDeleteFromMockdata={handleDeleteTraineeFromMockdata}
-                            />
-                        )}
-                        {activeSection === 'data-sources' && (
-                            <DataSourcesSettings
-                                onShowSuccess={props.onShowSuccess}
-                            />
-                        )}
-                    </div>
+                    )}
+
+                    {/* Sections rendered directly (not via SettingsView) */}
+                    {activeSection === 'user-list' && (
+                        <UserListSection
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                            onNavigateToProfile={props.onNavigateToProfile}
+                        />
+                    )}
+                    {activeSection === 'staff-database' && (
+                        <StaffDatabaseTable />
+                    )}
+                    {activeSection === 'staff-mockdata' && (
+                        <StaffMockDataTable
+                            instructorsData={filteredMockdata}
+                            onDeleteFromMockdata={handleDeleteFromMockdata}
+                        />
+                    )}
+                    {activeSection === 'staff-combined-data' && (
+                        <StaffCombinedDataTable instructorsData={props.instructorsData} />
+                    )}
+                    {activeSection === 'trainee-database' && (
+                        <TraineeDatabaseTable />
+                    )}
+                    {activeSection === 'trainee-mockdata' && (
+                        <TraineeMockDataTable
+                            traineesData={filteredTraineeMockdata}
+                            onDeleteFromMockdata={handleDeleteTraineeFromMockdata}
+                        />
+                    )}
+                    {activeSection === 'data-sources' && (
+                        <DataSourcesSettings
+                            onShowSuccess={props.onShowSuccess}
+                        />
+                    )}
                 </div>
             </div>
         </div>
