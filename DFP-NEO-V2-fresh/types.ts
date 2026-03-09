@@ -400,6 +400,7 @@ export interface SctRequest {
     notes?: string;
     dateRequested?: string;
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
+    submitted?: boolean; // Whether the request has been submitted to the queue
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';

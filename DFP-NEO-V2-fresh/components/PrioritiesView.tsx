@@ -110,6 +110,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const sctEvents = ['SCT GF', 'SCT IF', 'SCT NAV', 'SCT FORM'];
   const instructorNames = useMemo(() => instructorsData.map(i => i.name).sort(), [instructorsData]);
 
+  // State for SCT Request success message
+  const [sctSuccessMessage, setSctSuccessMessage] = useState<string | null>(null);
 
   // State for Build Factors
   const [aircraftTimestamp, setAircraftTimestamp] = useState(new Date().toLocaleString());
@@ -252,10 +254,43 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         }
         return times;
     }, []);
+
+    // Validate and submit SCT request
+    const handleSubmitSctRequest = (req: SctRequest) => {
+        // Validate required fields
+        if (!req.name || req.name.trim() === '') {
+            setSctSuccessMessage('Error: Please select an instructor before submitting.');
+            setTimeout(() => setSctSuccessMessage(null), 3000);
+            return;
+        }
+        if (!req.currency || req.currency.trim() === '') {
+            setSctSuccessMessage('Error: Please select a currency before submitting.');
+            setTimeout(() => setSctSuccessMessage(null), 3000);
+            return;
+        }
+        if (!req.currencyExpire || req.currencyExpire.trim() === '') {
+            setSctSuccessMessage('Error: Please select a currency expiry date before submitting.');
+            setTimeout(() => setSctSuccessMessage(null), 3000);
+            return;
+        }
+        
+        // Mark as submitted by updating the request
+        onUpdateSctRequest(req.id, 'submitted', 'true', type);
+        
+        // Show success message
+        setSctSuccessMessage(`Success: SCT request for ${req.name} has been submitted to the queue.`);
+        setTimeout(() => setSctSuccessMessage(null), 3000);
+    };
       
       return (
       <div>
           <h3 className="text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2">{type === 'flight' ? 'Flights' : 'FTD'}</h3>
+          {/* Success/Error message */}
+          {sctSuccessMessage && (
+              <div className={`mb-2 px-3 py-2 rounded text-sm font-medium ${sctSuccessMessage.startsWith('Error') ? 'bg-red-900/50 text-red-300 border border-red-700' : 'bg-green-900/50 text-green-300 border border-green-700'}`}>
+                  {sctSuccessMessage}
+              </div>
+          )}
           <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                   <thead className="text-xs text-gray-400 uppercase">
@@ -269,39 +304,41 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           <th className="py-2 px-2 text-left">Days to Expire</th>
                           <th className="py-2 px-2 text-left">Requested Time</th>
                           <th className="py-2 px-2 text-left">Priority</th>
+                          <th className="py-2 px-2 text-left">Status</th>
                           <th className="py-2 px-1 text-right"></th>
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700/50">
                       {requests.map(req => {
                           const expiryInfo = calculateDaysToExpire(req.currencyExpire);
+                          const isSubmitted = req.submitted === true;
                           return (
-                          <tr key={req.id}>
+                          <tr key={req.id} className={isSubmitted ? 'bg-green-900/20' : ''}>
                               <td className="py-1 px-2 w-48">
-                                  <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                  <select value={req.name} onChange={e => onUpdateSctRequest(req.id, 'name', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted}>
                                       <option value="">Select Instructor</option>
                                       {instructorNames.map(name => <option key={name} value={name}>{name}</option>)}
                                   </select>
                               </td>
                               <td className="py-1 px-2 w-40">
-                                  <select value={req.event} onChange={e => onUpdateSctRequest(req.id, 'event', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                  <select value={req.event} onChange={e => onUpdateSctRequest(req.id, 'event', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted}>
                                       {sctEvents.map(e => <option key={e} value={e}>{e}</option>)}
                                   </select>
                               </td>
                               <td className="py-1 px-2 w-32">
-                                  <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                  <select value={req.flightType} onChange={e => onUpdateSctRequest(req.id, 'flightType', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted}>
                                       <option value="Solo">Solo</option>
                                       <option value="Dual">Dual</option>
                                   </select>
                               </td>
                                <td className="py-1 px-2 w-48">
-                                  <select value={req.currency} onChange={e => onUpdateSctRequest(req.id, 'currency', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                  <select value={req.currency} onChange={e => onUpdateSctRequest(req.id, 'currency', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted}>
                                       <option value="">Select Currency</option>
                                       {currencyNames.map(name => <option key={name} value={name}>{name}</option>)}
                                   </select>
                               </td>
                                <td className="py-1 px-2 w-40">
-                                  <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" />
+                                  <input type="date" value={req.currencyExpire} onChange={e => onUpdateSctRequest(req.id, 'currencyExpire', e.target.value, type)} style={{colorScheme: 'dark'}} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted} />
                               </td>
                               <td className="py-1 px-2 w-24 text-gray-300 font-mono">
                                 {formatDate(req.dateRequested)}
@@ -310,16 +347,28 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 {expiryInfo ? <span className={`font-bold ${expiryInfo.color}`}>{expiryInfo.days}</span> : <span className="text-gray-500">-</span>}
                               </td>
                               <td className="py-1 px-2 w-32">
-                                  <select value={req.requestedTime || '15:00'} onChange={e => onUpdateSctRequest(req.id, 'requestedTime', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                  <select value={req.requestedTime || '15:00'} onChange={e => onUpdateSctRequest(req.id, 'requestedTime', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted}>
                                       {timeOptions.map(time => <option key={time} value={time}>{time}</option>)}
                                   </select>
                               </td>
                                <td className="py-1 px-2 w-32">
-                                  <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs">
+                                  <select value={req.priority} onChange={e => onUpdateSctRequest(req.id, 'priority', e.target.value, type)} className="w-full bg-gray-700 border-gray-600 rounded py-1 px-2 text-white focus:ring-sky-500 text-xs" disabled={isSubmitted}>
                                       <option value="High">High</option>
                                       <option value="Medium">Medium</option>
                                       <option value="Low">Low</option>
                                   </select>
+                              </td>
+                              <td className="py-1 px-2 w-24">
+                                  {isSubmitted ? (
+                                      <span className="text-green-400 text-xs font-semibold">✓ Submitted</span>
+                                  ) : (
+                                      <button 
+                                          onClick={() => handleSubmitSctRequest(req)} 
+                                          className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs font-semibold"
+                                      >
+                                          Submit
+                                      </button>
+                                  )}
                               </td>
                               <td className="py-1 px-1 text-right">
                                   <button onClick={() => onRemoveSctRequest(req.id, type)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
