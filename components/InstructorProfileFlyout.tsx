@@ -235,7 +235,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
   const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
   // Toggle: clicking active tab closes it; clicking another opens it
-  const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
+  const handleTabClick = (tab: typeof activeTab) => {
+    console.log('🔍 [SCT DEBUG] Tab clicked:', tab);
+    setActiveTab(prev => prev === tab ? null : tab);
+  };
   const exp = priorExperience;
 
   // Build role badges
