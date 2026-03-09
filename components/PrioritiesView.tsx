@@ -45,6 +45,7 @@ interface PrioritiesViewProps {
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;
+  onSubmitSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   syllabusDetails: SyllabusItemDetail[];
   scores?: Map<string, Score[]>; // Optional because it might not be passed initially but needed for new feature
   traineeLMPs?: Map<string, SyllabusItemDetail[]>; // Optional
@@ -93,6 +94,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onAddSctRequest,
   onRemoveSctRequest,
   onUpdateSctRequest,
+  onSubmitSctRequest,
   syllabusDetails,
   scores = new Map(),
   traineeLMPs = new Map(),
@@ -269,6 +271,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                           <th className="py-2 px-2 text-left">Days to Expire</th>
                           <th className="py-2 px-2 text-left">Requested Time</th>
                           <th className="py-2 px-2 text-left">Priority</th>
+                          <th className="py-2 px-2 text-left">Status</th>
                           <th className="py-2 px-1 text-right"></th>
                       </tr>
                   </thead>
@@ -320,6 +323,27 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                       <option value="Medium">Medium</option>
                                       <option value="Low">Low</option>
                                   </select>
+                              </td>
+                              <td className="py-1 px-2 w-24">
+                                  {req.submitted ? (
+                                      <span className="text-green-400 text-xs font-semibold">Submitted</span>
+                                  ) : (
+                                      <button 
+                                          onClick={() => {
+                                              if (req.name && req.currency) {
+                                                  onSubmitSctRequest(req.id, type);
+                                              }
+                                          }}
+                                          disabled={!req.name || !req.currency}
+                                          className={`px-2 py-1 text-xs rounded font-semibold ${
+                                              req.name && req.currency 
+                                                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                          }`}
+                                      >
+                                          Submit
+                                      </button>
+                                  )}
                               </td>
                               <td className="py-1 px-1 text-right">
                                   <button onClick={() => onRemoveSctRequest(req.id, type)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>

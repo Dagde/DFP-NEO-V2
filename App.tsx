@@ -8489,6 +8489,14 @@ updates.forEach(update => {
                         }
                       }, 100);
                     }}
+                    onSubmitSctRequest={(id, type) => {
+                      const updater = (prev: SctRequest[]) => prev.map(r => 
+                        r.id === id ? { ...r, submitted: true } : r
+                      );
+                      if (type === 'flight') setSctFlights(updater);
+                      else setSctFtds(updater);
+                      console.log(`✅ SCT Request ${id} submitted for ${type}`);
+                    }}
                     syllabusDetails={syllabusDetails}
                     scores={scores}
                     traineeLMPs={traineeLMPs}
