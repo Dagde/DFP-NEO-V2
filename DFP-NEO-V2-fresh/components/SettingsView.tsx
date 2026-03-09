@@ -22,8 +22,6 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
-import AircraftAvailabilityPanel from './AircraftAvailabilityPanel';
-import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 
 
 declare var XLSX: any;
@@ -69,7 +67,7 @@ interface SettingsViewProps {
     cptTurnaround: number;
     onUpdateCptTurnaround: (value: number) => void;
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
-    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions';
+    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
     formationCallsigns: FormationCallsign[];
@@ -79,13 +77,6 @@ interface SettingsViewProps {
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
     cancellationRecords?: CancellationRecord[];
     cancellationCodes?: CancellationCode[];
-    // Aircraft Availability Panel props
-    dayFlyingStart?: string;
-    dayFlyingEnd?: string;
-    totalAircraft?: number;
-    availableAircraftCount?: number;
-    onUpdateCurrentAvailability?: (count: number) => void;
-    currentUserId?: string | number;
 }
 
 const FolderIcon = () => (
@@ -147,13 +138,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setCourseColors,
     onUpdateTraineeLMPs,
     cancellationRecords,
-    cancellationCodes,
-    dayFlyingStart,
-    dayFlyingEnd,
-    totalAircraft,
-    availableAircraftCount,
-    onUpdateCurrentAvailability,
-    currentUserId,
+    cancellationCodes
 }) => {
     // --- STATE ---
     
@@ -1213,25 +1198,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* AC History */}
                 {shouldShowSection('validation') && (
                 <div className="space-y-6">
-                   {/* Aircraft Availability Panel - Daily Average */}
-                   {(() => { console.log('[SettingsView] AC History render - dayFlyingStart:', dayFlyingStart, 'dayFlyingEnd:', dayFlyingEnd, 'totalAircraft:', totalAircraft, 'availableAircraftCount:', availableAircraftCount, 'onUpdateCurrentAvailability exists:', !!onUpdateCurrentAvailability); return null; })()}
-                   {dayFlyingStart && dayFlyingEnd && totalAircraft && availableAircraftCount !== undefined && (
-                       <AircraftAvailabilityPanel
-                           currentDate={new Date()}
-                           totalAircraft={totalAircraft}
-                           plannedAvailability={availableAircraftCount}
-                           dayFlyingStart={dayFlyingStart}
-                           dayFlyingEnd={dayFlyingEnd}
-                           onAvailabilityChange={(record: DailyAvailabilityRecord) => {
-                               console.log('[SettingsView] Daily availability record:', record);
-                           }}
-                           onUpdateCurrentAvailability={onUpdateCurrentAvailability}
-                       />
-                   )}
                    <ACHistoryPage 
                        currentUserRole={currentUserPermission}
                        cancellationRecords={cancellationRecords || []}
-                       currentUserId={currentUserId ? String(currentUserId) : undefined}
                    />
                 </div>
                 )}

@@ -4,6 +4,9 @@ import { UserListSection } from './UserListSection';
 import StaffDatabaseTable from "./StaffDatabaseTable";
 import StaffMockDataTable from "./StaffMockDataTable";
 import StaffCombinedDataTable from "./StaffCombinedDataTable";
+import TraineeDatabaseTable from "./TraineeDatabaseTable";
+import TraineeMockDataTable from "./TraineeMockDataTable";
+import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
@@ -108,11 +111,17 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [activeCategory, setActiveCategory] = useState<SettingsCategory>('airmanship');
     const [activeSection, setActiveSection] = useState<SettingsSection>('scoring-matrix');
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
+    const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
         setFilteredMockdata(props.instructorsData);
     }, [props.instructorsData]);
+
+    // Initialize filtered trainee mockdata
+    React.useEffect(() => {
+        setFilteredTraineeMockdata(props.traineesData);
+    }, [props.traineesData]);
 
     // Update active section when category changes
     React.useEffect(() => {
@@ -123,6 +132,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const handleDeleteFromMockdata = (idNumber: number) => {
         setFilteredMockdata(prev => prev.filter(instructor => instructor.idNumber !== idNumber));
         props.onShowSuccess(`Staff member removed from mockdata display`);
+    };
+
+    const handleDeleteTraineeFromMockdata = (idNumber: number) => {
+        setFilteredTraineeMockdata(prev => prev.filter(trainee => trainee.idNumber !== idNumber));
+        props.onShowSuccess(`Trainee removed from mockdata display`);
     };
 
     return (
@@ -203,6 +217,20 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         )}
                         {activeSection === 'staff-combined-data' && (
                             <StaffCombinedDataTable instructorsData={props.instructorsData} />
+                        )}
+                        {activeSection === 'trainee-database' && (
+                            <TraineeDatabaseTable />
+                        )}
+                        {activeSection === 'trainee-mockdata' && (
+                            <TraineeMockDataTable
+                                traineesData={filteredTraineeMockdata}
+                                onDeleteFromMockdata={handleDeleteTraineeFromMockdata}
+                            />
+                        )}
+                        {activeSection === 'data-sources' && (
+                            <DataSourcesSettings
+                                onShowSuccess={props.onShowSuccess}
+                            />
                         )}
                     </div>
                 </div>
