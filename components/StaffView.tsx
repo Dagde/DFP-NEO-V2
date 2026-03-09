@@ -16,6 +16,7 @@ interface StaffViewProps {
   onBulkUpdateInstructors: (updates: any[]) => void;
   onArchiveInstructor: (id: number) => void;
   onRestoreInstructor: (id: number) => void;
+  onRequestSct?: (instructor: any) => void;
   
   // Props for InstructorScheduleView
   date: string;
@@ -127,6 +128,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onBulkUpdateInstructors={props.onBulkUpdateInstructors}
             onArchiveInstructor={props.onArchiveInstructor}
             onRestoreInstructor={props.onRestoreInstructor}
+            onRequestSct={props.onRequestSct}
           />
         )}
         {activeTab === 'schedule' && (

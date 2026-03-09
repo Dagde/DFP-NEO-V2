@@ -8835,6 +8835,10 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
+                            onRequestSct={(instructor) => {
+                                setInstructorForSct(instructor);
+                                setShowSctRequest(true);
+                            }}
                         />;
             case 'Instructors':
                 return <InstructorListView 
