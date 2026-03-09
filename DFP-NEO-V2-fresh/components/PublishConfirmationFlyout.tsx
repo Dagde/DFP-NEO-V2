@@ -37,11 +37,11 @@ const PublishConfirmationFlyout: React.FC<PublishConfirmationFlyoutProps> = ({ d
                     </p>
                 </div>
                 <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3">
-                    <button onClick={onCancel} className="px-6 py-2.5 rounded-md btn-aluminium-brushed text-sm font-semibold">
+                    <button onClick={onCancel} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
                         Cancel
                     </button>
-                    <button onClick={onConfirm} className="px-6 py-2.5 rounded-md btn-aluminium-brushed text-sm font-semibold text-green-500">
-                        Confirm & Publish
+                    <button onClick={onConfirm} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
+                        Confirm &amp; Publish
                     </button>
                 </div>
             </div>
