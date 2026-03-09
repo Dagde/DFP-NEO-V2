@@ -1,9 +1,15 @@
-# Todo List
+# Settings Page Redesign - COMPLETED
 
-## Tasks
-[ ] Redesign Settings page with category tabs at top (Airmanship, Preparation, Technique, Elements)
-[ ] Add second left menu bar for elements within selected category
+## Completed Tasks
+- [x] Add top tabs for categories: Airmanship, Preparation, Technique, Elements
+- [x] Add secondary left menu showing sections within selected category
+- [x] Remove icons from menu
+- [x] Reduce menu width (from w-64 to w-40)
+- [x] Verify build compiles successfully
+- [x] Commit and push changes
 
-## In Progress
-- Understanding current Settings page structure
-- Planning the tab and nested menu system
+## Category Structure
+- **Airmanship**: Scoring Matrix, Currencies, SCT Events, Event Limits
+- **Preparation**: Data Loaders, Data Sources, User List, Staff Database, Trainee Database, Staff MockData, Trainee MockData, Staff Combined Data
+- **Technique**: Duty & Turnaround, Business Rules, Permissions
+- **Elements**: AC History, Timezone, Location, Units
