@@ -20,7 +20,7 @@ interface InstructorProfileFlyoutProps {
   units: string[];
   traineesData: Trainee[];
   onViewLogbook?: (person: Instructor) => void;
-  onRequestSct: () => void;
+  onRequestSct: (instructor: Instructor) => void;
   onOpenTraineeProfile?: (traineeName: string) => void;
 }
 
@@ -376,7 +376,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
                   <p className="text-gray-400 text-xs italic mb-4">Submit a Standardisation and Continuation Training request for this staff member.</p>
-                  <button onClick={() => { onRequestSct(); setActiveTab(null); }} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Submit SCT Request</button>
+                  <button onClick={() => { onRequestSct(instructor); setActiveTab(null); }} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Submit SCT Request</button>
                 </div>
               )}
 
