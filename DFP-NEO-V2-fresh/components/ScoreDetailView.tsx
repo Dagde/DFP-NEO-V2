@@ -29,9 +29,9 @@ const ScoreDetailView: React.FC<ScoreDetailViewProps> = ({ trainee, scoreData, o
                 </div>
                 <button
                     onClick={onBack}
-                    className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed"
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
                 >
-                    Back
+                    &larr; Back to Summary
                 </button>
             </div>
 

@@ -756,37 +756,31 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <span className="text-xs text-gray-300 font-mono uppercase">{saveStatus === 'Saved' ? 'All changes saved' : saveStatus}</span>
                     </div>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center gap-4">
                     {/* Show Edit button if this is a saved assessment */}
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
                             // Enable editing mode - you could add state to track this
                             console.log('Editing mode enabled for PT-051:', initialAssessment.id);
-                        }} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
-                            Edit
+                        }} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold shadow-md">
+                            ✏️ Edit Assessment
                         </button>
                     )}
-                    <div className="w-[1px] h-[55px]"></div>
-                    <button onClick={handleManualSaveAndExit} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
+                    <button onClick={handleManualSaveAndExit} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md">
                         Save & Exit
                     </button>
                     {assessment.id && onDeleteAssessment && (
-                        <>
-                            <div className="w-[1px] h-[55px]"></div>
-                            <button 
-                                onClick={handleDeleteAssessment} 
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
-                            >
-                                Delete
-                            </button>
-                        </>
+                        <button 
+                            onClick={handleDeleteAssessment} 
+                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold shadow-md"
+                        >
+                            🗑️ Delete Assessment
+                        </button>
                     )}
-                    <div className="w-[1px] h-[55px]"></div>
-                    <button onClick={onBack} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md btn-aluminium-brushed">
-                        <span className="leading-tight text-center">Back to<br/>Summary</span>
+                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md">
+                        &larr; Back to Summary
+                       <AuditButton pageName="PT-051 Assessment" />
                     </button>
-                    <div className="w-[8px]"></div>
-                    <AuditButton pageName="PT-051 Assessment" />
                 </div>
             </div>
 

@@ -38,12 +38,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return '';
     }
     
-    // currentTime is timezone-adjusted (created by adding timezone offset to current time)
-    // Use UTC methods to get local time components from the adjusted time
-    const year = currentTime.getUTCFullYear();
-    const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(currentTime.getUTCDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
+    const todayStr = new Date().toISOString().split('T')[0];
     
     // Only apply highlighting for the current date
     if (event.date !== todayStr) {
@@ -59,9 +54,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return 'text-green-400';
     }
 
-    // currentTime is timezone-adjusted, so use UTC methods to get local time
-    // (just like the vertical time line does in ScheduleView)
-    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
+    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
     const endTime = event.startTime + event.duration;
     if (nowInHours >= endTime) {
         return ''; // Default text color for lapsed events on today's schedule
@@ -128,13 +121,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-red-400'; // Highest priority
     }
     
-    // currentTime is timezone-adjusted (created by adding timezone offset to current time)
-    // Use UTC methods to get local time components from the adjusted time
-    // (just like the vertical time line does in ScheduleView)
-    const year = currentTime.getUTCFullYear();
-    const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(currentTime.getUTCDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
+    const todayStr = new Date().toISOString().split('T')[0];
 
     // Only apply auth highlighting for the current date
     if (event.date !== todayStr) {
@@ -147,9 +134,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-green-400';
     }
     
-    // currentTime is timezone-adjusted, so use UTC methods to get local time
-    // (just like the vertical time line does in ScheduleView)
-    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
+    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
     const endTime = event.startTime + event.duration;
 
     // Lapsed status for today - no border required on main schedule
@@ -236,16 +221,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       
       // Check for event finish to stop highlighting unavailability on past events
-      // currentTime is timezone-adjusted, so use UTC methods to get local time
-      // (just like the vertical time line does in ScheduleView)
-      const year = currentTime.getUTCFullYear();
-      const month = String(currentTime.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(currentTime.getUTCDate()).padStart(2, '0');
-      const localTodayStr = `${year}-${month}-${day}`;
-      
-      const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
+      const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
       const eventEndTime = event.startTime + event.duration;
-      const isEventFinished = nowInHours >= eventEndTime && event.date === localTodayStr;
+      const isEventFinished = nowInHours >= eventEndTime && event.date === new Date().toISOString().split('T')[0];
 
       if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
           picClasses = 'font-bold truncate text-red-500';
@@ -391,41 +369,19 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
     
     if (event.type === 'deployment') {
-        // Render deployment tile with subtle styling - all on one line
-        const startTime = event.deploymentStartTime?.replace(/:/g, '') || '';
-        const endTime = event.deploymentEndTime?.replace(/:/g, '') || '';
-        
-        // Format dates as "9 Mar" style
-        const formatDate = (dateStr?: string) => {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            const day = date.getDate();
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const month = months[date.getMonth()];
-            return `${day} ${month}`;
-        };
-        
-        const startDateFormatted = formatDate(event.deploymentStartDate);
-        const endDateFormatted = formatDate(event.deploymentEndDate);
-        
-        // Build the display string: "0800, 9 Mar - 1700, 12 Mar"
-        let deployText = '';
-        if (startTime) {
-            deployText = startTime;
-            if (startDateFormatted) deployText += `, ${startDateFormatted}`;
-        }
-        if (endTime) {
-            deployText += ' - ' + endTime;
-            if (endDateFormatted) deployText += `, ${endDateFormatted}`;
-        }
-        
+        // Render deployment tile with subtle styling
         return (
             <div className="flex justify-center items-center h-full w-full px-2" style={textStyle}>
-                <div className="overflow-hidden text-center whitespace-nowrap">
-                    <span className="text-white/80 font-medium text-sm">DEPLOYED</span>
-                    {deployText && (
-                        <span className="text-white/60 text-xs ml-2">{deployText}</span>
-                    )}
+                <div className="overflow-hidden text-center">
+                    <div className="text-white/80 font-medium text-sm">
+                        DEPLOYMENT
+                    </div>
+                    <div className="font-mono text-white/60 truncate">
+                        deployed
+                    </div>
+                    <div className="text-xs text-white/50 mt-1">
+                        {event.deploymentStartTime?.replace(/:/g, '')} - {event.deploymentEndTime?.replace(/:/g, '')}
+                    </div>
                 </div>
             </div>
         );

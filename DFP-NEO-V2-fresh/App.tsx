@@ -63,7 +63,6 @@ import CourseRosterView from './components/CourseRosterView';
 import HateSheetView from './components/HateSheetView';
 import ScoreDetailView from './components/ScoreDetailView';
 import { EventDetailModal } from './components/FlightDetailModal';
-import AddFlightTileModal from './components/AddFlightTileModal';
 import ConflictModal from './components/ConflictModal';
 import AddGroundEventFlyout from './components/AddGroundEventFlyout';
 import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
@@ -118,7 +117,6 @@ import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } fro
 import { initializeData } from './lib/dataService';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
-
 
 // --- PT-051 STRUCTURE ---
 const PT051_STRUCTURE = [
@@ -3475,101 +3473,7 @@ useEffect(() => {
     const currentUserPermission = getHighestPermission(currentUser?.permissions);
     const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
     const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
-    // Helper function to save courses to localStorage with school-specific key
-    // Save course dates to database
-    const saveCourseToDatabase = async (courseName: string, startDate?: string, gradDate?: string) => {
-        try {
-            console.log(`🔵 saveCourseToDatabase called - courseName: ${courseName}, startDate: ${startDate}, gradDate: ${gradDate}`);
-            const course = courses.find(c => c.name === courseName);
-            if (!course) {
-                console.error(`❌ Course not found: ${courseName}`);
-                console.log(`   Available courses:`, courses.map(c => c.name));
-                return;
-            }
-
-            console.log(`🔵 Found course:`, course);
-            const requestBody = {
-                name: courseName,
-                startDate: startDate || course.startDate,
-                endDate: gradDate || course.gradDate,
-                color: course.color,
-                raafCount: course.raafStart,
-                navyCount: course.navyStart,
-                armyCount: course.armyStart
-            };
-            console.log(`🔵 Sending PUT /api/courses with body:`, requestBody);
-
-            const response = await fetch('/api/courses', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
-
-            console.log(`🔵 Response status: ${response.status}`);
-            const responseText = await response.text();
-            console.log(`🔵 Response body: ${responseText}`);
-
-            if (!response.ok) {
-                console.error('❌ Failed to save course to database:', responseText);
-            } else {
-                console.log('✅ Course saved successfully');
-            }
-        } catch (error) {
-            console.error('❌ Error saving course to database:', error);
-        }
-    };
-
-    // Load courses from database or use default data
-    const loadCoursesFromDatabase = async (): Promise<Course[]> => {
-        try {
-            console.log(`🔵 loadCoursesFromDatabase called - school: ${school}`);
-            const response = await fetch(`/api/courses?school=${school}`);
-            console.log(`🔵 Response status: ${response.status}`);
-            
-            const data = await response.json();
-            console.log(`🔵 Response data:`, data);
-            
-            if (data.courses && data.courses.length > 0) {
-                console.log(`✅ Found ${data.courses.length} courses in database`);
-                // Map database courses to frontend format
-                const defaultCourses = school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses;
-                const mappedCourses = data.courses.map((dbCourse: any) => {
-                    const defaultCourse = defaultCourses.find(c => c.name === dbCourse.name);
-                    const mapped = {
-                        name: dbCourse.name,
-                        color: dbCourse.color || defaultCourse?.color || 'bg-gray-400/50',
-                        startDate: dbCourse.startDate,
-                        gradDate: dbCourse.endDate,
-                        raafStart: dbCourse.raafCount || 0,
-                        navyStart: dbCourse.navyCount || 0,
-                        armyStart: dbCourse.armyCount || 0
-                    };
-                    console.log(`   Mapped course: ${mapped.name} - start: ${mapped.startDate}, grad: ${mapped.gradDate}`);
-                    return mapped;
-                });
-                return mappedCourses;
-            } else {
-                console.log(`⚠️ No courses found in database, using defaults`);
-            }
-        } catch (error) {
-            console.error('❌ Failed to load courses from database:', error);
-        }
-        
-        const defaultCourses = school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses;
-        console.log(`🔵 Using default courses:`, defaultCourses.map(c => ({ name: c.name, start: c.startDate, grad: c.gradDate })));
-        return defaultCourses;
-    };
-    
-    const [courses, setCourses] = useState<Course[]>(school === 'ESL' ? ESL_DATA.courses : PEA_DATA.courses);
-    const [coursesLoaded, setCoursesLoaded] = useState(false);
-
-    // Load courses from database on mount and school change
-    useEffect(() => {
-        loadCoursesFromDatabase().then(loadedCourses => {
-            setCourses(loadedCourses);
-            setCoursesLoaded(true);
-        });
-    }, [school]);
+    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
     const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
     const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
     const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
@@ -3679,37 +3583,6 @@ useEffect(() => {
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
 
-    // Record daily aircraft availability to the database whenever availableAircraftCount changes
-    // Uses a debounce-style approach: records once per day per unique count
-    React.useEffect(() => {
-        const recordDailyAvailability = async () => {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const totalFleet = 24; // matches totalAircraft={24} in SettingsViewWithMenu call
-                const pct = (availableAircraftCount / totalFleet) * 100;
-                await fetch('/api/aircraft-availability-history', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        date: today,
-                        dailyAverage: availableAircraftCount,
-                        plannedCount: availableAircraftCount,
-                        totalAircraft: totalFleet,
-                        availabilityPct: pct,
-                        recordedBy: String(currentUserId || ''),
-                    }),
-                });
-            } catch (err) {
-                // Non-critical: silently ignore recording errors
-                console.warn('[ACHistory] Failed to record daily availability:', err);
-            }
-        };
-        // Only record if authenticated and count is a valid positive number
-        if (isAuthenticated && availableAircraftCount > 0) {
-            recordDailyAvailability();
-        }
-    }, [availableAircraftCount, isAuthenticated]);
-
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
@@ -3723,7 +3596,6 @@ useEffect(() => {
     const [showAddRemedialPackage, setShowAddRemedialPackage] = useState(false);
     const [selectedTraineeForRemedial, setSelectedTraineeForRemedial] = useState<Trainee | null>(null);
     const [isAddingTile, setIsAddingTile] = useState(false);
-    const [showAddFlightTileModal, setShowAddFlightTileModal] = useState(false);
 
     const [selectedTraineeForHateSheet, setSelectedTraineeForHateSheet] = useState<Trainee | null>(null);
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
@@ -4958,10 +4830,7 @@ useEffect(() => {
         setInstructorsData(data.instructors);
         setTraineesData(data.trainees);
         setEvents(data.events);
-        
-        // Courses will be loaded from database via useEffect when school changes
-        setCourses(data.courses); // Set default courses immediately, useEffect will update from database
-        
+        setCourses(data.courses);
         setScores(data.scores);
         setPt051Assessments(data.pt051Assessments);
         setCourseColors(data.courseColors);
@@ -5262,8 +5131,7 @@ useEffect(() => {
     };
 
     // Helper function to add currency event to trainee's Individual LMP
-    // Inserts "Currency" event after the last completed event but before the next uncompleted event
-    const addCurrencyEventToTraineeLMP = (traineeFullName: string) => {
+    const addCurrencyEventToTraineeLMP = (traineeFullName: string, currencyEventId: string) => {
         setTraineeLMPs(prev => {
             const newLMPs = new Map(prev);
             const traineeLMP: SyllabusItemDetail[] | undefined = newLMPs.get(traineeFullName);
@@ -5273,64 +5141,45 @@ useEffect(() => {
                 return prev;
             }
             
-            // Check if Currency event already exists
-            const currencyEventExists = traineeLMP.some(item => item.id === 'CURR' || item.code === 'CURR');
-            if (currencyEventExists) {
-                console.log(`Currency event already exists in ${traineeFullName}'s LMP`);
+            // Find the base event in the syllabus
+            const baseEvent = syllabusDetails.find(item => item.id === currencyEventId);
+            if (!baseEvent) {
+                console.warn(`Currency event ${currencyEventId} not found in syllabus`);
                 return prev;
             }
             
-            // Get completed events from scores
-            const traineeScores = scores?.get(traineeFullName) || [];
-            const completedEventIds = new Set(traineeScores.map(s => s.event));
-            
-            // Find the index of the last completed event in the LMP
-            let lastCompletedIndex = -1;
-            for (let i = traineeLMP.length - 1; i >= 0; i--) {
-                const item = traineeLMP[i];
-                if (completedEventIds.has(item.id) || completedEventIds.has(item.code)) {
-                    lastCompletedIndex = i;
-                    break;
-                }
-            }
-            
-            // Create the Currency event with all required fields
+            // Create currency version with -CUR suffix
             const currencyEvent: SyllabusItemDetail = {
-                id: 'CURR',
-                code: 'CURR',
-                eventDescription: 'Currency',
-                type: 'Flight',
-                phase: 'Currency',
-                module: 'Currency',
-                dayNight: 'Day',
-                prerequisites: [],
-                prerequisitesGround: [],
-                prerequisitesFlying: [],
-                eventDetailsCommon: [],
-                eventDetailsSortie: [],
-                totalEventHours: 1.5,
-                flightOrSimHours: 1.5,
-                duration: 1.5,
-                preFlightTime: 0.5,
-                postFlightTime: 0.25,
-                methodOfDelivery: ['Flight'],
-                methodOfAssessment: ['Flight Assessment'],
-                resourcesPhysical: [],
-                resourcesHuman: [],
-                courses: [],
+                ...baseEvent,
+                id: `${baseEvent.id}-CUR`,
+                code: `${baseEvent.code}-CUR`,
+                eventDescription: `${baseEvent.eventDescription} (Currency)`,
             };
             
-            // Insert after the last completed event, or at the beginning if no completed events
-            const insertIndex = lastCompletedIndex >= 0 ? lastCompletedIndex + 1 : 0;
+            // Find the index of the base event in the trainee's LMP
+            const baseEventIndex = traineeLMP.findIndex(item => item.id === currencyEventId);
             
+            if (baseEventIndex === -1) {
+                console.warn(`Base event ${currencyEventId} not found in trainee's LMP`);
+                return prev;
+            }
+            
+            // Check if currency event already exists
+            const currencyEventExists = traineeLMP.some(item => item.id === `${currencyEventId}-CUR`);
+            if (currencyEventExists) {
+                console.log(`Currency event ${currencyEventId}-CUR already exists in trainee's LMP`);
+                return prev;
+            }
+            
+            // Insert currency event right after the base event
             const updatedLMP = [
-                ...traineeLMP.slice(0, insertIndex),
+                ...traineeLMP.slice(0, baseEventIndex + 1),
                 currencyEvent,
-                ...traineeLMP.slice(insertIndex)
+                ...traineeLMP.slice(baseEventIndex + 1)
             ];
             
             newLMPs.set(traineeFullName, updatedLMP);
-            console.log(`Added Currency event to ${traineeFullName}'s Individual LMP at index ${insertIndex}`);
+            console.log(`Added currency event ${currencyEvent.id} to ${traineeFullName}'s Individual LMP`);
             
             return newLMPs;
         });
@@ -5549,18 +5398,18 @@ useEffect(() => {
     
         // Handle LMP Currency events - add to trainee's Individual LMP
         eventsToSave.forEach(event => {
-            if (event.eventCategory === 'lmp_currency') {
+            if (event.eventCategory === 'lmp_currency' && event.flightNumber) {
                 // Get trainee name from the event
                 const traineeName = event.flightType === 'Dual' ? event.student : event.pilot;
                 
                 if (traineeName) {
-                    addCurrencyEventToTraineeLMP(traineeName);
+                    addCurrencyEventToTraineeLMP(traineeName, event.flightNumber);
                 } else if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
                     // Handle group events - add currency to all trainees in the group
                     event.groupTraineeIds.forEach(traineeId => {
                         const trainee = traineesData.find(t => t.idNumber === traineeId);
                         if (trainee) {
-                            addCurrencyEventToTraineeLMP(trainee.fullName);
+                            addCurrencyEventToTraineeLMP(trainee.fullName, event.flightNumber);
                         }
                     });
                 }
@@ -6823,49 +6672,20 @@ updates.forEach(update => {
         setSyllabusDetails(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
     };
 
-    const handleUpdateGradDate = async (courseName: string, newGradDate: string) => {
-        console.log(`🟢 handleUpdateGradDate called - courseName: ${courseName}, newGradDate: ${newGradDate}`);
-        setCourses(prevCourses => {
-            const updatedCourses = prevCourses.map(course => 
+    const handleUpdateGradDate = (courseName: string, newGradDate: string) => {
+        setCourses(prevCourses => 
+            prevCourses.map(course => 
                 course.name === courseName ? { ...course, gradDate: newGradDate } : course
-            );
-            console.log(`🟢 Updated courses state for ${courseName}`);
-            return updatedCourses;
-        });
-        // Save to database asynchronously
-        console.log(`🟢 Calling saveCourseToDatabase for ${courseName} with gradDate: ${newGradDate}`);
-        await saveCourseToDatabase(courseName, undefined, newGradDate);
-        console.log(`🟢 saveCourseToDatabase completed for ${courseName}`);
+            )
+        );
     };
 
-    const handleUpdateStartDate = async (courseName: string, newStartDate: string) => {
-        console.log(`🟢 handleUpdateStartDate called - courseName: ${courseName}, newStartDate: ${newStartDate}`);
-        setCourses(prevCourses => {
-            const updatedCourses = prevCourses.map(course => 
+    const handleUpdateStartDate = (courseName: string, newStartDate: string) => {
+        setCourses(prevCourses => 
+            prevCourses.map(course => 
                 course.name === courseName ? { ...course, startDate: newStartDate } : course
-            );
-            console.log(`🟢 Updated courses state for ${courseName}`);
-            return updatedCourses;
-        });
-        // Save to database asynchronously
-        console.log(`🟢 Calling saveCourseToDatabase for ${courseName} with startDate: ${newStartDate}`);
-        await saveCourseToDatabase(courseName, newStartDate, undefined);
-        console.log(`🟢 saveCourseToDatabase completed for ${courseName}`);
-    };
-
-    const handleUpdateCourseDates = async (courseName: string, startDate: string, gradDate: string) => {
-        console.log(`🔢 handleUpdateCourseDates called - courseName: ${courseName}, startDate: ${startDate}, gradDate: ${gradDate}`);
-        setCourses(prevCourses => {
-            const updatedCourses = prevCourses.map(course => 
-                course.name === courseName ? { ...course, startDate, gradDate } : course
-            );
-            console.log(`🔢 Updated courses state for ${courseName}`);
-            return updatedCourses;
-        });
-        // Save to database asynchronously
-        console.log(`🔢 Calling saveCourseToDatabase for ${courseName} with both dates`);
-        await saveCourseToDatabase(courseName, startDate, gradDate);
-        console.log(`🔢 saveCourseToDatabase completed for ${courseName}`);
+            )
+        );
     };
 
     const handleSetIsMultiSelectMode = (enabled: boolean) => {
@@ -8102,7 +7922,6 @@ updates.forEach(update => {
                            onAvailabilityChange={(record: DailyAvailabilityRecord) => {
                                console.log('Availability updated:', record);
                            }}
-                           onUpdatePlannedAvailability={(count: number) => { setAvailableAircraftCount(count); }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
                            onVisualAdjustTimeChange={(startTime: number, endTime: number) => {
@@ -8294,13 +8113,6 @@ updates.forEach(update => {
                             onProfileOpened={() => setSelectedPersonForProfile(null)}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
-                               onOpenInstructorProfile={(instructorName) => {
-                                   const instructor = instructorsData.find(i => i.name === instructorName || i.fullName === instructorName);
-                                   if (instructor) {
-                                       setSelectedPersonForProfile(instructor);
-                                       handleNavigation('Instructors');
-                                   }
-                               }}
                             onDeleteTrainee={(trainee) => {
                                 setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
                                 // Remove from trainee LMPs if exists
@@ -8315,19 +8127,6 @@ updates.forEach(update => {
                                     action: 'delete',
                                     description: `Deleted trainee from roster`,
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
-                                });
-                            }}
-                            onArchiveTrainee={(trainee) => {
-                                // Remove from active trainees
-                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
-                                // Add to archived trainees
-                                setArchivedTraineesData(prev => [...prev, trainee]);
-                                // Log audit for archiving
-                                logAudit({
-                                    page: 'Trainee Roster',
-                                    action: 'archive',
-                                    description: `Archived trainee from roster`,
-                                    changes: `Archived: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
                             }}
                             date={date}
@@ -8409,26 +8208,6 @@ updates.forEach(update => {
                                     description: `Deleted trainee from roster`,
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
-                            }}
-                            onArchiveTrainee={(trainee) => {
-                                // Remove from active trainees
-                                setTraineesData(prev => prev.filter(t => t.idNumber !== trainee.idNumber));
-                                // Add to archived trainees
-                                setArchivedTraineesData(prev => [...prev, trainee]);
-                                // Log audit for archiving
-                                logAudit({
-                                    page: 'Trainee Roster',
-                                    action: 'archive',
-                                    description: `Archived trainee from roster`,
-                                    changes: `Archived: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
-                                });
-                            }}
-                            onOpenInstructorProfile={(instructorName) => {
-                                const instructor = instructorsData.find(i => i.name === instructorName || i.fullName === instructorName);
-                                if (instructor) {
-                                    setSelectedPersonForProfile(instructor);
-                                    handleNavigation('Instructors');
-                                }
                             }}
                         />;
             case 'HateSheet':
@@ -8767,7 +8546,6 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
-                    onUpdateCourseDates={handleUpdateCourseDates}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}
@@ -9057,22 +8835,6 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
-                            selectedPersonForProfile={selectedPersonForProfile as any}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
-                            locations={locations}
-                            units={units}
-                            onViewLogbook={handleViewLogbook}
-                            onRequestSct={(instructor) => {
-                                setInstructorForSct(instructor);
-                                setShowSctRequest(true);
-                            }}
-                            onOpenTraineeProfile={(traineeName) => {
-                                const trainee = traineesData.find(t => t.name === traineeName || t.fullName === traineeName);
-                                if (trainee) {
-                                    setSelectedPersonForProfile(trainee);
-                                    handleNavigation('Trainee');
-                                }
-                            }}
                         />;
             case 'Instructors':
                 return <InstructorListView 
@@ -9158,13 +8920,6 @@ updates.forEach(update => {
                             onRequestSct={(instructor) => {
                                 setInstructorForSct(instructor);
                                 setShowSctRequest(true);
-                            }}
-                            onOpenTraineeProfile={(traineeName) => {
-                                const trainee = traineesData.find(t => t.name === traineeName || t.fullName === traineeName);
-                                if (trainee) {
-                                    setSelectedPersonForProfile(trainee);
-                                    handleNavigation('CourseRoster');
-                                }
                             }}
                         />;
                 case 'Trainees':
@@ -9332,9 +9087,6 @@ updates.forEach(update => {
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
-                       availableAircraftCount={availableAircraftCount}
-                       onUpdateCurrentAvailability={(count: number) => { setAvailableAircraftCount(count); }}
-                       currentUserId={currentUserId}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 
@@ -9569,7 +9321,9 @@ updates.forEach(update => {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
                     onAddTile={() => {
-                        setShowAddFlightTileModal(true);
+                        // Debug alert removed - Add Tile functionality working correctly
+                        setIsAddingTile(true);
+                        handleOpenModal(null, { type: 'flight' });
                     }}
                     onAddGroundEvent={() => setShowAddGroundEvent(true)}
                     showValidation={showValidation}
@@ -9824,25 +9578,6 @@ updates.forEach(update => {
                     traineesData={traineesData}
                 />
             )}
-            {showAddFlightTileModal && (
-                <AddFlightTileModal
-                    onClose={() => setShowAddFlightTileModal(false)}
-                    onSave={(events) => {
-                        handleSaveEvents(events);
-                        setShowAddFlightTileModal(false);
-                    }}
-                    instructors={instructorsData.map(i => i.name)}
-                    trainees={traineesData.map(t => t.fullName || t.name)}
-                    syllabusDetails={syllabusDetails}
-                    school={school}
-                    traineesData={traineesData}
-                    instructorsData={instructorsData}
-                    courseColors={courseColors}
-                    date={date}
-                    traineeLMPs={traineeLMPs}
-                    scores={scores}
-                />
-            )}
             {showAuthFlyout && eventForAuth && 
                 <AuthorisationFlyout
                     event={eventForAuth}
@@ -9972,8 +9707,7 @@ updates.forEach(update => {
                 </div>
             </div>
         )}
-
-        </>
+    </>
     );
 };
 
