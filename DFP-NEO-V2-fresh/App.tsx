@@ -3426,6 +3426,20 @@ useEffect(() => {
                 setTraineesData(data.trainees);
                 setEvents(data.events);
                 
+                // Convert scores plain object to Map and merge with ESL_DATA.scores
+                // DB scores take priority; mockData scores fill in for trainees not in DB
+                if (data.scores && Object.keys(data.scores).length > 0) {
+                    const scoresMap = new Map<string, Score[]>(ESL_DATA.scores); // start with mockData scores
+                    Object.entries(data.scores).forEach(([name, scoreArr]) => {
+                        scoresMap.set(name, scoreArr as Score[]); // DB scores override
+                    });
+                    setScores(scoresMap);
+                    console.log('✅ Scores loaded from DB and merged with mockData:', scoresMap.size, 'trainees');
+                } else {
+                    // No DB scores - keep ESL_DATA.scores (already the default state)
+                    console.log('ℹ️ No DB scores - using ESL_DATA.scores:', ESL_DATA.scores.size, 'trainees');
+                }
+                
                 console.log('✅ State updated successfully');
             } catch (error) {
                 console.error('❌ Failed to load initial data:', error);

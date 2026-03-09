@@ -108,11 +108,25 @@ export async function initializeData() {
   console.log('🔧 initializeData() v2.2 - Starting data initialization');
   
     // Read data source settings from localStorage
-    let dataSourceSettings = { staff: false, trainee: false, course: false };
+    // Defaults match DataSourcesSettings.tsx: all ON by default
+    let dataSourceSettings: { staff: boolean; trainee: boolean; course: boolean; staffDb: boolean; traineeDb: boolean } = {
+      staff: true,
+      trainee: true,
+      course: false,
+      staffDb: true,
+      traineeDb: true,
+    };
     try {
       const settingsStr = localStorage.getItem('dataSourceSettings');
       if (settingsStr) {
-        dataSourceSettings = JSON.parse(settingsStr);
+        const parsed = JSON.parse(settingsStr);
+        dataSourceSettings = {
+          staff: parsed.staff !== false,
+          trainee: parsed.trainee !== false,
+          course: parsed.course === true,
+          staffDb: parsed.staffDb !== false,
+          traineeDb: parsed.traineeDb !== false,
+        };
       }
       console.log('🎛️ Data source settings:', dataSourceSettings);
     } catch (e) {
