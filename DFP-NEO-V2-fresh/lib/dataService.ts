@@ -11,17 +11,32 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
   console.log('  Database instructors:', dbInstructors.length);
   console.log('  Mock instructors:', mockInstructors.length);
   
+  // Create a map of mockData instructors by name for permission inheritance
+  const mockByName = new Map();
+  mockInstructors.forEach((instructor: any) => {
+    mockByName.set(instructor.name, instructor);
+  });
+
   // Create a map of database instructors by idNumber for deduplication
+  // Also create a set of DB instructor names for name-based deduplication
   const dbInstructorMap = new Map();
+  const dbInstructorNames = new Set<string>();
   dbInstructors.forEach((instructor: any) => {
+    // If DB instructor has empty permissions, inherit from mockData by name
+    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
+      const mockMatch = mockByName.get(instructor.name);
+      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
+      console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
+    }
     dbInstructorMap.set(instructor.idNumber, instructor);
+    dbInstructorNames.add(instructor.name);
   });
   
-  // Merge mock instructors, skipping duplicates
-  // Also deduplicate database instructors by using only unique idNumbers from the map
+  // Merge mock instructors, skipping duplicates by idNumber AND by name
+  // This prevents duplicate entries when DB and mockData have same person with different idNumbers
   const merged = Array.from(dbInstructorMap.values());
   mockInstructors.forEach((instructor: any) => {
-    if (!dbInstructorMap.has(instructor.idNumber)) {
+    if (!dbInstructorMap.has(instructor.idNumber) && !dbInstructorNames.has(instructor.name)) {
       merged.push(instructor);
     }
   });
