@@ -11,6 +11,12 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
   console.log('  Database instructors:', dbInstructors.length);
   console.log('  Mock instructors:', mockInstructors.length);
   
+  // Debug: Log DB instructor details
+  console.log('📊 DB INSTRUCTOR DETAILS:');
+  dbInstructors.forEach((inst: any) => {
+    console.log(`  DB: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit} | role: ${inst.role} | isQFI: ${inst.isQFI}`);
+  });
+  
   // Create a map of mockData instructors by name for permission inheritance
   const mockByName = new Map();
   mockInstructors.forEach((instructor: any) => {
@@ -28,6 +34,12 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
       instructor = { ...instructor, permissions: mockMatch.permissions || [] };
       console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
     }
+    
+    // Check for duplicate idNumbers
+    if (dbInstructorMap.has(instructor.idNumber)) {
+      console.log(`  ⚠️ DUPLICATE IDNUMBER: ${instructor.idNumber} - ${instructor.name} overwrites ${dbInstructorMap.get(instructor.idNumber).name}`);
+    }
+    
     dbInstructorMap.set(instructor.idNumber, instructor);
     dbInstructorNames.add(instructor.name);
   });
@@ -35,11 +47,38 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
   // Merge mock instructors, skipping duplicates by idNumber AND by name
   // This prevents duplicate entries when DB and mockData have same person with different idNumbers
   const merged = Array.from(dbInstructorMap.values());
+  let skippedByIdNumber = 0;
+  let skippedByName = 0;
+  
   mockInstructors.forEach((instructor: any) => {
-    if (!dbInstructorMap.has(instructor.idNumber) && !dbInstructorNames.has(instructor.name)) {
+    if (dbInstructorMap.has(instructor.idNumber)) {
+      skippedByIdNumber++;
+      console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
+    } else if (dbInstructorNames.has(instructor.name)) {
+      skippedByName++;
+      console.log(`  ⏭️ Skipped mock instructor (name match): ${instructor.name}`);
+    } else {
       merged.push(instructor);
     }
   });
+  
+  console.log(`📊 MERGE SUMMARY:`);
+  console.log(`  DB instructors after dedup: ${dbInstructorMap.size}`);
+  console.log(`  Mock instructors skipped (idNumber): ${skippedByIdNumber}`);
+  console.log(`  Mock instructors skipped (name): ${skippedByName}`);
+  console.log(`  Mock instructors added: ${mockInstructors.length - skippedByIdNumber - skippedByName}`);
+  console.log(`  Total merged: ${merged.length}`);
+  
+  // Count QFIs by unit
+  const qfisByUnit: { [key: string]: number } = {};
+  merged.forEach((inst: any) => {
+    const isQFI = inst.role === 'QFI' || inst.isQFI === true;
+    if (isQFI) {
+      const unit = inst.unit || 'Unassigned';
+      qfisByUnit[unit] = (qfisByUnit[unit] || 0) + 1;
+    }
+  });
+  console.log('📊 QFIs BY UNIT:', qfisByUnit);
   
   // Sort by: Unit → Rank → Name (alphabetical)
   merged.sort((a: any, b: any) => {
@@ -160,8 +199,22 @@ export async function initializeData() {
          // Fetch instructors
          console.log('👨‍🏫 Fetching instructors from API...');
          if (dataSourceSettings.staffDb !== false) {
-           instructors = await fetchInstructors();
-           console.log('✅ Staff DB loaded:', instructors.length);
+           const allPersonnel = await fetchInstructors();
+           // Filter to only include personnel with userId set (real linked staff)
+           // This excludes old/incomplete records that don't have a user account
+           instructors = allPersonnel.filter((p: any) => p.userId && p.userId !== '');
+           console.log('✅ Staff DB loaded:', instructors.length, '(filtered from', allPersonnel.length, 'total personnel)');
+           // Debug: Log ALL personnel from DB (before filtering)
+           console.log('📊 ALL DB PERSONNEL (before userId filter):');
+           allPersonnel.forEach((inst: any) => {
+             const hasUserId = inst.userId && inst.userId !== '';
+             console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
+           });
+           // Debug: Log filtered personnel
+           console.log('📊 FILTERED DB PERSONNEL (with userId):');
+           instructors.forEach((inst: any) => {
+             console.log(`  Filtered: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false}`);
+           });
          } else {
            console.log('🚫 Staff Database disabled - skipping DB fetch');
          }

@@ -119,6 +119,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }, [instructorsData, selectedInstructor]);
 
   const qfis = useMemo(() => {
+      console.log('🔍 [QFI FILTER] instructorsData length:', instructorsData.length);
+      
       const rankOrder: { [key: string]: number } = {
           'WGCDR': 1,
           'SQNLDR': 2,
@@ -128,7 +130,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           'Mr': 6
       };
 
-      return instructorsData
+      const result = instructorsData
           .filter(i => {
               // Filter by role/flag
               const isQFI = i.role === 'QFI' || i.isQFI === true;
@@ -152,6 +154,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               }
               return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
           });
+      
+      // Debug: Count by unit
+      const unitCounts: { [key: string]: number } = {};
+      result.forEach(i => {
+          const unit = i.unit || 'Unassigned';
+          unitCounts[unit] = (unitCounts[unit] || 0) + 1;
+      });
+      console.log('🔍 [QFI FILTER] Total QFIs:', result.length, '| By unit:', unitCounts);
+      
+      return result;
   }, [instructorsData, school]);
 
   const qfisByUnit = useMemo(() => {
