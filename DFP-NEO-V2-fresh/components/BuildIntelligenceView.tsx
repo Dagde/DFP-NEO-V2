@@ -85,11 +85,11 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const formattedDate = useMemo(() => {
     const [year, month, day] = props.date.split('-').map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
+    // Format: DD Mmm YY (e.g., "10 Mar 25")
     return dateObj.toLocaleDateString('en-GB', {
-      weekday: 'long',
+      day: '2-digit',
+      month: 'short',
       year: '2-digit',
-      month: 'long',
-      day: 'numeric',
       timeZone: 'UTC'
     });
   }, [props.date]);
