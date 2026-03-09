@@ -200,8 +200,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {/* Scoring Matrix - with internal Airmanship/Preparation/Technique/Elements tabs */}
                     {activeSection === 'scoring-matrix' && (
                         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700">
-                            {/* Internal tabs for Scoring Matrix */}
-                            <div className="border-b border-gray-700">
+                            {/* Scoring Matrix header row: tabs + audit button */}
+                            <div className="border-b border-gray-700 flex items-center justify-between pr-3">
+                                {/* Internal tabs */}
                                 <div className="flex">
                                     {(['Airmanship', 'Preparation', 'Technique', 'Elements'] as ScoringMatrixTab[]).map((tab) => (
                                         <button
@@ -217,14 +218,24 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         </button>
                                     ))}
                                 </div>
+                                {/* Right side: read-only badge + audit button */}
+                                <div className="flex items-center space-x-3">
+                                    {!['Super Admin', 'Admin'].includes(props.currentUserPermission) && (
+                                        <span className="text-xs text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-2 py-1">
+                                            <strong>Read-Only</strong>
+                                        </span>
+                                    )}
+                                    <AuditButton pageName="Settings - Scoring Matrix" />
+                                </div>
                             </div>
-                            {/* Scoring Matrix content - pass the active tab to SettingsView */}
+                            {/* Scoring Matrix content - pass the active tab and read-only flag to SettingsView */}
                             <div className="p-4">
                                 <SettingsView
                                     {...props}
                                     hideHeader={true}
                                     activeSection="scoring-matrix"
                                     scoringMatrixActiveTab={scoringMatrixTab}
+                                    scoringMatrixReadOnly={!['Super Admin', 'Admin'].includes(props.currentUserPermission)}
                                 />
                             </div>
                         </div>

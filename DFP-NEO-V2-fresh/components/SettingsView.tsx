@@ -68,6 +68,7 @@ interface SettingsViewProps {
     onUpdateCptTurnaround: (value: number) => void;
     currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
     scoringMatrixActiveTab?: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
+    scoringMatrixReadOnly?: boolean;
     maxDispatchPerHour: number;
     onUpdateMaxDispatchPerHour: (value: number) => void;
     formationCallsigns: FormationCallsign[];
@@ -92,9 +93,10 @@ interface ScoringMatrixInlineProps {
     activeTab: 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
     phraseBank: PhraseBank;
     onUpdatePhraseBank: (newBank: PhraseBank) => void;
+    readOnly?: boolean;
 }
 
-const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank }) => {
+const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, phraseBank, onUpdatePhraseBank, readOnly = false }) => {
     const [showAddElementFlyout, setShowAddElementFlyout] = useState(false);
     const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
     const [newElementName, setNewElementName] = useState('');
@@ -179,26 +181,28 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                 <div className="w-56 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
                     <div className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider bg-gray-900/50 flex justify-between items-center">
                         <span>Flight Elements</span>
-                        <div className="flex space-x-1">
-                            <button
-                                onClick={() => setShowDeleteElementFlyout(true)}
-                                className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
-                                title="Delete flight element(s)"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={() => setShowAddElementFlyout(true)}
-                                className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
-                                title="Add new flight element"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                                </svg>
-                            </button>
-                        </div>
+                        {!readOnly && (
+                            <div className="flex space-x-1">
+                                <button
+                                    onClick={() => setShowDeleteElementFlyout(true)}
+                                    className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+                                    title="Delete flight element(s)"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={() => setShowAddElementFlyout(true)}
+                                    className="p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+                                    title="Add new flight element"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-sky-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
                     </div>
                     {flightElements.map((el) => (
                         <button
@@ -227,12 +231,14 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                     <div key={grade} className={`border rounded-lg overflow-hidden ${getGradeColor(grade)}`}>
                         <div className="px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center">
                             <span className="text-white opacity-90">{getGradeLabel(grade)}</span>
-                            <button
-                                onClick={() => handleAddPhrase(grade)}
-                                className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
-                            >
-                                + Add Phrase
-                            </button>
+                            {!readOnly && (
+                                <button
+                                    onClick={() => handleAddPhrase(grade)}
+                                    className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
+                                >
+                                    + Add Phrase
+                                </button>
+                            )}
                         </div>
                         <div className="p-4 space-y-2">
                             {(phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade]) ? (
@@ -240,9 +246,10 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                                     <div key={idx} className="flex items-start space-x-2 group">
                                         <textarea
                                             value={phrase}
-                                            onChange={(e) => handlePhraseChange(grade, idx, e.target.value)}
+                                            onChange={(e) => { if (!readOnly) handlePhraseChange(grade, idx, e.target.value); }}
+                                            readOnly={readOnly}
                                             rows={1}
-                                            className="flex-1 bg-gray-800 border border-gray-600 rounded p-2 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
+                                            className={`flex-1 rounded p-2 text-sm resize-none overflow-hidden ${readOnly ? 'bg-gray-800/50 border border-gray-700 text-gray-400 cursor-default' : 'bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500'}`}
                                             style={{ minHeight: '38px', height: 'auto' }}
                                             onInput={(e) => {
                                                 const target = e.currentTarget;
@@ -250,15 +257,17 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                                                 target.style.height = `${target.scrollHeight}px`;
                                             }}
                                         />
-                                        <button
-                                            onClick={() => handleDeletePhrase(grade, idx)}
-                                            className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title="Delete phrase"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
-                                            </svg>
-                                        </button>
+                                        {!readOnly && (
+                                            <button
+                                                onClick={() => handleDeletePhrase(grade, idx)}
+                                                className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Delete phrase"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
+                                                </svg>
+                                            </button>
+                                        )}
                                     </div>
                                 ))
                             ) : (
@@ -270,7 +279,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
             </div>
 
             {/* Add Element Flyout */}
-            {showAddElementFlyout && (
+            {!readOnly && showAddElementFlyout && (
                 <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onClick={() => setShowAddElementFlyout(false)}>
                     <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
                         <div className="p-4 border-b border-gray-700 bg-gray-900/50">
@@ -298,7 +307,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
             )}
 
             {/* Delete Element Flyout */}
-            {showDeleteElementFlyout && (
+            {!readOnly && showDeleteElementFlyout && (
                 <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center" onClick={() => setShowDeleteElementFlyout(false)}>
                     <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
                         <div className="p-4 border-b border-gray-700 bg-gray-900/50">
@@ -390,6 +399,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     currentUserPermission,
     activeSection = 'scoring-matrix',
     scoringMatrixActiveTab,
+    scoringMatrixReadOnly = false,
     maxDispatchPerHour,
     onUpdateMaxDispatchPerHour,
     timezoneOffset,
@@ -1530,6 +1540,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         activeTab={scoringMatrixActiveTab || 'Airmanship'}
                         phraseBank={phraseBank}
                         onUpdatePhraseBank={handleUpdatePhraseBank}
+                        readOnly={scoringMatrixReadOnly}
                     />
                 )}
 
