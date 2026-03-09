@@ -285,18 +285,24 @@ const populatePrerequisites = (syllabus: SyllabusItemDetail[]): SyllabusItemDeta
         const prerequisitesGround: string[] = [];
         const prerequisitesFlying: string[] = [];
         
-        // Find the immediate previous non-MB event within the same course(s)
-        // Simplified: looking for previous event in the array regardless of course for now to maintain dependency chain logic
+        // Find the immediate previous non-MB event within the SAME course(s)
+        // This ensures FIC, WSO, OFI etc. don't inherit BGF prerequisites
         for (let i = index - 1; i >= 0; i--) {
             const prereqCandidate = arr[i];
-            if (!prereqCandidate.code.includes(' MB')) {
-                 if (prereqCandidate.type === 'Flight' || prereqCandidate.type === 'FTD') {
-                    prerequisitesFlying.push(prereqCandidate.code);
-                } else {
-                    prerequisitesGround.push(prereqCandidate.code);
-                }
-                break; 
+            
+            // Skip MB items (mass briefs are not prerequisites)
+            if (prereqCandidate.code.includes(' MB')) continue;
+            
+            // CRITICAL: Only use as prerequisite if the candidate shares at least one course with the current item
+            const sharedCourses = prereqCandidate.courses.some(c => item.courses.includes(c));
+            if (!sharedCourses) break; // Stop looking - we've crossed a course boundary
+            
+            if (prereqCandidate.type === 'Flight' || prereqCandidate.type === 'FTD') {
+                prerequisitesFlying.push(prereqCandidate.code);
+            } else {
+                prerequisitesGround.push(prereqCandidate.code);
             }
+            break; 
         }
         return { ...item, prerequisitesGround, prerequisitesFlying, prerequisites: [...prerequisitesGround, ...prerequisitesFlying] };
     });
@@ -600,6 +606,8 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             service,
             category: 'A',
             isTestingOfficer: true,
+            isQFI: true,
+            isOFI: false,
             seatConfig: 'Normal',
             isExecutive: true,
             isFlyingSupervisor: true,
@@ -616,12 +624,12 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     }
     
     // --- Generate FLTLTs ---
-    // ESL: 28 for 1FTS + 11 for CFS = 39 FLTLTs
-    // Total ESL: 4 exec (1FTS) + 28 FLTLT (1FTS) = 32 for 1FTS
-    //            2 exec (CFS) + 11 FLTLT (CFS) + 1 Joe Bloggs (CFS) = 14 for CFS
+    // ESL: 34 for 1FTS + 15 for CFS = 49 FLTLTs
+    // Total ESL: 4 exec (1FTS) + 34 FLTLT (1FTS) = 38 for 1FTS ✓
+    //            2 exec (CFS) + 15 FLTLT (CFS) + 1 Joe Bloggs (CFS) = 18 for CFS ✓
     // PEA: 31 for 2FTS
-    const num1FTSFltlts = isESL ? 32 : 0;
-    const numCFSFltlts = isESL ? 16 : 0;
+    const num1FTSFltlts = isESL ? 34 : 0;
+    const numCFSFltlts = isESL ? 15 : 0;
     const num2FTSFltlts = isESL ? 0 : 31;
     const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
     
@@ -650,6 +658,8 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isExecutive,
             isFlyingSupervisor: false,
             isTestingOfficer: false,
+            isQFI: true,
+            isOFI: false,
             isIRE: isExecutive && Math.random() < 0.2,
             location: isESL ? 'East Sale' : 'Pearce',
             unit: isESL ? (i < num1FTSFltlts ? '1FTS' : 'CFS') : '2FTS',
@@ -689,6 +699,8 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             service: 'RAAF',
             category: 'A',
             isTestingOfficer: true,
+            isQFI: true,
+            isOFI: false,
             seatConfig: 'Normal',
             isExecutive: true,
             isFlyingSupervisor: true,
@@ -722,12 +734,14 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             service: undefined,
             category: 'UnCat',
             isTestingOfficer: false,
+            isQFI: false,
+            isOFI: false,
             seatConfig: 'Normal',
             isExecutive: false,
             isFlyingSupervisor: false,
             isIRE: false,
             location: isESL ? 'East Sale' : 'Pearce',
-            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+            unit: isESL ? (i < 3 ? '1FTS' : 'CFS') : '2FTS', // Deterministic: 3 to 1FTS, 1 to CFS
             phoneNumber,
             email,
             unavailability: [],
