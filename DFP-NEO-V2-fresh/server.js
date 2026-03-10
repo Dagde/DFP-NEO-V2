@@ -621,10 +621,16 @@ app.get('/api/sct-requests', async (req, res) => {
       String(userId)
     );
     // Also log all distinct userIds in the table for debugging
-    const allUserIds = await db.$queryRawUnsafe(`SELECT DISTINCT "userId", COUNT(*) as count FROM "SctRequest" GROUP BY "userId"`);
+    const allUserIds = await db.$queryRawUnsafe(`SELECT DISTINCT "userId", COUNT(*)::int as count FROM "SctRequest" GROUP BY "userId"`);
     console.log(`✅ GET /api/sct-requests - found ${requests.length} records for userId: "${userId}"`);
     console.log(`📊 All userIds in SctRequest table:`, JSON.stringify(allUserIds));
-    res.json(requests);
+    // Serialize BigInt values to regular numbers/booleans
+    const safeRequests = requests.map(r => ({
+      ...r,
+      submitted: Boolean(r.submitted),
+      includeInBuild: Boolean(r.includeInBuild),
+    }));
+    res.json(safeRequests);
   } catch (err) {
     console.error('❌ Error fetching SCT requests:', err);
     res.status(500).json({ error: err.message });
@@ -658,7 +664,8 @@ app.post('/api/sct-requests', async (req, res) => {
     );
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, newId);
     console.log(`✅ POST /api/sct-requests - created record id: ${newId} for userId: ${userId}`);
-    res.json(rows[0]);
+    const row = rows[0];
+    res.json({ ...row, submitted: Boolean(row.submitted), includeInBuild: Boolean(row.includeInBuild) });
   } catch (err) {
     console.error('❌ Error creating SCT request:', err);
     res.status(500).json({ error: err.message });
@@ -684,7 +691,8 @@ app.put('/api/sct-requests/:id', async (req, res) => {
     );
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, id);
     console.log(`✅ PUT /api/sct-requests/${id} - updated fields: ${fields.join(', ')}`);
-    res.json(rows[0] || { id });
+    const row = rows[0];
+    res.json(row ? { ...row, submitted: Boolean(row.submitted), includeInBuild: Boolean(row.includeInBuild) } : { id });
   } catch (err) {
     console.error('❌ Error updating SCT request:', err);
     res.status(500).json({ error: err.message });
