@@ -20,8 +20,7 @@ interface InstructorProfileFlyoutProps {
   units: string[];
   traineesData: Trainee[];
   onViewLogbook?: (person: Instructor) => void;
-  onRequestSct: (instructor: Instructor) => void;
-  onOpenTraineeProfile?: (traineeName: string) => void;
+  onRequestSct: () => void;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -118,7 +117,7 @@ const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 6
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, onViewLogbook, onRequestSct, onOpenTraineeProfile
+  locations, units, traineesData, onViewLogbook, onRequestSct
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
@@ -153,7 +152,6 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [isOFI, setIsOFI] = useState(instructor.isOFI || false);
 
   const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Scheduler', 'Course Supervisor', 'Admin', 'Super Admin'], []);
-  const allRoles = useMemo(() => ['CO', 'CFI', 'Exec', 'Fly Sup', 'TO', 'IRE', 'QFI', 'OFI', 'DFC', 'Contractor', 'Admin Staff'], []);
 
   const { primaryTrainees, secondaryTrainees } = useMemo(() => {
     if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
@@ -237,7 +235,10 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
   const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
   // Toggle: clicking active tab closes it; clicking another opens it
-  const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
+  const handleTabClick = (tab: typeof activeTab) => {
+    console.log('🔍 [SCT DEBUG] Tab clicked:', tab);
+    setActiveTab(prev => prev === tab ? null : tab);
+  };
   const exp = priorExperience;
 
   // Build role badges
@@ -376,7 +377,21 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
                   <p className="text-gray-400 text-xs italic mb-4">Submit a Standardisation and Continuation Training request for this staff member.</p>
-                  <button onClick={() => { onRequestSct(instructor); setActiveTab(null); }} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Submit SCT Request</button>
+                  <p className="text-yellow-400 text-xs mb-2 font-bold">🔧 DEBUG: SCT Tab is active, activeTab={activeTab}</p>
+                  <p className="text-yellow-400 text-xs mb-2">🔧 DEBUG: onRequestSct exists: {String(!!onRequestSct)}</p>
+                  <button 
+                    onClick={(e) => { 
+                      e.preventDefault();
+                      e.stopPropagation();
+                      alert('SCT Button Clicked! Check console for debug output.');
+                      console.log('🔍 [SCT DEBUG] Submit SCT Request button clicked in InstructorProfileFlyout');
+                      console.log('🔍 [SCT DEBUG] onRequestSct exists:', !!onRequestSct);
+                      console.log('🔍 [SCT DEBUG] onRequestSct type:', typeof onRequestSct);
+                      onRequestSct(); 
+                      setActiveTab(null); 
+                    }} 
+                    className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
+                  >Submit SCT Request</button>
                 </div>
               )}
 
@@ -441,69 +456,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         ))}
                       </div>
                     </div>
-                    {/* Permissions and Roles */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Permissions */}
-                      <div className="bg-gray-700/30 rounded p-3">
-                        <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {allPermissions.map(perm => (
-                            <label key={perm} className="flex items-center space-x-1 cursor-pointer">
-                              <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                              <span className="text-white text-[11px]">{perm}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      {/* Roles */}
-                      <div className="bg-gray-700/30 rounded p-3">
-                        <label className="block text-xs font-medium text-gray-400 mb-2">Roles</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isCommandingOfficer} onChange={e => setIsCommandingOfficer(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-[11px]">CO</span>
+                    {/* Permissions */}
+                    <div className="bg-gray-700/30 rounded p-3">
+                      <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {allPermissions.map(perm => (
+                          <label key={perm} className="flex items-center space-x-1 cursor-pointer">
+                            <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
+                            <span className="text-white text-xs">{perm}</span>
                           </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isCFI} onChange={e => setIsCFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">CFI</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isExecutive} onChange={e => setIsExecutive(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">Exec</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isFlyingSupervisor} onChange={e => setIsFlyingSupervisor(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">Fly Sup</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isTestingOfficer} onChange={e => setIsTestingOfficer(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">TO</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isIRE} onChange={e => setIsIRE(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">IRE</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isQFI} onChange={e => setIsQFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">QFI</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isOFI} onChange={e => setIsOFI(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">OFI</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isDeputyFlightCommander} onChange={e => setIsDeputyFlightCommander(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">DFC</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isContractor} onChange={e => setIsContractor(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">Contractor</span>
-                          </label>
-                          <label className="flex items-center space-x-1 cursor-pointer">
-                            <input type="checkbox" checked={isAdminStaff} onChange={e => setIsAdminStaff(e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                            <span className="text-white text-xs">Admin Staff</span>
-                          </label>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -539,47 +501,30 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{callsignData?.callsignPrefix || ''}{instructor.callsignNumber || ''}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
+                        <div></div>
                         {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{instructor.service || 'RAAF'}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{instructor.unit}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{instructor.crew || 'N/A'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{instructor.seatConfig}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{instructor.location}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{instructor.flight || 'N/A'}</span></div>
                         {/* Row 3 */}
-                        <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
+                        <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{instructor.phoneNumber || 'N/A'}</span></div>
+                        <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{instructor.email || 'N/A'}</span></div>
                       </div>
                     </div>
 
-                    {/* Permissions and Roles panels */}
-                    <div className="flex-shrink-0 w-40 flex flex-col gap-2">
-                      {/* Permissions panel */}
-                      <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
-                        <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
+                    {/* Permissions panel */}
+                    <div className="flex-shrink-0 w-36">
+                      <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                        <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
+                        <div className="space-y-1">
                           {(instructor.permissions || []).length > 0
                             ? (instructor.permissions || []).map(p => (
                                 <div key={p} className="text-white text-[10px]">• {p}</div>
                               ))
-                            : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
-                          }
-                        </div>
-                      </div>
-                      {/* Roles panel */}
-                      <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                        <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
-                        <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
-                          {roleBadges.length > 0
-                            ? roleBadges.map(r => (
-                                <div key={r} className="text-white text-[10px]">• {r}</div>
-                              ))
-                            : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
+                            : <div className="text-gray-500 text-[10px] italic">None</div>
                           }
                         </div>
                       </div>
@@ -597,16 +542,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
                       {primaryTrainees[0] ? (
-                        <button
-                          onClick={() => { onOpenTraineeProfile?.(primaryTrainees[0].name); onClose(); }}
-                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
-                        >
-                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-sky-300 hover:text-sky-100 text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}
@@ -615,16 +557,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
                       {primaryTrainees[1] ? (
-                        <button
-                          onClick={() => { onOpenTraineeProfile?.(primaryTrainees[1].name); onClose(); }}
-                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
-                        >
-                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-sky-300 hover:text-sky-100 text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}
@@ -633,16 +572,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
                       {secondaryTrainees[0] ? (
-                        <button
-                          onClick={() => { onOpenTraineeProfile?.(secondaryTrainees[0].name); onClose(); }}
-                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
-                        >
-                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-amber-300 hover:text-amber-100 text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}
@@ -651,16 +587,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                       <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
                       {secondaryTrainees[1] ? (
-                        <button
-                          onClick={() => { onOpenTraineeProfile?.(secondaryTrainees[1].name); onClose(); }}
-                          className="flex items-center gap-2 w-full text-left hover:bg-white/5 rounded p-1 -mx-1 transition-colors"
-                        >
-                          <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-amber-300 hover:text-amber-100 text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
+                          <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
                           <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                         </div>
                       )}

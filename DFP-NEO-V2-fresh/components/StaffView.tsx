@@ -16,13 +16,7 @@ interface StaffViewProps {
   onBulkUpdateInstructors: (updates: any[]) => void;
   onArchiveInstructor: (id: number) => void;
   onRestoreInstructor: (id: number) => void;
-  selectedPersonForProfile?: any;
-  onProfileOpened?: () => void;
-  locations?: string[];
-  units?: string[];
-  onViewLogbook?: (person: any) => void;
   onRequestSct?: (instructor: any) => void;
-  onOpenTraineeProfile?: (traineeName: string) => void;
   
   // Props for InstructorScheduleView
   date: string;
@@ -134,13 +128,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onBulkUpdateInstructors={props.onBulkUpdateInstructors}
             onArchiveInstructor={props.onArchiveInstructor}
             onRestoreInstructor={props.onRestoreInstructor}
-            selectedPersonForProfile={props.selectedPersonForProfile}
-            onProfileOpened={props.onProfileOpened}
-            locations={props.locations || []}
-            units={props.units || []}
-            onViewLogbook={props.onViewLogbook}
-            onRequestSct={props.onRequestSct || (() => {})}
-            onOpenTraineeProfile={props.onOpenTraineeProfile}
+            onRequestSct={props.onRequestSct}
           />
         )}
         {activeTab === 'schedule' && (

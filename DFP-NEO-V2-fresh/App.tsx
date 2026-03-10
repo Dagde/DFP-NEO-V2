@@ -3383,10 +3383,10 @@ useEffect(() => {
 
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
-    // Set current user for audit logging - always update when currentUserName changes
+    // Set current user for audit logging (fallback only if not already set by session)
     useEffect(() => {
-        if (currentUser && currentUserName) {
-            const userString = `${currentUser.rank ? currentUser.rank + ' ' : ''}${currentUser.name}`.trim();
+        if (currentUser && currentUserName === 'Bloggs, Joe') {
+            const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
             setCurrentUser(userString);
         }
     }, [currentUser, currentUserName]);
@@ -3425,20 +3425,6 @@ useEffect(() => {
                 setInstructorsData(data.instructors);
                 setTraineesData(data.trainees);
                 setEvents(data.events);
-                
-                // Convert scores plain object to Map and merge with ESL_DATA.scores
-                // DB scores take priority; mockData scores fill in for trainees not in DB
-                if (data.scores && Object.keys(data.scores).length > 0) {
-                    const scoresMap = new Map<string, Score[]>(ESL_DATA.scores); // start with mockData scores
-                    Object.entries(data.scores).forEach(([name, scoreArr]) => {
-                        scoresMap.set(name, scoreArr as Score[]); // DB scores override
-                    });
-                    setScores(scoresMap);
-                    console.log('✅ Scores loaded from DB and merged with mockData:', scoresMap.size, 'trainees');
-                } else {
-                    // No DB scores - keep ESL_DATA.scores (already the default state)
-                    console.log('ℹ️ No DB scores - using ESL_DATA.scores:', ESL_DATA.scores.size, 'trainees');
-                }
                 
                 console.log('✅ State updated successfully');
             } catch (error) {
@@ -8503,6 +8489,14 @@ updates.forEach(update => {
                         }
                       }, 100);
                     }}
+                    onSubmitSctRequest={(id, type) => {
+                      const updater = (prev: SctRequest[]) => prev.map(r => 
+                        r.id === id ? { ...r, submitted: true } : r
+                      );
+                      if (type === 'flight') setSctFlights(updater);
+                      else setSctFtds(updater);
+                      console.log(`✅ SCT Request ${id} submitted for ${type}`);
+                    }}
                     syllabusDetails={syllabusDetails}
                     scores={scores}
                     traineeLMPs={traineeLMPs}
@@ -8849,6 +8843,12 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
+                            onRequestSct={(instructor) => {
+                                console.log('🔍 [SCT DEBUG] App.tsx onRequestSct callback called with:', instructor?.name);
+                                setInstructorForSct(instructor);
+                                setShowSctRequest(true);
+                                console.log('🔍 [SCT DEBUG] Set instructorForSct and showSctRequest to true');
+                            }}
                         />;
             case 'Instructors':
                 return <InstructorListView 
