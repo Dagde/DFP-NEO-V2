@@ -3562,6 +3562,23 @@ useEffect(() => {
     const [sctFlights, setSctFlights] = useState<SctRequest[]>([]);
     const [sctFtds, setSctFtds] = useState<SctRequest[]>([]);
 
+    // Helper: get current userId from multiple sources
+    const getCurrentUserId = (): string | null => {
+        // 1. Try sessionUser (set after login)
+        if (sessionUser?.userId) return sessionUser.userId;
+        // 2. Try authUser (set after regular login)
+        if (authUser?.userId) return authUser.userId;
+        // 3. Try localStorage SSO data
+        try {
+            const ssoData = localStorage.getItem('dfp_sso_user');
+            if (ssoData) {
+                const ssoUser = JSON.parse(ssoData);
+                if (ssoUser?.userId) return ssoUser.userId;
+            }
+        } catch (e) {}
+        return null;
+    };
+
     // Load SCT requests from database when sessionUser is available
     useEffect(() => {
         console.log('[SCT] useEffect triggered - sessionUser?.userId:', sessionUser?.userId);
@@ -8496,12 +8513,12 @@ updates.forEach(update => {
                       console.log('[SCT] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
-                      // Persist to DB - wait for sessionUser if needed
-                      console.log('[SCT] Attempting to save - sessionUser?.userId:', sessionUser?.userId);
-                      console.log('[SCT] Full sessionUser object:', JSON.stringify(sessionUser));
-                      if (sessionUser?.userId) {
+                      // Persist to DB using robust userId lookup
+                      const userId = getCurrentUserId();
+                      console.log('[SCT] Attempting to save - userId from getCurrentUserId():', userId);
+                      if (userId) {
                         try {
-                          const payload = { ...newReq, userId: sessionUser.userId, requestType: type };
+                          const payload = { ...newReq, userId, requestType: type };
                           console.log('[SCT] POST payload:', JSON.stringify(payload));
                           const res = await fetch('/api/sct-requests', {
                             method: 'POST',
@@ -8522,7 +8539,7 @@ updates.forEach(update => {
                           }
                         } catch (err) { console.error('[SCT] Failed to save SCT request:', err); }
                       } else {
-                        console.warn('[SCT] No sessionUser.userId - SCT request NOT saved to DB');
+                        console.warn('[SCT] No userId available from any source - SCT request NOT saved to DB');
                       }
                     }}
                     onRemoveSctRequest={async (id, type) => {
@@ -9751,11 +9768,12 @@ updates.forEach(update => {
                         } else {
                             setSctFlights(prev => [...prev, request]);
                         }
-                        // Persist to DB
-                        if (sessionUser?.userId) {
+                        // Persist to DB using robust userId lookup
+                        const flyoutUserId = getCurrentUserId();
+                        if (flyoutUserId) {
                             try {
                                 const requestType = request.event.includes('FTD') ? 'ftd' : 'flight';
-                                const payload = { ...request, userId: sessionUser.userId, requestType };
+                                const payload = { ...request, userId: flyoutUserId, requestType };
                                 console.log('[SCT] POST from SctRequestFlyout:', JSON.stringify(payload));
                                 const res = await fetch('/api/sct-requests', {
                                     method: 'POST',
@@ -9779,7 +9797,7 @@ updates.forEach(update => {
                                 console.error('[SCT] Error saving from Flyout:', err);
                             }
                         } else {
-                            console.warn('[SCT] No sessionUser.userId - Flyout request NOT saved to DB');
+                            console.warn('[SCT] No userId available from any source - Flyout request NOT saved to DB');
                         }
                         setShowSctRequest(false);
                         // Show success message
