@@ -485,33 +485,27 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     <p className="text-sm text-gray-400">{locationFullName} ({school})</p>
                 </div>
               </div>
+              <div className="flex-1"></div>
               <div className="flex items-center gap-[1px]">
-                {isArchiveMode && <span className="text-red-400 font-bold text-sm animate-pulse mr-3">ARCHIVE MODE ACTIVE</span>}
-                 <button
-                    onClick={handleShowAddChoice}
-                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
-                >
-                    Add Staff
-                </button>
-                <button
-                    onClick={toggleArchiveMode}
-                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? 'text-green-500' : 'text-gray-300'}`}
-                >
-                    {isArchiveMode ? 'Done' : 'Archive'}
-                </button>
+                <AuditButton pageName="Staff" />
+                <div className="w-[5px]"></div>
                 <button
                     onClick={() => setShowArchivedFlyout(true)}
                     className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                 >
                     View Archived
                 </button>
-                <div className="w-[5px]"></div>
-                <AuditButton pageName="Staff" />
                 <button
-                    onClick={onClose}
-                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
+                    onClick={toggleArchiveMode}
+                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? 'text-green-500' : 'text-black'}`}
                 >
-                    Back
+                    {isArchiveMode ? 'Done' : 'Archive'}
+                </button>
+                <button
+                    onClick={handleShowAddChoice}
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                >
+                    Add Staff
                 </button>
               </div>
             </div>
