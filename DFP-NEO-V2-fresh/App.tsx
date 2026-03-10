@@ -3564,6 +3564,7 @@ useEffect(() => {
 
     // Load SCT requests from database when sessionUser is available
     useEffect(() => {
+        console.log('[SCT] useEffect triggered - sessionUser?.userId:', sessionUser?.userId);
         if (!sessionUser?.userId) return;
         const loadSctRequests = async () => {
             try {
@@ -8478,6 +8479,7 @@ updates.forEach(update => {
                     sctFlights={sctFlights}
                     sctFtds={sctFtds}
                     onAddSctRequest={async (type) => {
+                      console.log('[SCT] onAddSctRequest called with type:', type);
                       const newReq: SctRequest = { 
                           id: uuidv4(), 
                           name: '', 
@@ -8491,10 +8493,12 @@ updates.forEach(update => {
                           submitted: false,
                           includeInBuild: false
                       };
+                      console.log('[SCT] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
-                      // Persist to DB
+                      // Persist to DB - wait for sessionUser if needed
                       console.log('[SCT] Attempting to save - sessionUser?.userId:', sessionUser?.userId);
+                      console.log('[SCT] Full sessionUser object:', JSON.stringify(sessionUser));
                       if (sessionUser?.userId) {
                         try {
                           const payload = { ...newReq, userId: sessionUser.userId, requestType: type };
