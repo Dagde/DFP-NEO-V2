@@ -563,10 +563,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         </div>
 
         {/* MEDIUM/LOW Priority SCT Events - User can manually include in build */}
-        {(sctFlights.filter(r => r.priority !== 'High').length > 0 || sctFtds.filter(r => r.priority !== 'High').length > 0) && (
-          <div className="section-sct-optional bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-              <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional SCT Events</h2>
-              <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
+        <div className="section-sct-optional bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+            <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional SCT Events</h2>
+            <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
+            {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
+              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority SCT events. Add SCT requests with MEDIUM or LOW priority in the SCT Requests tab above.</p>
+            )}
 
               {/* SCT Flights - MEDIUM/LOW */}
               {sctFlights.filter(r => r.priority !== 'High').length > 0 && (
@@ -648,7 +650,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 </div>
               )}
           </div>
-        )}
 
         <div className="section-remedial-queue bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Remedial Priority Queue</h2>
