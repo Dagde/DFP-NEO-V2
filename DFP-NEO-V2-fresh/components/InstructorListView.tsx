@@ -480,10 +480,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
               <div className="flex items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Staff</h1>
-                    <p className="text-sm text-gray-400">{locationFullName} ({school})</p>
-                </div>
+                <h1 className="text-2xl font-bold text-white">Staff</h1>
               </div>
               <div className="flex-1"></div>
               <div className="flex items-center gap-[1px]">
