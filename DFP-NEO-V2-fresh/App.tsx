@@ -3561,6 +3561,33 @@ useEffect(() => {
     // SCT & Remedial State
     const [sctFlights, setSctFlights] = useState<SctRequest[]>([]);
     const [sctFtds, setSctFtds] = useState<SctRequest[]>([]);
+
+    // Load SCT requests from database when sessionUser is available
+    useEffect(() => {
+        if (!sessionUser?.userId) return;
+        const loadSctRequests = async () => {
+            try {
+                const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
+                    id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
+                    currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
+                    notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
+                    submitted: r.submitted, includeInBuild: r.includeInBuild
+                })));
+                setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
+                    id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
+                    currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
+                    notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
+                    submitted: r.submitted, includeInBuild: r.includeInBuild
+                })));
+            } catch (err) {
+                console.error('Failed to load SCT requests from DB:', err);
+            }
+        };
+        loadSctRequests();
+    }, [sessionUser?.userId]);
     const [showSctRequest, setShowSctRequest] = useState(false);
     const [instructorForSct, setInstructorForSct] = useState<Instructor | null>(null);
     const [traineeForSct, setTraineeForSct] = useState<Trainee | null>(null);
@@ -8444,65 +8471,102 @@ updates.forEach(update => {
                     onUpdateProgramWithPrimaries={setProgramWithPrimaries}
                     sctFlights={sctFlights}
                     sctFtds={sctFtds}
-                    onAddSctRequest={(type) => {
-                      const newReq = { 
+                    onAddSctRequest={async (type) => {
+                      const newReq: SctRequest = { 
                           id: uuidv4(), 
                           name: '', 
-                          event: 'SCT GF', 
+                          event: 'SCT GF',
+                          flightType: 'Dual',
                           currency: '', 
                           currencyExpire: '', 
                           priority: 'Medium' as 'Medium',
-                          dateRequested: getLocalDateString()
+                          dateRequested: getLocalDateString(),
+                          requestedTime: '15:00',
+                          submitted: false,
+                          includeInBuild: false
                       };
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
+                      // Persist to DB
+                      if (sessionUser?.userId) {
+                        try {
+                          const res = await fetch('/api/sct-requests', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ...newReq, userId: sessionUser.userId, requestType: type })
+                          });
+                          if (res.ok) {
+                            const saved = await res.json();
+                            // Update local state with DB-assigned id
+                            const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
+                            if (type === 'flight') setSctFlights(updater);
+                            else setSctFtds(updater);
+                          }
+                        } catch (err) { console.error('Failed to save SCT request:', err); }
+                      }
                     }}
-                    onRemoveSctRequest={(id, type) => {
+                    onRemoveSctRequest={async (id, type) => {
                       if (type === 'flight') setSctFlights(prev => prev.filter(r => r.id !== id));
                       else setSctFtds(prev => prev.filter(r => r.id !== id));
+                      // Delete from DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, { method: 'DELETE' });
+                      } catch (err) { console.error('Failed to delete SCT request:', err); }
                     }}
-                    onUpdateSctRequest={(id, field, value, type) => {
+                    onUpdateSctRequest={async (id, field, value, type) => {
                       const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: value } : r);
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
-                      
-                      // Trigger priority sync after a short delay to ensure state is updated
+                      // Persist to DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ [field]: value })
+                        });
+                      } catch (err) { console.error('Failed to update SCT request:', err); }
+                      // Trigger priority sync
                       setTimeout(() => {
-                        // Get the updated request to check its priority
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
                         const updatedRequest = request ? { ...request, [field]: value } : null;
-                        
-                        console.log('🔄 SCT Request Update:', {
-                          id,
-                          field,
-                          value,
-                          type,
-                          requestPriority: updatedRequest?.priority,
-                          shouldSync: updatedRequest?.priority === 'High'
-                        });
-                        
-                        // Sync if the request is High priority (either already was, or just became High)
                         if (updatedRequest && updatedRequest.priority === 'High') {
-                          console.log('✅ Triggering sync for HIGH priority SCT request');
                           syncPriorityEventsWithSctAndRemedial();
                         }
                       }, 100);
                     }}
-                    onSubmitSctRequest={(id, type) => {
+                    onSubmitSctRequest={async (id, type) => {
                       const updater = (prev: SctRequest[]) => prev.map(r => 
                         r.id === id ? { ...r, submitted: true } : r
                       );
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
-                      console.log(`✅ SCT Request ${id} submitted for ${type}`);
+                      // Persist to DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ submitted: true })
+                        });
+                      } catch (err) { console.error('Failed to submit SCT request:', err); }
                     }}
-                    onToggleSctInclude={(id, type) => {
+                    onToggleSctInclude={async (id, type) => {
+                      const requests = type === 'flight' ? sctFlights : sctFtds;
+                      const req = requests.find(r => r.id === id);
+                      const newValue = !req?.includeInBuild;
                       const updater = (prev: SctRequest[]) => prev.map(r => 
-                        r.id === id ? { ...r, includeInBuild: !r.includeInBuild } : r
+                        r.id === id ? { ...r, includeInBuild: newValue } : r
                       );
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
+                      // Persist to DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ includeInBuild: newValue })
+                        });
+                      } catch (err) { console.error('Failed to update SCT includeInBuild:', err); }
                       // Trigger priority sync to include the newly selected SCT event
                       setTimeout(() => {
                         syncPriorityEventsWithSctAndRemedial();

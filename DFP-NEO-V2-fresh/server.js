@@ -549,6 +549,90 @@ if (fs.existsSync(staticPath)) {
   console.log(`✅ Serving static files from: ${staticPath}`);
 }
 
+// ============================================================
+// SCT REQUESTS API
+// ============================================================
+
+// GET all SCT requests for a user
+app.get('/api/sct-requests', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const requests = await db.sctRequest.findMany({
+      where: { userId: String(userId) },
+      orderBy: { createdAt: 'asc' }
+    });
+    res.json(requests);
+  } catch (err) {
+    console.error('Error fetching SCT requests:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST create a new SCT request
+app.post('/api/sct-requests', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { userId, requestType, name, event, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const request = await db.sctRequest.create({
+      data: {
+        userId: String(userId),
+        requestType: requestType || 'flight',
+        name: name || '',
+        event: event || '',
+        flightType: flightType || 'Dual',
+        currency: currency || '',
+        currencyExpire: currencyExpire || '',
+        priority: priority || 'Medium',
+        notes: notes || null,
+        dateRequested: dateRequested || new Date().toISOString().split('T')[0],
+        requestedTime: requestedTime || '15:00',
+        submitted: false,
+        includeInBuild: false
+      }
+    });
+    res.json(request);
+  } catch (err) {
+    console.error('Error creating SCT request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update an SCT request
+app.put('/api/sct-requests/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const updates = req.body;
+    // Remove fields that shouldn't be updated directly
+    delete updates.id;
+    delete updates.createdAt;
+    const request = await db.sctRequest.update({
+      where: { id },
+      data: updates
+    });
+    res.json(request);
+  } catch (err) {
+    console.error('Error updating SCT request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE an SCT request
+app.delete('/api/sct-requests/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    await db.sctRequest.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting SCT request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
