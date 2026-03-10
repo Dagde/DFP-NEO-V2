@@ -3060,7 +3060,7 @@ const App: React.FC = () => {
     // Validation Settings State
     const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = useState<boolean>(() => {
         const saved = localStorage.getItem('showDepartureDensityOverlay');
-        return saved !== null ? JSON.parse(saved) : true; // Default to true
+        return saved !== null ? JSON.parse(saved) : false; // Default to false (OFF) on launch
     });
 
     // Save overlay setting to localStorage when it changes
