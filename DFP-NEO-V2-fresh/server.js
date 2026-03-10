@@ -34,6 +34,8 @@ async function getPrisma() {
     console.log('✅ Prisma connected to database');
     // Ensure AircraftAvailabilityHistory table exists (create if missing)
     await ensureAircraftAvailabilityTable(prisma);
+    // Ensure SctRequest table exists (create if missing)
+    await ensureSctRequestTable(prisma);
   }
   return prisma;
 }
@@ -72,6 +74,48 @@ async function ensureAircraftAvailabilityTable(db) {
     console.log('✅ AircraftAvailabilityHistory table ready');
   } catch (err) {
     console.error('❌ Failed to ensure AircraftAvailabilityHistory table:', err.message);
+  }
+}
+
+// Create SctRequest table if it doesn't exist
+async function ensureSctRequestTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SctRequest" (
+        "id"             TEXT NOT NULL,
+        "userId"         TEXT NOT NULL,
+        "requestType"    TEXT NOT NULL DEFAULT 'flight',
+        "name"           TEXT NOT NULL DEFAULT '',
+        "event"          TEXT NOT NULL DEFAULT '',
+        "flightType"     TEXT NOT NULL DEFAULT 'Dual',
+        "currency"       TEXT NOT NULL DEFAULT '',
+        "currencyExpire" TEXT NOT NULL DEFAULT '',
+        "priority"       TEXT NOT NULL DEFAULT 'Medium',
+        "notes"          TEXT,
+        "dateRequested"  TEXT,
+        "requestedTime"  TEXT,
+        "submitted"      BOOLEAN NOT NULL DEFAULT false,
+        "includeInBuild" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SctRequest_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "SctRequest_userId_idx"
+      ON "SctRequest"("userId");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "SctRequest_priority_idx"
+      ON "SctRequest"("priority");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "SctRequest_requestType_idx"
+      ON "SctRequest"("requestType");
+    `);
+    console.log('✅ SctRequest table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure SctRequest table:', err.message);
   }
 }
 
