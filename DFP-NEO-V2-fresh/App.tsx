@@ -8844,10 +8844,8 @@ updates.forEach(update => {
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
                             onRequestSct={(instructor) => {
-                                console.log('🔍 [SCT DEBUG] App.tsx onRequestSct callback called with:', instructor?.name);
                                 setInstructorForSct(instructor);
                                 setShowSctRequest(true);
-                                console.log('🔍 [SCT DEBUG] Set instructorForSct and showSctRequest to true');
                             }}
                         />;
             case 'Instructors':
