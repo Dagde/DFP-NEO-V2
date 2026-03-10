@@ -5773,7 +5773,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-red-500/50', // Highlight as high priority SCT
+                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
                     locationType: 'Local',
@@ -5850,7 +5850,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-red-500/50', // Highlight as high priority SCT
+                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
                     locationType: 'Local',
@@ -6169,6 +6169,13 @@ useEffect(() => {
                 event.id === eventId ? { ...event, ...updates } : event
             )
         );
+    };
+
+    const handleDeletePriorityEvent = (eventId: string) => {
+        setHighestPriorityEvents(prevEvents => 
+            prevEvents.filter(event => event.id !== eventId)
+        );
+        console.log('🗑️ Deleted priority event:', eventId);
     };
 
     const handleSelectInstructorFromSchedule = (instructorName: string) => {
@@ -8491,6 +8498,7 @@ updates.forEach(update => {
                     highestPriorityEvents={highestPriorityEvents}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
+                    onDeletePriorityEvent={handleDeletePriorityEvent}
                     programWithPrimaries={programWithPrimaries}
                     onUpdateProgramWithPrimaries={setProgramWithPrimaries}
                     sctFlights={sctFlights}

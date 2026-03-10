@@ -38,6 +38,7 @@ interface PrioritiesViewProps {
   highestPriorityEvents: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
+  onDeletePriorityEvent: (eventId: string) => void;
   programWithPrimaries: boolean;
   onUpdateProgramWithPrimaries: (value: boolean) => void;
   sctFlights: SctRequest[];
@@ -88,6 +89,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   highestPriorityEvents,
   onSelectEvent,
   onUpdatePriorityEvent,
+  onDeletePriorityEvent,
   programWithPrimaries,
   onUpdateProgramWithPrimaries,
   sctFlights,
@@ -401,6 +403,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="py-2 px-2 text-left">Solo/Dual</th>
                     <th className="py-2 px-2 text-left">Currency</th>
                     <th className="py-2 px-2 text-left">Priority</th>
+                    <th className="py-2 px-2 text-left">Action</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -413,6 +416,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <td className="py-2 px-2 text-gray-300">{event.soloOrDual || event.flightType || 'N/A'}</td>
                         <td className="py-2 px-2 text-gray-300">{event.currency || 'N/A'}</td>
                         <td className="py-2 px-2 text-gray-300 bg-yellow-100 text-gray-800 font-semibold">High</td>
+                        <td className="py-2 px-2">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onDeletePriorityEvent(event.id); }} 
+                                className="p-1 text-gray-400 hover:text-red-400"
+                                title="Delete event"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        </td>
                     </tr>
                     );
                 })}
