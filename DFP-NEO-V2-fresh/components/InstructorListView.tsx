@@ -487,8 +487,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               </div>
               <div className="flex-1"></div>
               <div className="flex items-center gap-[1px]">
-                <AuditButton pageName="Staff" />
-                <div className="w-[5px]"></div>
                 <button
                     onClick={() => setShowArchivedFlyout(true)}
                     className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
@@ -507,6 +505,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                 >
                     Add Staff
                 </button>
+                <div className="w-[8px]"></div>
+                <AuditButton pageName="Staff" />
               </div>
             </div>
 
