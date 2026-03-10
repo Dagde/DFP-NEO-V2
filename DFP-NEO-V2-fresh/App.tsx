@@ -3567,9 +3567,15 @@ useEffect(() => {
         if (!sessionUser?.userId) return;
         const loadSctRequests = async () => {
             try {
+                console.log('[SCT] Loading SCT requests from DB for userId:', sessionUser.userId);
                 const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
-                if (!res.ok) return;
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    console.error('[SCT] Failed to load from DB:', res.status, errData);
+                    return;
+                }
                 const data = await res.json();
+                console.log('[SCT] Loaded', data.length, 'SCT requests from DB');
                 setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
                     id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
                     currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
@@ -3583,7 +3589,7 @@ useEffect(() => {
                     submitted: r.submitted, includeInBuild: r.includeInBuild
                 })));
             } catch (err) {
-                console.error('Failed to load SCT requests from DB:', err);
+                console.error('[SCT] Failed to load SCT requests from DB:', err);
             }
         };
         loadSctRequests();
@@ -8501,8 +8507,14 @@ updates.forEach(update => {
                             const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
                             if (type === 'flight') setSctFlights(updater);
                             else setSctFtds(updater);
+                            console.log('[SCT] Saved to DB:', saved.id);
+                          } else {
+                            const errData = await res.json().catch(() => ({}));
+                            console.error('[SCT] Failed to save to DB:', res.status, errData);
                           }
-                        } catch (err) { console.error('Failed to save SCT request:', err); }
+                        } catch (err) { console.error('[SCT] Failed to save SCT request:', err); }
+                      } else {
+                        console.warn('[SCT] No sessionUser.userId - SCT request NOT saved to DB');
                       }
                     }}
                     onRemoveSctRequest={async (id, type) => {
