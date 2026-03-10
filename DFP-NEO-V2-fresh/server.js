@@ -638,10 +638,9 @@ app.post('/api/sct-requests', async (req, res) => {
     const { id, userId, requestType, name, event, flightType, currency, currencyExpire, priority, notes, dateRequested, requestedTime } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId required' });
     const newId = id || require('crypto').randomUUID();
-    const now = new Date().toISOString();
     await db.$executeRawUnsafe(
       `INSERT INTO "SctRequest" ("id","userId","requestType","name","event","flightType","currency","currencyExpire","priority","notes","dateRequested","requestedTime","submitted","includeInBuild","createdAt","updatedAt")
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),NOW())`,
       newId,
       String(userId),
       requestType || 'flight',
@@ -655,9 +654,7 @@ app.post('/api/sct-requests', async (req, res) => {
       dateRequested || new Date().toISOString().split('T')[0],
       requestedTime || '15:00',
       false,
-      false,
-      now,
-      now
+      false
     );
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SctRequest" WHERE "id" = $1`, newId);
     console.log(`✅ POST /api/sct-requests - created record id: ${newId} for userId: ${userId}`);
