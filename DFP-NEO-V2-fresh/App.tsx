@@ -8494,20 +8494,24 @@ updates.forEach(update => {
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
                       // Persist to DB
+                      console.log('[SCT] Attempting to save - sessionUser?.userId:', sessionUser?.userId);
                       if (sessionUser?.userId) {
                         try {
+                          const payload = { ...newReq, userId: sessionUser.userId, requestType: type };
+                          console.log('[SCT] POST payload:', JSON.stringify(payload));
                           const res = await fetch('/api/sct-requests', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ...newReq, userId: sessionUser.userId, requestType: type })
+                            body: JSON.stringify(payload)
                           });
+                          console.log('[SCT] POST response status:', res.status);
                           if (res.ok) {
                             const saved = await res.json();
                             // Update local state with DB-assigned id
                             const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
                             if (type === 'flight') setSctFlights(updater);
                             else setSctFtds(updater);
-                            console.log('[SCT] Saved to DB:', saved.id);
+                            console.log('[SCT] Saved to DB:', saved.id, 'userId:', saved.userId);
                           } else {
                             const errData = await res.json().catch(() => ({}));
                             console.error('[SCT] Failed to save to DB:', res.status, errData);
