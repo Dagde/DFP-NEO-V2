@@ -9743,12 +9743,43 @@ updates.forEach(update => {
                 <SctRequestFlyout
                     instructor={instructorForSct}
                     onClose={() => setShowSctRequest(false)}
-                    onSave={(request) => {
+                    onSave={async (request) => {
+                        console.log('[SCT] SctRequestFlyout onSave called with request:', request);
                         // Add the SCT request to the appropriate list
                         if (request.event.includes('FTD')) {
                             setSctFtds(prev => [...prev, request]);
                         } else {
                             setSctFlights(prev => [...prev, request]);
+                        }
+                        // Persist to DB
+                        if (sessionUser?.userId) {
+                            try {
+                                const requestType = request.event.includes('FTD') ? 'ftd' : 'flight';
+                                const payload = { ...request, userId: sessionUser.userId, requestType };
+                                console.log('[SCT] POST from SctRequestFlyout:', JSON.stringify(payload));
+                                const res = await fetch('/api/sct-requests', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (res.ok) {
+                                    const saved = await res.json();
+                                    console.log('[SCT] Saved from Flyout:', saved.id, 'userId:', saved.userId);
+                                    // Update local state with DB-assigned id
+                                    if (request.event.includes('FTD')) {
+                                        setSctFtds(prev => prev.map(r => r.id === request.id ? { ...r, id: saved.id } : r));
+                                    } else {
+                                        setSctFlights(prev => prev.map(r => r.id === request.id ? { ...r, id: saved.id } : r));
+                                    }
+                                } else {
+                                    const errData = await res.json().catch(() => ({}));
+                                    console.error('[SCT] Failed to save from Flyout:', res.status, errData);
+                                }
+                            } catch (err) {
+                                console.error('[SCT] Error saving from Flyout:', err);
+                            }
+                        } else {
+                            console.warn('[SCT] No sessionUser.userId - Flyout request NOT saved to DB');
                         }
                         setShowSctRequest(false);
                         // Show success message
