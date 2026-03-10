@@ -377,16 +377,21 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
                   <p className="text-gray-400 text-xs italic mb-4">Submit a Standardisation and Continuation Training request for this staff member.</p>
-                  <button onClick={(e) => { 
-                    e.preventDefault();
-                    e.stopPropagation();
-                    alert('SCT Button Clicked! Check console for debug output.');
-                    console.log('🔍 [SCT DEBUG] Submit SCT Request button clicked in InstructorProfileFlyout');
-                    console.log('🔍 [SCT DEBUG] onRequestSct exists:', !!onRequestSct);
-                    console.log('🔍 [SCT DEBUG] onRequestSct type:', typeof onRequestSct);
-                    onRequestSct(); 
-                    setActiveTab(null); 
-                  }} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Submit SCT Request</button>
+                  <p className="text-yellow-400 text-xs mb-2 font-bold">🔧 DEBUG: SCT Tab is active, activeTab={activeTab}</p>
+                  <p className="text-yellow-400 text-xs mb-2">🔧 DEBUG: onRequestSct exists: {String(!!onRequestSct)}</p>
+                  <button 
+                    onClick={(e) => { 
+                      e.preventDefault();
+                      e.stopPropagation();
+                      alert('SCT Button Clicked! Check console for debug output.');
+                      console.log('🔍 [SCT DEBUG] Submit SCT Request button clicked in InstructorProfileFlyout');
+                      console.log('🔍 [SCT DEBUG] onRequestSct exists:', !!onRequestSct);
+                      console.log('🔍 [SCT DEBUG] onRequestSct type:', typeof onRequestSct);
+                      onRequestSct(); 
+                      setActiveTab(null); 
+                    }} 
+                    className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
+                  >Submit SCT Request</button>
                 </div>
               )}
 
