@@ -597,6 +597,19 @@ if (fs.existsSync(staticPath)) {
 // SCT REQUESTS API
 // ============================================================
 
+// GET all SCT requests (diagnostic - no userId filter) - for debugging only
+app.get('/api/sct-requests-all', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const requests = await db.$queryRawUnsafe(`SELECT "id", "userId", "name", "event", "requestType", "createdAt" FROM "SctRequest" ORDER BY "createdAt" DESC LIMIT 50`);
+    console.log(`✅ GET /api/sct-requests-all - found ${requests.length} total records`);
+    res.json(requests);
+  } catch (err) {
+    console.error('❌ Error fetching all SCT requests:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET all SCT requests for a user
 app.get('/api/sct-requests', async (req, res) => {
   try {
@@ -607,7 +620,10 @@ app.get('/api/sct-requests', async (req, res) => {
       `SELECT * FROM "SctRequest" WHERE "userId" = $1 ORDER BY "createdAt" ASC`,
       String(userId)
     );
-    console.log(`✅ GET /api/sct-requests - found ${requests.length} records for userId: ${userId}`);
+    // Also log all distinct userIds in the table for debugging
+    const allUserIds = await db.$queryRawUnsafe(`SELECT DISTINCT "userId", COUNT(*) as count FROM "SctRequest" GROUP BY "userId"`);
+    console.log(`✅ GET /api/sct-requests - found ${requests.length} records for userId: "${userId}"`);
+    console.log(`📊 All userIds in SctRequest table:`, JSON.stringify(allUserIds));
     res.json(requests);
   } catch (err) {
     console.error('❌ Error fetching SCT requests:', err);
