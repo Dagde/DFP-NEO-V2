@@ -248,9 +248,19 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                         </div>
                     </div>
                     
-                    <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
-                        <button onClick={handleSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700">Save Event</button>
-                        <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
+                    <div className="flex justify-end gap-[1px] px-6 py-4 border-t border-gray-700 flex-shrink-0">
+                        <button
+                            onClick={onClose}
+                            className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                        >
+                            Save Event
+                        </button>
                     </div>
                 </div>
             </div>
