@@ -130,14 +130,14 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-xl border border-gray-700" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
-                        <h2 className="text-xl font-bold text-teal-400">Add Ground Event</h2>
-                        <button onClick={onClose} className="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={onClose}>
+                <div className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
+                        <h2 className="text-xl font-bold text-white">Add Ground Event</h2>
+                        <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
 
-                    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="ground-event" className="block text-sm font-medium text-gray-400">Event</label>
