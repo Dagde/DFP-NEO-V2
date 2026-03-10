@@ -399,6 +399,7 @@ export interface SctRequest {
     dateRequested?: string;
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
     submitted?: boolean;
+    includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';

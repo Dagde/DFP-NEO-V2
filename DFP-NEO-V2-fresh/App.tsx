@@ -5654,15 +5654,15 @@ useEffect(() => {
         let added = 0;
         const newPriorityEvents = [...highestPriorityEvents];
         
-        // 1. Auto-add HIGH priority SCT requests
+        // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
         console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req => 
-            req.priority === 'High' && req.name.trim() !== '' && req.currency.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.currency.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req => 
-            req.priority === 'High' && req.name.trim() !== '' && req.currency.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.currency.trim() !== ''
         );
-        console.log('🔍 Found HIGH priority SCT flights:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
+        console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
         
         // Process SCT Flights
         highPrioritySctFlights.forEach(sctReq => {
@@ -8496,6 +8496,17 @@ updates.forEach(update => {
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
                       console.log(`✅ SCT Request ${id} submitted for ${type}`);
+                    }}
+                    onToggleSctInclude={(id, type) => {
+                      const updater = (prev: SctRequest[]) => prev.map(r => 
+                        r.id === id ? { ...r, includeInBuild: !r.includeInBuild } : r
+                      );
+                      if (type === 'flight') setSctFlights(updater);
+                      else setSctFtds(updater);
+                      // Trigger priority sync to include the newly selected SCT event
+                      setTimeout(() => {
+                        syncPriorityEventsWithSctAndRemedial();
+                      }, 100);
                     }}
                     syllabusDetails={syllabusDetails}
                     scores={scores}

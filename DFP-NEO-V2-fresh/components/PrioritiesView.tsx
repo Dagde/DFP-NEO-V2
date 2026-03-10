@@ -46,6 +46,7 @@ interface PrioritiesViewProps {
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;
   onSubmitSctRequest: (id: string, type: 'flight' | 'ftd') => void;
+  onToggleSctInclude: (id: string, type: 'flight' | 'ftd') => void;
   syllabusDetails: SyllabusItemDetail[];
   scores?: Map<string, Score[]>; // Optional because it might not be passed initially but needed for new feature
   traineeLMPs?: Map<string, SyllabusItemDetail[]>; // Optional
@@ -95,6 +96,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onRemoveSctRequest,
   onUpdateSctRequest,
   onSubmitSctRequest,
+  onToggleSctInclude,
   syllabusDetails,
   scores = new Map(),
   traineeLMPs = new Map(),
@@ -559,6 +561,94 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Highest Priority Events</h2>
             <PriorityEventTable events={standardPriorityEvents} />
         </div>
+
+        {/* MEDIUM/LOW Priority SCT Events - User can manually include in build */}
+        {(sctFlights.filter(r => r.priority !== 'High').length > 0 || sctFtds.filter(r => r.priority !== 'High').length > 0) && (
+          <div className="section-sct-optional bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+              <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional SCT Events</h2>
+              <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
+
+              {/* SCT Flights - MEDIUM/LOW */}
+              {sctFlights.filter(r => r.priority !== 'High').length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT Flights</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                        <thead className="text-xs text-gray-400 uppercase">
+                            <tr>
+                                <th className="py-2 px-2 text-left">Name</th>
+                                <th className="py-2 px-2 text-left">Event</th>
+                                <th className="py-2 px-2 text-left">Type</th>
+                                <th className="py-2 px-2 text-left">Currency</th>
+                                <th className="py-2 px-2 text-left">Priority</th>
+                                <th className="py-2 px-2 text-center">Include in Build</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                            {sctFlights.filter(r => r.priority !== 'High').map(req => (
+                                <tr key={req.id} className="hover:bg-sky-900/50">
+                                    <td className="py-2 px-2 text-gray-300">{req.name}</td>
+                                    <td className="py-2 px-2 text-amber-300 font-semibold">{req.event}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.flightType}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.currency || 'N/A'}</td>
+                                    <td className={`py-2 px-2 font-semibold ${req.priority === 'Medium' ? 'text-orange-400' : 'text-green-400'}`}>{req.priority}</td>
+                                    <td className="py-2 px-2 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={req.includeInBuild || false}
+                                            onChange={() => onToggleSctInclude(req.id, 'flight')}
+                                            className="h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                                        />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* SCT FTDs - MEDIUM/LOW */}
+              {sctFtds.filter(r => r.priority !== 'High').length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT FTDs</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                        <thead className="text-xs text-gray-400 uppercase">
+                            <tr>
+                                <th className="py-2 px-2 text-left">Name</th>
+                                <th className="py-2 px-2 text-left">Event</th>
+                                <th className="py-2 px-2 text-left">Type</th>
+                                <th className="py-2 px-2 text-left">Currency</th>
+                                <th className="py-2 px-2 text-left">Priority</th>
+                                <th className="py-2 px-2 text-center">Include in Build</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                            {sctFtds.filter(r => r.priority !== 'High').map(req => (
+                                <tr key={req.id} className="hover:bg-sky-900/50">
+                                    <td className="py-2 px-2 text-gray-300">{req.name}</td>
+                                    <td className="py-2 px-2 text-amber-300 font-semibold">{req.event}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.flightType}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.currency || 'N/A'}</td>
+                                    <td className={`py-2 px-2 font-semibold ${req.priority === 'Medium' ? 'text-orange-400' : 'text-green-400'}`}>{req.priority}</td>
+                                    <td className="py-2 px-2 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={req.includeInBuild || false}
+                                            onChange={() => onToggleSctInclude(req.id, 'ftd')}
+                                            className="h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                                        />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+          </div>
+        )}
 
         <div className="section-remedial-queue bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Remedial Priority Queue</h2>
