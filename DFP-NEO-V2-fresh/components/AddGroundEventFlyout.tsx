@@ -257,9 +257,9 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                         </button>
                         <button
                             onClick={handleSave}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-black"
                         >
-                            Save Event
+                            <span>Save<br/>Event</span>
                         </button>
                     </div>
                 </div>
