@@ -485,40 +485,33 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     <p className="text-sm text-gray-400">{locationFullName} ({school})</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                {isArchiveMode && <span className="text-red-400 font-bold text-sm animate-pulse">ARCHIVE MODE ACTIVE</span>}
+              <div className="flex items-center gap-[1px]">
+                {isArchiveMode && <span className="text-red-400 font-bold text-sm animate-pulse mr-3">ARCHIVE MODE ACTIVE</span>}
                  <button
                     onClick={handleShowAddChoice}
-                    className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md flex items-center"
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
                     Add Staff
                 </button>
                 <button
                     onClick={toggleArchiveMode}
-                    className={`px-4 py-2 rounded-md transition-colors text-sm font-semibold shadow-md flex items-center ${isArchiveMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? 'text-green-500' : 'text-gray-300'}`}
                 >
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-                        <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
-                    </svg>
                     {isArchiveMode ? 'Done' : 'Archive'}
                 </button>
                 <button
                     onClick={() => setShowArchivedFlyout(true)}
-                    className="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 hover:text-white transition-colors text-sm font-semibold shadow-md"
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                 >
                     View Archived
                 </button>
-                   <AuditButton pageName="Staff" />
-                <div className="w-px h-8 bg-gray-600 mx-2"></div>
+                <div className="w-[5px]"></div>
+                <AuditButton pageName="Staff" />
                 <button
                     onClick={onClose}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                 >
-                    Back to Program
+                    Back
                 </button>
               </div>
             </div>
