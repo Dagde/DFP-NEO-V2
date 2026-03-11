@@ -10,9 +10,10 @@ lerna-debug.log*
 node_modules
 dist-ssr
 dist/
-dfp-neo-platform/public/flight-school-app/assets/
-dfp-neo-platform/public/flight-school-app/index.html
-dfp-neo-platform/public/flight-school-app/index-v2.html
+# Build assets are now tracked - do not ignore them
+# dfp-neo-platform/public/flight-school-app/assets/
+# dfp-neo-platform/public/flight-school-app/index.html
+# dfp-neo-platform/public/flight-school-app/index-v2.html
 *.local
 Screenshot*.jpg
 Screenshot*.png
