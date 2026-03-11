@@ -7985,9 +7985,10 @@ updates.forEach(update => {
                                    const dailyAverage = record.averageAvailability;
                                    const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
                                    
-                                   await fetch('/api/aircraft-availability-history', {
+                                   const response = await fetch('/api/aircraft-availability-history', {
                                        method: 'POST',
                                        headers: { 'Content-Type': 'application/json' },
+                                       credentials: 'include',
                                        body: JSON.stringify({
                                            date: record.date,
                                            dailyAverage,
@@ -7999,7 +8000,12 @@ updates.forEach(update => {
                                            notes: null
                                        })
                                    });
-                                   console.log('✅ Aircraft availability saved to database');
+                                   
+                                   if (response.ok) {
+                                       console.log('✅ Aircraft availability saved to database');
+                                   } else {
+                                       console.error('❌ Failed to save aircraft availability:', response.status, response.statusText);
+                                   }
                                } catch (error) {
                                    console.error('❌ Failed to save aircraft availability:', error);
                                }
