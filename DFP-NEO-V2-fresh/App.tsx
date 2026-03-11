@@ -7977,8 +7977,32 @@ updates.forEach(update => {
                            plannedAvailability={availableAircraftCount}
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
-                           onAvailabilityChange={(record: DailyAvailabilityRecord) => {
+                           onAvailabilityChange={async (record: DailyAvailabilityRecord) => {
                                console.log('Availability updated:', record);
+                               // Save to database
+                               try {
+                                   const totalAircraft = aircraftData.length;
+                                   const dailyAverage = record.averageAvailability;
+                                   const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
+                                   
+                                   await fetch('/api/aircraft-availability-history', {
+                                       method: 'POST',
+                                       headers: { 'Content-Type': 'application/json' },
+                                       body: JSON.stringify({
+                                           date: record.date,
+                                           dailyAverage,
+                                           plannedCount: record.snapshots.length > 0 ? record.snapshots[0].available : 0,
+                                           actualCount: null,
+                                           totalAircraft,
+                                           availabilityPct,
+                                           recordedBy: currentUserId || null,
+                                           notes: null
+                                       })
+                                   });
+                                   console.log('✅ Aircraft availability saved to database');
+                               } catch (error) {
+                                   console.error('❌ Failed to save aircraft availability:', error);
+                               }
                            }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}

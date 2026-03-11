@@ -127,16 +127,6 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
               Manage cancellation codes and view cancellation analytics and trends.
             </p>
           </div>
-          <button
-            onClick={() => {
-              const cancellationRecords = localStorage.getItem('cancellationRecords');
-              alert('cancellationRecords: ' + cancellationRecords);
-              console.log('cancellationRecords:', cancellationRecords);
-            }}
-            className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
-          >
-            Debug LocalStorage
-          </button>
         </div>
       </div>
 
