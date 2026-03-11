@@ -3612,6 +3612,70 @@ useEffect(() => {
         };
         loadSctRequests();
     }, [sessionUser?.userId]);
+
+    // Sync aircraft availability from localStorage to database on startup
+    useEffect(() => {
+        if (!sessionUser?.userId) return;
+        const syncAvailabilityToDb = async () => {
+            try {
+                // Scan localStorage for any aircraft-availability-YYYY-MM-DD keys
+                const keysToSync: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('aircraft-availability-')) {
+                        keysToSync.push(key);
+                    }
+                }
+                if (keysToSync.length === 0) return;
+                console.log('[AV] Found', keysToSync.length, 'aircraft availability records in localStorage to sync');
+                
+                for (const key of keysToSync) {
+                    try {
+                        const raw = localStorage.getItem(key);
+                        if (!raw) continue;
+                        const record = JSON.parse(raw);
+                        if (!record.date || !record.snapshots) continue;
+                        
+                        const totalAircraftCount = aircraftData.length || availableAircraftCount;
+                        const dailyAverage = record.averageAvailability ?? 0;
+                        const availabilityPct = totalAircraftCount > 0 ? (dailyAverage / totalAircraftCount) * 100 : 0;
+                        const plannedCount = record.snapshots.length > 0 ? record.snapshots[0].available : 0;
+                        const lastSnapshotAvailable = record.snapshots.length > 0 ? record.snapshots[record.snapshots.length - 1].available : null;
+
+                        const response = await fetch('/api/aircraft-availability-history', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                date: record.date,
+                                dailyAverage,
+                                plannedCount,
+                                actualCount: lastSnapshotAvailable,
+                                totalAircraft: totalAircraftCount,
+                                availabilityPct,
+                                recordedBy: sessionUser.userId,
+                                notes: null
+                            })
+                        });
+                        if (response.ok) {
+                            console.log('[AV] Synced availability for', record.date, 'to database');
+                        } else {
+                            const errText = await response.text();
+                            console.error('[AV] Failed to sync', record.date, ':', response.status, errText);
+                        }
+                    } catch (err) {
+                        console.error('[AV] Error syncing key', key, ':', err);
+                    }
+                }
+            } catch (err) {
+                console.error('[AV] Failed to sync aircraft availability to DB:', err);
+            }
+        };
+        // Small delay to allow other initialisation to complete first
+        const timer = setTimeout(syncAvailabilityToDb, 3000);
+        return () => clearTimeout(timer);
+    }, [sessionUser?.userId]);
+
     const [showSctRequest, setShowSctRequest] = useState(false);
     const [instructorForSct, setInstructorForSct] = useState<Instructor | null>(null);
     const [traineeForSct, setTraineeForSct] = useState<Trainee | null>(null);
