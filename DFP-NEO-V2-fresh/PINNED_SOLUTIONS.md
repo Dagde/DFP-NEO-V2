@@ -152,6 +152,27 @@ git push
 - Always verify changes appear in the bundled JavaScript files before committing
 - The build output goes to `/workspace/dist/` and must be copied to `public/flight-school-app/`
 
+### CRITICAL: .gitignore Was Blocking Deployments
+
+**Date:** March 12, 2026  
+**Issue:** The `.gitignore` file was ignoring `dfp-neo-platform/public/flight-school-app/assets/` and the HTML files, meaning compiled bundles were NEVER committed to git and NEVER deployed to Railway.
+
+**Fix Applied:**
+1. Commented out those lines in `.gitignore`
+2. Force-added current build assets with `git add -f`
+3. Now every `npm run build` will automatically track the new bundle
+
+**Correct workflow going forward:**
+```bash
+cd /workspace/DFP-NEO-V2-fresh
+# Make source changes
+npm run build
+# Build script auto-copies to public/flight-school-app/
+git add App.tsx components/... dfp-neo-platform/public/flight-school-app/
+git commit -m "feat: description"
+git push https://x-access-token:$GITHUB_TOKEN@github.com/Dagde/DFP-NEO-V2.git feature/comprehensive-build-algorithm
+```
+
 ### When to Use This Solution
 
 - Adding new components or features to the standalone app
