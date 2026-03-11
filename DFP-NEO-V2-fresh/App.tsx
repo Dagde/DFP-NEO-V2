@@ -7981,9 +7981,11 @@ updates.forEach(update => {
                                console.log('Availability updated:', record);
                                // Save to database
                                try {
-                                   const totalAircraft = aircraftData.length;
+                                   const totalAircraftCount = aircraftData.length;
                                    const dailyAverage = record.averageAvailability;
-                                   const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
+                                   const availabilityPct = totalAircraftCount > 0 ? (dailyAverage / totalAircraftCount) * 100 : 0;
+                                   const plannedCount = record.snapshots.length > 0 ? record.snapshots[0].available : availableAircraftCount;
+                                   const lastSnapshot = record.snapshots.length > 0 ? record.snapshots[record.snapshots.length - 1].available : null;
                                    
                                    const response = await fetch('/api/aircraft-availability-history', {
                                        method: 'POST',
@@ -7992,19 +7994,20 @@ updates.forEach(update => {
                                        body: JSON.stringify({
                                            date: record.date,
                                            dailyAverage,
-                                           plannedCount: record.snapshots.length > 0 ? record.snapshots[0].available : 0,
-                                           actualCount: null,
-                                           totalAircraft,
+                                           plannedCount,
+                                           actualCount: lastSnapshot,
+                                           totalAircraft: totalAircraftCount,
                                            availabilityPct,
-                                           recordedBy: currentUserId || null,
+                                           recordedBy: sessionUser?.userId || null,
                                            notes: null
                                        })
                                    });
                                    
                                    if (response.ok) {
-                                       console.log('✅ Aircraft availability saved to database');
+                                       console.log('✅ Aircraft availability saved to database for', record.date);
                                    } else {
-                                       console.error('❌ Failed to save aircraft availability:', response.status, response.statusText);
+                                       const errText = await response.text();
+                                       console.error('❌ Failed to save aircraft availability:', response.status, errText);
                                    }
                                } catch (error) {
                                    console.error('❌ Failed to save aircraft availability:', error);

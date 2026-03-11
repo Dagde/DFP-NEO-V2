@@ -18,20 +18,19 @@ export async function OPTIONS() {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const startDate = searchParams.get('startDate'); // YYYY-MM-DD
+    const endDate = searchParams.get('endDate');     // YYYY-MM-DD
 
-    // Build where clause
+    // For string date fields, Prisma string comparison works correctly with gte/lte
+    // since dates in YYYY-MM-DD format sort lexicographically
     const where: any = {};
 
-    if (startDate || endDate) {
-      where.date = {};
-      if (startDate) {
-        where.date.gte = startDate;
-      }
-      if (endDate) {
-        where.date.lte = endDate;
-      }
+    if (startDate && endDate) {
+      where.date = { gte: startDate, lte: endDate };
+    } else if (startDate) {
+      where.date = { gte: startDate };
+    } else if (endDate) {
+      where.date = { lte: endDate };
     }
 
     const records = await prisma.aircraftAvailabilityHistory.findMany({
@@ -43,7 +42,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching aircraft availability history:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch aircraft availability history' },
+      { error: 'Failed to fetch aircraft availability history', details: String(error) },
       { status: 500, headers: CORS_HEADERS }
     );
   } finally {
@@ -55,70 +54,56 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      date, 
-      dailyAverage, 
-      plannedCount, 
-      actualCount, 
-      totalAircraft, 
-      availabilityPct, 
-      recordedBy, 
-      notes 
+    const {
+      date,
+      dailyAverage,
+      plannedCount,
+      actualCount,
+      totalAircraft,
+      availabilityPct,
+      recordedBy,
+      notes
     } = body;
 
     if (!date) {
       return NextResponse.json(
         { error: 'date is required' },
-        { status: 400 }
+        { status: 400, headers: CORS_HEADERS }
       );
     }
 
-    // Check if record exists for this date
-    const existingRecord = await prisma.aircraftAvailabilityHistory.findUnique({
+    // Upsert - create or update based on unique date
+    const record = await prisma.aircraftAvailabilityHistory.upsert({
       where: { date },
+      update: {
+        dailyAverage: dailyAverage ?? 0,
+        plannedCount: plannedCount ?? 0,
+        actualCount: actualCount ?? null,
+        totalAircraft: totalAircraft ?? 0,
+        availabilityPct: availabilityPct ?? 0,
+        recordedBy: recordedBy ?? null,
+        notes: notes ?? null,
+      },
+      create: {
+        date,
+        dailyAverage: dailyAverage ?? 0,
+        plannedCount: plannedCount ?? 0,
+        actualCount: actualCount ?? null,
+        totalAircraft: totalAircraft ?? 0,
+        availabilityPct: availabilityPct ?? 0,
+        recordedBy: recordedBy ?? null,
+        notes: notes ?? null,
+      },
     });
 
-    let record;
-
-    if (existingRecord) {
-      // Update existing record
-      record = await prisma.aircraftAvailabilityHistory.update({
-        where: { date },
-        data: {
-          dailyAverage,
-          plannedCount,
-          actualCount,
-          totalAircraft,
-          availabilityPct,
-          recordedBy,
-          notes,
-          updatedAt: new Date(),
-        },
-      });
-    } else {
-      // Create new record
-      record = await prisma.aircraftAvailabilityHistory.create({
-        data: {
-          date,
-          dailyAverage: dailyAverage ?? 0,
-          plannedCount: plannedCount ?? 0,
-          actualCount,
-          totalAircraft: totalAircraft ?? 0,
-          availabilityPct: availabilityPct ?? 0,
-          recordedBy,
-          notes,
-        },
-      });
-    }
-
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      record 
+      record
     }, { headers: CORS_HEADERS });
   } catch (error) {
     console.error('Error saving aircraft availability history:', error);
     return NextResponse.json(
-      { error: 'Failed to save aircraft availability history' },
+      { error: 'Failed to save aircraft availability history', details: String(error) },
       { status: 500, headers: CORS_HEADERS }
     );
   } finally {
