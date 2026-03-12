@@ -290,6 +290,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     setTodaysAverageLoading(true);
     try {
       const today = getLocalDateString();
+      console.log(`[AV-REFRESH] Refreshing average for date: ${today}, local time: ${new Date().getHours()}:${new Date().getMinutes()}`);
       const recalcRes = await fetch('/api/aircraft-availability-recalculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -412,6 +413,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       setTodaysAverageLoading(true);
       try {
         const today = getLocalDateString();
+        console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${new Date().getHours()}:${new Date().getMinutes()}`);
         
         // First, trigger a recalculation via the recalculate endpoint
         // This will rebuild the daily summary from raw events

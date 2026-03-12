@@ -1033,9 +1033,27 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
       return null;
     }
     
-    // Convert timestamp to minutes-since-midnight
+    // Convert timestamp to minutes-since-midnight in CLIENT'S LOCAL TIME
+    // Timestamps are stored in UTC, but we need to compare them to local flying window times
+    // We calculate the timezone offset from the client's current local time vs UTC
+    const getClientLocalMinutes = (ts) => {
+      const d = new Date(ts);
+      const now = new Date();
+      // Calculate offset: client's local time - UTC time (in minutes)
+      // clientCurrentTimeMinutes is the client's local time in minutes
+      // Current UTC time in minutes
+      const currentUTCMonth = now.getUTCHours() * 60 + now.getUTCMinutes();
+      // If we have client time, we can calculate offset
+      // For now, use a simpler approach: assume timestamps in DB are in local time
+      // This works if the server and client are in the same timezone
+      // OR we use the date string which is already in local format
+      return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+    };
+    
+    // Alternative: Use the date string's time portion if available
     const toMinutes = (ts) => {
       const d = new Date(ts);
+      // Use local time methods since we want to compare to local flying window
       return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
     };
     
@@ -1053,12 +1071,20 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     // If first event is after window start, we have no data for the start of window
     // In this case, we'll use the first event's value for the beginning
     
+    console.log(`[AV-EVENTS] Starting calculation with ${events.length} events`);
+    console.log(`[AV-EVENTS] Window: ${windowStartMin}min (${Math.floor(windowStartMin/60)}:${String(windowStartMin%60).padStart(2,'0')}) to ${windowEndMin}min (${Math.floor(windowEndMin/60)}:${String(windowEndMin%60).padStart(2,'0')})`);
+    console.log(`[AV-EVENTS] Effective end: ${effectiveEndMin}min (${Math.floor(effectiveEndMin/60)}:${String(effectiveEndMin%60).padStart(2,'0')}), Elapsed: ${elapsedMinutes}min`);
+    
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
       const evMinutes = toMinutes(ev.timestamp);
+      console.log(`[AV-EVENTS] Event ${i}: time=${evMinutes}min (${Math.floor(evMinutes/60)}:${String(Math.floor(evMinutes%60)).padStart(2,'0')}), available=${ev.availableCount}`);
       
       // Skip events after the effective end time
-      if (evMinutes >= effectiveEndMin) continue;
+      if (evMinutes >= effectiveEndMin) {
+        console.log(`[AV-EVENTS]   Skipping - after effective end time`);
+        continue;
+      }
       
       // If event is before window start, just update last known availability
       if (evMinutes < windowStartMin) {
@@ -1082,6 +1108,8 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
       lastKnownAvailability = ev.availableCount;
       lastKnownTime = evMinutes;
     }
+    
+    console.log(`[AV-EVENTS] After loop: weightedSum=${weightedSum}, coveredMinutes=${coveredMinutes}, lastKnownAvailability=${lastKnownAvailability}, lastKnownTime=${lastKnownTime}`);
     
     // Fill remaining time from last known availability to window end
     // BUT: Only if we have actual events within or before the window
@@ -1120,6 +1148,7 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     }
     
     console.log(`[AV-EVENTS] 📊 Calculation complete: weightedSum=${weightedSum}, coveredMinutes=${coveredMinutes}, elapsedMinutes=${elapsedMinutes}`);
+    console.log(`[AV-EVENTS] 📊 Final: dailyAverage=${dailyAverage.toFixed(2)}, plannedCount=${plannedCount}, actualCount=${actualCount}`);
     
     // Divide by elapsed time, not total window duration
     const dailyAverage = elapsedMinutes > 0 ? weightedSum / elapsedMinutes : 0;

@@ -1,10 +1,14 @@
 ## Tasks
 
-### 1. Fix Today's Average to update in real-time
-- [x] The date should always show the current date
-- [x] Fixed: Use correct /api/aircraft-availability-recalculate endpoint
-- [x] Added clientLocalHour/clientLocalMinute to recalculate endpoint
-- [x] When no events for today, use last known availability from previous days
+### 1. Fix the refresh button visibility
+- [ ] Check if the button is being rendered correctly
+- [ ] Ensure the build was deployed
 
-### 2. Commit and verify
-- [x] Commit changes
+### 2. Fix the average calculation
+- [ ] Fix timezone mismatch in toMinutes function
+- [ ] Ensure timestamps are compared consistently
+- [ ] Verify the calculation logic is correct
+
+### 3. Test and commit
+- [ ] Test the changes
+- [ ] Commit and push
