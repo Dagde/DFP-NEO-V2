@@ -285,6 +285,41 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     return () => clearInterval(interval);
   }, []);
 
+  // Function to manually refresh today's average
+  const refreshTodaysAverage = async () => {
+    setTodaysAverageLoading(true);
+    try {
+      const today = getLocalDateString();
+      const recalcRes = await fetch('/api/aircraft-availability-recalculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          date: today,
+          clientLocalHour: new Date().getHours(),
+          clientLocalMinute: new Date().getMinutes(),
+        }),
+      });
+      
+      if (recalcRes.ok) {
+        const recalcData = await recalcRes.json();
+        if (recalcData.summary) {
+          const recordWithDate = {
+            ...recalcData.summary,
+            date: today
+          };
+          setTodaysAverageWithMetadata(recordWithDate);
+        } else {
+          setTodaysAverageWithMetadata(null);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to refresh today's average:", err);
+    } finally {
+      setTodaysAverageLoading(false);
+    }
+  };
+
 
 
   const getDateRange = useCallback((period: TimePeriod): { start: Date; end: Date } => {
@@ -564,11 +599,23 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           </div>
         </div>
         <div className="bg-gradient-to-br from-amber-900/40 to-amber-800/20 rounded-lg p-4 border border-amber-700/50">
-          <div className="flex items-center gap-2 mb-1">
-            <svg className="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-xs text-gray-400 uppercase tracking-wider">Today's Average (Flying Window)</span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <svg className="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Today's Average (Flying Window)</span>
+            </div>
+            <button
+              onClick={refreshTodaysAverage}
+              disabled={todaysAverageLoading}
+              className="p-1.5 text-gray-400 hover:text-amber-400 hover:bg-amber-900/30 rounded transition-colors disabled:opacity-50"
+              title="Refresh to current time"
+            >
+              <svg className={`w-4 h-4 ${todaysAverageLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
           {todaysAverageLoading ? (
             <div className="flex items-center gap-2">
