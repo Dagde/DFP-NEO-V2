@@ -3621,6 +3621,20 @@ useEffect(() => {
         return `${h.toString().padStart(2, '0')}${m.toString().padStart(2, '0')}`;
     };
 
+    // Helper: get the correct API base URL for cross-origin deployments
+    const getApiBaseUrl = (): string => {
+        const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
+        const currentOrigin = window.location.origin;
+        
+        // If we're on the Railway backend, use relative URL
+        if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
+            return '/api';
+        }
+        
+        // Otherwise, use absolute URL to the Railway backend
+        return `${railwayBackend}/api`;
+    };
+
     // Helper: post an aircraft availability event to the database
     const postAvailabilityEvent = async (
         availableCount: number,
@@ -3633,6 +3647,7 @@ useEffect(() => {
         console.log(`\n${'='.repeat(60)}`);
         console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
         
+        const apiBase = getApiBaseUrl();
         const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
         const windowStart = formatWindowTime(flyingStartTime);
         const windowEnd   = formatWindowTime(flyingEndTime);
@@ -3647,7 +3662,8 @@ useEffect(() => {
             available: `${availableCount}/${totalAircraftCount}`,
             window: `${windowStart}-${windowEnd}`,
             timestamp: ts.toISOString(),
-            sessionUser: sessionUser?.userId ?? 'not logged in'
+            sessionUser: sessionUser?.userId ?? 'not logged in',
+            apiBase
         });
 
         const requestBody = {
@@ -3663,13 +3679,13 @@ useEffect(() => {
         };
         
         console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
-        console.log(`[AV] 🌐 API URL: /api/aircraft-availability-events`);
+        console.log(`[AV] 🌐 API URL: ${apiBase}/aircraft-availability-events`);
 
         try {
             console.log(`[AV] 🚀 Starting fetch...`);
             const fetchStart = Date.now();
             
-            const res = await fetch('/api/aircraft-availability-events', {
+            const res = await fetch(`${apiBase}/aircraft-availability-events`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -3712,6 +3728,8 @@ useEffect(() => {
     useEffect(() => {
         (window as any).testAvailabilityAPI = async () => {
             console.log('\n🧪 TESTING AVAILABILITY API FROM CONSOLE');
+            console.log('🧪 Current origin:', window.location.origin);
+            console.log('🧪 API Base URL:', getApiBaseUrl());
             const result = await postAvailabilityEvent(99, 'debug_test', undefined, 'Console test');
             console.log('🧪 Test result:', result);
             return result;
@@ -3719,8 +3737,16 @@ useEffect(() => {
         
         (window as any).debugAvailabilityDB = async () => {
             console.log('\n🧪 DEBUGGING AVAILABILITY DATABASE');
+            const apiBase = getApiBaseUrl();
+            const url = `${apiBase}/aircraft-availability-debug`;
+            console.log('🧪 API URL:', url);
+            console.log('🧪 Current origin:', window.location.origin);
             try {
-                const res = await fetch('/api/aircraft-availability-debug');
+                const res = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 console.log('🧪 Response status:', res.status, res.statusText);
                 console.log('🧪 Response headers:', Object.fromEntries(res.headers.entries()));
                 
@@ -3738,7 +3764,8 @@ useEffect(() => {
                         status: res.status,
                         statusText: res.statusText,
                         responseText: text.substring(0, 2000),
-                        parseError: String(parseErr)
+                        parseError: String(parseErr),
+                        url: url
                     };
                 }
                 
@@ -3746,24 +3773,35 @@ useEffect(() => {
                 return data;
             } catch (e) {
                 console.error('🧪 Debug failed:', e);
-                return { error: String(e) };
+                return { error: String(e), url };
             }
         };
         
         (window as any).forceInsertAvailability = async (count: number = 15) => {
             console.log('\n🧪 FORCE INSERTING AVAILABILITY RECORD');
+            const apiBase = getApiBaseUrl();
+            const url = `${apiBase}/aircraft-availability-debug`;
+            console.log('🧪 API URL:', url);
             try {
-                const res = await fetch('/api/aircraft-availability-debug', {
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ availableCount: count })
                 });
-                const data = await res.json();
+                const text = await res.text();
+                console.log('🧪 Response text:', text.substring(0, 500));
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    return { error: 'Not JSON', responseText: text.substring(0, 2000), url };
+                }
                 console.log('🧪 Force insert result:', data);
                 return data;
             } catch (e) {
                 console.error('🧪 Force insert failed:', e);
-                return { error: String(e) };
+                return { error: String(e), url };
             }
         };
         
@@ -3800,7 +3838,8 @@ useEffect(() => {
 
             console.log(`[AV] Running recovery check for ${todayStr}`);
             try {
-                const recovRes = await fetch('/api/aircraft-availability-history', {
+                const apiBase = getApiBaseUrl();
+                const recovRes = await fetch(`${apiBase}/aircraft-availability-history`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -8281,8 +8320,10 @@ updates.forEach(update => {
                                console.log('[AV] 👤 Session user:', sessionUser?.userId ?? 'not logged in');
 
                                try {
-                                   console.log('[AV] 🚀 Starting fetch to /api/aircraft-availability-events...');
-                                   const res = await fetch('/api/aircraft-availability-events', {
+                                   const apiBase = getApiBaseUrl();
+                                   const apiUrl = `${apiBase}/aircraft-availability-events`;
+                                   console.log('[AV] 🚀 Starting fetch to', apiUrl);
+                                   const res = await fetch(apiUrl, {
                                        method: 'POST',
                                        headers: { 'Content-Type': 'application/json' },
                                        credentials: 'include',

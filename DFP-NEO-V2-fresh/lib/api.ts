@@ -1,8 +1,32 @@
 // API Client for fetching data from backend
 // Uses plain objects (NOT Maps) for React compatibility
 
-// API base URL - relative to the Next.js platform (same origin when served as iframe)
-const API_BASE = '/api';
+// API base URL - can be configured via environment variable for cross-origin deployments
+// Default: '/api' for same-origin (Next.js serves frontend at /flight-school-app/)
+// Set VITE_API_BASE_URL for cross-origin (e.g., 'https://api.example.com/api')
+const getApiBase = (): string => {
+  // Check for environment variable (injected at build time)
+  const envApiBase = (window as any).VITE_API_BASE_URL || (window as any).DFP_API_BASE;
+  if (envApiBase) {
+    console.log('🌐 API Base URL from environment:', envApiBase);
+    return envApiBase;
+  }
+  
+  // Check for current origin - if we're on the Railway backend, use relative
+  const currentOrigin = window.location.origin;
+  const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
+  
+  if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
+    console.log('🌐 API Base URL: relative (same origin as backend)');
+    return '/api';
+  }
+  
+  // If accessing from different origin, use the Railway backend URL
+  console.log('🌐 API Base URL: absolute (cross-origin to Railway backend)');
+  return `${railwayBackend}/api`;
+};
+
+const API_BASE = getApiBase();
 
 interface FetchResult<T> {
   success: boolean;
