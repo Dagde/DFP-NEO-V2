@@ -902,28 +902,70 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     };
     
     // Calculate time-weighted average
+    // Key insight: Events can occur before, during, or after the flying window.
+    // We need to track the "current" availability as of any point in time.
+    
     let weightedSum = 0;
     let coveredMinutes = 0;
+    
+    // Find the last event before the window starts - this is our starting availability
+    let lastKnownAvailability = events.length > 0 ? events[0].availableCount : 0;
+    let lastKnownTime = events.length > 0 ? toMinutes(events[0].timestamp) : 0;
+    
+    // If first event is after window start, we have no data for the start of window
+    // In this case, we'll use the first event's value for the beginning
     
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
       const evMinutes = toMinutes(ev.timestamp);
-      const nextMinutes = i + 1 < events.length ? toMinutes(events[i + 1].timestamp) : windowEndMin;
       
-      const segStart = Math.max(evMinutes, windowStartMin);
-      const segEnd = Math.min(nextMinutes, windowEndMin);
+      // Skip events after the window ends
+      if (evMinutes >= windowEndMin) continue;
+      
+      // If event is before window start, just update last known availability
+      if (evMinutes < windowStartMin) {
+        lastKnownAvailability = ev.availableCount;
+        lastKnownTime = evMinutes;
+        continue;
+      }
+      
+      // Event is within the window (windowStartMin <= evMinutes < windowEndMin)
+      // Calculate the segment from lastKnownTime to this event
+      const segStart = Math.max(lastKnownTime, windowStartMin);
+      const segEnd = evMinutes;
       
       if (segEnd > segStart) {
         const duration = segEnd - segStart;
-        weightedSum += ev.availableCount * duration;
+        weightedSum += lastKnownAvailability * duration;
         coveredMinutes += duration;
       }
+      
+      // Update last known
+      lastKnownAvailability = ev.availableCount;
+      lastKnownTime = evMinutes;
     }
     
-    // Fill remaining time with last known value
-    if (coveredMinutes < totalWindowMinutes && events.length > 0) {
-      const uncoveredMinutes = totalWindowMinutes - coveredMinutes;
-      weightedSum += events[events.length - 1].availableCount * uncoveredMinutes;
+    // Fill remaining time from last known availability to window end
+    const remainingStart = Math.max(lastKnownTime, windowStartMin);
+    if (remainingStart < windowEndMin && coveredMinutes < totalWindowMinutes) {
+      const remainingDuration = windowEndMin - remainingStart;
+      weightedSum += lastKnownAvailability * remainingDuration;
+      coveredMinutes += remainingDuration;
+    }
+    
+    // If no events within the window, use the last known availability for the entire window
+    if (coveredMinutes === 0 && events.length > 0) {
+      // Find the last event before or at window start
+      const eventsBeforeWindow = events.filter(e => toMinutes(e.timestamp) <= windowStartMin);
+      if (eventsBeforeWindow.length > 0) {
+        const lastBeforeWindow = eventsBeforeWindow[eventsBeforeWindow.length - 1];
+        weightedSum = lastBeforeWindow.availableCount * totalWindowMinutes;
+        coveredMinutes = totalWindowMinutes;
+      } else {
+        // No events before window, use first event's value
+        weightedSum = events[0].availableCount * totalWindowMinutes;
+        coveredMinutes = totalWindowMinutes;
+      }
     }
     
     const dailyAverage = totalWindowMinutes > 0 ? weightedSum / totalWindowMinutes : 0;
