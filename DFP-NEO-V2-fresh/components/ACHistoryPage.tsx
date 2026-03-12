@@ -10,12 +10,16 @@ interface ACHistoryPageProps {
   currentUserRole: string;
   cancellationRecords: CancellationRecord[];
   currentUserId?: string;
+  currentAircraftAvailable?: number;
+  totalAircraft?: number;
 }
 
 const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   currentUserRole,
   cancellationRecords,
   currentUserId,
+  currentAircraftAvailable = 0,
+  totalAircraft = 24,
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
@@ -156,6 +160,8 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
       {/* AC History - Aircraft Availability */}
       <ACHistoryAircraftAvailability
         currentUserId={currentUserId}
+        currentAircraftAvailable={currentAircraftAvailable}
+        totalAircraft={totalAircraft}
       />
     </div>
   );

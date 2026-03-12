@@ -18,6 +18,8 @@ interface AvailabilityRecord {
 
 interface ACHistoryAircraftAvailabilityProps {
   currentUserId?: string;
+  currentAircraftAvailable?: number;
+  totalAircraft?: number;
 }
 
 // ─── Tiny SVG line/area chart ────────────────────────────────────────────────
@@ -227,12 +229,16 @@ const AvailabilityChart: React.FC<{ data: ChartPoint[]; totalAircraft: number }>
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps> = ({
   currentUserId,
+  currentAircraftAvailable = 0,
+  totalAircraft = 24,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const [records, setRecords] = useState<AvailabilityRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(false);
+  const [todaysAverage, setTodaysAverage] = useState<number | null>(null);
+  const [todaysAverageLoading, setTodaysAverageLoading] = useState(false);
 
   const getDateRange = useCallback((period: TimePeriod): { start: Date; end: Date } => {
     const now = new Date();
@@ -308,6 +314,31 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     fetchRecords();
   }, [fetchRecords]);
 
+  // Fetch today's average from the database
+  useEffect(() => {
+    const fetchTodaysAverage = async () => {
+      setTodaysAverageLoading(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const res = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.records && data.records.length > 0) {
+            setTodaysAverage(data.records[0].dailyAverage);
+          } else {
+            setTodaysAverage(null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch today\'s average:', err);
+        setTodaysAverage(null);
+      } finally {
+        setTodaysAverageLoading(false);
+      }
+    };
+    fetchTodaysAverage();
+  }, []);
+
   const formatPeriodLabel = (period: TimePeriod): string => {
     const labels: Record<TimePeriod, string> = {
       week: 'Past Week',
@@ -361,9 +392,9 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     [records]
   );
 
-  const totalAircraft = records.length > 0
+  const historicalTotalAircraft = records.length > 0
     ? Math.max(...records.map(r => r.totalAircraft))
-    : 15;
+    : totalAircraft;
 
   const getTrendIcon = (trend: number) => {
     if (trend > 2) return <span className="text-green-400">↑</span>;
@@ -398,6 +429,55 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           >
             {showTable ? 'Hide Table' : 'Show Table'}
           </button>
+        </div>
+      </div>
+
+      {/* Current Status Display - Live aircraft count and today's average */}
+      <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="bg-gradient-to-br from-sky-900/40 to-sky-800/20 rounded-lg p-4 border border-sky-700/50">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+            <span className="text-xs text-gray-400 uppercase tracking-wider">Current Available</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold text-sky-400">{currentAircraftAvailable}</span>
+            <span className="text-sm text-gray-400">of {totalAircraft} aircraft</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            {((currentAircraftAvailable / totalAircraft) * 100).toFixed(0)}% availability
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-amber-900/40 to-amber-800/20 rounded-lg p-4 border border-amber-700/50">
+          <div className="flex items-center gap-2 mb-1">
+            <svg className="w-3 h-3 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xs text-gray-400 uppercase tracking-wider">Today's Average (Flying Window)</span>
+          </div>
+          {todaysAverageLoading ? (
+            <div className="flex items-center gap-2">
+              <svg className="animate-spin h-5 w-5 text-amber-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              <span className="text-gray-400">Loading...</span>
+            </div>
+          ) : todaysAverage !== null ? (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-amber-400">{todaysAverage.toFixed(2)}</span>
+                <span className="text-sm text-gray-400">avg aircraft</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {((todaysAverage / totalAircraft) * 100).toFixed(0)}% time-weighted availability
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-xl font-bold text-gray-500">—</div>
+              <div className="text-xs text-gray-600 mt-1">No data recorded today yet</div>
+            </>
+          )}
         </div>
       </div>
 
@@ -480,7 +560,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           <div className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider">
             Daily Average Aircraft Available — {formatPeriodLabel(selectedPeriod)}
           </div>
-          <AvailabilityChart data={chartData} totalAircraft={totalAircraft} />
+          <AvailabilityChart data={chartData} totalAircraft={historicalTotalAircraft} />
         </div>
       )}
 

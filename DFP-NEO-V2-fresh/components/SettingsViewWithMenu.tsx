@@ -60,6 +60,8 @@ interface SettingsViewWithMenuProps {
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
     cancellationRecords: CancellationRecord[];
     cancellationCodes: CancellationCode[];
+    currentAircraftAvailable?: number;
+    totalAircraft?: number;
 }
 
 type SettingsSection =

@@ -78,6 +78,8 @@ interface SettingsViewProps {
     onUpdateTraineeLMPs: (lmpMap: Map<string, SyllabusItemDetail[]>) => void;
     cancellationRecords?: CancellationRecord[];
     cancellationCodes?: CancellationCode[];
+    currentAircraftAvailable?: number;
+    totalAircraft?: number;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -411,7 +413,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setCourseColors,
     onUpdateTraineeLMPs,
     cancellationRecords,
-    cancellationCodes
+    cancellationCodes,
+    currentAircraftAvailable,
+    totalAircraft
 }) => {
     // --- STATE ---
     
@@ -1471,9 +1475,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {/* AC History */}
                 {shouldShowSection('validation') && (
                 <div className="space-y-6">
-                   <ACHistoryPage 
+                   <ACHistoryPage
                        currentUserRole={currentUserPermission}
                        cancellationRecords={cancellationRecords || []}
+                       currentAircraftAvailable={currentAircraftAvailable}
+                       totalAircraft={totalAircraft}
                    />
                 </div>
                 )}
