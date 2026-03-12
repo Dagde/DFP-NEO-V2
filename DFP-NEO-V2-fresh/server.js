@@ -1184,12 +1184,42 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     
     console.log(`[AV-RECALC] 📅 Date: ${date}, Window: ${flyingWindowStart}-${flyingWindowEnd}`);
     
-    // Get event count
+    // Get events with details
     const events = await db.$queryRawUnsafe(
-      `SELECT COUNT(*)::int as count FROM "AircraftAvailabilityEvent" WHERE "date" = $1`,
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" ASC`,
       date
     );
-    console.log(`[AV-RECALC] 📊 Events for ${date}: ${events[0]?.count || 0}`);
+    console.log(`[AV-RECALC] 📊 Events for ${date}: ${events.length}`);
+    
+    // Parse window times
+    const parseWindowTime = (s, defaultHour) => {
+      if (!s) return defaultHour * 60;
+      const clean = String(s).replace(':', '');
+      const h = parseInt(clean.slice(0, -2), 10) || defaultHour;
+      const m = parseInt(clean.slice(-2), 10) || 0;
+      return h * 60 + m;
+    };
+    
+    const windowStartMin = parseWindowTime(flyingWindowStart, 8);
+    const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
+    
+    // Convert timestamp to minutes
+    const toMinutes = (ts) => {
+      const d = new Date(ts);
+      return d.getUTCHours() * 60 + d.getUTCMinutes();
+    };
+    
+    // Categorize events
+    const eventsBeforeWindow = events.filter(e => toMinutes(e.timestamp) < windowStartMin);
+    const eventsInWindow = events.filter(e => {
+      const m = toMinutes(e.timestamp);
+      return m >= windowStartMin && m < windowEndMin;
+    });
+    const eventsAfterWindow = events.filter(e => toMinutes(e.timestamp) >= windowEndMin);
+    
+    console.log(`[AV-RECALC] 📊 Events before window: ${eventsBeforeWindow.length}`);
+    console.log(`[AV-RECALC] 📊 Events in window: ${eventsInWindow.length}`);
+    console.log(`[AV-RECALC] 📊 Events after window: ${eventsAfterWindow.length}`);
     
     // Recalculate summary
     const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, 'recalc_endpoint');
@@ -1206,13 +1236,18 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       success: true,
       requestId,
       date,
-      flyingWindow: { start: flyingWindowStart, end: flyingWindowEnd },
-      eventCount: events[0]?.count || 0,
+      flyingWindow: { start: flyingWindowStart, end: flyingWindowEnd, startMin: windowStartMin, endMin: windowEndMin },
+      events: {
+        total: events.length,
+        beforeWindow: eventsBeforeWindow.length,
+        inWindow: eventsInWindow.length,
+        afterWindow: eventsAfterWindow.length
+      },
       summary
     });
   } catch (error) {
     console.error(`[AV-RECALC] ❌ Recalculate failed:`, error);
-    res.status(500).json({ success: false, requestId, error: error.message });
+    res.status(500).json({ success: false, requestId, error: error.message, stack: error.stack });
   }
 });
 
