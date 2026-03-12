@@ -47,17 +47,20 @@ async function ensureAircraftAvailabilityTable(db) {
   try {
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "AircraftAvailabilityHistory" (
-        "id"              TEXT NOT NULL,
-        "date"            TEXT NOT NULL,
-        "dailyAverage"    DOUBLE PRECISION NOT NULL,
-        "plannedCount"    INTEGER NOT NULL,
-        "actualCount"     INTEGER,
-        "totalAircraft"   INTEGER NOT NULL,
-        "availabilityPct" DOUBLE PRECISION NOT NULL,
-        "recordedBy"      TEXT,
-        "notes"           TEXT,
-        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "id"                TEXT NOT NULL,
+        "date"              TEXT NOT NULL,
+        "dailyAverage"      DOUBLE PRECISION NOT NULL,
+        "plannedCount"      INTEGER NOT NULL,
+        "actualCount"       INTEGER,
+        "totalAircraft"     INTEGER NOT NULL,
+        "availabilityPct"   DOUBLE PRECISION NOT NULL,
+        "flyingWindowStart" TEXT,
+        "flyingWindowEnd"   TEXT,
+        "recordedBy"        TEXT,
+        "notes"             TEXT,
+        "lastCalculatedAt"  TIMESTAMP(3),
+        "createdAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"         TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "AircraftAvailabilityHistory_pkey" PRIMARY KEY ("id")
       );
     `);
@@ -73,6 +76,23 @@ async function ensureAircraftAvailabilityTable(db) {
       CREATE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_createdAt_idx"
       ON "AircraftAvailabilityHistory"("createdAt");
     `);
+    
+    // Add missing columns if table already exists
+    const addColumnIfMissing = async (columnName, columnType) => {
+      try {
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "AircraftAvailabilityHistory" 
+          ADD COLUMN IF NOT EXISTS "${columnName}" ${columnType}
+        `);
+      } catch (err) {
+        // Column might already exist, ignore error
+      }
+    };
+    
+    await addColumnIfMissing('flyingWindowStart', 'TEXT');
+    await addColumnIfMissing('flyingWindowEnd', 'TEXT');
+    await addColumnIfMissing('lastCalculatedAt', 'TIMESTAMP(3)');
+    
     console.log('✅ AircraftAvailabilityHistory table ready');
   } catch (err) {
     console.error('❌ Failed to ensure AircraftAvailabilityHistory table:', err.message);
