@@ -1017,7 +1017,8 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     return { date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct };
   } catch (err) {
     console.error(`[AV-EVENTS] ❌ Failed to recalculate summary:`, err);
-    return null;
+    // Throw the error so caller can see it
+    throw err;
   }
 }
 
@@ -1221,13 +1222,25 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     console.log(`[AV-RECALC] 📊 Events in window: ${eventsInWindow.length}`);
     console.log(`[AV-RECALC] 📊 Events after window: ${eventsAfterWindow.length}`);
     
-    // Recalculate summary
-    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, 'recalc_endpoint');
+    // Recalculate summary with detailed error capture
+    let summary = null;
+    let summaryError = null;
+    
+    try {
+      summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, 'recalc_endpoint');
+    } catch (err) {
+      summaryError = {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      };
+      console.error(`[AV-RECALC] ❌ Summary calculation error:`, err);
+    }
     
     if (summary) {
       console.log(`[AV-RECALC] ✅ Summary calculated:`, summary);
     } else {
-      console.log(`[AV-RECALC] ⚠️ No summary generated (no events?)`);
+      console.log(`[AV-RECALC] ⚠️ No summary generated`);
     }
     
     console.log(`${'='.repeat(80)}\n`);
@@ -1243,7 +1256,8 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
         inWindow: eventsInWindow.length,
         afterWindow: eventsAfterWindow.length
       },
-      summary
+      summary,
+      summaryError
     });
   } catch (error) {
     console.error(`[AV-RECALC] ❌ Recalculate failed:`, error);
