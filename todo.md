@@ -1,15 +1,8 @@
-# Settings Page Redesign - COMPLETED
+# TODO: Aircraft Availability Database Debug
 
-## Completed Tasks
-- [x] Add top tabs for categories: Airmanship, Preparation, Technique, Elements
-- [x] Add secondary left menu showing sections within selected category
-- [x] Remove icons from menu
-- [x] Reduce menu width (from w-64 to w-40)
-- [x] Verify build compiles successfully
-- [x] Commit and push changes
-
-## Category Structure
-- **Airmanship**: Scoring Matrix, Currencies, SCT Events, Event Limits
-- **Preparation**: Data Loaders, Data Sources, User List, Staff Database, Trainee Database, Staff MockData, Trainee MockData, Staff Combined Data
-- **Technique**: Duty & Turnaround, Business Rules, Permissions
-- **Elements**: AC History, Timezone, Location, Units
+## Tasks
+- [ ] Add comprehensive tracking to frontend onAvailabilityChange callback
+- [ ] Add detailed logging to API route /api/aircraft-availability-events
+- [ ] Add detailed logging to API route /api/aircraft-availability-history
+- [ ] Add database connection verification
+- [ ] Test and verify data flow end-to-end

@@ -3628,7 +3628,11 @@ useEffect(() => {
         totalAircraftOverride?: number,
         notesOverride?: string,
         timestampOverride?: Date
-    ): Promise<void> => {
+    ): Promise<{ success: boolean; data?: any; error?: string }> => {
+        const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
+        
         const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
         const windowStart = formatWindowTime(flyingStartTime);
         const windowEnd   = formatWindowTime(flyingEndTime);
@@ -3636,44 +3640,118 @@ useEffect(() => {
         const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         const ts = timestampOverride ?? new Date();
 
-        console.log(
-            `[AV] Posting event: type=${changeType} date=${dateStr} ` +
-            `available=${availableCount}/${totalAircraftCount} ` +
-            `window=${windowStart}-${windowEnd} ts=${ts.toISOString()}`
-        );
+        console.log(`[AV] 📋 Event details:`, {
+            requestId,
+            type: changeType,
+            date: dateStr,
+            available: `${availableCount}/${totalAircraftCount}`,
+            window: `${windowStart}-${windowEnd}`,
+            timestamp: ts.toISOString(),
+            sessionUser: sessionUser?.userId ?? 'not logged in'
+        });
+
+        const requestBody = {
+            timestamp: ts.toISOString(),
+            date: dateStr,
+            availableCount,
+            totalAircraft: totalAircraftCount,
+            changeType,
+            recordedBy: sessionUser?.userId ?? null,
+            notes: notesOverride ?? null,
+            flyingWindowStart: windowStart,
+            flyingWindowEnd:   windowEnd,
+        };
+        
+        console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
+        console.log(`[AV] 🌐 API URL: /api/aircraft-availability-events`);
 
         try {
+            console.log(`[AV] 🚀 Starting fetch...`);
+            const fetchStart = Date.now();
+            
             const res = await fetch('/api/aircraft-availability-events', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    timestamp: ts.toISOString(),
-                    date: dateStr,
-                    availableCount,
-                    totalAircraft: totalAircraftCount,
-                    changeType,
-                    recordedBy: sessionUser?.userId ?? null,
-                    notes: notesOverride ?? null,
-                    flyingWindowStart: windowStart,
-                    flyingWindowEnd:   windowEnd,
-                })
+                body: JSON.stringify(requestBody)
             });
+            
+            const fetchDuration = Date.now() - fetchStart;
+            console.log(`[AV] ⏱️ Fetch completed in ${fetchDuration}ms`);
+            console.log(`[AV] 📥 Response status: ${res.status} ${res.statusText}`);
+            console.log(`[AV] 📥 Response headers:`, Object.fromEntries(res.headers.entries()));
+            
             if (res.ok) {
                 const data = await res.json();
+                console.log(`[AV] ✅ Response data:`, data);
                 if (data.skipped) {
-                    console.log(`[AV] Event skipped (${data.reason}): no change in available count`);
+                    console.log(`[AV] ⏭️ Event skipped: ${data.reason}`);
                 } else {
-                    console.log(`[AV] ✅ Event recorded: ${changeType} available=${availableCount}`);
+                    console.log(`[AV] ✅ Event recorded successfully!`);
                 }
+                console.log(`${'='.repeat(60)}\n`);
+                return { success: true, data };
             } else {
                 const errText = await res.text();
-                console.error(`[AV] ❌ Failed to post event: ${res.status} ${errText}`);
+                console.error(`[AV] ❌ Request failed: ${res.status} ${errText}`);
+                console.log(`${'='.repeat(60)}\n`);
+                return { success: false, error: `${res.status}: ${errText}` };
             }
         } catch (err) {
-            console.error('[AV] ❌ Error posting availability event:', err);
+            console.error(`[AV] ❌ Exception during fetch:`, err);
+            console.error(`[AV] ❌ Error type:`, (err as Error)?.constructor?.name);
+            console.error(`[AV] ❌ Error message:`, (err as Error)?.message);
+            console.error(`[AV] ❌ Error stack:`, (err as Error)?.stack);
+            console.log(`${'='.repeat(60)}\n`);
+            return { success: false, error: String(err) };
         }
     };
+    
+    // 🧪 Global debug helper - call from browser console
+    // Usage: window.testAvailabilityAPI() or window.debugAvailability()
+    useEffect(() => {
+        (window as any).testAvailabilityAPI = async () => {
+            console.log('\n🧪 TESTING AVAILABILITY API FROM CONSOLE');
+            const result = await postAvailabilityEvent(99, 'debug_test', undefined, 'Console test');
+            console.log('🧪 Test result:', result);
+            return result;
+        };
+        
+        (window as any).debugAvailabilityDB = async () => {
+            console.log('\n🧪 DEBUGGING AVAILABILITY DATABASE');
+            try {
+                const res = await fetch('/api/aircraft-availability-debug');
+                const data = await res.json();
+                console.log('🧪 Debug result:', data);
+                return data;
+            } catch (e) {
+                console.error('🧪 Debug failed:', e);
+                return { error: String(e) };
+            }
+        };
+        
+        (window as any).forceInsertAvailability = async (count: number = 15) => {
+            console.log('\n🧪 FORCE INSERTING AVAILABILITY RECORD');
+            try {
+                const res = await fetch('/api/aircraft-availability-debug', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ availableCount: count })
+                });
+                const data = await res.json();
+                console.log('🧪 Force insert result:', data);
+                return data;
+            } catch (e) {
+                console.error('🧪 Force insert failed:', e);
+                return { error: String(e) };
+            }
+        };
+        
+        console.log('🔧 Debug helpers available:');
+        console.log('  - window.testAvailabilityAPI() - Test posting an event');
+        console.log('  - window.debugAvailabilityDB() - Check database status');
+        console.log('  - window.forceInsertAvailability(count) - Force insert a test record');
+    }, [sessionUser?.userId, availableAircraftCount, flyingStartTime, flyingEndTime]);
 
     // Startup: fire once when user logs in
     // - Posts a "startup" event with current availability
