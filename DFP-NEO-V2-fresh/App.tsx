@@ -3833,6 +3833,8 @@ useEffect(() => {
 
     // Track whether we've loaded the persisted availability
     const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = useState(false);
+    // Ref to hold the loaded availability value immediately (avoids async state issue)
+    const loadedAvailabilityRef = useRef<number | null>(null);
 
     // Fetch current availability from database on startup
     // This ensures the availability persists across app restarts/hard refreshes
@@ -3854,8 +3856,11 @@ useEffect(() => {
                         if (!data.isDefault) {
                             console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
                             setAvailableAircraftCount(data.availableCount);
+                            // Store in ref for immediate use in startup
+                            loadedAvailabilityRef.current = data.availableCount;
                         } else {
                             console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                            loadedAvailabilityRef.current = 15; // Explicit default
                         }
                     }
                 }
@@ -3882,11 +3887,15 @@ useEffect(() => {
             // 1. Fire startup event (1s delay to allow state to settle)
             await new Promise(resolve => setTimeout(resolve, 1000));
 
+            // Use the ref value if available (avoids async state issue), otherwise fall back to state
+            const availabilityToRecord = loadedAvailabilityRef.current ?? availableAircraftCount;
+            console.log(`[AV] Startup: using availability ${availabilityToRecord} (ref: ${loadedAvailabilityRef.current}, state: ${availableAircraftCount})`);
+
             await postAvailabilityEvent(
-                availableAircraftCount,
+                availabilityToRecord,
                 'startup',
                 undefined,
-                `App startup - initial availability: ${availableAircraftCount}`
+                `App startup - initial availability: ${availabilityToRecord}`
             );
 
             // 2. Recovery: check if today's summary exists, rebuild from events if missing

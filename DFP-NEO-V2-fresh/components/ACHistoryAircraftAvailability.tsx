@@ -247,6 +247,11 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   const [todaysFlyingWindowStart, setTodaysFlyingWindowStart] = useState<string | null>(null);
   const [todaysFlyingWindowEnd, setTodaysFlyingWindowEnd] = useState<string | null>(null);
   const [todaysEffectiveEndTime, setTodaysEffectiveEndTime] = useState<string | null>(null);
+  // Current time state (updated every minute)
+  const [currentLocalTime, setCurrentLocalTime] = useState<string>(() => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  });
 
   // Helper function to set today's average with all metadata
   const setTodaysAverageWithMetadata = (record: any) => {
@@ -264,6 +269,21 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     setTodaysFlyingWindowEnd(record.flyingWindowEnd || null);
     setTodaysEffectiveEndTime(record.effectiveEndTime || null);
   };
+
+  // Update current local time every minute
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentLocalTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    };
+    
+    // Update immediately
+    updateTime();
+    
+    // Then update every minute
+    const interval = setInterval(updateTime, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
 
 
@@ -578,6 +598,11 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                       <span>{todaysFlyingWindowStart} - {todaysFlyingWindowEnd}</span>
                     </div>
                   )}
+                  {/* Current time indicator */}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Current Time:</span>
+                    <span className="text-amber-300 font-medium">{currentLocalTime}</span>
+                  </div>
                   {todaysEffectiveEndTime && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Calculated at:</span>
