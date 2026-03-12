@@ -1,6 +1,5 @@
 ## Tasks
 
-- [ ] Add API endpoint to save/retrieve the last known aircraft availability count
-- [ ] On app startup, fetch the last saved availability from the database
-- [ ] When availability changes, save it to the database
-- [ ] Test that availability persists across app restarts
+- [ ] Fix time-weighted average calculation to ignore events outside flying window
+- [ ] Events posted outside flying window should not trigger recalculation
+- [ ] Average should only consider events within the flying window hours

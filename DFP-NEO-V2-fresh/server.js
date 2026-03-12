@@ -863,8 +863,29 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     
     console.log(`[AV-EVENTS] ✅ Event created with ID: ${eventId}`);
     
-    // Recalculate daily summary
-    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+    // Check if we should recalculate the daily summary
+    // Skip if event is after flying window AND it's today
+    const parseWindowTime = (s, defaultHour) => {
+      if (!s) return defaultHour * 60;
+      const clean = String(s).replace(':', '');
+      const h = parseInt(clean.slice(0, -2), 10) || defaultHour;
+      const m = parseInt(clean.slice(-2), 10) || 0;
+      return h * 60 + m;
+    };
+    
+    const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
+    const eventMin = eventTimestamp.getHours() * 60 + eventTimestamp.getMinutes();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isAfterWindow = eventMin >= windowEndMin;
+    const isToday = date === todayStr;
+    
+    let summary = null;
+    if (isAfterWindow && isToday) {
+      console.log(`[AV-EVENTS] ⏭️ Skipping recalculation - event is after flying window (${eventMin} >= ${windowEndMin})`);
+    } else {
+      // Recalculate daily summary
+      summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+    }
     
     console.log(`[AV-EVENTS] ✅ POST completed successfully ${requestId}`);
     console.log(`${'='.repeat(80)}\n`);
@@ -971,10 +992,20 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     }
     
     // Fill remaining time from last known availability to window end
+    // BUT: Only if we have actual events within or before the window
+    // Events AFTER the window ends should NOT affect the average
     const remainingStart = Math.max(lastKnownTime, windowStartMin);
-    if (remainingStart < windowEndMin && coveredMinutes < totalWindowMinutes) {
+    
+    // Only fill remaining time if the last known event was BEFORE or WITHIN the window
+    // If the last event was after window end, don't use it
+    const lastEventWithinOrBeforeWindow = events.filter(e => toMinutes(e.timestamp) <= windowEndMin);
+    const validLastKnown = lastEventWithinOrBeforeWindow.length > 0 
+      ? lastEventWithinOrBeforeWindow[lastEventWithinOrBeforeWindow.length - 1].availableCount 
+      : lastKnownAvailability;
+    
+    if (remainingStart < windowEndMin && coveredMinutes < totalWindowMinutes && lastKnownTime < windowEndMin) {
       const remainingDuration = windowEndMin - remainingStart;
-      weightedSum += lastKnownAvailability * remainingDuration;
+      weightedSum += validLastKnown * remainingDuration;
       coveredMinutes += remainingDuration;
     }
     
