@@ -3693,6 +3693,9 @@ useEffect(() => {
             notes: notesOverride ?? null,
             flyingWindowStart: windowStart,
             flyingWindowEnd:   windowEnd,
+            // Send client's local time for accurate timezone comparison
+            clientLocalHour: new Date().getHours(),
+            clientLocalMinute: new Date().getMinutes(),
         };
         
         console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
@@ -8359,6 +8362,9 @@ updates.forEach(update => {
                                    notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
                                    flyingWindowStart: windowStart,
                                    flyingWindowEnd:   windowEnd,
+                                   // Send client's local time for accurate timezone comparison
+                                   clientLocalHour: new Date().getHours(),
+                                   clientLocalMinute: new Date().getMinutes(),
                                };
                                
                                console.log('[AV] 📦 Request body:', JSON.stringify(requestBody, null, 2));

@@ -816,9 +816,9 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     const db = await getPrisma();
     await ensureAircraftAvailabilityEventTable(db);
     
-    const { timestamp, date, availableCount, totalAircraft, changeType, recordedBy, notes, flyingWindowStart, flyingWindowEnd } = req.body;
+    const { timestamp, date, availableCount, totalAircraft, changeType, recordedBy, notes, flyingWindowStart, flyingWindowEnd, clientLocalHour, clientLocalMinute } = req.body;
     
-    console.log(`[AV-EVENTS] 📋 Parsed body:`, { timestamp, date, availableCount, totalAircraft, changeType, recordedBy });
+    console.log(`[AV-EVENTS] 📋 Parsed body:`, { timestamp, date, availableCount, totalAircraft, changeType, recordedBy, clientLocalHour, clientLocalMinute });
     
     if (!date || availableCount === undefined || availableCount === null) {
       console.error(`[AV-EVENTS] ❌ Validation failed: missing date or availableCount`);
@@ -838,12 +838,18 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
       return h * 60 + m;
     };
     
-    const now = new Date();
-    const eventMin = now.getHours() * 60 + now.getMinutes();
+    // Use the client's local time (if provided) to determine if it's after the flying window
+    // This fixes a timezone mismatch issue where server time != user's local time
+    // The clientLocalHour and clientLocalMinute are in the user's timezone
+    const eventMin = (clientLocalHour !== undefined && clientLocalMinute !== undefined)
+      ? clientLocalHour * 60 + clientLocalMinute
+      : (timestamp ? new Date(timestamp).getHours() * 60 + new Date(timestamp).getMinutes() : new Date().getHours() * 60 + new Date().getMinutes());
     const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
     const todayStr = new Date().toISOString().split('T')[0];
     const isAfterWindow = eventMin >= windowEndMin;
     const isToday = date === todayStr;
+    
+    console.log(`[AV-EVENTS] 🕐 Time check: clientLocalTime=${clientLocalHour}:${clientLocalMinute} (${eventMin}min), windowEnd=${windowEndMin}min, isAfterWindow=${isAfterWindow}, isToday=${isToday}`);
     
     // Deduplication: skip if last event has same count (unless boundary event)
     if (!isBoundary) {
