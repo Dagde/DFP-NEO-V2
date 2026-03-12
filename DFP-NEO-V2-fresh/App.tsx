@@ -3513,6 +3513,23 @@ useEffect(() => {
     const [allowNightFlying, setAllowNightFlying] = useState(true);
     const [commenceNightFlying, setCommenceNightFlying] = useState(18.5); // 18:30
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
+    
+    // Wrapper function to update aircraft count AND save to database
+    const handleUpdateAircraftCount = async (count: number) => {
+        const previousCount = availableAircraftCount;
+        setAvailableAircraftCount(count);
+        
+        // Save to database if count changed and user is logged in
+        if (count !== previousCount && sessionUser?.userId) {
+            console.log(`[AV] ✈️ Aircraft count changed: ${previousCount} → ${count}, saving to database`);
+            await postAvailabilityEvent(
+                count,
+                'change',
+                undefined,
+                `Aircraft availability updated: ${count}`
+            );
+        }
+    };
     const [preferredDutyPeriod, setPreferredDutyPeriod] = useState(8);
     const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = useState(10);
     const [maxDispatchPerHour, setMaxDispatchPerHour] = useState(8);
@@ -3810,6 +3827,35 @@ useEffect(() => {
         console.log('  - window.debugAvailabilityDB() - Check database status');
         console.log('  - window.forceInsertAvailability(count) - Force insert a test record');
     }, [sessionUser?.userId, availableAircraftCount, flyingStartTime, flyingEndTime]);
+
+    // Fetch current availability from database on startup
+    // This ensures the availability persists across app restarts/hard refreshes
+    useEffect(() => {
+        if (!sessionUser?.userId) return;
+
+        const fetchCurrentAvailability = async () => {
+            try {
+                const apiBase = getApiBaseUrl();
+                const res = await fetch(`${apiBase}/aircraft-availability-current`, {
+                    credentials: 'include'
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && !data.isDefault) {
+                        console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft`);
+                        setAvailableAircraftCount(data.availableCount);
+                    } else {
+                        console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                    }
+                }
+            } catch (err) {
+                console.error('[AV] ❌ Failed to fetch current availability:', err);
+            }
+        };
+
+        fetchCurrentAvailability();
+    }, [sessionUser?.userId]);
 
     // Startup: fire once when user logs in
     // - Posts a "startup" event with current availability
@@ -8268,7 +8314,7 @@ updates.forEach(update => {
                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                            showAircraftAvailability={showAircraftAvailability}
                            plannedAvailability={availableAircraftCount}
-                           onUpdatePlannedAvailability={setAvailableAircraftCount}
+                           onUpdatePlannedAvailability={handleUpdateAircraftCount}
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
                            onAvailabilityChange={async (record: DailyAvailabilityRecord) => {
@@ -8842,7 +8888,7 @@ updates.forEach(update => {
                     coursePercentages={coursePercentages}
                     onUpdatePercentages={setCoursePercentages}
                     availableAircraftCount={availableAircraftCount}
-                    onUpdateAircraftCount={setAvailableAircraftCount}
+                    onUpdateAircraftCount={handleUpdateAircraftCount}
                     availableFtdCount={availableFtdCount}
                     onUpdateFtdCount={setAvailableFtdCount}
                     availableCptCount={availableCptCount}

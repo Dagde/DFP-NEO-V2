@@ -1,8 +1,6 @@
 ## Tasks
 
-- [x] Investigate why AircraftAvailabilityHistory table is empty
-- [x] Fix the daily summary calculation/recording
-- [x] Add recalculate endpoint for existing events
-- [ ] Wait for Railway deployment
-- [ ] Trigger recalculation for today's events
-- [ ] Verify "Today's Average (Flying Window)" displays correctly
+- [ ] Add API endpoint to save/retrieve the last known aircraft availability count
+- [ ] On app startup, fetch the last saved availability from the database
+- [ ] When availability changes, save it to the database
+- [ ] Test that availability persists across app restarts

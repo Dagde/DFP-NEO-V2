@@ -1285,6 +1285,43 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
   }
 });
 
+// GET /api/aircraft-availability-current - Get the current aircraft availability
+// Returns the most recent availability from the events table
+app.get('/api/aircraft-availability-current', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureAircraftAvailabilityEventTable(db);
+    
+    // Get the most recent event (any date, ordered by timestamp desc)
+    const latestEvent = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
+    );
+    
+    if (latestEvent.length > 0) {
+      res.json({
+        success: true,
+        availableCount: latestEvent[0].availableCount,
+        totalAircraft: latestEvent[0].totalAircraft,
+        timestamp: latestEvent[0].timestamp,
+        date: latestEvent[0].date
+      });
+    } else {
+      // No events yet, return default
+      res.json({
+        success: true,
+        availableCount: 15,
+        totalAircraft: 15,
+        timestamp: null,
+        date: null,
+        isDefault: true
+      });
+    }
+  } catch (error) {
+    console.error('[AV-CURRENT] ❌ Error getting current availability:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
