@@ -61,8 +61,28 @@ export async function GET(request: NextRequest) {
  * After inserting, triggers recalculation of the daily summary.
  */
 export async function POST(request: NextRequest) {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[AV-EVENTS] 📨 POST request received ${requestId}`);
+  console.log(`[AV-EVENTS] 📍 URL: ${request.url}`);
+  console.log(`[AV-EVENTS] 🌐 Method: ${request.method}`);
+  console.log(`[AV-EVENTS] 📋 Headers:`, Object.fromEntries(request.headers.entries()));
+  
   try {
-    const body = await request.json();
+    const rawBody = await request.text();
+    console.log(`[AV-EVENTS] 📦 Raw body: ${rawBody.substring(0, 500)}`);
+    
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.error(`[AV-EVENTS] ❌ JSON parse error:`, parseError);
+      return NextResponse.json(
+        { error: 'Invalid JSON body', details: String(parseError), requestId },
+        { status: 400, headers: CORS_HEADERS }
+      );
+    }
+    
     const {
       timestamp,
       date,
@@ -75,9 +95,22 @@ export async function POST(request: NextRequest) {
       flyingWindowEnd,
     } = body;
 
+    console.log(`[AV-EVENTS] 📊 Parsed body:`, {
+      timestamp,
+      date,
+      availableCount,
+      totalAircraft,
+      changeType,
+      recordedBy,
+      hasNotes: !!notes,
+      flyingWindowStart,
+      flyingWindowEnd
+    });
+
     if (!date || availableCount === undefined || availableCount === null) {
+      console.error(`[AV-EVENTS] ❌ Validation failed: missing date or availableCount`);
       return NextResponse.json(
-        { error: 'date and availableCount are required' },
+        { error: 'date and availableCount are required', received: { date, availableCount }, requestId },
         { status: 400, headers: CORS_HEADERS }
       );
     }
@@ -85,22 +118,37 @@ export async function POST(request: NextRequest) {
     const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown'];
     const isBoundary = BOUNDARY_TYPES.includes(changeType);
 
+    console.log(`[AV-EVENTS] 🔍 Checking for duplicates (isBoundary: ${isBoundary})...`);
+
     // --- Deduplication ---
     // For non-boundary events: skip if last event for the day has same availableCount
     if (!isBoundary) {
-      const lastEvent = await prisma.aircraftAvailabilityEvent.findFirst({
-        where: { date },
-        orderBy: { timestamp: 'desc' },
-      });
+      let lastEvent;
+      try {
+        lastEvent = await prisma.aircraftAvailabilityEvent.findFirst({
+          where: { date },
+          orderBy: { timestamp: 'desc' },
+        });
+        console.log(`[AV-EVENTS] 📋 Last event found:`, lastEvent ? {
+          id: lastEvent.id,
+          availableCount: lastEvent.availableCount,
+          changeType: lastEvent.changeType,
+          timestamp: lastEvent.timestamp.toISOString()
+        } : 'none');
+      } catch (dbError) {
+        console.error(`[AV-EVENTS] ❌ Database query error (findFirst):`, dbError);
+        throw dbError;
+      }
+      
       if (lastEvent && lastEvent.availableCount === availableCount) {
         console.log(
-          `[AV-EVENTS] Skipping duplicate event for ${date}: ` +
+          `[AV-EVENTS] ⏭️ Skipping duplicate event for ${date}: ` +
           `availableCount=${availableCount} unchanged since last event (${lastEvent.changeType} @ ${lastEvent.timestamp.toISOString()})`
         );
         // Still recalculate summary in case it's missing
         const summary = await recalculateDailySummary(date, flyingWindowStart, flyingWindowEnd, recordedBy);
         return NextResponse.json(
-          { skipped: true, reason: 'no_change', summary },
+          { skipped: true, reason: 'no_change', summary, requestId },
           { headers: CORS_HEADERS }
         );
       }
@@ -108,17 +156,26 @@ export async function POST(request: NextRequest) {
 
     // --- Insert event ---
     const eventTimestamp = timestamp ? new Date(timestamp) : new Date();
-    const event = await prisma.aircraftAvailabilityEvent.create({
-      data: {
-        timestamp: eventTimestamp,
-        date,
-        availableCount,
-        totalAircraft,
-        changeType: changeType || 'change',
-        recordedBy: recordedBy ?? null,
-        notes: notes ?? null,
-      },
-    });
+    console.log(`[AV-EVENTS] 📝 Creating event with timestamp: ${eventTimestamp.toISOString()}`);
+    
+    let event;
+    try {
+      event = await prisma.aircraftAvailabilityEvent.create({
+        data: {
+          timestamp: eventTimestamp,
+          date,
+          availableCount,
+          totalAircraft,
+          changeType: changeType || 'change',
+          recordedBy: recordedBy ?? null,
+          notes: notes ?? null,
+        },
+      });
+      console.log(`[AV-EVENTS] ✅ Event created successfully with ID: ${event.id}`);
+    } catch (createError) {
+      console.error(`[AV-EVENTS] ❌ Database create error:`, createError);
+      throw createError;
+    }
 
     console.log(
       `[AV-EVENTS] ✅ Event inserted: date=${date} type=${changeType} ` +
@@ -127,20 +184,37 @@ export async function POST(request: NextRequest) {
     );
 
     // --- Recalculate daily summary ---
+    console.log(`[AV-EVENTS] 🔄 Recalculating daily summary...`);
     const summary = await recalculateDailySummary(date, flyingWindowStart, flyingWindowEnd, recordedBy);
+    console.log(`[AV-EVENTS] 📊 Summary result:`, summary ? {
+      date: summary.date,
+      dailyAverage: summary.dailyAverage,
+      totalAircraft: summary.totalAircraft
+    } : 'null');
 
+    console.log(`[AV-EVENTS] ✅ POST completed successfully ${requestId}`);
+    console.log(`${'='.repeat(80)}\n`);
+    
     return NextResponse.json(
-      { success: true, event, summary },
+      { success: true, event, summary, requestId },
       { headers: CORS_HEADERS }
     );
   } catch (error) {
-    console.error('[AV-EVENTS] POST error:', error);
+    console.error(`[AV-EVENTS] ❌ POST error ${requestId}:`, error);
+    console.error(`[AV-EVENTS] ❌ Error type:`, (error as Error)?.constructor?.name);
+    console.error(`[AV-EVENTS] ❌ Error message:`, (error as Error)?.message);
+    console.error(`[AV-EVENTS] ❌ Error stack:`, (error as Error)?.stack);
+    console.log(`${'='.repeat(80)}\n`);
     return NextResponse.json(
-      { error: 'Failed to insert event', details: String(error) },
+      { 
+        error: 'Failed to insert event', 
+        details: String(error),
+        errorType: (error as Error)?.constructor?.name,
+        errorMessage: (error as Error)?.message,
+        requestId 
+      },
       { status: 500, headers: CORS_HEADERS }
     );
-  } finally {
-    
   }
 }
 
@@ -160,6 +234,9 @@ async function recalculateDailySummary(
   flyingWindowEnd?: string,   // "1700" or "17:00" format
   recordedBy?: string | null
 ): Promise<any> {
+  console.log(`[AV-EVENTS] 🔄 recalculateDailySummary called for ${date}`);
+  console.log(`[AV-EVENTS] 🔄 Flying window: ${flyingWindowStart} - ${flyingWindowEnd}`);
+  
   try {
     // Parse flying window (default 0800-1700)
     const parseWindowTime = (s: string | undefined, defaultHour: number): number => {
@@ -173,20 +250,30 @@ async function recalculateDailySummary(
     const windowStartMin = parseWindowTime(flyingWindowStart, 8);  // 480 = 08:00
     const windowEndMin   = parseWindowTime(flyingWindowEnd, 17);   // 1020 = 17:00
     const totalWindowMinutes = windowEndMin - windowStartMin;
+    
+    console.log(`[AV-EVENTS] 🔄 Parsed window: ${windowStartMin}min - ${windowEndMin}min (total: ${totalWindowMinutes}min)`);
 
     if (totalWindowMinutes <= 0) {
-      console.warn(`[AV-EVENTS] Invalid flying window: ${flyingWindowStart}-${flyingWindowEnd}`);
+      console.warn(`[AV-EVENTS] ⚠️ Invalid flying window: ${flyingWindowStart}-${flyingWindowEnd}`);
       return null;
     }
 
     // Get all events for the date
-    const events = await prisma.aircraftAvailabilityEvent.findMany({
-      where: { date },
-      orderBy: { timestamp: 'asc' },
-    });
+    console.log(`[AV-EVENTS] 🔄 Querying events for date ${date}...`);
+    let events;
+    try {
+      events = await prisma.aircraftAvailabilityEvent.findMany({
+        where: { date },
+        orderBy: { timestamp: 'asc' },
+      });
+      console.log(`[AV-EVENTS] 🔄 Found ${events.length} events for ${date}`);
+    } catch (dbError) {
+      console.error(`[AV-EVENTS] ❌ Database error fetching events:`, dbError);
+      throw dbError;
+    }
 
     if (events.length === 0) {
-      console.log(`[AV-EVENTS] No events for ${date}, skipping summary recalculation`);
+      console.log(`[AV-EVENTS] ⚠️ No events for ${date}, skipping summary recalculation`);
       return null;
     }
 
@@ -270,37 +357,47 @@ async function recalculateDailySummary(
     );
 
     // Upsert daily summary
-    const summary = await prisma.aircraftAvailabilityHistory.upsert({
-      where: { date },
-      update: {
-        dailyAverage,
-        plannedCount,
-        actualCount,
-        totalAircraft,
-        availabilityPct,
-        flyingWindowStart: flyingWindowStart ?? null,
-        flyingWindowEnd:   flyingWindowEnd ?? null,
-        recordedBy: recordedBy ?? null,
-        lastCalculatedAt: new Date(),
-      },
-      create: {
-        date,
-        dailyAverage,
-        plannedCount,
-        actualCount,
-        totalAircraft,
-        availabilityPct,
-        flyingWindowStart: flyingWindowStart ?? null,
-        flyingWindowEnd:   flyingWindowEnd ?? null,
-        recordedBy: recordedBy ?? null,
-        lastCalculatedAt: new Date(),
-      },
-    });
+    console.log(`[AV-EVENTS] 📝 Upserting daily summary for ${date}...`);
+    let summary;
+    try {
+      summary = await prisma.aircraftAvailabilityHistory.upsert({
+        where: { date },
+        update: {
+          dailyAverage,
+          plannedCount,
+          actualCount,
+          totalAircraft,
+          availabilityPct,
+          flyingWindowStart: flyingWindowStart ?? null,
+          flyingWindowEnd:   flyingWindowEnd ?? null,
+          recordedBy: recordedBy ?? null,
+          lastCalculatedAt: new Date(),
+        },
+        create: {
+          date,
+          dailyAverage,
+          plannedCount,
+          actualCount,
+          totalAircraft,
+          availabilityPct,
+          flyingWindowStart: flyingWindowStart ?? null,
+          flyingWindowEnd:   flyingWindowEnd ?? null,
+          recordedBy: recordedBy ?? null,
+          lastCalculatedAt: new Date(),
+        },
+      });
+      console.log(`[AV-EVENTS] ✅ Daily summary upserted for ${date}, ID: ${summary.id}`);
+    } catch (upsertError) {
+      console.error(`[AV-EVENTS] ❌ Database upsert error:`, upsertError);
+      throw upsertError;
+    }
 
-    console.log(`[AV-EVENTS] ✅ Daily summary upserted for ${date}`);
     return summary;
   } catch (err) {
     console.error(`[AV-EVENTS] ❌ Failed to recalculate summary for ${date}:`, err);
+    console.error(`[AV-EVENTS] ❌ Error type:`, (err as Error)?.constructor?.name);
+    console.error(`[AV-EVENTS] ❌ Error message:`, (err as Error)?.message);
+    console.error(`[AV-EVENTS] ❌ Error stack:`, (err as Error)?.stack);
     return null;
   }
 }

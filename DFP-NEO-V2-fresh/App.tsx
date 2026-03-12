@@ -8138,40 +8138,64 @@ updates.forEach(update => {
                                // Event-based tracking: record a 'change' event whenever
                                // the availability line is moved in the overlay.
                                // The last snapshot in the record represents the current state.
-                               if (record.snapshots.length === 0) return;
+                               console.log('[AV] 🔥 onAvailabilityChange CALLED', {
+                                   snapshotsLength: record.snapshots.length,
+                                   date: record.date,
+                                   snapshots: record.snapshots.map((s: any) => ({
+                                       time: s.timestamp,
+                                       available: s.available
+                                   }))
+                               });
+                               
+                               if (record.snapshots.length === 0) {
+                                   console.log('[AV] ⚠️ No snapshots, returning early');
+                                   return;
+                               }
 
                                const lastSnapshot = record.snapshots[record.snapshots.length - 1];
                                const currentAvailable = lastSnapshot.available;
                                const snapshotTs = new Date(lastSnapshot.timestamp);
 
                                console.log(
-                                   `[AV] onAvailabilityChange: date=${record.date} ` +
-                                   `available=${currentAvailable} snapshots=${record.snapshots.length}`
+                                   `[AV] 📤 Preparing to POST event: date=${record.date} ` +
+                                   `available=${currentAvailable} snapshots=${record.snapshots.length} ` +
+                                   `timestamp=${snapshotTs.toISOString()}`
                                );
 
                                const totalAircraftCount = aircraftData.length > 0 ? aircraftData.length : availableAircraftCount;
                                const windowStart = formatWindowTime(flyingStartTime);
                                const windowEnd   = formatWindowTime(flyingEndTime);
 
+                               const requestBody = {
+                                   timestamp: snapshotTs.toISOString(),
+                                   date: record.date,
+                                   availableCount: currentAvailable,
+                                   totalAircraft: totalAircraftCount,
+                                   changeType: 'change',
+                                   recordedBy: sessionUser?.userId ?? null,
+                                   notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
+                                   flyingWindowStart: windowStart,
+                                   flyingWindowEnd:   windowEnd,
+                               };
+                               
+                               console.log('[AV] 📦 Request body:', JSON.stringify(requestBody, null, 2));
+                               console.log('[AV] 🌐 Current origin:', window.location.origin);
+                               console.log('[AV] 👤 Session user:', sessionUser?.userId ?? 'not logged in');
+
                                try {
+                                   console.log('[AV] 🚀 Starting fetch to /api/aircraft-availability-events...');
                                    const res = await fetch('/api/aircraft-availability-events', {
                                        method: 'POST',
                                        headers: { 'Content-Type': 'application/json' },
                                        credentials: 'include',
-                                       body: JSON.stringify({
-                                           timestamp: snapshotTs.toISOString(),
-                                           date: record.date,
-                                           availableCount: currentAvailable,
-                                           totalAircraft: totalAircraftCount,
-                                           changeType: 'change',
-                                           recordedBy: sessionUser?.userId ?? null,
-                                           notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
-                                           flyingWindowStart: windowStart,
-                                           flyingWindowEnd:   windowEnd,
-                                       })
+                                       body: JSON.stringify(requestBody)
                                    });
+                                   console.log('[AV] 📥 Response status:', res.status, res.statusText);
+                                   console.log('[AV] 📥 Response headers:', Object.fromEntries(res.headers.entries()));
+                                   
                                    if (res.ok) {
                                        const data = await res.json();
+                                       console.log('[AV] ✅ Response data:', data);
                                        if (data.skipped) {
                                            console.log(`[AV] Change event skipped: count unchanged at ${currentAvailable}`);
                                        } else {
@@ -8183,6 +8207,7 @@ updates.forEach(update => {
                                    }
                                } catch (error) {
                                    console.error('[AV] ❌ Error recording change event:', error);
+                                   console.error('[AV] ❌ Error stack:', (error as Error).stack);
                                }
                            }}
                            isVisualAdjustMode={isVisualAdjustMode}
