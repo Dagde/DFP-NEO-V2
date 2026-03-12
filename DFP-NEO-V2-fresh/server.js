@@ -995,7 +995,41 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     }))));
     
     if (events.length === 0) {
-      console.log(`[AV-EVENTS] ⚠️ No events for ${date}, skipping summary`);
+      console.log(`[AV-EVENTS] ⚠️ No events for ${date}, checking for last known availability from previous days`);
+      
+      // Get the most recent event from any previous date
+      const lastKnownEvent = await db.$queryRawUnsafe(
+        `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
+      );
+      
+      if (lastKnownEvent.length > 0) {
+        // Use the last known availability for today's calculation
+        const lastAvailability = lastKnownEvent[0].availableCount;
+        const lastTotalAircraft = lastKnownEvent[0].totalAircraft;
+        console.log(`[AV-EVENTS] 📋 Using last known availability: ${lastAvailability} from ${lastKnownEvent[0].date}`);
+        
+        // Calculate average using last known availability for the elapsed time
+        const dailyAverage = lastAvailability;
+        const availabilityPct = lastTotalAircraft > 0 ? (lastAvailability / lastTotalAircraft) * 100 : 0;
+        
+        // Format effective end time
+        const effectiveEndTimeStr = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(effectiveEndMin % 60).padStart(2, '0')}`;
+        
+        return {
+          date,
+          dailyAverage,
+          plannedCount: lastAvailability,
+          actualCount: lastAvailability,
+          totalAircraft: lastTotalAircraft,
+          availabilityPct,
+          flyingWindowStart,
+          flyingWindowEnd,
+          effectiveEndTime: effectiveEndTimeStr,
+          isProjected: true // Flag to indicate this is projected from previous data
+        };
+      }
+      
+      console.log(`[AV-EVENTS] ⚠️ No events found at all, skipping summary`);
       return null;
     }
     
@@ -1313,8 +1347,13 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     const date = req.body.date || new Date().toISOString().split('T')[0];
     const flyingWindowStart = req.body.flyingWindowStart || '0800';
     const flyingWindowEnd = req.body.flyingWindowEnd || '1700';
+    const clientLocalHour = req.body.clientLocalHour;
+    const clientLocalMinute = req.body.clientLocalMinute;
+    const clientCurrentTimeMinutes = (clientLocalHour !== undefined && clientLocalMinute !== undefined)
+      ? clientLocalHour * 60 + clientLocalMinute
+      : null;
     
-    console.log(`[AV-RECALC] 📅 Date: ${date}, Window: ${flyingWindowStart}-${flyingWindowEnd}`);
+    console.log(`[AV-RECALC] 📅 Date: ${date}, Window: ${flyingWindowStart}-${flyingWindowEnd}, ClientTime: ${clientLocalHour}:${clientLocalMinute}`);
     
     // Get events with details
     const events = await db.$queryRawUnsafe(
@@ -1358,7 +1397,7 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     let summaryError = null;
     
     try {
-      summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, 'recalc_endpoint');
+      summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, 'recalc_endpoint', clientCurrentTimeMinutes);
     } catch (err) {
       summaryError = {
         message: err.message,

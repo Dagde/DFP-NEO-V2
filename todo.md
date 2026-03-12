@@ -1,13 +1,10 @@
 ## Tasks
 
-### 1. Fix available aircraft persisting across reset/restart
-- [x] Investigate why available aircraft resets to 15 after hard reset
-- [x] Ensure the database has the persisted value
-- [x] Fix the startup sequence to properly restore the value (use ref to avoid async state issue)
+### 1. Fix Today's Average to update in real-time
+- [x] The date should always show the current date
+- [x] Fixed: Use correct /api/aircraft-availability-recalculate endpoint
+- [x] Added clientLocalHour/clientLocalMinute to recalculate endpoint
+- [x] When no events for today, use last known availability from previous days
 
-### 2. Add current time to Today's Average display
-- [x] Show the current time used to determine if within Day flying window
-- [x] Display alongside the flying window times
-
-### 3. Commit and test
+### 2. Commit and verify
 - [ ] Commit changes

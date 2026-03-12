@@ -370,49 +370,37 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       try {
         const today = new Date().toISOString().split('T')[0];
         
-        // First, trigger a recalculation via POST (recovery endpoint)
+        // First, trigger a recalculation via the recalculate endpoint
         // This will rebuild the daily summary from raw events
-        const recalcRes = await fetch('/api/aircraft-availability-history', {
+        const recalcRes = await fetch('/api/aircraft-availability-recalculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
             date: today,
+            clientLocalHour: new Date().getHours(),
+            clientLocalMinute: new Date().getMinutes(),
             // Use default flying window (0800-1700) - the server will use its configured values
           }),
         });
         
         if (recalcRes.ok) {
           const recalcData = await recalcRes.json();
-          if (recalcData.record) {
-            // The recalculation returned the updated record
-            setTodaysAverageWithMetadata(recalcData.record);
-          } else if (recalcData.skipped && recalcData.record) {
-            // Recalculation was skipped (recent), but we have the record
-            setTodaysAverageWithMetadata(recalcData.record);
+          if (recalcData.summary) {
+            // The recalculation returned the updated summary
+            // Add the date to the summary for the UI
+            const recordWithDate = {
+              ...recalcData.summary,
+              date: today
+            };
+            setTodaysAverageWithMetadata(recordWithDate);
           } else {
-            // No events exist yet for today, try GET as fallback
-            const getRes = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
-            if (getRes.ok) {
-              const getData = await getRes.json();
-              if (getData.records && getData.records.length > 0) {
-                setTodaysAverageWithMetadata(getData.records[0]);
-              } else {
-                setTodaysAverageWithMetadata(null);
-              }
-            }
+            // No events exist yet for today
+            setTodaysAverageWithMetadata(null);
           }
         } else {
-          // POST failed, fall back to GET
-          const getRes = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
-          if (getRes.ok) {
-            const getData = await getRes.json();
-            if (getData.records && getData.records.length > 0) {
-              setTodaysAverageWithMetadata(getData.records[0]);
-            } else {
-              setTodaysAverageWithMetadata(null);
-            }
-          }
+          // Recalculation failed, show no data
+          setTodaysAverageWithMetadata(null);
         }
       } catch (err) {
         console.error('Failed to fetch today\'s average:', err);
@@ -434,15 +422,23 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     // Debounce the refresh to avoid too many API calls
     const timeoutId = setTimeout(() => {
       const today = new Date().toISOString().split('T')[0];
-      fetch('/api/aircraft-availability-history', {
+      fetch('/api/aircraft-availability-recalculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ date: today }),
+        body: JSON.stringify({ 
+          date: today,
+          clientLocalHour: new Date().getHours(),
+          clientLocalMinute: new Date().getMinutes(),
+        }),
       }).then(res => res.json())
         .then(data => {
-          if (data.record) {
-            setTodaysAverageWithMetadata(data.record);
+          if (data.summary) {
+            const recordWithDate = {
+              ...data.summary,
+              date: today
+            };
+            setTodaysAverageWithMetadata(recordWithDate);
           }
         })
         .catch(err => console.error('Failed to refresh today\'s average:', err));
