@@ -3721,7 +3721,27 @@ useEffect(() => {
             console.log('\n🧪 DEBUGGING AVAILABILITY DATABASE');
             try {
                 const res = await fetch('/api/aircraft-availability-debug');
-                const data = await res.json();
+                console.log('🧪 Response status:', res.status, res.statusText);
+                console.log('🧪 Response headers:', Object.fromEntries(res.headers.entries()));
+                
+                const text = await res.text();
+                console.log('🧪 Response text (first 500 chars):', text.substring(0, 500));
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    console.error('🧪 JSON parse failed - response is not JSON!');
+                    console.error('🧪 Full response text:', text);
+                    return { 
+                        error: 'Response is not JSON',
+                        status: res.status,
+                        statusText: res.statusText,
+                        responseText: text.substring(0, 2000),
+                        parseError: String(parseErr)
+                    };
+                }
+                
                 console.log('🧪 Debug result:', data);
                 return data;
             } catch (e) {
