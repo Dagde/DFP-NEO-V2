@@ -889,6 +889,11 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     );
     
     console.log(`[AV-EVENTS] 🔄 Found ${events.length} events for ${date}`);
+    console.log(`[AV-EVENTS] 📋 Events:`, JSON.stringify(events.map(e => ({
+      id: e.id.slice(0, 8),
+      timestamp: e.timestamp,
+      availableCount: e.availableCount
+    }))));
     
     if (events.length === 0) {
       console.log(`[AV-EVENTS] ⚠️ No events for ${date}, skipping summary`);
@@ -967,6 +972,8 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
         coveredMinutes = totalWindowMinutes;
       }
     }
+    
+    console.log(`[AV-EVENTS] 📊 Calculation complete: weightedSum=${weightedSum}, coveredMinutes=${coveredMinutes}, totalWindowMinutes=${totalWindowMinutes}`);
     
     const dailyAverage = totalWindowMinutes > 0 ? weightedSum / totalWindowMinutes : 0;
     const firstEvent = events[0];
