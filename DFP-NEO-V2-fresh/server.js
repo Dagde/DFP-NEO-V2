@@ -92,6 +92,7 @@ async function ensureAircraftAvailabilityTable(db) {
     await addColumnIfMissing('flyingWindowStart', 'TEXT');
     await addColumnIfMissing('flyingWindowEnd', 'TEXT');
     await addColumnIfMissing('lastCalculatedAt', 'TIMESTAMP(3)');
+    await addColumnIfMissing('effectiveEndTime', 'TEXT'); // The time used for calculation (e.g., "13:00")
     
     console.log('✅ AircraftAvailabilityHistory table ready');
   } catch (err) {
@@ -1104,29 +1105,47 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     );
     
     if (existingRecord.length > 0) {
+      // Format effective end time as HH:MM
+      const effectiveEndTimeStr = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(effectiveEndMin % 60).padStart(2, '0')}`;
+      
       await db.$executeRawUnsafe(
         `UPDATE "AircraftAvailabilityHistory" SET 
          "dailyAverage" = $2, "plannedCount" = $3, "actualCount" = $4, "totalAircraft" = $5,
          "availabilityPct" = $6, "flyingWindowStart" = $7, "flyingWindowEnd" = $8,
-         "recordedBy" = $9, "lastCalculatedAt" = NOW(), "updatedAt" = NOW()
+         "recordedBy" = $9, "effectiveEndTime" = $10, "lastCalculatedAt" = NOW(), "updatedAt" = NOW()
          WHERE "date" = $1`,
         date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct,
-        flyingWindowStart || null, flyingWindowEnd || null, recordedBy || null
+        flyingWindowStart || null, flyingWindowEnd || null, recordedBy || null, effectiveEndTimeStr
       );
       console.log(`[AV-EVENTS] ✅ Updated history for ${date}`);
     } else {
       const historyId = require('crypto').randomUUID();
+      // Format effective end time as HH:MM
+      const effectiveEndTimeStr = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(effectiveEndMin % 60).padStart(2, '0')}`;
+      
       await db.$executeRawUnsafe(
         `INSERT INTO "AircraftAvailabilityHistory" 
-         ("id", "date", "dailyAverage", "plannedCount", "actualCount", "totalAircraft", "availabilityPct", "flyingWindowStart", "flyingWindowEnd", "recordedBy", "lastCalculatedAt", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())`,
+         ("id", "date", "dailyAverage", "plannedCount", "actualCount", "totalAircraft", "availabilityPct", "flyingWindowStart", "flyingWindowEnd", "recordedBy", "effectiveEndTime", "lastCalculatedAt", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW())`,
         historyId, date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct,
-        flyingWindowStart || null, flyingWindowEnd || null, recordedBy || null
+        flyingWindowStart || null, flyingWindowEnd || null, recordedBy || null, effectiveEndTimeStr
       );
       console.log(`[AV-EVENTS] ✅ Inserted history for ${date}`);
     }
     
-    return { date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct };
+    // Format effective end time for return value
+    const effectiveEndTimeStr = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(effectiveEndMin % 60).padStart(2, '0')}`;
+    return { 
+      date, 
+      dailyAverage, 
+      plannedCount, 
+      actualCount, 
+      totalAircraft, 
+      availabilityPct,
+      flyingWindowStart,
+      flyingWindowEnd,
+      effectiveEndTime: effectiveEndTimeStr
+    };
   } catch (err) {
     console.error(`[AV-EVENTS] ❌ Failed to recalculate summary:`, err);
     // Throw the error so caller can see it

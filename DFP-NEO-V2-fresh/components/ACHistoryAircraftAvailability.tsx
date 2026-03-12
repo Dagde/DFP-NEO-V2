@@ -12,6 +12,9 @@ interface AvailabilityRecord {
   availabilityPct: number;
   recordedBy: string | null;
   notes: string | null;
+  flyingWindowStart: string | null;
+  flyingWindowEnd: string | null;
+  effectiveEndTime: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -239,6 +242,30 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   const [showTable, setShowTable] = useState(false);
   const [todaysAverage, setTodaysAverage] = useState<number | null>(null);
   const [todaysAverageLoading, setTodaysAverageLoading] = useState(false);
+  // Store metadata about today's average calculation
+  const [todaysAverageDate, setTodaysAverageDate] = useState<string | null>(null);
+  const [todaysFlyingWindowStart, setTodaysFlyingWindowStart] = useState<string | null>(null);
+  const [todaysFlyingWindowEnd, setTodaysFlyingWindowEnd] = useState<string | null>(null);
+  const [todaysEffectiveEndTime, setTodaysEffectiveEndTime] = useState<string | null>(null);
+
+  // Helper function to set today's average with all metadata
+  const setTodaysAverageWithMetadata = (record: any) => {
+    if (!record) {
+      setTodaysAverage(null);
+      setTodaysAverageDate(null);
+      setTodaysFlyingWindowStart(null);
+      setTodaysFlyingWindowEnd(null);
+      setTodaysEffectiveEndTime(null);
+      return;
+    }
+    setTodaysAverage(record.dailyAverage);
+    setTodaysAverageDate(record.date || null);
+    setTodaysFlyingWindowStart(record.flyingWindowStart || null);
+    setTodaysFlyingWindowEnd(record.flyingWindowEnd || null);
+    setTodaysEffectiveEndTime(record.effectiveEndTime || null);
+  };
+
+
 
   const getDateRange = useCallback((period: TimePeriod): { start: Date; end: Date } => {
     const now = new Date();
@@ -339,19 +366,19 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           const recalcData = await recalcRes.json();
           if (recalcData.record) {
             // The recalculation returned the updated record
-            setTodaysAverage(recalcData.record.dailyAverage);
+            setTodaysAverageWithMetadata(recalcData.record);
           } else if (recalcData.skipped && recalcData.record) {
             // Recalculation was skipped (recent), but we have the record
-            setTodaysAverage(recalcData.record.dailyAverage);
+            setTodaysAverageWithMetadata(recalcData.record);
           } else {
             // No events exist yet for today, try GET as fallback
             const getRes = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
             if (getRes.ok) {
               const getData = await getRes.json();
               if (getData.records && getData.records.length > 0) {
-                setTodaysAverage(getData.records[0].dailyAverage);
+                setTodaysAverageWithMetadata(getData.records[0]);
               } else {
-                setTodaysAverage(null);
+                setTodaysAverageWithMetadata(null);
               }
             }
           }
@@ -361,15 +388,15 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           if (getRes.ok) {
             const getData = await getRes.json();
             if (getData.records && getData.records.length > 0) {
-              setTodaysAverage(getData.records[0].dailyAverage);
+              setTodaysAverageWithMetadata(getData.records[0]);
             } else {
-              setTodaysAverage(null);
+              setTodaysAverageWithMetadata(null);
             }
           }
         }
       } catch (err) {
         console.error('Failed to fetch today\'s average:', err);
-        setTodaysAverage(null);
+        setTodaysAverageWithMetadata(null);
       } finally {
         setTodaysAverageLoading(false);
       }
@@ -395,7 +422,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       }).then(res => res.json())
         .then(data => {
           if (data.record) {
-            setTodaysAverage(data.record.dailyAverage);
+            setTodaysAverageWithMetadata(data.record);
           }
         })
         .catch(err => console.error('Failed to refresh today\'s average:', err));
@@ -536,6 +563,29 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
               <div className="text-xs text-gray-500 mt-1">
                 {((todaysAverage / totalAircraft) * 100).toFixed(0)}% time-weighted availability
               </div>
+              {/* Metadata display */}
+              {todaysAverageDate && (
+                <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700/50 space-y-0.5">
+                  {todaysAverageDate && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Date:</span>
+                      <span>{new Date(todaysAverageDate + 'T00:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                  )}
+                  {todaysFlyingWindowStart && todaysFlyingWindowEnd && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Flying Window:</span>
+                      <span>{todaysFlyingWindowStart} - {todaysFlyingWindowEnd}</span>
+                    </div>
+                  )}
+                  {todaysEffectiveEndTime && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Calculated at:</span>
+                      <span>{todaysEffectiveEndTime}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <>

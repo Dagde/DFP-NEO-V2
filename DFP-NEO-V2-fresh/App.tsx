@@ -3831,6 +3831,9 @@ useEffect(() => {
         console.log('  - window.forceInsertAvailability(count) - Force insert a test record');
     }, [sessionUser?.userId, availableAircraftCount, flyingStartTime, flyingEndTime]);
 
+    // Track whether we've loaded the persisted availability
+    const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = useState(false);
+
     // Fetch current availability from database on startup
     // This ensures the availability persists across app restarts/hard refreshes
     useEffect(() => {
@@ -3845,32 +3848,39 @@ useEffect(() => {
                 
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.success && !data.isDefault) {
-                        console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft`);
-                        setAvailableAircraftCount(data.availableCount);
-                    } else {
-                        console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                    if (data.success && data.availableCount !== undefined) {
+                        // Always use the persisted value if it exists (even from previous days)
+                        // The server returns the most recent event regardless of date
+                        if (!data.isDefault) {
+                            console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
+                            setAvailableAircraftCount(data.availableCount);
+                        } else {
+                            console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                        }
                     }
                 }
             } catch (err) {
                 console.error('[AV] ❌ Failed to fetch current availability:', err);
+            } finally {
+                // Mark that we've attempted to load persisted availability
+                setHasLoadedPersistedAvailability(true);
             }
         };
 
         fetchCurrentAvailability();
     }, [sessionUser?.userId]);
 
-    // Startup: fire once when user logs in
+    // Startup: fire once when user logs in AND after persisted availability is loaded
     // - Posts a "startup" event with current availability
     // - Runs recovery: checks if today's summary is missing and triggers recalculation
     useEffect(() => {
-        if (!sessionUser?.userId) return;
+        if (!sessionUser?.userId || !hasLoadedPersistedAvailability) return;
 
         const runStartup = async () => {
             console.log('[AV] 🚀 Startup: recording initial availability state');
 
-            // 1. Fire startup event (3s delay to allow state to settle)
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // 1. Fire startup event (1s delay to allow state to settle)
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             await postAvailabilityEvent(
                 availableAircraftCount,
