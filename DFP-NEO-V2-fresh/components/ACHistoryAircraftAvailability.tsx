@@ -335,6 +335,14 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   }, []);
 
   const toISODate = (d: Date) => d.toISOString().split('T')[0];
+  
+  // Get local date string in YYYY-MM-DD format (respects timezone)
+  const getLocalDateString = (d: Date = new Date()): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
@@ -368,7 +376,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         
         // First, trigger a recalculation via the recalculate endpoint
         // This will rebuild the daily summary from raw events
@@ -421,7 +429,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   useEffect(() => {
     // Debounce the refresh to avoid too many API calls
     const timeoutId = setTimeout(() => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateString();
       fetch('/api/aircraft-availability-recalculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

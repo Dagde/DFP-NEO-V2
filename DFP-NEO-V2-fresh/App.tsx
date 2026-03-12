@@ -3907,7 +3907,7 @@ useEffect(() => {
             console.log(`[AV] Running recovery check for ${todayStr}`);
             try {
                 const apiBase = getApiBaseUrl();
-                const recovRes = await fetch(`${apiBase}/aircraft-availability-history`, {
+                const recovRes = await fetch(`${apiBase}/aircraft-availability-recalculate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -3915,7 +3915,8 @@ useEffect(() => {
                         date: todayStr,
                         flyingWindowStart: windowStart,
                         flyingWindowEnd:   windowEnd,
-                        recordedBy: sessionUser?.userId ?? null,
+                        clientLocalHour: new Date().getHours(),
+                        clientLocalMinute: new Date().getMinutes(),
                     })
                 });
                 if (recovRes.ok) {
