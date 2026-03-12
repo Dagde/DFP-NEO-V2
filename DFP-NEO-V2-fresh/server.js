@@ -866,7 +866,10 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
         if (isAfterWindow && isToday) {
           console.log(`[AV-EVENTS] ⏭️ Also skipping recalculation - after flying window`);
         } else {
-          summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+          const clientCurrentTimeMinutes = (clientLocalHour !== undefined && clientLocalMinute !== undefined) 
+            ? clientLocalHour * 60 + clientLocalMinute 
+            : null;
+          summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy, clientCurrentTimeMinutes);
         }
         return res.json({ skipped: true, reason: 'no_change', summary, requestId });
       }
@@ -925,7 +928,11 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     console.log(`[AV-EVENTS] ✅ Event created with ID: ${eventId}`);
     
     // Recalculate daily summary (we only reach here if we're NOT after the flying window)
-    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+    // Pass the client's current time for accurate elapsed time calculation
+    const clientCurrentTimeMinutes = (clientLocalHour !== undefined && clientLocalMinute !== undefined) 
+      ? clientLocalHour * 60 + clientLocalMinute 
+      : null;
+    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy, clientCurrentTimeMinutes);
     
     console.log(`[AV-EVENTS] ✅ POST completed successfully ${requestId}`);
     console.log(`${'='.repeat(80)}\n`);
@@ -939,7 +946,9 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
 });
 
 // Recalculate daily summary helper
-async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy) {
+// clientCurrentTimeMinutes: Optional - the client's current local time in minutes since midnight
+//                              If provided, this is used to calculate effective end time
+async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy, clientCurrentTimeMinutes = null) {
   console.log(`[AV-EVENTS] 🔄 recalculateDailySummary for ${date}`);
   
   try {
@@ -954,12 +963,20 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     
     const windowStartMin = parseWindowTime(flyingWindowStart, 8);
     const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
-    const totalWindowMinutes = windowEndMin - windowStartMin;
     
-    console.log(`[AV-EVENTS] 🔄 Window: ${windowStartMin}min - ${windowEndMin}min (total: ${totalWindowMinutes}min)`);
+    // Calculate effective end time: min(current time, window end)
+    // If clientCurrentTimeMinutes is provided, use it; otherwise use window end
+    const effectiveEndMin = clientCurrentTimeMinutes !== null 
+      ? Math.min(Math.max(clientCurrentTimeMinutes, windowStartMin), windowEndMin)
+      : windowEndMin;
     
-    if (totalWindowMinutes <= 0) {
-      console.warn(`[AV-EVENTS] ⚠️ Invalid flying window`);
+    // Calculate elapsed time in the window (not total window duration)
+    const elapsedMinutes = effectiveEndMin - windowStartMin;
+    
+    console.log(`[AV-EVENTS] 🔄 Window: ${windowStartMin}min - ${windowEndMin}min, effectiveEnd: ${effectiveEndMin}min, elapsed: ${elapsedMinutes}min`);
+    
+    if (elapsedMinutes <= 0) {
+      console.warn(`[AV-EVENTS] ⚠️ Invalid flying window or current time before window start`);
       return null;
     }
     
@@ -1005,8 +1022,8 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
       const ev = events[i];
       const evMinutes = toMinutes(ev.timestamp);
       
-      // Skip events after the window ends
-      if (evMinutes >= windowEndMin) continue;
+      // Skip events after the effective end time
+      if (evMinutes >= effectiveEndMin) continue;
       
       // If event is before window start, just update last known availability
       if (evMinutes < windowStartMin) {
@@ -1036,37 +1053,41 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     // Events AFTER the window ends should NOT affect the average
     const remainingStart = Math.max(lastKnownTime, windowStartMin);
     
-    // Only fill remaining time if the last known event was BEFORE or WITHIN the window
-    // If the last event was after window end, don't use it
-    const lastEventWithinOrBeforeWindow = events.filter(e => toMinutes(e.timestamp) <= windowEndMin);
-    const validLastKnown = lastEventWithinOrBeforeWindow.length > 0 
-      ? lastEventWithinOrBeforeWindow[lastEventWithinOrBeforeWindow.length - 1].availableCount 
+    // Only fill remaining time if the last known event was BEFORE or WITHIN the effective end time
+    // If the last event was after effective end time, don't use it
+    const lastEventWithinOrBeforeEffective = events.filter(e => toMinutes(e.timestamp) <= effectiveEndMin);
+    const validLastKnown = lastEventWithinOrBeforeEffective.length > 0 
+      ? lastEventWithinOrBeforeEffective[lastEventWithinOrBeforeEffective.length - 1].availableCount 
       : lastKnownAvailability;
     
-    if (remainingStart < windowEndMin && coveredMinutes < totalWindowMinutes && lastKnownTime < windowEndMin) {
-      const remainingDuration = windowEndMin - remainingStart;
+    // Fill remaining time up to effective end time (not window end)
+    // This ensures we only count time that has actually elapsed
+    const effectiveRemainingEnd = Math.min(remainingStart + (elapsedMinutes - coveredMinutes), effectiveEndMin);
+    if (remainingStart < effectiveRemainingEnd && coveredMinutes < elapsedMinutes && lastKnownTime < effectiveEndMin) {
+      const remainingDuration = effectiveRemainingEnd - remainingStart;
       weightedSum += validLastKnown * remainingDuration;
       coveredMinutes += remainingDuration;
     }
     
-    // If no events within the window, use the last known availability for the entire window
+    // If no events within the window, use the last known availability for elapsed time
     if (coveredMinutes === 0 && events.length > 0) {
       // Find the last event before or at window start
       const eventsBeforeWindow = events.filter(e => toMinutes(e.timestamp) <= windowStartMin);
       if (eventsBeforeWindow.length > 0) {
         const lastBeforeWindow = eventsBeforeWindow[eventsBeforeWindow.length - 1];
-        weightedSum = lastBeforeWindow.availableCount * totalWindowMinutes;
-        coveredMinutes = totalWindowMinutes;
+        weightedSum = lastBeforeWindow.availableCount * elapsedMinutes;
+        coveredMinutes = elapsedMinutes;
       } else {
         // No events before window, use first event's value
-        weightedSum = events[0].availableCount * totalWindowMinutes;
-        coveredMinutes = totalWindowMinutes;
+        weightedSum = events[0].availableCount * elapsedMinutes;
+        coveredMinutes = elapsedMinutes;
       }
     }
     
-    console.log(`[AV-EVENTS] 📊 Calculation complete: weightedSum=${weightedSum}, coveredMinutes=${coveredMinutes}, totalWindowMinutes=${totalWindowMinutes}`);
+    console.log(`[AV-EVENTS] 📊 Calculation complete: weightedSum=${weightedSum}, coveredMinutes=${coveredMinutes}, elapsedMinutes=${elapsedMinutes}`);
     
-    const dailyAverage = totalWindowMinutes > 0 ? weightedSum / totalWindowMinutes : 0;
+    // Divide by elapsed time, not total window duration
+    const dailyAverage = elapsedMinutes > 0 ? weightedSum / elapsedMinutes : 0;
     const firstEvent = events[0];
     const lastEvent = events[events.length - 1];
     const totalAircraft = Math.max(...events.map(e => e.totalAircraft));

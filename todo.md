@@ -1,38 +1,51 @@
-# Aircraft Availability Fix Tasks
+# Aircraft Availability Average Fix Tasks
 
-## Current Issues
-1. Average still changes when aircraft availability is updated outside flying window (fix not working)
-2. Commit hash in header is one commit behind
+## Issues to Fix
+
+### Issue 1: Wrong Average Calculation (Server-side)
+**Current behavior**: Divides weighted sum by total window duration (e.g., 540 minutes for 08:00-17:00)
+**Correct behavior**: Should divide by **elapsed time in the flying window**
+
+Example:
+- If it's 13:00 (1 PM) and window started at 08:00
+- Elapsed time = 5 hours = 300 minutes
+- Average = weightedSum / 300, NOT weightedSum / 540
+
+### Issue 2: After-Window Check Should Use Vertical Time Line
+**Current behavior**: Uses `new Date()` when the event is sent to check if after flying window
+**Correct behavior**: Should use the **vertical time line value** from the Daily Schedule, which represents the current local time displayed in the UI
+
+The vertical time line is calculated from `new Date()` in the frontend, but the issue is:
+- When user changes availability at night (e.g., 11 PM), the event is sent with that timestamp
+- The check should compare the **event's time** against the flying window end
+- If the event time is after window end, skip recalculation
+
+### Issue 3: Day Flying Window Only
+**Requirement**: Only look at Day flying window for average calculation, ignore Night flying window
+
+## Implementation Plan
+
+### Step 1: Fix Server-Side Average Calculation
+- Modify `recalculateDailySummary` to accept a "current time" parameter
+- Calculate elapsed time = min(current time, window end) - window start
+- Divide weighted sum by elapsed time, not total window duration
+
+### Step 2: Use Event Timestamp for After-Window Check
+- The event already has a `timestamp` field
+- Use this timestamp (in local time) to compare against flying window end
+- If event timestamp is after window end, skip recalculation
+
+### Step 3: Ensure Day Flying Window Only
+- Verify that `flyingWindowStart` and `flyingWindowEnd` refer to Day flying window
+- These should already be `flyingStartTime` and `flyingEndTime` from the app
+
+## Code Locations
+
+- **Server calculation**: `/workspace/DFP-NEO-V2-fresh/server.js` - `recalculateDailySummary` function (lines 936-1100)
+- **Frontend utility**: `/workspace/DFP-NEO-V2-fresh/utils/aircraftAvailabilityUtils.ts` - `calculateDailyAverageAvailability` (already has correct logic)
+- **After-window check**: `/workspace/DFP-NEO-V2-fresh/server.js` - POST handler (lines 844-855)
 
 ## Tasks
-- [x] Investigate why the after-window fix isn't working
-  - **ROOT CAUSE 1**: The duplicate event check was calling `recalculateDailySummary` unconditionally
-  - **ROOT CAUSE 2 (NEW)**: Timezone mismatch - server uses its local time but compares against user's flying window time
-- [x] Check the commit display logic in the header
-  - The commit hash is baked into the build at compile time via Vite using `__COMMIT_HASH__`
-  - The issue is Railway serving pre-built static assets (the "pin" issue)
-- [x] Fix the duplicate event bypass issue
-  - Moved the after-window check to the BEGINNING of the POST handler
-- [ ] Fix the timezone mismatch issue
-  - Server should either:
-    a. Use the timestamp from the event (which is in user's timezone)
-    b. Or accept the user's timezone from the request
-  - Need to compare event timestamp against the flying window end
-
-## Summary of Issues Found
-
-### Issue 1: After-Window Check Was Being Bypassed (FIXED)
-The previous fix added a check at the end of the POST handler, but there was a duplicate event check earlier that called `recalculateDailySummary` unconditionally.
-
-### Issue 2: Timezone Mismatch (NEW - ROOT CAUSE)
-The server compares:
-- `now.getHours() * 60 + now.getMinutes()` - Server's local time
-- `parseWindowTime(flyingWindowEnd, 17)` - User's local time (e.g., 17:00 in Australia)
-
-If the server is in UTC and user is in UTC+10:
-- User at 11 PM Australia = 1 PM UTC
-- Server sees 13:00 UTC < 17:00 → thinks it's still within window!
-- This causes recalculation even though it's after window in user's timezone
-
-### Fix 2: Commit Display Lag
-The commit hash is embedded in the frontend build at compile time via Vite's `define` option. Railway may be serving cached/pinned static assets that don't reflect the latest build.
+- [ ] Fix server-side average calculation to use elapsed time
+- [ ] Fix after-window check to use event timestamp correctly
+- [ ] Test the fixes
