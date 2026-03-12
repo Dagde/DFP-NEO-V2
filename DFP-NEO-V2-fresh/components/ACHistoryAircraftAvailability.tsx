@@ -315,18 +315,56 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   }, [fetchRecords]);
 
   // Fetch today's average from the database
+  // Uses the POST /api/aircraft-availability-history endpoint to trigger recalculation
+  // This ensures the time-weighted average is always up-to-date based on raw events
   useEffect(() => {
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
       try {
         const today = new Date().toISOString().split('T')[0];
-        const res = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.records && data.records.length > 0) {
-            setTodaysAverage(data.records[0].dailyAverage);
+        
+        // First, trigger a recalculation via POST (recovery endpoint)
+        // This will rebuild the daily summary from raw events
+        const recalcRes = await fetch('/api/aircraft-availability-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            date: today,
+            // Use default flying window (0800-1700) - the server will use its configured values
+          }),
+        });
+        
+        if (recalcRes.ok) {
+          const recalcData = await recalcRes.json();
+          if (recalcData.record) {
+            // The recalculation returned the updated record
+            setTodaysAverage(recalcData.record.dailyAverage);
+          } else if (recalcData.skipped && recalcData.record) {
+            // Recalculation was skipped (recent), but we have the record
+            setTodaysAverage(recalcData.record.dailyAverage);
           } else {
-            setTodaysAverage(null);
+            // No events exist yet for today, try GET as fallback
+            const getRes = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
+            if (getRes.ok) {
+              const getData = await getRes.json();
+              if (getData.records && getData.records.length > 0) {
+                setTodaysAverage(getData.records[0].dailyAverage);
+              } else {
+                setTodaysAverage(null);
+              }
+            }
+          }
+        } else {
+          // POST failed, fall back to GET
+          const getRes = await fetch(`/api/aircraft-availability-history?startDate=${today}&endDate=${today}`);
+          if (getRes.ok) {
+            const getData = await getRes.json();
+            if (getData.records && getData.records.length > 0) {
+              setTodaysAverage(getData.records[0].dailyAverage);
+            } else {
+              setTodaysAverage(null);
+            }
           }
         }
       } catch (err) {
@@ -337,6 +375,10 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       }
     };
     fetchTodaysAverage();
+    
+    // Also set up a periodic refresh every 5 minutes to keep the average current
+    const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const formatPeriodLabel = (period: TimePeriod): string => {
