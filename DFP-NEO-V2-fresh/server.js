@@ -828,6 +828,23 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown'];
     const isBoundary = BOUNDARY_TYPES.includes(changeType);
     
+    // Check if we should skip recalculation (after flying window AND today)
+    // Do this check early to avoid unnecessary processing
+    const parseWindowTime = (s, defaultHour) => {
+      if (!s) return defaultHour * 60;
+      const clean = String(s).replace(':', '');
+      const h = parseInt(clean.slice(0, -2), 10) || defaultHour;
+      const m = parseInt(clean.slice(-2), 10) || 0;
+      return h * 60 + m;
+    };
+    
+    const now = new Date();
+    const eventMin = now.getHours() * 60 + now.getMinutes();
+    const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isAfterWindow = eventMin >= windowEndMin;
+    const isToday = date === todayStr;
+    
     // Deduplication: skip if last event has same count (unless boundary event)
     if (!isBoundary) {
       const lastEvent = await db.$queryRawUnsafe(
@@ -838,10 +855,48 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
       if (lastEvent.length > 0 && lastEvent[0].availableCount === availableCount) {
         console.log(`[AV-EVENTS] ⏭️ Skipping duplicate event for ${date}: availableCount=${availableCount} unchanged`);
         
-        // Still recalculate summary
-        const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+        // Only recalculate if not after window
+        let summary = null;
+        if (isAfterWindow && isToday) {
+          console.log(`[AV-EVENTS] ⏭️ Also skipping recalculation - after flying window`);
+        } else {
+          summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+        }
         return res.json({ skipped: true, reason: 'no_change', summary, requestId });
       }
+    }
+    
+    // If after flying window and today, just record the event but don't recalculate
+    if (isAfterWindow && isToday) {
+      console.log(`[AV-EVENTS] ⏰ Event is after flying window (${eventMin}min >= ${windowEndMin}min), recording event only`);
+      
+      // Insert the event
+      const eventTimestamp = timestamp ? new Date(timestamp) : new Date();
+      const eventId = require('crypto').randomUUID();
+      
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        eventId,
+        eventTimestamp,
+        date,
+        parseInt(availableCount),
+        parseInt(totalAircraft) || 15,
+        changeType || 'change',
+        recordedBy || null,
+        notes || null
+      );
+      
+      console.log(`[AV-EVENTS] ✅ Event recorded (no recalculation) with ID: ${eventId}`);
+      console.log(`${'='.repeat(80)}\n`);
+      
+      return res.json({ 
+        success: true, 
+        event: { id: eventId, timestamp: eventTimestamp, date, availableCount }, 
+        skippedRecalculation: true, 
+        reason: 'after_flying_window',
+        requestId 
+      });
     }
     
     // Insert the event
@@ -863,29 +918,8 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     
     console.log(`[AV-EVENTS] ✅ Event created with ID: ${eventId}`);
     
-    // Check if we should recalculate the daily summary
-    // Skip if event is after flying window AND it's today
-    const parseWindowTime = (s, defaultHour) => {
-      if (!s) return defaultHour * 60;
-      const clean = String(s).replace(':', '');
-      const h = parseInt(clean.slice(0, -2), 10) || defaultHour;
-      const m = parseInt(clean.slice(-2), 10) || 0;
-      return h * 60 + m;
-    };
-    
-    const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
-    const eventMin = eventTimestamp.getHours() * 60 + eventTimestamp.getMinutes();
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isAfterWindow = eventMin >= windowEndMin;
-    const isToday = date === todayStr;
-    
-    let summary = null;
-    if (isAfterWindow && isToday) {
-      console.log(`[AV-EVENTS] ⏭️ Skipping recalculation - event is after flying window (${eventMin} >= ${windowEndMin})`);
-    } else {
-      // Recalculate daily summary
-      summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
-    }
+    // Recalculate daily summary (we only reach here if we're NOT after the flying window)
+    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
     
     console.log(`[AV-EVENTS] ✅ POST completed successfully ${requestId}`);
     console.log(`${'='.repeat(80)}\n`);
