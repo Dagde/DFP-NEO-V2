@@ -380,6 +380,29 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+  
+  // Refresh today's average when currentAircraftAvailable changes
+  // This ensures the average updates when the user changes availability in the daily schedule
+  useEffect(() => {
+    // Debounce the refresh to avoid too many API calls
+    const timeoutId = setTimeout(() => {
+      const today = new Date().toISOString().split('T')[0];
+      fetch('/api/aircraft-availability-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ date: today }),
+      }).then(res => res.json())
+        .then(data => {
+          if (data.record) {
+            setTodaysAverage(data.record.dailyAverage);
+          }
+        })
+        .catch(err => console.error('Failed to refresh today\'s average:', err));
+    }, 2000); // 2 second debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [currentAircraftAvailable]);
 
   const formatPeriodLabel = (period: TimePeriod): string => {
     const labels: Record<TimePeriod, string> = {
