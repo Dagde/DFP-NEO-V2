@@ -34,6 +34,8 @@ async function getPrisma() {
     console.log('✅ Prisma connected to database');
     // Ensure AircraftAvailabilityHistory table exists (create if missing)
     await ensureAircraftAvailabilityTable(prisma);
+    // Ensure AircraftAvailabilityEvent table exists (create if missing)
+    await ensureAircraftAvailabilityEventTable(prisma);
     // Ensure SctRequest table exists (create if missing)
     await ensureSctRequestTable(prisma);
   }
@@ -710,6 +712,430 @@ app.delete('/api/sct-requests/:id', async (req, res) => {
   } catch (err) {
     console.error('❌ Error deleting SCT request:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// AIRCRAFT AVAILABILITY EVENTS API
+// ============================================================
+
+// Ensure AircraftAvailabilityEvent table exists
+async function ensureAircraftAvailabilityEventTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AircraftAvailabilityEvent" (
+        "id"             TEXT NOT NULL PRIMARY KEY,
+        "timestamp"      TIMESTAMP NOT NULL,
+        "date"           TEXT NOT NULL,
+        "availableCount" INTEGER NOT NULL,
+        "totalAircraft"  INTEGER NOT NULL,
+        "changeType"     TEXT NOT NULL,
+        "recordedBy"     TEXT,
+        "notes"          TEXT,
+        "createdAt"      TIMESTAMP NOT NULL DEFAULT NOW()
+      )
+    `);
+    // Create indexes
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_date ON "AircraftAvailabilityEvent"("date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_timestamp ON "AircraftAvailabilityEvent"("timestamp")`);
+    console.log('✅ AircraftAvailabilityEvent table ensured');
+  } catch (err) {
+    console.error('❌ Error creating AircraftAvailabilityEvent table:', err);
+  }
+}
+
+// GET /api/aircraft-availability-events - Get events for a date
+app.get('/api/aircraft-availability-events', async (req, res) => {
+  const requestId = `get_${Date.now()}`;
+  console.log(`\n[AV-EVENTS] 📥 GET request ${requestId}`);
+  
+  try {
+    const db = await getPrisma();
+    await ensureAircraftAvailabilityEventTable(db);
+    
+    const { date, startDate, endDate } = req.query;
+    let whereClause = '';
+    const params = [];
+    
+    if (date) {
+      whereClause = 'WHERE "date" = $1';
+      params.push(date);
+    } else if (startDate || endDate) {
+      const conditions = [];
+      if (startDate) {
+        params.push(startDate);
+        conditions.push(`"date" >= $${params.length}`);
+      }
+      if (endDate) {
+        params.push(endDate);
+        conditions.push(`"date" <= $${params.length}`);
+      }
+      whereClause = 'WHERE ' + conditions.join(' AND ');
+    }
+    
+    const events = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" ${whereClause} ORDER BY "timestamp" ASC`,
+      ...params
+    );
+    
+    console.log(`[AV-EVENTS] ✅ Returning ${events.length} events`);
+    res.json({ events });
+  } catch (error) {
+    console.error('[AV-EVENTS] ❌ GET error:', error);
+    res.status(500).json({ error: 'Failed to fetch events', details: error.message, requestId });
+  }
+});
+
+// POST /api/aircraft-availability-events - Create a new event
+app.post('/api/aircraft-availability-events', async (req, res) => {
+  const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[AV-EVENTS] 📨 POST request ${requestId}`);
+  
+  try {
+    const db = await getPrisma();
+    await ensureAircraftAvailabilityEventTable(db);
+    
+    const { timestamp, date, availableCount, totalAircraft, changeType, recordedBy, notes, flyingWindowStart, flyingWindowEnd } = req.body;
+    
+    console.log(`[AV-EVENTS] 📋 Parsed body:`, { timestamp, date, availableCount, totalAircraft, changeType, recordedBy });
+    
+    if (!date || availableCount === undefined || availableCount === null) {
+      console.error(`[AV-EVENTS] ❌ Validation failed: missing date or availableCount`);
+      return res.status(400).json({ error: 'date and availableCount are required', received: { date, availableCount }, requestId });
+    }
+    
+    const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown'];
+    const isBoundary = BOUNDARY_TYPES.includes(changeType);
+    
+    // Deduplication: skip if last event has same count (unless boundary event)
+    if (!isBoundary) {
+      const lastEvent = await db.$queryRawUnsafe(
+        `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" DESC LIMIT 1`,
+        date
+      );
+      
+      if (lastEvent.length > 0 && lastEvent[0].availableCount === availableCount) {
+        console.log(`[AV-EVENTS] ⏭️ Skipping duplicate event for ${date}: availableCount=${availableCount} unchanged`);
+        
+        // Still recalculate summary
+        const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+        return res.json({ skipped: true, reason: 'no_change', summary, requestId });
+      }
+    }
+    
+    // Insert the event
+    const eventTimestamp = timestamp ? new Date(timestamp) : new Date();
+    const eventId = require('crypto').randomUUID();
+    
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+      eventId,
+      eventTimestamp,
+      date,
+      parseInt(availableCount),
+      parseInt(totalAircraft) || 15,
+      changeType || 'change',
+      recordedBy || null,
+      notes || null
+    );
+    
+    console.log(`[AV-EVENTS] ✅ Event created with ID: ${eventId}`);
+    
+    // Recalculate daily summary
+    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy);
+    
+    console.log(`[AV-EVENTS] ✅ POST completed successfully ${requestId}`);
+    console.log(`${'='.repeat(80)}\n`);
+    
+    res.json({ success: true, event: { id: eventId, timestamp: eventTimestamp, date, availableCount, totalAircraft, changeType }, summary, requestId });
+  } catch (error) {
+    console.error(`[AV-EVENTS] ❌ POST error ${requestId}:`, error);
+    console.log(`${'='.repeat(80)}\n`);
+    res.status(500).json({ error: 'Failed to insert event', details: error.message, requestId });
+  }
+});
+
+// Recalculate daily summary helper
+async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, recordedBy) {
+  console.log(`[AV-EVENTS] 🔄 recalculateDailySummary for ${date}`);
+  
+  try {
+    // Parse flying window (default 0800-1700)
+    const parseWindowTime = (s, defaultHour) => {
+      if (!s) return defaultHour * 60;
+      const clean = String(s).replace(':', '');
+      const h = parseInt(clean.slice(0, -2), 10) || defaultHour;
+      const m = parseInt(clean.slice(-2), 10) || 0;
+      return h * 60 + m;
+    };
+    
+    const windowStartMin = parseWindowTime(flyingWindowStart, 8);
+    const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
+    const totalWindowMinutes = windowEndMin - windowStartMin;
+    
+    console.log(`[AV-EVENTS] 🔄 Window: ${windowStartMin}min - ${windowEndMin}min (total: ${totalWindowMinutes}min)`);
+    
+    if (totalWindowMinutes <= 0) {
+      console.warn(`[AV-EVENTS] ⚠️ Invalid flying window`);
+      return null;
+    }
+    
+    // Get all events for the date
+    const events = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" ASC`,
+      date
+    );
+    
+    console.log(`[AV-EVENTS] 🔄 Found ${events.length} events for ${date}`);
+    
+    if (events.length === 0) {
+      console.log(`[AV-EVENTS] ⚠️ No events for ${date}, skipping summary`);
+      return null;
+    }
+    
+    // Convert timestamp to minutes-since-midnight
+    const toMinutes = (ts) => {
+      const d = new Date(ts);
+      return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+    };
+    
+    // Calculate time-weighted average
+    let weightedSum = 0;
+    let coveredMinutes = 0;
+    
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      const evMinutes = toMinutes(ev.timestamp);
+      const nextMinutes = i + 1 < events.length ? toMinutes(events[i + 1].timestamp) : windowEndMin;
+      
+      const segStart = Math.max(evMinutes, windowStartMin);
+      const segEnd = Math.min(nextMinutes, windowEndMin);
+      
+      if (segEnd > segStart) {
+        const duration = segEnd - segStart;
+        weightedSum += ev.availableCount * duration;
+        coveredMinutes += duration;
+      }
+    }
+    
+    // Fill remaining time with last known value
+    if (coveredMinutes < totalWindowMinutes && events.length > 0) {
+      const uncoveredMinutes = totalWindowMinutes - coveredMinutes;
+      weightedSum += events[events.length - 1].availableCount * uncoveredMinutes;
+    }
+    
+    const dailyAverage = totalWindowMinutes > 0 ? weightedSum / totalWindowMinutes : 0;
+    const firstEvent = events[0];
+    const lastEvent = events[events.length - 1];
+    const totalAircraft = Math.max(...events.map(e => e.totalAircraft));
+    const plannedCount = firstEvent.availableCount;
+    const actualCount = lastEvent.availableCount;
+    const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
+    
+    console.log(`[AV-EVENTS] 📊 Daily summary: dailyAverage=${dailyAverage.toFixed(2)}, plannedCount=${plannedCount}, actualCount=${actualCount}`);
+    
+    // Upsert to AircraftAvailabilityHistory
+    const existingRecord = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1 LIMIT 1`,
+      date
+    );
+    
+    if (existingRecord.length > 0) {
+      await db.$executeRawUnsafe(
+        `UPDATE "AircraftAvailabilityHistory" SET 
+         "dailyAverage" = $2, "plannedCount" = $3, "actualCount" = $4, "totalAircraft" = $5,
+         "availabilityPct" = $6, "flyingWindowStart" = $7, "flyingWindowEnd" = $8,
+         "recordedBy" = $9, "lastCalculatedAt" = NOW(), "updatedAt" = NOW()
+         WHERE "date" = $1`,
+        date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct,
+        flyingWindowStart || null, flyingWindowEnd || null, recordedBy || null
+      );
+      console.log(`[AV-EVENTS] ✅ Updated history for ${date}`);
+    } else {
+      const historyId = require('crypto').randomUUID();
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AircraftAvailabilityHistory" 
+         ("id", "date", "dailyAverage", "plannedCount", "actualCount", "totalAircraft", "availabilityPct", "flyingWindowStart", "flyingWindowEnd", "recordedBy", "lastCalculatedAt", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW(), NOW())`,
+        historyId, date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct,
+        flyingWindowStart || null, flyingWindowEnd || null, recordedBy || null
+      );
+      console.log(`[AV-EVENTS] ✅ Inserted history for ${date}`);
+    }
+    
+    return { date, dailyAverage, plannedCount, actualCount, totalAircraft, availabilityPct };
+  } catch (err) {
+    console.error(`[AV-EVENTS] ❌ Failed to recalculate summary:`, err);
+    return null;
+  }
+}
+
+// ============================================================
+// AIRCRAFT AVAILABILITY DEBUG API
+// ============================================================
+
+// GET /api/aircraft-availability-debug - Diagnostic endpoint
+app.get('/api/aircraft-availability-debug', async (req, res) => {
+  const requestId = `debug_${Date.now()}`;
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[AV-DEBUG] 🔍 Diagnostic request ${requestId}`);
+  
+  const results = {
+    requestId,
+    timestamp: new Date().toISOString(),
+    checks: {},
+    errors: []
+  };
+  
+  try {
+    const db = await getPrisma();
+    
+    // Check database URL
+    results.checks.databaseUrl = {
+      configured: !!process.env.DATABASE_URL,
+      prefix: process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'not set'
+    };
+    
+    // Ensure tables exist
+    await ensureAircraftAvailabilityTable(db);
+    await ensureAircraftAvailabilityEventTable(db);
+    
+    // Count events
+    try {
+      const eventCount = await db.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM "AircraftAvailabilityEvent"`);
+      results.checks.eventTable = { accessible: true, count: eventCount[0].count };
+    } catch (e) {
+      results.checks.eventTable = { accessible: false };
+      results.errors.push({ check: 'eventTable', error: e.message });
+    }
+    
+    // Count history
+    try {
+      const historyCount = await db.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM "AircraftAvailabilityHistory"`);
+      results.checks.historyTable = { accessible: true, count: historyCount[0].count };
+    } catch (e) {
+      results.checks.historyTable = { accessible: false };
+      results.errors.push({ check: 'historyTable', error: e.message });
+    }
+    
+    // Latest event
+    try {
+      const latestEvent = await db.$queryRawUnsafe(`SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "createdAt" DESC LIMIT 1`);
+      results.checks.latestEvent = latestEvent.length > 0 ? {
+        exists: true,
+        id: latestEvent[0].id,
+        date: latestEvent[0].date,
+        availableCount: latestEvent[0].availableCount,
+        changeType: latestEvent[0].changeType
+      } : { exists: false };
+    } catch (e) {
+      results.errors.push({ check: 'latestEvent', error: e.message });
+    }
+    
+    // Latest history
+    try {
+      const latestHistory = await db.$queryRawUnsafe(`SELECT * FROM "AircraftAvailabilityHistory" ORDER BY "createdAt" DESC LIMIT 1`);
+      results.checks.latestHistory = latestHistory.length > 0 ? {
+        exists: true,
+        id: latestHistory[0].id,
+        date: latestHistory[0].date,
+        dailyAverage: latestHistory[0].dailyAverage
+      } : { exists: false };
+    } catch (e) {
+      results.errors.push({ check: 'latestHistory', error: e.message });
+    }
+    
+    // Test write
+    try {
+      const testDate = `TEST-${Date.now()}`;
+      const testId = require('crypto').randomUUID();
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
+         VALUES ($1, NOW(), $2, 999, 999, 'debug_test', 'debug', 'test', NOW())`,
+        testId, testDate
+      );
+      await db.$executeRawUnsafe(`DELETE FROM "AircraftAvailabilityEvent" WHERE "id" = $1`, testId);
+      results.checks.writeTest = { success: true };
+    } catch (e) {
+      results.checks.writeTest = { success: false };
+      results.errors.push({ check: 'writeTest', error: e.message });
+    }
+    
+    console.log(`[AV-DEBUG] ✅ Diagnostic complete ${requestId}`);
+    console.log(`${'='.repeat(80)}\n`);
+    
+    res.json(results);
+  } catch (error) {
+    console.error(`[AV-DEBUG] ❌ Error:`, error);
+    results.errors.push({ check: 'general', error: error.message });
+    res.status(500).json(results);
+  }
+});
+
+// POST /api/aircraft-availability-debug - Force insert test record
+app.post('/api/aircraft-availability-debug', async (req, res) => {
+  const requestId = `debug_post_${Date.now()}`;
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[AV-DEBUG] 🧪 Force insert test ${requestId}`);
+  
+  try {
+    const db = await getPrisma();
+    await ensureAircraftAvailabilityEventTable(db);
+    await ensureAircraftAvailabilityTable(db);
+    
+    const testDate = req.body.date || new Date().toISOString().split('T')[0];
+    const availableCount = req.body.availableCount || 15;
+    
+    // Insert event
+    const eventId = require('crypto').randomUUID();
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
+       VALUES ($1, NOW(), $2, $3, $4, 'debug_force_insert', 'debug_endpoint', 'Force insert test', NOW())`,
+      eventId, testDate, availableCount, availableCount
+    );
+    
+    console.log(`[AV-DEBUG] ✅ Event inserted: ${eventId}`);
+    
+    // Insert/update history
+    const existingHistory = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1 LIMIT 1`,
+      testDate
+    );
+    
+    let historyId;
+    if (existingHistory.length > 0) {
+      historyId = existingHistory[0].id;
+      await db.$executeRawUnsafe(
+        `UPDATE "AircraftAvailabilityHistory" SET 
+         "dailyAverage" = $2, "plannedCount" = $3, "actualCount" = $4, "totalAircraft" = $5,
+         "availabilityPct" = 100, "lastCalculatedAt" = NOW(), "updatedAt" = NOW()
+         WHERE "date" = $1`,
+        testDate, availableCount, availableCount, availableCount, availableCount
+      );
+    } else {
+      historyId = require('crypto').randomUUID();
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AircraftAvailabilityHistory" 
+         ("id", "date", "dailyAverage", "plannedCount", "actualCount", "totalAircraft", "availabilityPct", "lastCalculatedAt", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, 100, NOW(), NOW(), NOW())`,
+        historyId, testDate, availableCount, availableCount, availableCount, availableCount
+      );
+    }
+    
+    console.log(`[AV-DEBUG] ✅ History upserted: ${historyId}`);
+    console.log(`${'='.repeat(80)}\n`);
+    
+    res.json({
+      success: true,
+      requestId,
+      event: { id: eventId, date: testDate, availableCount },
+      history: { id: historyId, date: testDate }
+    });
+  } catch (error) {
+    console.error(`[AV-DEBUG] ❌ Force insert failed:`, error);
+    res.status(500).json({ success: false, requestId, error: error.message });
   }
 });
 
