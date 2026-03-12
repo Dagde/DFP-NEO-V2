@@ -523,10 +523,12 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
 
       {/* Footer notes */}
       <div className="mt-4 text-sm text-gray-400 space-y-1">
-        <p>• Daily Average is the mean aircraft availability count recorded throughout each day.</p>
+        <p>• Daily Average is the <strong className="text-gray-300">time-weighted average</strong> aircraft availability during the flying window only.</p>
+        <p>• Each availability state change is recorded as an event; the daily average weights by minutes active.</p>
         <p>• Trend compares the second half of the selected period against the first half.</p>
         <p>• Availability % is calculated as Daily Average ÷ Total Fleet × 100.</p>
         <p>• Data is stored in a dedicated database table and persists independently of schedule data.</p>
+        <p>• Both active and inactive codes appear in analytics if used historically.</p>
       </div>
     </div>
   );

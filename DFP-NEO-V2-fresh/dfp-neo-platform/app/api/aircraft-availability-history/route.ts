@@ -14,17 +14,17 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-// GET /api/aircraft-availability-history - Get availability records
+/**
+ * GET /api/aircraft-availability-history?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+ * Returns daily summary records for the given date range (used by AC History page).
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate'); // YYYY-MM-DD
-    const endDate = searchParams.get('endDate');     // YYYY-MM-DD
+    const startDate = searchParams.get('startDate');
+    const endDate   = searchParams.get('endDate');
 
-    // For string date fields, Prisma string comparison works correctly with gte/lte
-    // since dates in YYYY-MM-DD format sort lexicographically
     const where: any = {};
-
     if (startDate && endDate) {
       where.date = { gte: startDate, lte: endDate };
     } else if (startDate) {
@@ -40,9 +40,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ records }, { headers: CORS_HEADERS });
   } catch (error) {
-    console.error('Error fetching aircraft availability history:', error);
+    console.error('[AV-HISTORY] GET error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch aircraft availability history', details: String(error) },
+      { error: 'Failed to fetch history', details: String(error) },
       { status: 500, headers: CORS_HEADERS }
     );
   } finally {
@@ -50,20 +50,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/aircraft-availability-history - Create or update an availability record
+/**
+ * POST /api/aircraft-availability-history
+ * Recovery/sync endpoint. Recalculates daily summary for a date from raw events.
+ * Body: { date, flyingWindowStart, flyingWindowEnd, recordedBy }
+ *
+ * Also used on startup to check if today's summary is missing and rebuild it.
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      date,
-      dailyAverage,
-      plannedCount,
-      actualCount,
-      totalAircraft,
-      availabilityPct,
-      recordedBy,
-      notes
-    } = body;
+    const { date, flyingWindowStart, flyingWindowEnd, recordedBy } = body;
 
     if (!date) {
       return NextResponse.json(
@@ -72,38 +69,130 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert - create or update based on unique date
+    // Check if summary already exists and is recent (within last 10 minutes) - skip recalc
+    const existing = await prisma.aircraftAvailabilityHistory.findUnique({
+      where: { date },
+    });
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    if (existing && existing.lastCalculatedAt > tenMinutesAgo) {
+      console.log(`[AV-HISTORY] Summary for ${date} is recent, skipping recalculation`);
+      return NextResponse.json(
+        { skipped: true, reason: 'recent', record: existing },
+        { headers: CORS_HEADERS }
+      );
+    }
+
+    // Get all events for the date
+    const events = await prisma.aircraftAvailabilityEvent.findMany({
+      where: { date },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    if (events.length === 0) {
+      console.log(`[AV-HISTORY] No events for ${date}, cannot rebuild summary`);
+      return NextResponse.json(
+        { skipped: true, reason: 'no_events' },
+        { headers: CORS_HEADERS }
+      );
+    }
+
+    // Parse flying window
+    const parseWindowTime = (s: string | undefined, defaultHour: number): number => {
+      if (!s) return defaultHour * 60;
+      const clean = s.replace(':', '');
+      const h = parseInt(clean.slice(0, -2), 10);
+      const m = parseInt(clean.slice(-2), 10);
+      return h * 60 + m;
+    };
+
+    const windowStartMin = parseWindowTime(flyingWindowStart, 8);
+    const windowEndMin   = parseWindowTime(flyingWindowEnd, 17);
+    const totalWindowMinutes = windowEndMin - windowStartMin;
+
+    const toMinutes = (ts: Date): number => {
+      return ts.getHours() * 60 + ts.getMinutes() + ts.getSeconds() / 60;
+    };
+
+    let weightedSum = 0;
+    let coveredMinutes = 0;
+
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      const evMinutes = toMinutes(ev.timestamp);
+      const nextMinutes = i + 1 < events.length
+        ? toMinutes(events[i + 1].timestamp)
+        : windowEndMin;
+
+      const segStart = Math.max(evMinutes, windowStartMin);
+      const segEnd   = Math.min(nextMinutes, windowEndMin);
+
+      if (segEnd > segStart) {
+        const duration = segEnd - segStart;
+        weightedSum += ev.availableCount * duration;
+        coveredMinutes += duration;
+      }
+    }
+
+    if (coveredMinutes === 0 && events.length > 0) {
+      const toMin = (ts: Date) => ts.getHours() * 60 + ts.getMinutes();
+      const lastBeforeWindow = [...events].reverse().find(e => toMin(e.timestamp) <= windowStartMin);
+      const fallbackCount = lastBeforeWindow ? lastBeforeWindow.availableCount : events[0].availableCount;
+      weightedSum = fallbackCount * totalWindowMinutes;
+      coveredMinutes = totalWindowMinutes;
+    }
+
+    if (coveredMinutes < totalWindowMinutes) {
+      const uncoveredMinutes = totalWindowMinutes - coveredMinutes;
+      const lastEvent = events[events.length - 1];
+      weightedSum += lastEvent.availableCount * uncoveredMinutes;
+    }
+
+    const dailyAverage = totalWindowMinutes > 0 ? weightedSum / totalWindowMinutes : 0;
+    const totalAircraft = Math.max(...events.map(e => e.totalAircraft));
+    const plannedCount = events[0].availableCount;
+    const actualCount = events[events.length - 1].availableCount;
+    const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
+
+    console.log(
+      `[AV-HISTORY] 🔄 Recovery recalculation for ${date}: ` +
+      `dailyAverage=${dailyAverage.toFixed(3)} from ${events.length} events`
+    );
+
     const record = await prisma.aircraftAvailabilityHistory.upsert({
       where: { date },
       update: {
-        dailyAverage: dailyAverage ?? 0,
-        plannedCount: plannedCount ?? 0,
-        actualCount: actualCount ?? null,
-        totalAircraft: totalAircraft ?? 0,
-        availabilityPct: availabilityPct ?? 0,
+        dailyAverage,
+        plannedCount,
+        actualCount,
+        totalAircraft,
+        availabilityPct,
+        flyingWindowStart: flyingWindowStart ?? null,
+        flyingWindowEnd:   flyingWindowEnd ?? null,
         recordedBy: recordedBy ?? null,
-        notes: notes ?? null,
+        lastCalculatedAt: new Date(),
       },
       create: {
         date,
-        dailyAverage: dailyAverage ?? 0,
-        plannedCount: plannedCount ?? 0,
-        actualCount: actualCount ?? null,
-        totalAircraft: totalAircraft ?? 0,
-        availabilityPct: availabilityPct ?? 0,
+        dailyAverage,
+        plannedCount,
+        actualCount,
+        totalAircraft,
+        availabilityPct,
+        flyingWindowStart: flyingWindowStart ?? null,
+        flyingWindowEnd:   flyingWindowEnd ?? null,
         recordedBy: recordedBy ?? null,
-        notes: notes ?? null,
+        lastCalculatedAt: new Date(),
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      record
-    }, { headers: CORS_HEADERS });
-  } catch (error) {
-    console.error('Error saving aircraft availability history:', error);
     return NextResponse.json(
-      { error: 'Failed to save aircraft availability history', details: String(error) },
+      { success: true, record },
+      { headers: CORS_HEADERS }
+    );
+  } catch (error) {
+    console.error('[AV-HISTORY] POST error:', error);
+    return NextResponse.json(
+      { error: 'Failed to recalculate summary', details: String(error) },
       { status: 500, headers: CORS_HEADERS }
     );
   } finally {

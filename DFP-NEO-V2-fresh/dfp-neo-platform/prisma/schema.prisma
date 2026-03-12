@@ -268,18 +268,39 @@ model Score {
   trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
 }
 
+// Raw event log - every meaningful state change
+model AircraftAvailabilityEvent {
+  id             String   @id @default(cuid())
+  timestamp      DateTime // Exact time of the event
+  date           String   // ISO date YYYY-MM-DD (for easy querying)
+  availableCount Int      // How many aircraft available at this point
+  totalAircraft  Int      // Total fleet size
+  changeType     String   // "startup" | "reset" | "change" | "window_start" | "window_end" | "shutdown"
+  recordedBy     String?  // userId
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  @@index([date])
+  @@index([timestamp])
+  @@index([changeType])
+}
+
+// Daily summary table - UI display
 model AircraftAvailabilityHistory {
-  id              String   @id @default(cuid())
-  date            String   // ISO date string YYYY-MM-DD
-  dailyAverage    Float    // Average aircraft available for that day
-  plannedCount    Int      // Planned availability count set at start of day
-  actualCount     Int?     // Actual count at end of day (if recorded)
-  totalAircraft   Int      // Total aircraft in fleet
-  availabilityPct Float    // Percentage available (dailyAverage / totalAircraft * 100)
-  recordedBy      String?  // userId who recorded
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(cuid())
+  date             String   // ISO date string YYYY-MM-DD
+  dailyAverage     Float    // Time-weighted average aircraft available during flying window
+  plannedCount     Int      // Planned availability at start of day
+  actualCount      Int?     // Actual count at end of flying window
+  totalAircraft    Int      // Total aircraft in fleet
+  availabilityPct  Float    // Percentage available (dailyAverage / totalAircraft * 100)
+  flyingWindowStart String? // "0800" format
+  flyingWindowEnd   String? // "1700" format
+  recordedBy       String?  // userId who last triggered recalculation
+  notes            String?
+  lastCalculatedAt DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([date])
   @@index([date])

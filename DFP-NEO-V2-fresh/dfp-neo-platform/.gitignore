@@ -39,4 +39,5 @@ yarn-error.log*
 next-env.d.ts
 
 # Prisma
-prisma/migrations
+# NOTE: prisma/migrations MUST be tracked in git for Railway deployments
+# prisma/migrations

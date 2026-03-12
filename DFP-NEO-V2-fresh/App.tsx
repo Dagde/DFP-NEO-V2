@@ -3613,68 +3613,160 @@ useEffect(() => {
         loadSctRequests();
     }, [sessionUser?.userId]);
 
-    // Sync aircraft availability from localStorage to database on startup
+    // ─── Aircraft Availability Event-Based Tracking ──────────────────────────────
+    // Helper: format decimal hour (e.g. 8.5) to "0830"
+    const formatWindowTime = (decimalHour: number): string => {
+        const h = Math.floor(decimalHour);
+        const m = Math.round((decimalHour - h) * 60);
+        return `${h.toString().padStart(2, '0')}${m.toString().padStart(2, '0')}`;
+    };
+
+    // Helper: post an aircraft availability event to the database
+    const postAvailabilityEvent = async (
+        availableCount: number,
+        changeType: 'startup' | 'reset' | 'change' | 'window_start' | 'window_end' | 'shutdown',
+        totalAircraftOverride?: number,
+        notesOverride?: string,
+        timestampOverride?: Date
+    ): Promise<void> => {
+        const totalAircraftCount = totalAircraftOverride ?? (aircraftData.length > 0 ? aircraftData.length : availableAircraftCount);
+        const windowStart = formatWindowTime(flyingStartTime);
+        const windowEnd   = formatWindowTime(flyingEndTime);
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const ts = timestampOverride ?? new Date();
+
+        console.log(
+            `[AV] Posting event: type=${changeType} date=${dateStr} ` +
+            `available=${availableCount}/${totalAircraftCount} ` +
+            `window=${windowStart}-${windowEnd} ts=${ts.toISOString()}`
+        );
+
+        try {
+            const res = await fetch('/api/aircraft-availability-events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    timestamp: ts.toISOString(),
+                    date: dateStr,
+                    availableCount,
+                    totalAircraft: totalAircraftCount,
+                    changeType,
+                    recordedBy: sessionUser?.userId ?? null,
+                    notes: notesOverride ?? null,
+                    flyingWindowStart: windowStart,
+                    flyingWindowEnd:   windowEnd,
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.skipped) {
+                    console.log(`[AV] Event skipped (${data.reason}): no change in available count`);
+                } else {
+                    console.log(`[AV] ✅ Event recorded: ${changeType} available=${availableCount}`);
+                }
+            } else {
+                const errText = await res.text();
+                console.error(`[AV] ❌ Failed to post event: ${res.status} ${errText}`);
+            }
+        } catch (err) {
+            console.error('[AV] ❌ Error posting availability event:', err);
+        }
+    };
+
+    // Startup: fire once when user logs in
+    // - Posts a "startup" event with current availability
+    // - Runs recovery: checks if today's summary is missing and triggers recalculation
     useEffect(() => {
         if (!sessionUser?.userId) return;
-        const syncAvailabilityToDb = async () => {
-            try {
-                // Scan localStorage for any aircraft-availability-YYYY-MM-DD keys
-                const keysToSync: string[] = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith('aircraft-availability-')) {
-                        keysToSync.push(key);
-                    }
-                }
-                if (keysToSync.length === 0) return;
-                console.log('[AV] Found', keysToSync.length, 'aircraft availability records in localStorage to sync');
-                
-                for (const key of keysToSync) {
-                    try {
-                        const raw = localStorage.getItem(key);
-                        if (!raw) continue;
-                        const record = JSON.parse(raw);
-                        if (!record.date || !record.snapshots) continue;
-                        
-                        const totalAircraftCount = aircraftData.length || availableAircraftCount;
-                        const dailyAverage = record.averageAvailability ?? 0;
-                        const availabilityPct = totalAircraftCount > 0 ? (dailyAverage / totalAircraftCount) * 100 : 0;
-                        const plannedCount = record.snapshots.length > 0 ? record.snapshots[0].available : 0;
-                        const lastSnapshotAvailable = record.snapshots.length > 0 ? record.snapshots[record.snapshots.length - 1].available : null;
 
-                        const response = await fetch('/api/aircraft-availability-history', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({
-                                date: record.date,
-                                dailyAverage,
-                                plannedCount,
-                                actualCount: lastSnapshotAvailable,
-                                totalAircraft: totalAircraftCount,
-                                availabilityPct,
-                                recordedBy: sessionUser.userId,
-                                notes: null
-                            })
-                        });
-                        if (response.ok) {
-                            console.log('[AV] Synced availability for', record.date, 'to database');
-                        } else {
-                            const errText = await response.text();
-                            console.error('[AV] Failed to sync', record.date, ':', response.status, errText);
-                        }
-                    } catch (err) {
-                        console.error('[AV] Error syncing key', key, ':', err);
+        const runStartup = async () => {
+            console.log('[AV] 🚀 Startup: recording initial availability state');
+
+            // 1. Fire startup event (3s delay to allow state to settle)
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            await postAvailabilityEvent(
+                availableAircraftCount,
+                'startup',
+                undefined,
+                `App startup - initial availability: ${availableAircraftCount}`
+            );
+
+            // 2. Recovery: check if today's summary exists, rebuild from events if missing
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const windowStart = formatWindowTime(flyingStartTime);
+            const windowEnd   = formatWindowTime(flyingEndTime);
+
+            console.log(`[AV] Running recovery check for ${todayStr}`);
+            try {
+                const recovRes = await fetch('/api/aircraft-availability-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        date: todayStr,
+                        flyingWindowStart: windowStart,
+                        flyingWindowEnd:   windowEnd,
+                        recordedBy: sessionUser?.userId ?? null,
+                    })
+                });
+                if (recovRes.ok) {
+                    const recovData = await recovRes.json();
+                    if (recovData.skipped) {
+                        console.log(`[AV] Recovery: summary for ${todayStr} is recent, no rebuild needed`);
+                    } else {
+                        console.log(`[AV] Recovery: rebuilt daily summary for ${todayStr}`, recovData.record);
                     }
                 }
             } catch (err) {
-                console.error('[AV] Failed to sync aircraft availability to DB:', err);
+                console.error('[AV] Recovery check failed:', err);
             }
         };
-        // Small delay to allow other initialisation to complete first
-        const timer = setTimeout(syncAvailabilityToDb, 3000);
-        return () => clearTimeout(timer);
+
+        runStartup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionUser?.userId]);
+
+    // Flying-window boundary events: fire when time crosses window start/end
+    useEffect(() => {
+        if (!sessionUser?.userId) return;
+
+        const checkWindowBoundaries = () => {
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const windowStartMin = Math.floor(flyingStartTime) * 60 + Math.round((flyingStartTime % 1) * 60);
+            const windowEndMin   = Math.floor(flyingEndTime) * 60 + Math.round((flyingEndTime % 1) * 60);
+
+            // Fire window_start event at exact flying window start (within 1-min window)
+            if (currentMinutes >= windowStartMin && currentMinutes < windowStartMin + 1) {
+                console.log(`[AV] ⏰ Flying window START reached (${formatWindowTime(flyingStartTime)})`);
+                postAvailabilityEvent(
+                    availableAircraftCount,
+                    'window_start',
+                    undefined,
+                    `Flying window start: ${formatWindowTime(flyingStartTime)}`
+                );
+            }
+            // Fire window_end event at exact flying window end (within 1-min window)
+            if (currentMinutes >= windowEndMin && currentMinutes < windowEndMin + 1) {
+                console.log(`[AV] ⏰ Flying window END reached (${formatWindowTime(flyingEndTime)})`);
+                postAvailabilityEvent(
+                    availableAircraftCount,
+                    'window_end',
+                    undefined,
+                    `Flying window end: ${formatWindowTime(flyingEndTime)}`
+                );
+            }
+        };
+
+        // Check every minute
+        const interval = setInterval(checkWindowBoundaries, 60 * 1000);
+        return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionUser?.userId, flyingStartTime, flyingEndTime, availableAircraftCount]);
 
     const [showSctRequest, setShowSctRequest] = useState(false);
     const [instructorForSct, setInstructorForSct] = useState<Instructor | null>(null);
@@ -8042,39 +8134,54 @@ updates.forEach(update => {
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
                            onAvailabilityChange={async (record: DailyAvailabilityRecord) => {
-                               console.log('Availability updated:', record);
-                               // Save to database
+                               // Event-based tracking: record a 'change' event whenever
+                               // the availability line is moved in the overlay.
+                               // The last snapshot in the record represents the current state.
+                               if (record.snapshots.length === 0) return;
+
+                               const lastSnapshot = record.snapshots[record.snapshots.length - 1];
+                               const currentAvailable = lastSnapshot.available;
+                               const snapshotTs = new Date(lastSnapshot.timestamp);
+
+                               console.log(
+                                   `[AV] onAvailabilityChange: date=${record.date} ` +
+                                   `available=${currentAvailable} snapshots=${record.snapshots.length}`
+                               );
+
+                               const totalAircraftCount = aircraftData.length > 0 ? aircraftData.length : availableAircraftCount;
+                               const windowStart = formatWindowTime(flyingStartTime);
+                               const windowEnd   = formatWindowTime(flyingEndTime);
+
                                try {
-                                   const totalAircraftCount = aircraftData.length;
-                                   const dailyAverage = record.averageAvailability;
-                                   const availabilityPct = totalAircraftCount > 0 ? (dailyAverage / totalAircraftCount) * 100 : 0;
-                                   const plannedCount = record.snapshots.length > 0 ? record.snapshots[0].available : availableAircraftCount;
-                                   const lastSnapshot = record.snapshots.length > 0 ? record.snapshots[record.snapshots.length - 1].available : null;
-                                   
-                                   const response = await fetch('/api/aircraft-availability-history', {
+                                   const res = await fetch('/api/aircraft-availability-events', {
                                        method: 'POST',
                                        headers: { 'Content-Type': 'application/json' },
                                        credentials: 'include',
                                        body: JSON.stringify({
+                                           timestamp: snapshotTs.toISOString(),
                                            date: record.date,
-                                           dailyAverage,
-                                           plannedCount,
-                                           actualCount: lastSnapshot,
+                                           availableCount: currentAvailable,
                                            totalAircraft: totalAircraftCount,
-                                           availabilityPct,
-                                           recordedBy: sessionUser?.userId || null,
-                                           notes: null
+                                           changeType: 'change',
+                                           recordedBy: sessionUser?.userId ?? null,
+                                           notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
+                                           flyingWindowStart: windowStart,
+                                           flyingWindowEnd:   windowEnd,
                                        })
                                    });
-                                   
-                                   if (response.ok) {
-                                       console.log('✅ Aircraft availability saved to database for', record.date);
+                                   if (res.ok) {
+                                       const data = await res.json();
+                                       if (data.skipped) {
+                                           console.log(`[AV] Change event skipped: count unchanged at ${currentAvailable}`);
+                                       } else {
+                                           console.log(`[AV] ✅ Change event recorded for ${record.date}: available=${currentAvailable}`);
+                                       }
                                    } else {
-                                       const errText = await response.text();
-                                       console.error('❌ Failed to save aircraft availability:', response.status, errText);
+                                       const errText = await res.text();
+                                       console.error(`[AV] ❌ Failed to record change event: ${res.status} ${errText}`);
                                    }
                                } catch (error) {
-                                   console.error('❌ Failed to save aircraft availability:', error);
+                                   console.error('[AV] ❌ Error recording change event:', error);
                                }
                            }}
                            isVisualAdjustMode={isVisualAdjustMode}
