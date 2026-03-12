@@ -8131,6 +8131,7 @@ updates.forEach(update => {
                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                            showAircraftAvailability={showAircraftAvailability}
                            plannedAvailability={availableAircraftCount}
+                           onUpdatePlannedAvailability={setAvailableAircraftCount}
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
                            onAvailabilityChange={async (record: DailyAvailabilityRecord) => {
