@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../lib/db/prisma';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': 'https://dfp-neo-v2-production.up.railway.app',
@@ -47,7 +45,7 @@ export async function GET(request: NextRequest) {
       { status: 500, headers: CORS_HEADERS }
     );
   } finally {
-    await prisma.$disconnect();
+    
   }
 }
 
@@ -142,7 +140,7 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: CORS_HEADERS }
     );
   } finally {
-    await prisma.$disconnect();
+    
   }
 }
 
