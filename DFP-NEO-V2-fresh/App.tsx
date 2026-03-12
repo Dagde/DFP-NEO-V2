@@ -3629,7 +3629,7 @@ useEffect(() => {
         notesOverride?: string,
         timestampOverride?: Date
     ): Promise<void> => {
-        const totalAircraftCount = totalAircraftOverride ?? (aircraftData.length > 0 ? aircraftData.length : availableAircraftCount);
+        const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
         const windowStart = formatWindowTime(flyingStartTime);
         const windowEnd   = formatWindowTime(flyingEndTime);
         const today = new Date();
@@ -8162,7 +8162,7 @@ updates.forEach(update => {
                                    `timestamp=${snapshotTs.toISOString()}`
                                );
 
-                               const totalAircraftCount = aircraftData.length > 0 ? aircraftData.length : availableAircraftCount;
+                               const totalAircraftCount = availableAircraftCount;
                                const windowStart = formatWindowTime(flyingStartTime);
                                const windowEnd   = formatWindowTime(flyingEndTime);
 
