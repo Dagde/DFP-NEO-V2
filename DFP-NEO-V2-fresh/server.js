@@ -1129,6 +1129,8 @@ app.post('/api/aircraft-availability-debug', async (req, res) => {
     
     const testDate = req.body.date || new Date().toISOString().split('T')[0];
     const availableCount = req.body.availableCount || 15;
+    const flyingWindowStart = req.body.flyingWindowStart || '0800';
+    const flyingWindowEnd = req.body.flyingWindowEnd || '1700';
     
     // Insert event
     const eventId = require('crypto').randomUUID();
@@ -1140,43 +1142,69 @@ app.post('/api/aircraft-availability-debug', async (req, res) => {
     
     console.log(`[AV-DEBUG] ✅ Event inserted: ${eventId}`);
     
-    // Insert/update history
-    const existingHistory = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1 LIMIT 1`,
-      testDate
-    );
+    // Recalculate summary using the proper function (this handles events before window start)
+    const summary = await recalculateDailySummary(db, testDate, flyingWindowStart, flyingWindowEnd, 'debug_endpoint');
     
-    let historyId;
-    if (existingHistory.length > 0) {
-      historyId = existingHistory[0].id;
-      await db.$executeRawUnsafe(
-        `UPDATE "AircraftAvailabilityHistory" SET 
-         "dailyAverage" = $2, "plannedCount" = $3, "actualCount" = $4, "totalAircraft" = $5,
-         "availabilityPct" = 100, "lastCalculatedAt" = NOW(), "updatedAt" = NOW()
-         WHERE "date" = $1`,
-        testDate, availableCount, availableCount, availableCount, availableCount
-      );
-    } else {
-      historyId = require('crypto').randomUUID();
-      await db.$executeRawUnsafe(
-        `INSERT INTO "AircraftAvailabilityHistory" 
-         ("id", "date", "dailyAverage", "plannedCount", "actualCount", "totalAircraft", "availabilityPct", "lastCalculatedAt", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, 100, NOW(), NOW(), NOW())`,
-        historyId, testDate, availableCount, availableCount, availableCount, availableCount
-      );
-    }
-    
-    console.log(`[AV-DEBUG] ✅ History upserted: ${historyId}`);
+    console.log(`[AV-DEBUG] ✅ Summary calculated:`, summary);
     console.log(`${'='.repeat(80)}\n`);
     
     res.json({
       success: true,
       requestId,
       event: { id: eventId, date: testDate, availableCount },
-      history: { id: historyId, date: testDate }
+      summary
     });
   } catch (error) {
     console.error(`[AV-DEBUG] ❌ Force insert failed:`, error);
+    res.status(500).json({ success: false, requestId, error: error.message });
+  }
+});
+
+// POST /api/aircraft-availability-recalculate - Recalculate summary for a date
+app.post('/api/aircraft-availability-recalculate', async (req, res) => {
+  const requestId = `recalc_${Date.now()}`;
+  console.log(`\n${'='.repeat(80)}`);
+  console.log(`[AV-RECALC] 🔄 Recalculate summary ${requestId}`);
+  
+  try {
+    const db = await getPrisma();
+    await ensureAircraftAvailabilityEventTable(db);
+    await ensureAircraftAvailabilityTable(db);
+    
+    const date = req.body.date || new Date().toISOString().split('T')[0];
+    const flyingWindowStart = req.body.flyingWindowStart || '0800';
+    const flyingWindowEnd = req.body.flyingWindowEnd || '1700';
+    
+    console.log(`[AV-RECALC] 📅 Date: ${date}, Window: ${flyingWindowStart}-${flyingWindowEnd}`);
+    
+    // Get event count
+    const events = await db.$queryRawUnsafe(
+      `SELECT COUNT(*)::int as count FROM "AircraftAvailabilityEvent" WHERE "date" = $1`,
+      date
+    );
+    console.log(`[AV-RECALC] 📊 Events for ${date}: ${events[0]?.count || 0}`);
+    
+    // Recalculate summary
+    const summary = await recalculateDailySummary(db, date, flyingWindowStart, flyingWindowEnd, 'recalc_endpoint');
+    
+    if (summary) {
+      console.log(`[AV-RECALC] ✅ Summary calculated:`, summary);
+    } else {
+      console.log(`[AV-RECALC] ⚠️ No summary generated (no events?)`);
+    }
+    
+    console.log(`${'='.repeat(80)}\n`);
+    
+    res.json({
+      success: true,
+      requestId,
+      date,
+      flyingWindow: { start: flyingWindowStart, end: flyingWindowEnd },
+      eventCount: events[0]?.count || 0,
+      summary
+    });
+  } catch (error) {
+    console.error(`[AV-RECALC] ❌ Recalculate failed:`, error);
     res.status(500).json({ success: false, requestId, error: error.message });
   }
 });
