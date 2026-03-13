@@ -41,6 +41,9 @@ async function getPrisma() {
     // Ensure CancellationCode table exists and seed defaults
     await ensureCancellationCodesTable(prisma);
     await seedCancellationCodesIfEmpty(prisma);
+    // Ensure SystemConfig table exists and seed defaults
+    await ensureSystemConfigTable(prisma);
+    await seedDefaultConfigIfEmpty(prisma);
   }
   return prisma;
 }
@@ -819,11 +822,16 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
     await ensureAircraftAvailabilityEventTable(db);
-    
+    await ensureSystemConfigTable(db); // Ensure config table exists
+
     const { timestamp, date, availableCount, totalAircraft, changeType, recordedBy, notes, flyingWindowStart, flyingWindowEnd, clientLocalHour, clientLocalMinute } = req.body;
-    
+
+    // Get the configured fleet size from database (ignore client's totalAircraft - it was buggy)
+    const configuredFleetSize = await getFleetSize(db);
+
     console.log(`[AV-EVENTS] 📋 Parsed body:`, { timestamp, date, availableCount, totalAircraft, changeType, recordedBy, clientLocalHour, clientLocalMinute });
-    
+    console.log(`[AV-EVENTS] ✈️ Using configured fleet size: ${configuredFleetSize} (client sent: ${totalAircraft})`);
+
     if (!date || availableCount === undefined || availableCount === null) {
       console.error(`[AV-EVENTS] ❌ Validation failed: missing date or availableCount`);
       return res.status(400).json({ error: 'date and availableCount are required', received: { date, availableCount }, requestId });
@@ -898,12 +906,12 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
         eventTimestamp,
         date,
         parseInt(availableCount),
-        parseInt(totalAircraft) || 15,
+        configuredFleetSize,
         changeType || 'change',
         recordedBy || null,
         notes || null
       );
-      
+
       console.log(`[AV-EVENTS] ✅ Event recorded (no recalculation) with ID: ${eventId}`);
       console.log(`${'='.repeat(80)}\n`);
       
@@ -927,12 +935,12 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
       eventTimestamp,
       date,
       parseInt(availableCount),
-      parseInt(totalAircraft) || 15,
+      configuredFleetSize,
       changeType || 'change',
       recordedBy || null,
       notes || null
     );
-    
+
     console.log(`[AV-EVENTS] ✅ Event created with ID: ${eventId}`);
     
     // Recalculate daily summary (we only reach here if we're NOT after the flying window)
@@ -945,7 +953,7 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     console.log(`[AV-EVENTS] ✅ POST completed successfully ${requestId}`);
     console.log(`${'='.repeat(80)}\n`);
     
-    res.json({ success: true, event: { id: eventId, timestamp: eventTimestamp, date, availableCount, totalAircraft, changeType }, summary, requestId });
+    res.json({ success: true, event: { id: eventId, timestamp: eventTimestamp, date, availableCount, totalAircraft: configuredFleetSize, changeType }, summary, requestId });
   } catch (error) {
     console.error(`[AV-EVENTS] ❌ POST error ${requestId}:`, error);
     console.log(`${'='.repeat(80)}\n`);
@@ -1347,13 +1355,17 @@ app.post('/api/aircraft-availability-debug', async (req, res) => {
     const availableCount = req.body.availableCount || 15;
     const flyingWindowStart = req.body.flyingWindowStart || '0800';
     const flyingWindowEnd = req.body.flyingWindowEnd || '1700';
-    
+
+    // Get configured fleet size
+    await ensureSystemConfigTable(db);
+    const configuredFleetSize = await getFleetSize(db);
+
     // Insert event
     const eventId = require('crypto').randomUUID();
     await db.$executeRawUnsafe(
       `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
        VALUES ($1, NOW(), $2, $3, $4, 'debug_force_insert', 'debug_endpoint', 'Force insert test', NOW())`,
-      eventId, testDate, availableCount, availableCount
+      eventId, testDate, availableCount, configuredFleetSize
     );
     
     console.log(`[AV-DEBUG] ✅ Event inserted: ${eventId}`);
@@ -1501,16 +1513,19 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
     const db = await getPrisma();
     await ensureAircraftAvailabilityEventTable(db);
     
+    await ensureSystemConfigTable(db);
+    const configuredFleetSize = await getFleetSize(db);
+
     // Get the most recent event (any date, ordered by timestamp desc)
     const latestEvent = await db.$queryRawUnsafe(
       `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
     );
-    
+
     if (latestEvent.length > 0) {
       res.json({
         success: true,
         availableCount: latestEvent[0].availableCount,
-        totalAircraft: latestEvent[0].totalAircraft,
+        totalAircraft: configuredFleetSize, // Use configured fleet size, not stored value
         timestamp: latestEvent[0].timestamp,
         date: latestEvent[0].date
       });
@@ -1519,7 +1534,7 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
       res.json({
         success: true,
         availableCount: 15,
-        totalAircraft: 15,
+        totalAircraft: configuredFleetSize, // Use configured fleet size
         timestamp: null,
         date: null,
         isDefault: true
@@ -1552,6 +1567,57 @@ async function ensureCancellationCodesTable(db) {
     console.log('✅ CancellationCode table ensured');
   } catch (err) {
     console.error('❌ Error creating CancellationCode table:', err);
+  }
+}
+
+// ── System Configuration Table ───────────────────────────────────────────────
+async function ensureSystemConfigTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SystemConfig" (
+        "key"         VARCHAR(50) PRIMARY KEY,
+        "value"       TEXT NOT NULL,
+        "description" TEXT,
+        "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedBy"   VARCHAR(50)
+      )
+    `);
+    console.log('✅ SystemConfig table ensured');
+  } catch (err) {
+    console.error('❌ Error creating SystemConfig table:', err);
+  }
+}
+
+async function seedDefaultConfigIfEmpty(db) {
+  try {
+    // Check if fleet_size exists
+    const existing = await db.$queryRawUnsafe(
+      `SELECT * FROM "SystemConfig" WHERE "key" = 'fleet_size'`
+    );
+    if (existing.length === 0) {
+      await db.$executeRawUnsafe(`
+        INSERT INTO "SystemConfig" ("key", "value", "description")
+        VALUES ('fleet_size', '24', 'Total number of aircraft in the fleet')
+      `);
+      console.log('✅ Seeded default fleet_size = 24');
+    }
+  } catch (err) {
+    console.error('❌ Error seeding SystemConfig defaults:', err);
+  }
+}
+
+async function getFleetSize(db) {
+  try {
+    const result = await db.$queryRawUnsafe(
+      `SELECT "value" FROM "SystemConfig" WHERE "key" = 'fleet_size'`
+    );
+    if (result.length > 0) {
+      return parseInt(result[0].value, 10);
+    }
+    return 24; // Default fallback
+  } catch (err) {
+    console.error('❌ Error getting fleet_size:', err);
+    return 24;
   }
 }
 
@@ -1661,6 +1727,74 @@ app.delete('/api/cancellation-codes/:code', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('❌ DELETE /api/cancellation-codes error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ── System Configuration Endpoints ───────────────────────────────────────────
+
+// GET /api/system-config - Get all config values
+app.get('/api/system-config', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSystemConfigTable(db);
+    const config = await db.$queryRawUnsafe(`SELECT * FROM "SystemConfig"`);
+    // Return as key-value object for easy consumption
+    const configObj = {};
+    config.forEach(row => {
+      configObj[row.key] = row.value;
+    });
+    res.json({ success: true, config: configObj });
+  } catch (error) {
+    console.error('❌ GET /api/system-config error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/system-config/:key - Get a specific config value
+app.get('/api/system-config/:key', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSystemConfigTable(db);
+    const { key } = req.params;
+    const result = await db.$queryRawUnsafe(
+      `SELECT * FROM "SystemConfig" WHERE "key" = $1`,
+      key
+    );
+    if (result.length === 0) {
+      return res.status(404).json({ success: false, error: 'Config key not found' });
+    }
+    res.json({ success: true, key, value: result[0].value, description: result[0].description });
+  } catch (error) {
+    console.error('❌ GET /api/system-config/:key error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/system-config - Update a config value
+app.post('/api/system-config', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureSystemConfigTable(db);
+    const { key, value, description, updatedBy } = req.body;
+
+    if (!key || value === undefined) {
+      return res.status(400).json({ success: false, error: 'Missing key or value' });
+    }
+
+    await db.$executeRawUnsafe(`
+      INSERT INTO "SystemConfig" ("key", "value", "description", "updatedAt", "updatedBy")
+      VALUES ($1, $2, $3, NOW(), $4)
+      ON CONFLICT ("key") DO UPDATE SET
+        "value" = EXCLUDED.value,
+        "description" = COALESCE(EXCLUDED.description, "SystemConfig"."description"),
+        "updatedAt" = NOW(),
+        "updatedBy" = EXCLUDED.updatedBy
+    `, key, String(value), description || null, updatedBy || null);
+
+    res.json({ success: true, key, value });
+  } catch (error) {
+    console.error('❌ POST /api/system-config error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

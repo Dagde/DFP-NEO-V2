@@ -23,6 +23,7 @@ interface ACHistoryAircraftAvailabilityProps {
   currentUserId?: string;
   currentAircraftAvailable?: number;
   totalAircraft?: number;
+  currentUserRole?: string; // For admin check
 }
 
 // ─── Tiny SVG line/area chart ────────────────────────────────────────────────
@@ -234,12 +235,83 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   currentUserId,
   currentAircraftAvailable = 0,
   totalAircraft = 24,
+  currentUserRole,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const [records, setRecords] = useState<AvailabilityRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(false);
+
+  // ── Fleet Size Configuration State ───────────────────────────────────────────
+  const [configuredFleetSize, setConfiguredFleetSize] = useState(totalAircraft);
+  const [fleetSizeLoading, setFleetSizeLoading] = useState(false);
+  const [fleetSizeSaving, setFleetSizeSaving] = useState(false);
+  const [fleetSizeError, setFleetSizeError] = useState<string | null>(null);
+  const [showFleetSizeEditor, setShowFleetSizeEditor] = useState(false);
+  const [newFleetSize, setNewFleetSize] = useState(totalAircraft.toString());
+
+  const canEditFleetSize = currentUserRole === 'Super Admin' || currentUserRole === 'Admin';
+
+  // Fetch configured fleet size from database
+  useEffect(() => {
+    const fetchFleetSize = async () => {
+      setFleetSizeLoading(true);
+      try {
+        const res = await fetch('/api/system-config/fleet_size', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.value) {
+            const size = parseInt(data.value, 10);
+            setConfiguredFleetSize(size);
+            setNewFleetSize(size.toString());
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch fleet size config:', err);
+      } finally {
+        setFleetSizeLoading(false);
+      }
+    };
+    fetchFleetSize();
+  }, []);
+
+  const handleSaveFleetSize = async () => {
+    const size = parseInt(newFleetSize, 10);
+    if (isNaN(size) || size < 1 || size > 100) {
+      setFleetSizeError('Fleet size must be between 1 and 100');
+      return;
+    }
+    setFleetSizeSaving(true);
+    setFleetSizeError(null);
+    try {
+      const res = await fetch('/api/system-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          key: 'fleet_size',
+          value: size.toString(),
+          description: 'Total number of aircraft in the fleet',
+          updatedBy: currentUserId,
+        }),
+      });
+      if (res.ok) {
+        setConfiguredFleetSize(size);
+        setShowFleetSizeEditor(false);
+      } else {
+        const data = await res.json();
+        setFleetSizeError(data.error || 'Failed to save');
+      }
+    } catch (err) {
+      setFleetSizeError('Failed to save fleet size');
+    } finally {
+      setFleetSizeSaving(false);
+    }
+  };
+
+  // Use configured fleet size from DB, fallback to prop
+  const effectiveFleetSize = configuredFleetSize;
 
   // ── Export helpers ────────────────────────────────────────────────────────────
   const formatDateFull = (dateStr: string): string => {
@@ -643,7 +715,61 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mt-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-white">AC History (Aircraft Availability)</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold text-white">AC History (Aircraft Availability)</h2>
+          {/* Fleet Size Configuration - Admin Only */}
+          {canEditFleetSize && (
+            <div className="flex items-center gap-2">
+              {showFleetSizeEditor ? (
+                <div className="flex items-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1.5">
+                  <span className="text-xs text-gray-400">Fleet Size:</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={newFleetSize}
+                    onChange={(e) => setNewFleetSize(e.target.value)}
+                    className="w-16 px-2 py-1 text-sm bg-gray-600 text-white rounded border border-gray-500 focus:border-sky-500 focus:outline-none"
+                    disabled={fleetSizeSaving}
+                  />
+                  <button
+                    onClick={handleSaveFleetSize}
+                    disabled={fleetSizeSaving}
+                    className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 transition-colors"
+                  >
+                    {fleetSizeSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowFleetSizeEditor(false);
+                      setNewFleetSize(configuredFleetSize.toString());
+                      setFleetSizeError(null);
+                    }}
+                    disabled={fleetSizeSaving}
+                    className="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded hover:bg-gray-500 disabled:opacity-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowFleetSizeEditor(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/50 text-gray-400 rounded hover:bg-gray-600 hover:text-gray-300 transition-colors"
+                  title="Configure fleet size"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Fleet: {effectiveFleetSize}</span>
+                </button>
+              )}
+              {fleetSizeError && (
+                <span className="text-xs text-red-400">{fleetSizeError}</span>
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {loading && (
             <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -672,10 +798,10 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-sky-400">{currentAircraftAvailable}</span>
-            <span className="text-sm text-gray-400">of {totalAircraft} aircraft</span>
+            <span className="text-sm text-gray-400">of {effectiveFleetSize} aircraft</span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {((currentAircraftAvailable / totalAircraft) * 100).toFixed(0)}% availability
+            {((currentAircraftAvailable / effectiveFleetSize) * 100).toFixed(0)}% availability
           </div>
         </div>
         <div className="bg-gradient-to-br from-amber-900/40 to-amber-800/20 rounded-lg p-4 border border-amber-700/50">
@@ -712,7 +838,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                 <span className="text-sm text-gray-400">avg aircraft</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {((todaysAverage / totalAircraft) * 100).toFixed(0)}% time-weighted availability
+                {((todaysAverage / effectiveFleetSize) * 100).toFixed(0)}% time-weighted availability
               </div>
               {/* Metadata display */}
               {todaysAverageDate && (

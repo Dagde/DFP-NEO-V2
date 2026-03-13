@@ -176,6 +176,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
         currentUserId={currentUserId}
         currentAircraftAvailable={currentAircraftAvailable}
         totalAircraft={totalAircraft}
+        currentUserRole={currentUserRole}
       />
 
       {/* Recent Cancellations Table */}
