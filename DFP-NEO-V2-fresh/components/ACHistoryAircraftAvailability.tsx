@@ -240,6 +240,84 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTable, setShowTable] = useState(false);
+
+  // ── Export helpers ────────────────────────────────────────────────────────────
+  const formatDateFull = (dateStr: string): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  const exportCSV = () => {
+    const sorted = [...records].reverse();
+    const header = ['Date', 'Day', 'Daily Avg (ac)', 'Planned', 'Actual', 'Fleet Size', 'Availability %'];
+    const rows = sorted.map(r => {
+      const d = new Date(r.date + 'T00:00:00');
+      const day = d.toLocaleDateString('en-AU', { weekday: 'long' });
+      return [
+        r.date,
+        day,
+        r.dailyAverage.toFixed(2),
+        r.plannedCount,
+        r.actualCount ?? '',
+        r.totalAircraft,
+        r.availabilityPct.toFixed(1),
+      ];
+    });
+    const csv = [header, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aircraft-availability-${selectedPeriod}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportExcel = () => {
+    const sorted = [...records].reverse();
+    // Build an HTML table that Excel can open directly
+    const rows = sorted.map(r => {
+      const d = new Date(r.date + 'T00:00:00');
+      const day = d.toLocaleDateString('en-AU', { weekday: 'long' });
+      const pctColor = r.availabilityPct >= 70 ? '#16a34a' : r.availabilityPct >= 50 ? '#d97706' : '#dc2626';
+      return `<tr>
+        <td>${r.date}</td>
+        <td>${day}</td>
+        <td style="text-align:right">${r.dailyAverage.toFixed(2)}</td>
+        <td style="text-align:right">${r.plannedCount}</td>
+        <td style="text-align:right">${r.actualCount ?? ''}</td>
+        <td style="text-align:right">${r.totalAircraft}</td>
+        <td style="text-align:right;color:${pctColor}">${r.availabilityPct.toFixed(1)}%</td>
+      </tr>`;
+    }).join('');
+
+    const periodLabel = formatPeriodLabel(selectedPeriod);
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="UTF-8">
+<style>
+  th { background:#1e3a5f; color:#38bdf8; font-weight:bold; padding:6px 10px; }
+  td { padding:5px 10px; border-bottom:1px solid #e5e7eb; }
+  tr:nth-child(even) td { background:#f0f9ff; }
+</style>
+</head>
+<body>
+<h2 style="font-family:Arial;color:#1e3a5f">Daily Average Aircraft Available — ${periodLabel}</h2>
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial;font-size:12px">
+  <thead><tr>
+    <th>Date</th><th>Day</th><th>Daily Avg (ac)</th><th>Planned</th><th>Actual</th><th>Fleet Size</th><th>Availability %</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aircraft-availability-${selectedPeriod}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const [todaysAverage, setTodaysAverage] = useState<number | null>(null);
   const [todaysAverageLoading, setTodaysAverageLoading] = useState(false);
   // Store metadata about today's average calculation
@@ -580,7 +658,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
             onClick={() => setShowTable(v => !v)}
             className="px-3 py-1.5 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors"
           >
-            {showTable ? 'Hide Table' : 'Show Table'}
+            {showTable ? 'Hide Raw Table' : 'Show Raw Table'}
           </button>
         </div>
       </div>
@@ -757,18 +835,120 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         </div>
       )}
 
-      {/* Data Table (collapsible) */}
+      {/* ── Daily Average Table (always visible when data exists) ─────────── */}
+      {!loading && records.length > 0 && (
+        <div className="bg-gray-900/40 rounded-lg border border-gray-700 mt-4">
+          {/* Table header row with title + export buttons */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+            <div>
+              <span className="text-sm font-semibold text-white">Daily Average Aircraft Available</span>
+              <span className="ml-2 text-xs text-gray-400">— {formatPeriodLabel(selectedPeriod)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-semibold rounded transition-colors"
+                title="Export as CSV"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                </svg>
+                CSV
+              </button>
+              <button
+                onClick={exportExcel}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-semibold rounded transition-colors"
+                title="Export as Excel"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Excel
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-700/80 bg-gray-800/60">
+                  <th className="text-left py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide">Date</th>
+                  <th className="text-left py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide">Day</th>
+                  <th className="text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide">Daily Avg (ac)</th>
+                  <th className="text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide">Avail %</th>
+                  <th className="text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide">Fleet</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...records].reverse().map((r, idx) => {
+                  const d = new Date(r.date + 'T00:00:00');
+                  const dayName = d.toLocaleDateString('en-AU', { weekday: 'long' });
+                  const dateDisplay = d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+                  return (
+                    <tr key={r.id} className={`border-b border-gray-700/40 hover:bg-gray-700/20 transition-colors ${idx % 2 === 1 ? 'bg-gray-800/20' : ''}`}>
+                      <td className="py-2.5 px-4 text-white font-mono text-xs">{dateDisplay}</td>
+                      <td className="py-2.5 px-4 text-gray-300 text-xs">{dayName}</td>
+                      <td className="py-2.5 px-4 text-right">
+                        <span className="text-sky-400 font-bold">{r.dailyAverage.toFixed(2)}</span>
+                        <span className="text-gray-500 text-xs ml-1">ac</span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                          r.availabilityPct >= 70 ? 'bg-green-900/40 text-green-400' :
+                          r.availabilityPct >= 50 ? 'bg-amber-900/40 text-amber-400' :
+                          'bg-red-900/40 text-red-400'
+                        }`}>
+                          {r.availabilityPct.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-gray-400 text-xs">{r.totalAircraft}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* Summary footer row */}
+                {stats && (
+                  <tr className="border-t-2 border-gray-600 bg-gray-800/60">
+                    <td className="py-2.5 px-4 text-gray-300 font-semibold text-xs" colSpan={2}>
+                      Period Average ({records.length} days)
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <span className="text-amber-400 font-bold">{stats.mean.toFixed(2)}</span>
+                      <span className="text-gray-500 text-xs ml-1">ac</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                        stats.meanPct >= 70 ? 'bg-green-900/40 text-green-400' :
+                        stats.meanPct >= 50 ? 'bg-amber-900/40 text-amber-400' :
+                        'bg-red-900/40 text-red-400'
+                      }`}>
+                        {stats.meanPct.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-right text-gray-400 text-xs">{historicalTotalAircraft}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Raw data table (collapsible, for debugging/detail) ───────────── */}
       {showTable && records.length > 0 && (
-        <div className="overflow-x-auto mt-4">
+        <div className="overflow-x-auto mt-4 border border-gray-700 rounded-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-700">
-                <th className="text-left py-2 px-3 text-gray-300 font-semibold">Date</th>
-                <th className="text-right py-2 px-3 text-gray-300 font-semibold">Daily Avg</th>
-                <th className="text-right py-2 px-3 text-gray-300 font-semibold">Planned</th>
-                <th className="text-right py-2 px-3 text-gray-300 font-semibold">Actual</th>
-                <th className="text-right py-2 px-3 text-gray-300 font-semibold">Fleet</th>
-                <th className="text-right py-2 px-3 text-gray-300 font-semibold">Avail %</th>
+              <tr className="border-b border-gray-700 bg-gray-800/60">
+                <th className="text-left py-2 px-3 text-gray-300 font-semibold text-xs">Date</th>
+                <th className="text-right py-2 px-3 text-gray-300 font-semibold text-xs">Daily Avg</th>
+                <th className="text-right py-2 px-3 text-gray-300 font-semibold text-xs">Planned</th>
+                <th className="text-right py-2 px-3 text-gray-300 font-semibold text-xs">Actual</th>
+                <th className="text-right py-2 px-3 text-gray-300 font-semibold text-xs">Fleet</th>
+                <th className="text-right py-2 px-3 text-gray-300 font-semibold text-xs">Avail %</th>
               </tr>
             </thead>
             <tbody>
