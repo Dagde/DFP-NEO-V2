@@ -54,43 +54,50 @@ async function getPrisma() {
 // Make SQNLDR Alexander Burns an Admin on startup
 async function makeBurnsAdmin(db) {
   try {
-    // Find Alexander Burns in Personnel
-    const burns = await db.personnel.findFirst({
-      where: {
-        name: { contains: 'Burns', mode: 'insensitive' }
-      },
-      include: { user: true }
-    });
+    // Find Alexander Burns in Personnel using raw query for compatibility
+    const burnsResult = await db.$queryRaw`
+      SELECT id, name, rank, permissions, "userId"
+      FROM "Personnel"
+      WHERE name ILIKE '%Burns%'
+      LIMIT 1
+    `;
 
-    if (!burns) {
+    if (!burnsResult || burnsResult.length === 0) {
       console.log('⚠️ Alexander Burns not found in Personnel table - skipping admin assignment');
       return;
     }
 
+    const burns = burnsResult[0];
+
     // Check if already has Admin permission
-    if (burns.permissions && burns.permissions.includes('Admin')) {
+    if (burns.permissions && Array.isArray(burns.permissions) && burns.permissions.includes('Admin')) {
       console.log('✅ Alexander Burns already has Admin permission');
       return;
     }
 
     // Update Personnel permissions
-    const newPermissions = [...new Set([...(burns.permissions || []), 'Admin', 'Scheduler', 'Staff'])];
-    await db.personnel.update({
-      where: { id: burns.id },
-      data: { permissions: newPermissions }
-    });
+    const existingPerms = burns.permissions || [];
+    const newPermissions = [...new Set([...existingPerms, 'Admin', 'Scheduler', 'Staff'])];
+
+    await db.$executeRaw`
+      UPDATE "Personnel"
+      SET permissions = ${newPermissions}::text[]
+      WHERE id = ${burns.id}
+    `;
 
     // Update User role to ADMIN if user exists
-    if (burns.userId && burns.user) {
-      await db.user.update({
-        where: { id: burns.userId },
-        data: { role: 'ADMIN' }
-      });
+    if (burns.userId) {
+      await db.$executeRaw`
+        UPDATE "User"
+        SET role = 'ADMIN'
+        WHERE id = ${burns.userId}
+      `;
     }
 
     console.log(`✅ Made ${burns.name} an Admin with permissions: ${newPermissions.join(', ')}`);
   } catch (error) {
     console.error('⚠️ Could not make Burns admin:', error.message);
+    // Don't throw - server should still start
   }
 }
 
