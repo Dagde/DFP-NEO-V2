@@ -1937,6 +1937,91 @@ app.get('/api/user/search', async (req, res) => {
   }
 });
 
+// ━━ Admin Setup Endpoint ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// POST /api/admin/setup - Create or reset admin user
+app.post('/api/admin/setup', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const bcrypt = require('bcryptjs');
+
+    const adminUserId = process.env.INITIAL_ADMIN_USERID || 'admin';
+    const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'ChangeMe123!';
+    const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@dfpneo.com';
+
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
+
+    // Check if admin user already exists
+    const existingAdmin = await db.user.findUnique({ where: { userId: adminUserId } });
+
+    if (existingAdmin) {
+      await db.user.update({
+        where: { id: existingAdmin.id },
+        data: { password: hashedPassword, isActive: true },
+      });
+      return res.json({
+        message: 'Admin password reset successfully',
+        userId: adminUserId,
+        password: adminPassword,
+        note: 'Please change the password after login',
+      });
+    }
+
+    // Create admin user
+    await db.user.create({
+      data: {
+        userId: adminUserId,
+        username: 'admin',
+        firstName: 'System',
+        lastName: 'Administrator',
+        email: adminEmail,
+        password: hashedPassword,
+        isActive: true,
+        role: 'ADMIN',
+      },
+    });
+
+    res.json({
+      message: 'Admin user created successfully',
+      userId: adminUserId,
+      password: adminPassword,
+      note: 'Please change the password after first login',
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/setup error:', error);
+    res.status(500).json({ error: 'Failed to setup admin user', details: error.message });
+  }
+});
+
+// GET /api/admin/setup - Check admin user status
+app.get('/api/admin/setup', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const adminUserId = process.env.INITIAL_ADMIN_USERID || 'admin';
+
+    const admin = await db.user.findUnique({
+      where: { userId: adminUserId },
+      select: { userId: true, username: true, firstName: true, lastName: true, email: true, isActive: true },
+    });
+
+    if (!admin) {
+      return res.json({
+        exists: false,
+        message: 'Admin user does not exist. Use POST /api/admin/setup to create one.',
+      });
+    }
+
+    res.json({
+      exists: true,
+      admin,
+      message: 'Admin user exists. Use POST /api/admin/setup to reset password.',
+    });
+  } catch (error) {
+    console.error('❌ GET /api/admin/setup error:', error);
+    res.status(500).json({ error: 'Failed to check admin status', details: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
