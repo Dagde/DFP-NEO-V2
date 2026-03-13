@@ -46,8 +46,52 @@ async function getPrisma() {
     await seedDefaultConfigIfEmpty(prisma);
     // Migrate old history records to use correct fleet size
     await migrateFleetSizeInHistory(prisma);
+    await makeBurnsAdmin(prisma);
   }
   return prisma;
+}
+
+// Make SQNLDR Alexander Burns an Admin on startup
+async function makeBurnsAdmin(db) {
+  try {
+    // Find Alexander Burns in Personnel
+    const burns = await db.personnel.findFirst({
+      where: {
+        name: { contains: 'Burns', mode: 'insensitive' }
+      },
+      include: { user: true }
+    });
+
+    if (!burns) {
+      console.log('⚠️ Alexander Burns not found in Personnel table - skipping admin assignment');
+      return;
+    }
+
+    // Check if already has Admin permission
+    if (burns.permissions && burns.permissions.includes('Admin')) {
+      console.log('✅ Alexander Burns already has Admin permission');
+      return;
+    }
+
+    // Update Personnel permissions
+    const newPermissions = [...new Set([...(burns.permissions || []), 'Admin', 'Scheduler', 'Staff'])];
+    await db.personnel.update({
+      where: { id: burns.id },
+      data: { permissions: newPermissions }
+    });
+
+    // Update User role to ADMIN if user exists
+    if (burns.userId && burns.user) {
+      await db.user.update({
+        where: { id: burns.userId },
+        data: { role: 'ADMIN' }
+      });
+    }
+
+    console.log(`✅ Made ${burns.name} an Admin with permissions: ${newPermissions.join(', ')}`);
+  } catch (error) {
+    console.error('⚠️ Could not make Burns admin:', error.message);
+  }
 }
 
 // Create AircraftAvailabilityHistory table if it doesn't exist
