@@ -3,13 +3,13 @@ import { prisma } from '@/lib/db/prisma';
 import * as bcrypt from 'bcryptjs';
 
 // This endpoint creates or resets the admin user
+// Access at: https://dfp-neo.com/api/admin/setup
 
 export async function POST(request: NextRequest) {
   try {
-    // Get admin credentials from environment or use defaults
     const adminUserId = process.env.INITIAL_ADMIN_USERID || 'admin';
     const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'ChangeMe123!';
-    const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@dfpneo.com';
+    const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@dfp-neo.com';
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
@@ -20,10 +20,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingAdmin) {
-      // Update existing admin password
+      // Reset existing admin password and ensure ADMIN role
       await prisma.user.update({
         where: { id: existingAdmin.id },
-        data: { password: hashedPassword, isActive: true },
+        data: {
+          password: hashedPassword,
+          isActive: true,
+          role: 'ADMIN',
+        },
       });
 
       return NextResponse.json({
@@ -34,22 +38,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Find the admin role
-    let adminRole = await prisma.role.findUnique({
-      where: { name: 'admin' },
-    });
-
-    // If no role table, try to handle without role
-    // Create admin user
-    const admin = await prisma.user.create({
+    // Create new admin user
+    await prisma.user.create({
       data: {
         userId: adminUserId,
-        username: 'admin',
+        username: adminUserId,
         firstName: 'System',
         lastName: 'Administrator',
         email: adminEmail,
         password: hashedPassword,
         isActive: true,
+        role: 'ADMIN',
       },
     });
 
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Admin setup error:', error);
     return NextResponse.json(
-      { error: 'Failed to create admin user', details: String(error) },
+      { error: 'Failed to create/reset admin user', details: String(error) },
       { status: 500 }
     );
   }
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const adminUserId = process.env.INITIAL_ADMIN_USERID || 'admin';
-    
+
     const admin = await prisma.user.findUnique({
       where: { userId: adminUserId },
       select: {
@@ -82,6 +81,7 @@ export async function GET() {
         lastName: true,
         email: true,
         isActive: true,
+        role: true,
       },
     });
 
@@ -89,27 +89,13 @@ export async function GET() {
       return NextResponse.json({
         exists: false,
         message: 'Admin user does not exist. Use POST /api/admin/setup to create one.',
-        defaultCredentials: {
-          userId: adminUserId,
-          password: process.env.INITIAL_ADMIN_PASSWORD || 'ChangeMe123!',
-        }
       });
     }
 
     return NextResponse.json({
       exists: true,
-      admin: {
-        userId: admin.userId,
-        username: admin.username,
-        name: `${admin.firstName} ${admin.lastName}`,
-        email: admin.email,
-        isActive: admin.isActive,
-      },
+      admin,
       message: 'Admin user exists. Use POST /api/admin/setup to reset password.',
-      currentCredentials: {
-        userId: admin.userId,
-        password: 'Use POST /api/admin/setup to reset to default password',
-      },
     });
   } catch (error) {
     console.error('Admin status check error:', error);
