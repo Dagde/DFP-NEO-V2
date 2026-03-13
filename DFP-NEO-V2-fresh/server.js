@@ -1827,6 +1827,8 @@ app.post('/api/system-config', async (req, res) => {
     console.error('❌ POST /api/system-config error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
 // ━━ User Permissions Endpoints ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // PATCH /api/user/permissions - Update user permissions by name
