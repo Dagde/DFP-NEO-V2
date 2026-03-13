@@ -9,6 +9,7 @@ interface CancellationCodesTableProps {
   onDeleteCode: (code: string) => void;
   canEdit: boolean; // Based on user role
   usedCodes: Set<string>; // Codes that have been used in cancellations
+  isLoading?: boolean; // Loading state while fetching from DB
 }
 
 const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
@@ -19,6 +20,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   onDeleteCode,
   canEdit,
   usedCodes,
+  isLoading = false,
 }) => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
@@ -101,13 +103,78 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   };
 
   const sortedCodes = [...codes].sort((a, b) => {
-    // Sort by category first, then by code
     if (a.category !== b.category) {
       return a.category.localeCompare(b.category);
     }
     return a.code.localeCompare(b.code);
   });
 
+  // ── Loading skeleton ─────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">Cancellation Codes (Master Table)</h2>
+          {canEdit && (
+            <div className="w-24 h-8 bg-gray-700 rounded animate-pulse" />
+          )}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="text-left py-3 px-4 text-gray-300 font-semibold">Code</th>
+                <th className="text-left py-3 px-4 text-gray-300 font-semibold">Category</th>
+                <th className="text-left py-3 px-4 text-gray-300 font-semibold">Description</th>
+                <th className="text-left py-3 px-4 text-gray-300 font-semibold">Applies To</th>
+                <th className="text-center py-3 px-4 text-gray-300 font-semibold">Status</th>
+                {canEdit && <th className="text-center py-3 px-4 text-gray-300 font-semibold">Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {[...Array(6)].map((_, i) => (
+                <tr key={i} className="border-b border-gray-700">
+                  <td className="py-3 px-4">
+                    <div className="w-12 h-4 bg-gray-700 rounded animate-pulse" />
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="w-20 h-4 bg-gray-700 rounded animate-pulse" />
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="w-48 h-4 bg-gray-700 rounded animate-pulse" />
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="w-16 h-4 bg-gray-700 rounded animate-pulse" />
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <div className="w-14 h-5 bg-gray-700 rounded animate-pulse mx-auto" />
+                  </td>
+                  {canEdit && (
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center space-x-2">
+                        <div className="w-10 h-6 bg-gray-700 rounded animate-pulse" />
+                        <div className="w-20 h-6 bg-gray-700 rounded animate-pulse" />
+                        <div className="w-12 h-6 bg-gray-700 rounded animate-pulse" />
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 flex items-center space-x-2 text-gray-400 text-sm">
+          <svg className="animate-spin h-4 w-4 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span>Loading cancellation codes from database…</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main render ──────────────────────────────────────────────────────────────
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
       <div className="flex justify-between items-center mb-4">
@@ -203,6 +270,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                 </td>
               </tr>
             )}
+
             {sortedCodes.map((code) => {
               const isEditing = editingCode === code.code;
               const isUsed = usedCodes.has(code.code);
@@ -252,8 +320,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                        formData.isActive 
-                          ? 'bg-green-900/50 text-green-400' 
+                        formData.isActive
+                          ? 'bg-green-900/50 text-green-400'
                           : 'bg-red-900/50 text-red-400'
                       }`}>
                         {formData.isActive ? 'Active' : 'Inactive'}
@@ -287,8 +355,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                   <td className="py-3 px-4 text-gray-300">{code.appliesTo}</td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
-                      code.isActive 
-                        ? 'bg-green-900/50 text-green-400' 
+                      code.isActive
+                        ? 'bg-green-900/50 text-green-400'
                         : 'bg-red-900/50 text-red-400'
                     }`}>
                       {code.isActive ? 'Active' : 'Inactive'}
@@ -332,6 +400,20 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                 </tr>
               );
             })}
+
+            {/* Empty state */}
+            {sortedCodes.length === 0 && !isAddingNew && (
+              <tr>
+                <td colSpan={canEdit ? 6 : 5} className="py-8 text-center text-gray-500">
+                  No cancellation codes found.
+                  {canEdit && (
+                    <span className="ml-1">
+                      Click <span className="text-sky-400 font-semibold">+ Add Code</span> to create one.
+                    </span>
+                  )}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -348,7 +430,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md">
             <h3 className="text-xl font-bold text-white mb-4">Confirm Delete</h3>
             <p className="text-gray-300 mb-6">
-              Are you sure you want to delete the cancellation code <span className="font-mono font-bold text-red-400">{deletingCode}</span>?
+              Are you sure you want to delete the cancellation code{' '}
+              <span className="font-mono font-bold text-red-400">{deletingCode}</span>?
               This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">

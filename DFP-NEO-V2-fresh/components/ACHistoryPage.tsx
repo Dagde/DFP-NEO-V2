@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import CancellationCodesTable from './CancellationCodesTable';
 import ACHistoryAnalytics from './ACHistoryAnalytics';
 import ACHistoryAircraftAvailability from './ACHistoryAircraftAvailability';
 import RecentCancellationsTable from './RecentCancellationsTable';
 import { CancellationCode, CancellationRecord } from '../types';
-import { initialCancellationCodes } from '../data/cancellationCodes';
 
 interface ACHistoryPageProps {
   currentUserRole: string;
@@ -23,25 +22,36 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
+  const [codesLoading, setCodesLoading] = useState(true);
+  const [codesError, setCodesError] = useState<string | null>(null);
 
   // Check if user has edit permissions (Admin or Super Admin)
   const canEdit = currentUserRole === 'Super Admin' || currentUserRole === 'Admin';
 
-  // Load cancellation codes from localStorage or use initial data
-  useEffect(() => {
-    const storedCodes = localStorage.getItem('cancellationCodes');
-    if (storedCodes) {
-      try {
-        setCancellationCodes(JSON.parse(storedCodes));
-      } catch (error) {
-        console.error('Error loading cancellation codes:', error);
-        setCancellationCodes(initialCancellationCodes);
+  // ─── Load cancellation codes from the database ───────────────────────────
+  const loadCodesFromDB = useCallback(async () => {
+    setCodesLoading(true);
+    setCodesError(null);
+    try {
+      const res = await fetch('/api/cancellation-codes', { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.codes)) {
+        setCancellationCodes(data.codes);
+      } else {
+        throw new Error('Invalid response from server');
       }
-    } else {
-      setCancellationCodes(initialCancellationCodes);
-      localStorage.setItem('cancellationCodes', JSON.stringify(initialCancellationCodes));
+    } catch (err: any) {
+      console.error('Failed to load cancellation codes from DB:', err);
+      setCodesError('Failed to load cancellation codes.');
+    } finally {
+      setCodesLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadCodesFromDB();
+  }, [loadCodesFromDB]);
 
   // Calculate which codes have been used in cancellations
   useEffect(() => {
@@ -55,94 +65,117 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
     setUsedCodes(used);
   }, [cancellationRecords]);
 
-  // Save codes to localStorage whenever they change
-  const saveCodes = (codes: CancellationCode[]) => {
-    setCancellationCodes(codes);
-    localStorage.setItem('cancellationCodes', JSON.stringify(codes));
-  };
-
-  const handleAddCode = (newCode: CancellationCode) => {
-    // Check if code already exists
+  // ─── DB-backed CRUD handlers ──────────────────────────────────────────────
+  const handleAddCode = async (newCode: CancellationCode) => {
+    // Check for duplicate locally first
     if (cancellationCodes.some(c => c.code === newCode.code)) {
       alert('A code with this identifier already exists.');
       return;
     }
-
-    const updatedCodes = [...cancellationCodes, newCode];
-    saveCodes(updatedCodes);
-  };
-
-  const handleEditCode = (oldCode: string, newCode: CancellationCode) => {
-    const updatedCodes = cancellationCodes.map(c => 
-      c.code === oldCode ? newCode : c
-    );
-    saveCodes(updatedCodes);
-  };
-
-  const handleToggleActive = (code: string) => {
-    const updatedCodes = cancellationCodes.map(c => 
-      c.code === code 
-        ? { ...c, isActive: !c.isActive, updatedAt: new Date().toISOString() }
-        : c
-    );
-    saveCodes(updatedCodes);
-  };
-
-  const handleDeleteCode = (code: string) => {
-    const updatedCodes = cancellationCodes.filter(c => c.code !== code);
-    saveCodes(updatedCodes);
-  };
-
-  // Debug function to extract localStorage data
-  const debugLocalStorage = () => {
     try {
-      const cancellationRecords = localStorage.getItem('cancellationRecords');
-      console.log('=== CANCELLATION RECORDS DEBUG ===');
-      console.log('Raw localStorage data:', cancellationRecords);
-      
-      if (cancellationRecords) {
-        const parsed = JSON.parse(cancellationRecords);
-        console.log('Parsed data:', parsed);
-        console.log('Number of records:', parsed.length);
-        console.log('First record:', parsed[0]);
-        console.log('All records:', parsed);
-      } else {
-        console.log('No cancellation records found in localStorage');
+      const res = await fetch('/api/cancellation-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...newCode, createdBy: currentUserId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to save code: ${err.error || 'Unknown error'}`);
+        return;
       }
-      
-      // Also check other potential keys
-      console.log('All localStorage keys:', Object.keys(localStorage));
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        console.log(`${key}:`, localStorage.getItem(key));
+      const data = await res.json();
+      if (data.success) {
+        // Refresh from DB to get server-generated timestamps
+        await loadCodesFromDB();
       }
-    } catch (error) {
-      console.error('Error debugging localStorage:', error);
+    } catch (err: any) {
+      console.error('Failed to add cancellation code:', err);
+      alert('Failed to save code. Please try again.');
+    }
+  };
+
+  const handleEditCode = async (oldCode: string, newCode: CancellationCode) => {
+    try {
+      // If the code string changed, delete old and insert new
+      if (oldCode !== newCode.code) {
+        await fetch(`/api/cancellation-codes/${encodeURIComponent(oldCode)}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+      }
+      const res = await fetch('/api/cancellation-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ...newCode, createdBy: currentUserId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to update code: ${err.error || 'Unknown error'}`);
+        return;
+      }
+      await loadCodesFromDB();
+    } catch (err: any) {
+      console.error('Failed to edit cancellation code:', err);
+      alert('Failed to update code. Please try again.');
+    }
+  };
+
+  const handleToggleActive = async (code: string) => {
+    try {
+      const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}/toggle`, {
+        method: 'PATCH',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to toggle code: ${err.error || 'Unknown error'}`);
+        return;
+      }
+      // Optimistic update: flip locally while waiting for DB refresh
+      setCancellationCodes(prev =>
+        prev.map(c => c.code === code ? { ...c, isActive: !c.isActive } : c)
+      );
+    } catch (err: any) {
+      console.error('Failed to toggle cancellation code:', err);
+      alert('Failed to update code. Please try again.');
+    }
+  };
+
+  const handleDeleteCode = async (code: string) => {
+    try {
+      const res = await fetch(`/api/cancellation-codes/${encodeURIComponent(code)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Failed to delete code: ${err.error || 'Unknown error'}`);
+        return;
+      }
+      setCancellationCodes(prev => prev.filter(c => c.code !== code));
+    } catch (err: any) {
+      console.error('Failed to delete cancellation code:', err);
+      alert('Failed to delete code. Please try again.');
     }
   };
 
   return (
     <div className="p-6 space-y-6">
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">AC History</h1>
-            <p className="text-gray-400">
-              Manage cancellation codes and view cancellation analytics and trends.
-            </p>
-          </div>
-        </div>
+      {/* Page Header */}
+      <div className="mb-2">
+        <h1 className="text-3xl font-bold text-white mb-1">AC History</h1>
+        <p className="text-gray-400">
+          View cancellation analytics, aircraft availability trends, and manage cancellation codes.
+        </p>
       </div>
 
-      {/* Cancellation Codes Master Table */}
-      <CancellationCodesTable
-        codes={cancellationCodes}
-        onAddCode={handleAddCode}
-        onEditCode={handleEditCode}
-        onToggleActive={handleToggleActive}
-        onDeleteCode={handleDeleteCode}
-        canEdit={canEdit}
-        usedCodes={usedCodes}
+      {/* AC History - Aircraft Availability */}
+      <ACHistoryAircraftAvailability
+        currentUserId={currentUserId}
+        currentAircraftAvailable={currentAircraftAvailable}
+        totalAircraft={totalAircraft}
       />
 
       {/* Recent Cancellations Table */}
@@ -157,12 +190,30 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
         cancellationCodes={cancellationCodes}
       />
 
-      {/* AC History - Aircraft Availability */}
-      <ACHistoryAircraftAvailability
-        currentUserId={currentUserId}
-        currentAircraftAvailable={currentAircraftAvailable}
-        totalAircraft={totalAircraft}
-      />
+      {/* ── Cancellation Codes Master Table (bottom) ── */}
+      <div>
+        {codesError && (
+          <div className="mb-3 px-4 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm flex items-center gap-2">
+            <span>⚠️ {codesError}</span>
+            <button
+              onClick={loadCodesFromDB}
+              className="ml-auto text-xs underline hover:text-red-100"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        <CancellationCodesTable
+          codes={cancellationCodes}
+          onAddCode={handleAddCode}
+          onEditCode={handleEditCode}
+          onToggleActive={handleToggleActive}
+          onDeleteCode={handleDeleteCode}
+          canEdit={canEdit}
+          usedCodes={usedCodes}
+          isLoading={codesLoading}
+        />
+      </div>
     </div>
   );
 };

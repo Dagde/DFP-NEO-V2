@@ -38,6 +38,9 @@ async function getPrisma() {
     await ensureAircraftAvailabilityEventTable(prisma);
     // Ensure SctRequest table exists (create if missing)
     await ensureSctRequestTable(prisma);
+    // Ensure CancellationCode table exists and seed defaults
+    await ensureCancellationCodesTable(prisma);
+    await seedCancellationCodesIfEmpty(prisma);
   }
   return prisma;
 }
@@ -1524,6 +1527,140 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
     }
   } catch (error) {
     console.error('[AV-CURRENT] ❌ Error getting current availability:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
+// CANCELLATION CODES API
+// ============================================================
+
+async function ensureCancellationCodesTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CancellationCode" (
+        "code"        TEXT PRIMARY KEY,
+        "category"    TEXT NOT NULL,
+        "description" TEXT NOT NULL,
+        "appliesTo"   TEXT NOT NULL DEFAULT 'Both',
+        "isActive"    BOOLEAN NOT NULL DEFAULT true,
+        "createdBy"   TEXT,
+        "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log('✅ CancellationCode table ensured');
+  } catch (err) {
+    console.error('❌ Error creating CancellationCode table:', err);
+  }
+}
+
+// Seed default codes if table is empty
+async function seedCancellationCodesIfEmpty(db) {
+  const existing = await db.$queryRawUnsafe(`SELECT COUNT(*) as cnt FROM "CancellationCode"`);
+  const count = parseInt(existing[0].cnt);
+  if (count > 0) return;
+
+  const defaults = [
+    { code: 'AD', category: 'Aircraft', description: 'On deployment',           appliesTo: 'Both' },
+    { code: 'AT', category: 'Aircraft', description: 'Time constraint',          appliesTo: 'Both' },
+    { code: 'AU', category: 'Aircraft', description: 'Unavailable',              appliesTo: 'Both' },
+    { code: 'CI', category: 'Crew',     description: 'Instructor',               appliesTo: 'Both' },
+    { code: 'CO', category: 'Crew',     description: 'Other crew',               appliesTo: 'Both' },
+    { code: 'CP', category: 'Crew',     description: 'Pilot',                    appliesTo: 'Both' },
+    { code: 'CS', category: 'Crew',     description: 'Student',                  appliesTo: 'Both' },
+    { code: 'PA', category: 'Program',  description: 'Admin',                    appliesTo: 'Both' },
+    { code: 'PO', category: 'Program',  description: 'Other program',            appliesTo: 'Both' },
+    { code: 'PT', category: 'Program',  description: 'Training requirement',     appliesTo: 'Both' },
+    { code: 'WC', category: 'Weather',  description: 'Crosswind',                appliesTo: 'Flight' },
+    { code: 'WF', category: 'Weather',  description: 'Fog',                      appliesTo: 'Flight' },
+    { code: 'WR', category: 'Weather',  description: 'Rain',                     appliesTo: 'Flight' },
+    { code: 'WT', category: 'Weather',  description: 'Thunderstorm',             appliesTo: 'Flight' },
+    { code: 'WV', category: 'Weather',  description: 'Visibility',               appliesTo: 'Flight' },
+    { code: 'WW', category: 'Weather',  description: 'Wind',                     appliesTo: 'Flight' },
+  ];
+
+  for (const c of defaults) {
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CancellationCode" ("code","category","description","appliesTo","isActive","createdAt","updatedAt")
+      VALUES ($1,$2,$3,$4,true,NOW(),NOW())
+      ON CONFLICT ("code") DO NOTHING
+    `, c.code, c.category, c.description, c.appliesTo);
+  }
+  console.log(`✅ Seeded ${defaults.length} default cancellation codes`);
+}
+
+// GET /api/cancellation-codes - Return all codes
+app.get('/api/cancellation-codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureCancellationCodesTable(db);
+    await seedCancellationCodesIfEmpty(db);
+    const codes = await db.$queryRawUnsafe(
+      `SELECT * FROM "CancellationCode" ORDER BY "category" ASC, "code" ASC`
+    );
+    res.json({ success: true, codes });
+  } catch (error) {
+    console.error('❌ GET /api/cancellation-codes error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/cancellation-codes - Create or update a code (upsert)
+app.post('/api/cancellation-codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureCancellationCodesTable(db);
+    const { code, category, description, appliesTo, isActive, createdBy } = req.body;
+    if (!code || !category || !description) {
+      return res.status(400).json({ success: false, error: 'code, category, and description are required' });
+    }
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CancellationCode" ("code","category","description","appliesTo","isActive","createdBy","createdAt","updatedAt")
+      VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())
+      ON CONFLICT ("code") DO UPDATE SET
+        "category"    = EXCLUDED."category",
+        "description" = EXCLUDED."description",
+        "appliesTo"   = EXCLUDED."appliesTo",
+        "isActive"    = EXCLUDED."isActive",
+        "updatedAt"   = NOW()
+    `, code.toUpperCase(), category, description, appliesTo || 'Both', isActive !== false, createdBy || null);
+
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code.toUpperCase());
+    res.json({ success: true, code: rows[0] });
+  } catch (error) {
+    console.error('❌ POST /api/cancellation-codes error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PATCH /api/cancellation-codes/:code/toggle - Toggle active status
+app.patch('/api/cancellation-codes/:code/toggle', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureCancellationCodesTable(db);
+    const { code } = req.params;
+    await db.$executeRawUnsafe(`
+      UPDATE "CancellationCode" SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE "code" = $1
+    `, code);
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    res.json({ success: true, code: rows[0] });
+  } catch (error) {
+    console.error('❌ PATCH /api/cancellation-codes toggle error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// DELETE /api/cancellation-codes/:code
+app.delete('/api/cancellation-codes/:code', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureCancellationCodesTable(db);
+    const { code } = req.params;
+    await db.$executeRawUnsafe(`DELETE FROM "CancellationCode" WHERE "code" = $1`, code);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/cancellation-codes error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
