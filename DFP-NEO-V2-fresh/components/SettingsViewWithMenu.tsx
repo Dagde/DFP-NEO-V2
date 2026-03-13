@@ -369,43 +369,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
     return (
         <div className="flex-1 flex overflow-hidden bg-gray-900">
-            {/* Left Menu - all sections */}
-            <div className="w-48 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
-                <nav className="flex-1 overflow-y-auto py-2">
-                    {/* Home button */}
-                    <button
-                        onClick={() => setActiveSection('home')}
-                        className={`w-full text-left px-4 py-2 text-sm transition-all ${
-                            activeSection === 'home'
-                                ? 'bg-sky-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                        }`}
-                    >
-                        ⌂ Settings Home
-                    </button>
-                    <div className="border-t border-gray-700/50 my-1" />
-                    {allSections.map((section) => (
-                        <button
-                            key={section}
-                            onClick={() => setActiveSection(section)}
-                            className={`w-full text-left px-4 py-2 text-sm transition-all ${
-                                activeSection === section
-                                    ? 'bg-sky-600 text-white'
-                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                            }`}
-                        >
-                            {sectionLabels[section]}
-                        </button>
-                    ))}
-                </nav>
-
-                {/* Audit Button at Bottom */}
-                <div className="p-2 border-t border-gray-700">
-                    <AuditButton pageName="Settings" />
-                </div>
-            </div>
-
-            {/* Main Content */}
+            {/* Main Content - full width, no left menu */}
             <div className="flex-1 overflow-y-auto bg-gray-900">
                 <div className="p-4 sm:p-6">
 
@@ -418,11 +382,14 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
                                     <p className="text-xs sm:text-sm text-gray-400 mt-0.5">Configure system rules, data sources and operational parameters</p>
                                 </div>
-                                {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
-                                    <span className="ml-auto text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap">
-                                        Read-Only Mode
-                                    </span>
-                                )}
+                                <div className="ml-auto flex items-center gap-[10px]">
+                                    {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
+                                        <span className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap">
+                                            Read-Only Mode
+                                        </span>
+                                    )}
+                                    <AuditButton pageName="Settings" />
+                                </div>
                             </div>
 
                             {/* Section groups */}
@@ -496,11 +463,14 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <h2 className="text-xl sm:text-2xl font-bold text-white">
                                 {sectionLabels[activeSection as SettingsSection]}
                             </h2>
-                            {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
-                                <div className="ml-auto text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2">
-                                    <strong>Read-Only Mode</strong>
-                                </div>
-                            )}
+                            <div className="ml-auto flex items-center gap-[10px]">
+                                {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
+                                    <div className="text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2">
+                                        <strong>Read-Only Mode</strong>
+                                    </div>
+                                )}
+                                <AuditButton pageName={`Settings - ${sectionLabels[activeSection as SettingsSection]}`} />
+                            </div>
                         </div>
 
                     {/* Scoring Matrix - with internal Airmanship/Preparation/Technique/Elements tabs */}
@@ -524,14 +494,13 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         </button>
                                     ))}
                                 </div>
-                                {/* Right side: read-only badge + audit button */}
+                                {/* Right side: read-only badge */}
                                 <div className="flex items-center space-x-3">
                                     {!['Super Admin', 'Admin'].includes(props.currentUserPermission) && (
                                         <span className="text-xs text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-2 py-1">
                                             <strong>Read-Only</strong>
                                         </span>
                                     )}
-                                    <AuditButton pageName="Settings - Scoring Matrix" />
                                 </div>
                             </div>
                             {/* Scoring Matrix content - pass the active tab and read-only flag to SettingsView */}
