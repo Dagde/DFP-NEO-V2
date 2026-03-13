@@ -562,9 +562,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onShowSuccess={props.onShowSuccess}
                         />
                     )}
+                    {/* End section content */}
                     </div>
                     )}
-                    {/* End section content */}
 
                 </div>
             </div>
