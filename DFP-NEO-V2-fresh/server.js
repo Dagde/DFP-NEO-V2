@@ -1827,6 +1827,112 @@ app.post('/api/system-config', async (req, res) => {
     console.error('❌ POST /api/system-config error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
+// ━━ User Permissions Endpoints ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// PATCH /api/user/permissions - Update user permissions by name
+app.patch('/api/user/permissions', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { name, permissions, role } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Name is required' });
+    }
+
+    // Find the personnel record by name (case-insensitive search)
+    const personnel = await db.personnel.findFirst({
+      where: {
+        name: { contains: name, mode: 'insensitive' }
+      },
+      include: { user: true }
+    });
+
+    if (!personnel) {
+      return res.status(404).json({ success: false, error: `Personnel not found with name: ${name}` });
+    }
+
+    // Update personnel permissions
+    if (permissions && Array.isArray(permissions)) {
+      await db.personnel.update({
+        where: { id: personnel.id },
+        data: { permissions }
+      });
+    }
+
+    // Update user role if provided and user exists
+    if (role && personnel.userId) {
+      await db.user.update({
+        where: { id: personnel.userId },
+        data: { role }
+      });
+    }
+
+    // Return updated record
+    const updated = await db.personnel.findFirst({
+      where: { id: personnel.id },
+      include: { user: true }
+    });
+
+    console.log(`✅ PATCH /api/user/permissions - Updated: ${personnel.name}`);
+    res.json({
+      success: true,
+      personnel: {
+        id: updated.id,
+        name: updated.name,
+        rank: updated.rank,
+        permissions: updated.permissions
+      },
+      user: updated.user ? {
+        id: updated.user.id,
+        username: updated.user.username,
+        role: updated.user.role
+      } : null
+    });
+  } catch (error) {
+    console.error('❌ PATCH /api/user/permissions error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/user/search - Find user by name
+app.get('/api/user/search', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { name } = req.query;
+
+    if (!name) {
+      return res.status(400).json({ success: false, error: 'Name query parameter is required' });
+    }
+
+    const personnel = await db.personnel.findFirst({
+      where: {
+        name: { contains: name, mode: 'insensitive' }
+      },
+      include: { user: true }
+    });
+
+    if (!personnel) {
+      return res.status(404).json({ success: false, error: `Personnel not found with name: ${name}` });
+    }
+
+    res.json({
+      success: true,
+      personnel: {
+        id: personnel.id,
+        name: personnel.name,
+        rank: personnel.rank,
+        permissions: personnel.permissions
+      },
+      user: personnel.user ? {
+        id: personnel.user.id,
+        username: personnel.user.username,
+        role: personnel.user.role
+      } : null
+    });
+  } catch (error) {
+    console.error('❌ GET /api/user/search error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 // Fallback: serve index-v2.html for all non-API routes

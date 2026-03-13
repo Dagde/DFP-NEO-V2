@@ -3194,6 +3194,41 @@ useEffect(() => {
     const [showChangePassword, setShowChangePassword] = useState<boolean>(false);
     const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
 
+    // Fetch the logged-in user's military rank from Personnel table and update audit logger
+    const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string) => {
+        const formattedName = lastName && firstName
+            ? `${lastName}, ${firstName}`
+            : displayName || lastName || firstName || 'Unknown User';
+
+        let rank = '';
+        try {
+            const searchName = lastName || firstName || '';
+            if (searchName) {
+                const res = await fetch(`/api/personnel?search=${encodeURIComponent(searchName)}`, {
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const matched = (data.personnel || []).find((p: any) => {
+                        const pName = (p.name || '').toLowerCase();
+                        const fnLower = (firstName || '').toLowerCase();
+                        const lnLower = (lastName || '').toLowerCase();
+                        return pName.includes(lnLower) && (fnLower ? pName.includes(fnLower) : true);
+                    });
+                    if (matched && matched.rank) {
+                        rank = matched.rank;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[AUDIT] Could not fetch rank from Personnel:', e);
+        }
+
+        const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
+        setCurrentUser(auditUserString);
+        console.log('[AUDIT] setCurrentUser ->', auditUserString);
+    };
+
     // Check for existing session on app load
     useEffect(() => {
         const checkExistingSession = async () => {
@@ -3237,6 +3272,8 @@ useEffect(() => {
                             userId: ssoUser.userId,
                             username: ssoUser.username
                         });
+                        // Set correct user for audit logging
+                        fetchAndSetAuditUser(ssoUser.firstName || null, ssoUser.lastName || null, ssoUser.displayName);
                         return; // Exit early - SSO user authenticated
                     }
                 } catch (e) {
@@ -3267,6 +3304,8 @@ useEffect(() => {
                         userId: user.userId,
                         username: user.username
                     });
+                    // Set correct user for audit logging
+                    fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
                     if (user.mustChangePassword) {
                         setShowChangePassword(true);
                     }
@@ -3298,6 +3337,8 @@ useEffect(() => {
             militaryRank: 'FLTLT',
             userId: user.userId,
         });
+        // Set correct user for audit logging
+        fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
         if (user.mustChangePassword) {
             setShowChangePassword(true);
         }
@@ -3383,13 +3424,14 @@ useEffect(() => {
 
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
-    // Set current user for audit logging (fallback only if not already set by session)
+    // Set current user for audit logging — fallback only when no auth user is set
+    // (fetchAndSetAuditUser handles the primary case on login/session restore)
     useEffect(() => {
-        if (currentUser && currentUserName === 'Bloggs, Joe') {
+        if (!authUser && currentUser) {
             const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
             setCurrentUser(userString);
         }
-    }, [currentUser, currentUserName]);
+    }, [authUser, currentUser, currentUserName]);
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
         const loadInitialData = async () => {
