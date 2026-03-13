@@ -44,6 +44,8 @@ async function getPrisma() {
     // Ensure SystemConfig table exists and seed defaults
     await ensureSystemConfigTable(prisma);
     await seedDefaultConfigIfEmpty(prisma);
+    // Migrate old history records to use correct fleet size
+    await migrateFleetSizeInHistory(prisma);
   }
   return prisma;
 }
@@ -1176,7 +1178,8 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     const dailyAverage = elapsedMinutes > 0 ? weightedSum / elapsedMinutes : 0;
     const firstEvent = events[0];
     const lastEvent = events[events.length - 1];
-    const totalAircraft = Math.max(...events.map(e => e.totalAircraft));
+    // Always use configured fleet size from database (not stored event values which may be stale/incorrect)
+    const totalAircraft = await getFleetSize(db);
     const plannedCount = firstEvent.availableCount;
     const actualCount = lastEvent.availableCount;
     const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
@@ -1618,6 +1621,33 @@ async function getFleetSize(db) {
   } catch (err) {
     console.error('❌ Error getting fleet_size:', err);
     return 24;
+  }
+}
+
+// Migrate old AircraftAvailabilityHistory records that have incorrect totalAircraft values
+// (previously stored available aircraft count instead of fleet size)
+async function migrateFleetSizeInHistory(db) {
+  try {
+    const fleetSize = await getFleetSize(db);
+    // Update all history records where totalAircraft != configured fleet size
+    const result = await db.$executeRawUnsafe(
+      `UPDATE "AircraftAvailabilityHistory" SET 
+       "totalAircraft" = $1,
+       "availabilityPct" = CASE WHEN $1 > 0 THEN ("dailyAverage" / $1) * 100 ELSE "availabilityPct" END,
+       "updatedAt" = NOW()
+       WHERE "totalAircraft" != $1`,
+      fleetSize
+    );
+    console.log(`✅ Migrated AircraftAvailabilityHistory: updated records to fleet_size=${fleetSize}`);
+
+    // Also fix AircraftAvailabilityEvent records with wrong totalAircraft
+    await db.$executeRawUnsafe(
+      `UPDATE "AircraftAvailabilityEvent" SET "totalAircraft" = $1 WHERE "totalAircraft" != $1`,
+      fleetSize
+    );
+    console.log(`✅ Migrated AircraftAvailabilityEvent: updated records to fleet_size=${fleetSize}`);
+  } catch (err) {
+    console.error('❌ Error migrating fleet size in history:', err);
   }
 }
 

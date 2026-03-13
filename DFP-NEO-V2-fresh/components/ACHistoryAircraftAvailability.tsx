@@ -717,58 +717,63 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-white">AC History (Aircraft Availability)</h2>
-          {/* Fleet Size Configuration - Admin Only */}
-          {canEditFleetSize && (
-            <div className="flex items-center gap-2">
-              {showFleetSizeEditor ? (
-                <div className="flex items-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1.5">
-                  <span className="text-xs text-gray-400">Fleet Size:</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={newFleetSize}
-                    onChange={(e) => setNewFleetSize(e.target.value)}
-                    className="w-16 px-2 py-1 text-sm bg-gray-600 text-white rounded border border-gray-500 focus:border-sky-500 focus:outline-none"
-                    disabled={fleetSizeSaving}
-                  />
-                  <button
-                    onClick={handleSaveFleetSize}
-                    disabled={fleetSizeSaving}
-                    className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 transition-colors"
-                  >
-                    {fleetSizeSaving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowFleetSizeEditor(false);
-                      setNewFleetSize(configuredFleetSize.toString());
-                      setFleetSizeError(null);
-                    }}
-                    disabled={fleetSizeSaving}
-                    className="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded hover:bg-gray-500 disabled:opacity-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
+          {/* Fleet Size Display / Configuration */}
+          <div className="flex items-center gap-2">
+            {canEditFleetSize && showFleetSizeEditor ? (
+              <div className="flex items-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1.5">
+                <span className="text-xs text-gray-400">Fleet Size:</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={newFleetSize}
+                  onChange={(e) => setNewFleetSize(e.target.value)}
+                  className="w-16 px-2 py-1 text-sm bg-gray-600 text-white rounded border border-gray-500 focus:border-sky-500 focus:outline-none"
+                  disabled={fleetSizeSaving}
+                />
                 <button
-                  onClick={() => setShowFleetSizeEditor(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/50 text-gray-400 rounded hover:bg-gray-600 hover:text-gray-300 transition-colors"
-                  title="Configure fleet size"
+                  onClick={handleSaveFleetSize}
+                  disabled={fleetSizeSaving}
+                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 transition-colors"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>Fleet: {effectiveFleetSize}</span>
+                  {fleetSizeSaving ? 'Saving...' : 'Save'}
                 </button>
-              )}
-              {fleetSizeError && (
-                <span className="text-xs text-red-400">{fleetSizeError}</span>
-              )}
-            </div>
-          )}
+                <button
+                  onClick={() => {
+                    setShowFleetSizeEditor(false);
+                    setNewFleetSize(configuredFleetSize.toString());
+                    setFleetSizeError(null);
+                  }}
+                  disabled={fleetSizeSaving}
+                  className="px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded hover:bg-gray-500 disabled:opacity-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : canEditFleetSize ? (
+              <button
+                onClick={() => setShowFleetSizeEditor(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/50 text-gray-400 rounded hover:bg-gray-600 hover:text-gray-300 transition-colors"
+                title="Click to configure fleet size"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>Fleet: {effectiveFleetSize}</span>
+              </button>
+            ) : (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/30 text-gray-500 rounded">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                <span>Fleet: {effectiveFleetSize}</span>
+              </span>
+            )}
+            {fleetSizeError && (
+              <span className="text-xs text-red-400">{fleetSizeError}</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {loading && (
@@ -1030,7 +1035,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                           {r.availabilityPct.toFixed(1)}%
                         </span>
                       </td>
-                      <td className="py-2.5 px-4 text-right text-gray-400 text-xs">{r.totalAircraft}</td>
+                      <td className="py-2.5 px-4 text-right text-gray-400 text-xs">{effectiveFleetSize}</td>
                     </tr>
                   );
                 })}
@@ -1054,7 +1059,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                         {stats.meanPct.toFixed(1)}%
                       </span>
                     </td>
-                    <td className="py-2.5 px-4 text-right text-gray-400 text-xs">{historicalTotalAircraft}</td>
+                    <td className="py-2.5 px-4 text-right text-gray-400 text-xs">{effectiveFleetSize}</td>
                   </tr>
                 )}
               </tbody>
@@ -1084,7 +1089,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
                   <td className="py-2 px-3 text-right text-sky-400 font-semibold">{r.dailyAverage.toFixed(2)}</td>
                   <td className="py-2 px-3 text-right text-gray-300">{r.plannedCount}</td>
                   <td className="py-2 px-3 text-right text-gray-300">{r.actualCount ?? '—'}</td>
-                  <td className="py-2 px-3 text-right text-gray-400">{r.totalAircraft}</td>
+                  <td className="py-2 px-3 text-right text-gray-400">{effectiveFleetSize}</td>
                   <td className="py-2 px-3 text-right">
                     <span className={`font-semibold ${
                       r.availabilityPct >= 70 ? 'text-green-400' :
