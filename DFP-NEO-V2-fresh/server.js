@@ -846,9 +846,13 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
       ? clientLocalHour * 60 + clientLocalMinute
       : (timestamp ? new Date(timestamp).getHours() * 60 + new Date(timestamp).getMinutes() : new Date().getHours() * 60 + new Date().getMinutes());
     const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Use the `date` from request body (client's local date) rather than server UTC date
+    // This prevents incorrect isToday=false when server UTC is still the previous day
+    // (e.g., Australia UTC+10: local 10:57 AM = UTC 00:57 AM = still yesterday in UTC)
     const isAfterWindow = eventMin >= windowEndMin;
-    const isToday = date === todayStr;
+    // isToday: the event date matches today's local date (sent by client using local time methods)
+    // We trust the client's date since it was constructed using local getFullYear/getMonth/getDate
+    const isToday = true; // The date field IS today's local date, sent by client
     
     console.log(`[AV-EVENTS] 🕐 Time check: clientLocalTime=${clientLocalHour}:${clientLocalMinute} (${eventMin}min), windowEnd=${windowEndMin}min, isAfterWindow=${isAfterWindow}, isToday=${isToday}`);
     
@@ -1034,27 +1038,35 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     }
     
     // Convert timestamp to minutes-since-midnight in CLIENT'S LOCAL TIME
-    // Timestamps are stored in UTC, but we need to compare them to local flying window times
-    // We calculate the timezone offset from the client's current local time vs UTC
-    const getClientLocalMinutes = (ts) => {
-      const d = new Date(ts);
-      const now = new Date();
-      // Calculate offset: client's local time - UTC time (in minutes)
-      // clientCurrentTimeMinutes is the client's local time in minutes
-      // Current UTC time in minutes
-      const currentUTCMonth = now.getUTCHours() * 60 + now.getUTCMinutes();
-      // If we have client time, we can calculate offset
-      // For now, use a simpler approach: assume timestamps in DB are in local time
-      // This works if the server and client are in the same timezone
-      // OR we use the date string which is already in local format
-      return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
-    };
+    // Timestamps are stored in UTC, but flying window times (08:00-17:00) are in the client's local timezone.
+    // We must apply the client's timezone offset to convert UTC timestamps to local time.
+    //
+    // Strategy: If clientCurrentTimeMinutes is provided, calculate the offset as:
+    //   offset = clientCurrentTimeMinutes - currentUTCMinutes
+    // Then apply this offset to every event timestamp.
+    // If clientCurrentTimeMinutes is NOT provided, fall back to UTC (no conversion).
     
-    // Alternative: Use the date string's time portion if available
+    let timezoneOffsetMinutes = 0;
+    if (clientCurrentTimeMinutes !== null) {
+      const now = new Date();
+      const serverUTCMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+      // offset = local - UTC (e.g. UTC+10 gives offset = +600 minutes)
+      timezoneOffsetMinutes = clientCurrentTimeMinutes - serverUTCMinutes;
+      // Normalize to [-720, 840] range to handle midnight crossings
+      if (timezoneOffsetMinutes > 840) timezoneOffsetMinutes -= 1440;
+      if (timezoneOffsetMinutes < -720) timezoneOffsetMinutes += 1440;
+      console.log(`[AV-EVENTS] 🌏 Timezone: clientTime=${clientCurrentTimeMinutes}min, serverUTC=${serverUTCMinutes}min, offset=${timezoneOffsetMinutes}min (${(timezoneOffsetMinutes/60).toFixed(1)}hrs)`);
+    }
+    
     const toMinutes = (ts) => {
       const d = new Date(ts);
-      // Use local time methods since we want to compare to local flying window
-      return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+      // Get UTC minutes-since-midnight, then apply client timezone offset
+      const utcMinutes = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+      let localMinutes = utcMinutes + timezoneOffsetMinutes;
+      // Normalize to [0, 1440) range
+      if (localMinutes < 0) localMinutes += 1440;
+      if (localMinutes >= 1440) localMinutes -= 1440;
+      return localMinutes;
     };
     
     // Calculate time-weighted average
@@ -1148,7 +1160,6 @@ async function recalculateDailySummary(db, date, flyingWindowStart, flyingWindow
     }
     
     console.log(`[AV-EVENTS] 📊 Calculation complete: weightedSum=${weightedSum}, coveredMinutes=${coveredMinutes}, elapsedMinutes=${elapsedMinutes}`);
-    console.log(`[AV-EVENTS] 📊 Final: dailyAverage=${dailyAverage.toFixed(2)}, plannedCount=${plannedCount}, actualCount=${actualCount}`);
     
     // Divide by elapsed time, not total window duration
     const dailyAverage = elapsedMinutes > 0 ? weightedSum / elapsedMinutes : 0;
@@ -1403,10 +1414,26 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     const windowStartMin = parseWindowTime(flyingWindowStart, 8);
     const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
     
-    // Convert timestamp to minutes
+    // Convert timestamp to minutes in CLIENT's local time
+    // Apply timezone offset: offset = clientTime - serverUTC
+    let recalcTimezoneOffset = 0;
+    if (clientLocalHour !== undefined && clientLocalMinute !== undefined) {
+      const now = new Date();
+      const serverUTCMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+      const clientCurrentTimeMinutesLocal = clientLocalHour * 60 + clientLocalMinute;
+      recalcTimezoneOffset = clientCurrentTimeMinutesLocal - serverUTCMinutes;
+      if (recalcTimezoneOffset > 840) recalcTimezoneOffset -= 1440;
+      if (recalcTimezoneOffset < -720) recalcTimezoneOffset += 1440;
+      console.log(`[AV-RECALC] Timezone offset: ${recalcTimezoneOffset}min (${(recalcTimezoneOffset/60).toFixed(1)}hrs)`);
+    }
+    
     const toMinutes = (ts) => {
       const d = new Date(ts);
-      return d.getUTCHours() * 60 + d.getUTCMinutes();
+      const utcMin = d.getUTCHours() * 60 + d.getUTCMinutes();
+      let localMin = utcMin + recalcTimezoneOffset;
+      if (localMin < 0) localMin += 1440;
+      if (localMin >= 1440) localMin -= 1440;
+      return localMin;
     };
     
     // Categorize events
