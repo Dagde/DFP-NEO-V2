@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_22", "npm-9_x"]
 cmds = ["cd DFP-NEO-V2-fresh && npm install --omit=dev || npm install"]
 
 [phases.build]
-cmds = ["cd DFP-NEO-V2-fresh && npm run build"]
+cmds = ["cd DFP-NEO-V2-fresh && npm ci", "cd DFP-NEO-V2-fresh && npx prisma generate", "cd DFP-NEO-V2-fresh && npm run build"]
 
 [start]
 cmd = "cd DFP-NEO-V2-fresh && node server.js"
