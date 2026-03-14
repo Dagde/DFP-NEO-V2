@@ -54,24 +54,26 @@ const Header: React.FC<HeaderProps> = ({
     const [showUserMenu, setShowUserMenu] = useState(false);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
 
+    // Each button is 75px wide, gaps are 1px between buttons
+    // Total = (n * 75) + ((n-1) * 1) px
+    // Both sidebars are 110px wide, so we center the button group in the remaining space
+
     return (
         <>
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center px-4 z-20">
-                {/* LEFT SECTION - Location selector and other controls */}
-                <div className="flex items-center space-x-[1px]">
-                    <div className="w-32" style={{ marginLeft: '-10px' }}>
-                        <select
-                            value={activeLocation}
-                            onChange={(e) => onLocationChange(e.target.value)}
-                            className="bg-gray-700 border-gray-600 rounded-md text-white py-1 px-2 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center"
-                        >
-                            {locations.map(loc => (
-                                <option key={loc} value={loc}>{loc}</option>
-                            ))}
-                        </select>
-                    </div>
-                    
-                    {/* Multi Select Button */}
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center justify-center z-20" style={{ gap: 0 }}>
+                {/* ALL BUTTONS - single centered row, 1px gap between each */}
+                <div className="flex items-center" style={{ gap: '1px' }}>
+
+                    {/* 1. Audit Log Button */}
+                    <button 
+                        onClick={() => setShowAuditFlyout(true)}
+                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                        title="View Audit Log"
+                    >
+                        <span className="text-center leading-tight">Audit Log</span>
+                    </button>
+
+                    {/* 2. Multi Select Button */}
                     <button
                       onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
                       className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMultiSelectMode ? 'active' : ''}`}
@@ -79,8 +81,8 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Multi Select</span>
                     </button>
-                    
-                    {/* Magnifier Button */}
+
+                    {/* 3. Magnifier Button */}
                     <button
                       onClick={() => setIsMagnifierEnabled(!isMagnifierEnabled)}
                       className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMagnifierEnabled ? 'active' : ''}`}
@@ -89,8 +91,8 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Magnifier</span>
                     </button>
-                    
-                    {/* Validation Check Button */}
+
+                    {/* 4. Validation Check Button */}
                     <button
                       onClick={() => setShowValidation(!showValidation)}
                       className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
@@ -98,8 +100,8 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Validation<br/>Check</span>
                     </button>
-                    
-                    {/* Hourly Event Rate Button */}
+
+                    {/* 5. Hourly Event Rate Button */}
                     <button
                       onClick={onToggleDepartureDensityOverlay}
                       className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
@@ -107,8 +109,8 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Hourly<br/>Event Rate</span>
                     </button>
-                    
-                    {/* Aircraft Available Button */}
+
+                    {/* 6. Aircraft Available Button */}
                     {onToggleAircraftAvailability && (
                         <button
                           onClick={onToggleAircraftAvailability}
@@ -118,8 +120,8 @@ const Header: React.FC<HeaderProps> = ({
                             <span className="text-center leading-tight">Aircraft<br/>Available</span>
                         </button>
                     )}
-                    
-                    {/* Add Ground Tile Button */}
+
+                    {/* 7. Add Ground Tile Button */}
                     <button 
                         onClick={onAddGroundEvent}
                         className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
@@ -127,8 +129,8 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Add Ground<br/>Tile</span>
                     </button>
-                    
-                    {/* Add Flight Tile Button */}
+
+                    {/* 8. Add Flight Tile Button */}
                     <button 
                         onClick={onAddTile}
                         className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
@@ -136,20 +138,8 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Add Flight<br/>Tile</span>
                     </button>
-                </div>
-                
-                {/* CENTER SECTION - Audit Log and NEO Tile - centered between sidebars */}
-                <div className="flex-1 flex items-center justify-center space-x-[1px]">
-                    {/* Audit Log Button */}
-                    <button 
-                        onClick={() => setShowAuditFlyout(true)}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
-                        title="View Audit Log"
-                    >
-                        <span className="text-center leading-tight">Audit Log</span>
-                    </button>
-                    
-                    {/* NEO - Tile Button */}
+
+                    {/* 9. NEO - Tile Button */}
                     <button
                         onClick={onToggleOracleMode}
                         className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
@@ -157,13 +147,10 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
                     </button>
-                </div>
-                
-                {/* RIGHT SECTION - User Menu */}
-                <div className="flex items-center">
-                    {/* User Menu Button */}
+
+                    {/* 10. Logged In As / User Button */}
                     {authUser && (
-                        <div className="relative ml-2">
+                        <div className="relative" style={{ marginLeft: '1px' }}>
                             <button
                                 onClick={() => setShowUserMenu(!showUserMenu)}
                                 className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
@@ -172,7 +159,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
-                                <span className="text-center leading-tight truncate w-full px-1 text-center">
+                                <span className="text-center leading-tight truncate w-full px-1">
                                     {authUser.lastName || authUser.displayName || authUser.userId}
                                 </span>
                                 <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
@@ -221,6 +208,20 @@ const Header: React.FC<HeaderProps> = ({
                             )}
                         </div>
                     )}
+
+                </div>
+
+                {/* Location selector - hidden visually but keeps layout - moved to absolute position */}
+                <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ width: '100px' }}>
+                    <select
+                        value={activeLocation}
+                        onChange={(e) => onLocationChange(e.target.value)}
+                        className="bg-gray-700 border-gray-600 rounded-md text-white py-1 px-2 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center"
+                    >
+                        {locations.map(loc => (
+                            <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                    </select>
                 </div>
             </header>
             
