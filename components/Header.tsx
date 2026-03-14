@@ -58,7 +58,7 @@ const Header: React.FC<HeaderProps> = ({
         <>
             <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center px-4 z-20">
                 {/* LEFT SECTION - Location selector and utility buttons */}
-                <div className="flex items-center space-x-[1px]">
+                <div className="flex items-center space-x-[1px] flex-shrink-0">
                     <div className="w-32" style={{ marginLeft: '-10px' }}>
                         <select
                             value={activeLocation}
@@ -139,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 
                 {/* CENTER SECTION - Audit Log and NEO Tile - centered between sidebars */}
-                <div className="flex-1 flex items-center justify-center space-x-[1px]">
+                <div className="flex-1 flex items-center justify-center space-x-[1px] min-w-0">
                     {/* Audit Log Button */}
                     <button 
                         onClick={() => setShowAuditFlyout(true)}
@@ -160,7 +160,7 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
                 
                 {/* RIGHT SECTION - User Menu */}
-                <div className="flex items-center">
+                <div className="flex items-center flex-shrink-0">
                     {/* User Menu Button */}
                     {authUser && (
                         <div className="relative ml-2">
