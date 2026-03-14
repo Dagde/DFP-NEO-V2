@@ -900,6 +900,20 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     return (
         <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none">
+            {/* Location Dropdown - above the grid with 4px gap from date control */}
+            {locations && activeLocation && onLocationChange && (
+                <div className="absolute left-0 z-50 bg-gray-900 px-1" style={{ top: '4px', width: `${AIRFRAME_COLUMN_WIDTH}px` }}>
+                    <select
+                        value={activeLocation}
+                        onChange={(e) => onLocationChange(e.target.value)}
+                        className="bg-gray-700 border border-gray-600 rounded-md text-white py-0.5 px-1 text-xs focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center"
+                    >
+                        {locations.map(loc => (
+                            <option key={loc} value={loc}>{loc}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
@@ -907,23 +921,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     display: 'grid',
                     gridTemplateColumns: `${AIRFRAME_COLUMN_WIDTH}px 1fr`,
                     gridTemplateRows: `${TIME_HEADER_HEIGHT}px 1fr`,
+                    marginTop: locations && activeLocation && onLocationChange ? '24px' : '0',
                 }}
             >
-                {/* Date Control (Top Left) with Location Dropdown above */}
-                <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 flex flex-col">
-                    {/* Location Dropdown - above date with 4px gap */}
-                    {locations && activeLocation && onLocationChange && (
-                        <select
-                            value={activeLocation}
-                            onChange={(e) => onLocationChange(e.target.value)}
-                            className="bg-gray-700 border border-gray-600 rounded-md text-white py-0.5 px-1 text-xs focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center mb-1"
-                        >
-                            {locations.map(loc => (
-                                <option key={loc} value={loc}>{loc}</option>
-                            ))}
-                        </select>
-                    )}
-                    <div className="bg-gray-700 rounded-md w-full flex-1 flex items-center justify-center px-2 space-x-2">
+                {/* Date Control (Top Left) */}
+                <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
+                    <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2">
                         <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                             &lt;
                         </button>
