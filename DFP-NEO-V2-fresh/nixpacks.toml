@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs_22", "npm-9_x"]
+nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
 
 [phases.install]
-cmds = ["npm install --omit=dev || npm install"]
+cmds = ["cd dfp-neo-platform && npm ci"]
 
 [phases.build]
-cmds = ["npm ci", "npx prisma generate", "npm run build"]
+cmds = ["cd dfp-neo-platform && npm run build"]
 
 [start]
-cmd = "node server.js"
+cmd = "cd dfp-neo-platform && npx prisma migrate deploy && npm run start"
