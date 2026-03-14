@@ -56,8 +56,8 @@ const Header: React.FC<HeaderProps> = ({
 
     return (
         <>
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center justify-between px-4 z-20">
-                {/* LEFT ALIGNED ITEMS */}
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center px-4 z-20">
+                {/* LEFT SECTION - Location selector and other controls */}
                 <div className="flex items-center space-x-[1px]">
                     <div className="w-32" style={{ marginLeft: '-10px' }}>
                         <select
@@ -69,17 +69,6 @@ const Header: React.FC<HeaderProps> = ({
                                 <option key={loc} value={loc}>{loc}</option>
                             ))}
                         </select>
-                    </div>
-                    
-                    <div style={{ marginLeft: '10px' }}>
-                        {/* Audit Log Button */}
-                        <button 
-                            onClick={() => setShowAuditFlyout(true)}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
-                            title="View Audit Log"
-                        >
-                            <span className="text-center leading-tight">Audit Log</span>
-                        </button>
                     </div>
                     
                     {/* Multi Select Button */}
@@ -147,6 +136,18 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className="text-center leading-tight">Add Flight<br/>Tile</span>
                     </button>
+                </div>
+                
+                {/* CENTER SECTION - Audit Log and NEO Tile - centered between sidebars */}
+                <div className="flex-1 flex items-center justify-center space-x-[1px]">
+                    {/* Audit Log Button */}
+                    <button 
+                        onClick={() => setShowAuditFlyout(true)}
+                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                        title="View Audit Log"
+                    >
+                        <span className="text-center leading-tight">Audit Log</span>
+                    </button>
                     
                     {/* NEO - Tile Button */}
                     <button
@@ -156,7 +157,10 @@ const Header: React.FC<HeaderProps> = ({
                     >
                         <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
                     </button>
-
+                </div>
+                
+                {/* RIGHT SECTION - User Menu */}
+                <div className="flex items-center">
                     {/* User Menu Button */}
                     {authUser && (
                         <div className="relative ml-2">
