@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_22", "npm-9_x", "openssl"]
 
 [phases.install]
-cmds = ["cd DFP-NEO-V2-fresh && npm ci"]
+cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["cd DFP-NEO-V2-fresh && npm run build"]
+cmds = ["npm run build"]
 
 [start]
-cmd = "cd DFP-NEO-V2-fresh && node server.js"
+cmd = "node server.js"
