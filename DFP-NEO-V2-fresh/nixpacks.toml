@@ -8,4 +8,4 @@ cmds = ["cd dfp-neo-platform && npm ci"]
 cmds = ["cd dfp-neo-platform && npm run build"]
 
 [start]
-cmd = "cd dfp-neo-platform && npx prisma migrate deploy && npm run start"
+cmd = "cd dfp-neo-platform && npx prisma db push --accept-data-loss && npm run start"
