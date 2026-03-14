@@ -7,9 +7,6 @@ interface HeaderProps {
     onAddGroundEvent: () => void;
     showValidation: boolean;
     setShowValidation: (show: boolean) => void;
-    locations: string[];
-    activeLocation: string;
-    onLocationChange: (location: string) => void;
     isMagnifierEnabled: boolean;
     setIsMagnifierEnabled: (enabled: boolean) => void;
     isMultiSelectMode: boolean;
@@ -32,9 +29,6 @@ const Header: React.FC<HeaderProps> = ({
     onAddGroundEvent, 
     showValidation, 
     setShowValidation, 
-    locations, 
-    activeLocation, 
-    onLocationChange, 
     isMagnifierEnabled, 
     setIsMagnifierEnabled, 
     isMultiSelectMode, 
@@ -211,19 +205,7 @@ const Header: React.FC<HeaderProps> = ({
 
                 </div>
 
-                {/* Location selector - hidden visually but keeps layout - moved to absolute position */}
-                <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ width: '100px' }}>
-                    <select
-                        value={activeLocation}
-                        onChange={(e) => onLocationChange(e.target.value)}
-                        className="bg-gray-700 border-gray-600 rounded-md text-white py-1 px-2 text-sm focus:ring-sky-500 focus:border-sky-500 focus:outline-none w-full text-center"
-                    >
-                        {locations.map(loc => (
-                            <option key={loc} value={loc}>{loc}</option>
-                        ))}
-                    </select>
-                </div>
-            </header>
+                </header>
             
             {/* Audit Flyout */}
             {showAuditFlyout && (

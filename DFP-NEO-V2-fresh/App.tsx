@@ -8358,6 +8358,9 @@ updates.forEach(update => {
                            zoomLevel={zoomLevel}
                            showValidation={showValidation}
                            showPrePost={showPrePost}
+                           locations={['ESL', 'PEA']}
+                           activeLocation={school}
+                           onLocationChange={(loc) => changeSchool(loc as 'ESL' | 'PEA')}
                            syllabusDetails={syllabusDetails}
                            personnelData={personnelData}
                            seatConfigs={seatConfigs}
@@ -9944,9 +9947,6 @@ updates.forEach(update => {
                     onAddGroundEvent={() => setShowAddGroundEvent(true)}
                     showValidation={showValidation}
                     setShowValidation={setShowValidation}
-                    locations={['ESL', 'PEA']}
-                    activeLocation={school}
-                    onLocationChange={(loc) => changeSchool(loc as 'ESL' | 'PEA')}
                     isMagnifierEnabled={isMagnifierEnabled}
                     setIsMagnifierEnabled={setIsMagnifierEnabled}
                     isMultiSelectMode={isMultiSelectMode}
