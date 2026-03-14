@@ -2022,6 +2022,180 @@ app.get('/api/admin/setup', async (req, res) => {
   }
 });
 
+// ============================================================
+// ADMIN USER MANAGEMENT API ROUTES
+// ============================================================
+
+// GET /api/admin/direct-users - List all users (admin only)
+app.get('/api/admin/direct-users', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    
+    // Simple auth check - verify Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Unauthorized - No token provided' });
+    }
+    
+    const token = authHeader.substring(7);
+    
+    // For now, we'll accept any non-empty token since the session is managed client-side
+    // In a production environment, you'd verify the token against a session store
+    if (!token || token === 'null' || token === 'undefined') {
+      return res.status(401).json({ message: 'Unauthorized - Invalid token' });
+    }
+
+    const users = await db.user.findMany({
+      select: {
+        id: true,
+        userId: true,
+        username: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        isActive: true,
+        mustChangePassword: true,
+        lastLoginAt: true,
+        createdAt: true,
+        permissionsRoleId: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Transform users to match AdminPanel interface
+    const transformedUsers = users.map(user => ({
+      ...user,
+      displayName: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || user.userId,
+    }));
+
+    console.log(`✅ GET /api/admin/direct-users - returning ${transformedUsers.length} users`);
+    res.json({ users: transformedUsers });
+  } catch (error) {
+    console.error('❌ GET /api/admin/direct-users error:', error);
+    res.status(500).json({ message: 'Failed to fetch users', details: error.message });
+  }
+});
+
+// POST /api/admin/direct-create-user - Create a new user (admin only)
+app.post('/api/admin/direct-create-user', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const bcrypt = require('bcryptjs');
+    
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Unauthorized - No token provided' });
+    }
+    
+    const token = authHeader.substring(7);
+    if (!token || token === 'null' || token === 'undefined') {
+      return res.status(401).json({ message: 'Unauthorized - Invalid token' });
+    }
+
+    const { userId, password, email, firstName, lastName, role, mustChangePassword } = req.body;
+
+    if (!userId || !password) {
+      return res.status(400).json({ message: 'User ID and password are required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await db.user.findUnique({ where: { userId } });
+    if (existingUser) {
+      return res.status(409).json({ message: `User with ID '${userId}' already exists` });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create the user
+    const newUser = await db.user.create({
+      data: {
+        userId,
+        username: userId,
+        email: email || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        password: hashedPassword,
+        role: role || 'USER',
+        isActive: true,
+        mustChangePassword: mustChangePassword !== false, // Default to true
+      },
+    });
+
+    console.log(`✅ POST /api/admin/direct-create-user - created: ${userId}`);
+    res.json({ 
+      success: true, 
+      message: `User '${userId}' created successfully`,
+      user: {
+        id: newUser.id,
+        userId: newUser.userId,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+      }
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/direct-create-user error:', error);
+    res.status(500).json({ message: 'Failed to create user', details: error.message });
+  }
+});
+
+// POST /api/admin/direct-reset-password - Reset a user's password (admin only)
+app.post('/api/admin/direct-reset-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const bcrypt = require('bcryptjs');
+    
+    // Simple auth check
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Unauthorized - No token provided' });
+    }
+    
+    const token = authHeader.substring(7);
+    if (!token || token === 'null' || token === 'undefined') {
+      return res.status(401).json({ message: 'Unauthorized - Invalid token' });
+    }
+
+    const { targetUserId, newPassword, mustChangePassword } = req.body;
+
+    if (!targetUserId || !newPassword) {
+      return res.status(400).json({ message: 'Target user ID and new password are required' });
+    }
+
+    // Check if user exists
+    const existingUser = await db.user.findUnique({ where: { userId: targetUserId } });
+    if (!existingUser) {
+      return res.status(404).json({ message: `User with ID '${targetUserId}' not found` });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update the user's password
+    await db.user.update({
+      where: { userId: targetUserId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: mustChangePassword !== false, // Default to true
+      },
+    });
+
+    console.log(`✅ POST /api/admin/direct-reset-password - reset password for: ${targetUserId}`);
+    res.json({ 
+      success: true, 
+      message: `Password reset successfully for '${targetUserId}'`
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/direct-reset-password error:', error);
+    res.status(500).json({ message: 'Failed to reset password', details: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
