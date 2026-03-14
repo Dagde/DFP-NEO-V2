@@ -173,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                                 <span className="text-center leading-tight truncate w-full px-1 text-center">
-                                    {authUser.lastName || authUser.userId}
+                                    {authUser.lastName || authUser.displayName || authUser.userId}
                                 </span>
                                 <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
                                     {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : ''}
