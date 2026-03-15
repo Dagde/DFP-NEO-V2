@@ -54,15 +54,12 @@ const Header: React.FC<HeaderProps> = ({
     const [showUserMenu, setShowUserMenu] = useState(false);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
 
-    // Each button is 75px wide, gaps are 1px between buttons
-    // Total = (n * 75) + ((n-1) * 1) px
-    // Both sidebars are 110px wide, so we center the button group in the remaining space
-
     return (
         <>
             <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-20 relative" style={{ gap: 0 }}>
-                {/* Location Dropdown - left edge aligned with date window below (144px width) */}
-                <div className="absolute left-0" style={{ width: '144px' }}>
+
+                {/* Location Dropdown - absolute left, 144px wide, aligned with date window below */}
+                <div className="absolute left-0 flex items-center justify-center" style={{ width: '144px' }}>
                     <select
                         value={activeLocation}
                         onChange={(e) => onLocationChange(e.target.value)}
@@ -74,160 +71,159 @@ const Header: React.FC<HeaderProps> = ({
                     </select>
                 </div>
 
-                {/* ALL BUTTONS - centered in the remaining space, 1px gap between each */}
-                {/* Sidebars are 110px each, so buttons are centered between them */}
+                {/* ALL BUTTONS - centered in the full width, 1px gap between each */}
                 <div className="flex-1 flex items-center justify-center">
                     <div className="flex items-center" style={{ gap: '1px' }}>
 
-                    {/* 1. Audit Log Button */}
-                    <button 
-                        onClick={() => setShowAuditFlyout(true)}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
-                        title="View Audit Log"
-                    >
-                        <span className="text-center leading-tight">Audit Log</span>
-                    </button>
-
-                    {/* 2. Multi Select Button */}
-                    <button
-                      onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
-                      className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMultiSelectMode ? 'active' : ''}`}
-                      title="Toggle multi-select mode"
-                    >
-                        <span className="text-center leading-tight">Multi Select</span>
-                    </button>
-
-                    {/* 3. Magnifier Button */}
-                    <button
-                      onClick={() => setIsMagnifierEnabled(!isMagnifierEnabled)}
-                      className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMagnifierEnabled ? 'active' : ''}`}
-                      aria-label="Toggle Magnifier"
-                      title="Toggle Magnifier"
-                    >
-                        <span className="text-center leading-tight">Magnifier</span>
-                    </button>
-
-                    {/* 4. Validation Check Button */}
-                    <button
-                      onClick={() => setShowValidation(!showValidation)}
-                      className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
-                      title="Toggle validation"
-                    >
-                        <span className="text-center leading-tight">Validation<br/>Check</span>
-                    </button>
-
-                    {/* 5. Hourly Event Rate Button */}
-                    <button
-                      onClick={onToggleDepartureDensityOverlay}
-                      className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
-                      title="Hourly Event Rate - Shows flight density in 1-hour window"
-                    >
-                        <span className="text-center leading-tight">Hourly<br/>Event Rate</span>
-                    </button>
-
-                    {/* 6. Aircraft Available Button */}
-                    {onToggleAircraftAvailability && (
-                        <button
-                          onClick={onToggleAircraftAvailability}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!showAircraftAvailability ? 'active' : ''}`}
-                          title="Toggle aircraft availability"
+                        {/* 1. Audit Log Button */}
+                        <button 
+                            onClick={() => setShowAuditFlyout(true)}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                            title="View Audit Log"
                         >
-                            <span className="text-center leading-tight">Aircraft<br/>Available</span>
+                            <span className="text-center leading-tight">Audit Log</span>
                         </button>
-                    )}
 
-                    {/* 7. Add Ground Tile Button */}
-                    <button 
-                        onClick={onAddGroundEvent}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
-                        title="Add Ground Tile"
-                    >
-                        <span className="text-center leading-tight">Add Ground<br/>Tile</span>
-                    </button>
+                        {/* 2. Multi Select Button */}
+                        <button
+                          onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMultiSelectMode ? 'active' : ''}`}
+                          title="Toggle multi-select mode"
+                        >
+                            <span className="text-center leading-tight">Multi Select</span>
+                        </button>
 
-                    {/* 8. Add Flight Tile Button */}
-                    <button 
-                        onClick={onAddTile}
-                        className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
-                        title="Add Flight Tile"
-                    >
-                        <span className="text-center leading-tight">Add Flight<br/>Tile</span>
-                    </button>
+                        {/* 3. Magnifier Button */}
+                        <button
+                          onClick={() => setIsMagnifierEnabled(!isMagnifierEnabled)}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isMagnifierEnabled ? 'active' : ''}`}
+                          aria-label="Toggle Magnifier"
+                          title="Toggle Magnifier"
+                        >
+                            <span className="text-center leading-tight">Magnifier</span>
+                        </button>
 
-                    {/* 9. NEO - Tile Button */}
-                    <button
-                        onClick={onToggleOracleMode}
-                        className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
-                        title="NEO - Tile"
-                    >
-                        <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
-                    </button>
+                        {/* 4. Validation Check Button */}
+                        <button
+                          onClick={() => setShowValidation(!showValidation)}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
+                          title="Toggle validation"
+                        >
+                            <span className="text-center leading-tight">Validation<br/>Check</span>
+                        </button>
 
-                    {/* 10. Logged In As / User Button */}
-                    {authUser && (
-                        <div className="relative" style={{ marginLeft: '1px' }}>
+                        {/* 5. Hourly Event Rate Button */}
+                        <button
+                          onClick={onToggleDepartureDensityOverlay}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${showDepartureDensityOverlay ? 'active' : ''}`}
+                          title="Hourly Event Rate - Shows flight density in 1-hour window"
+                        >
+                            <span className="text-center leading-tight">Hourly<br/>Event Rate</span>
+                        </button>
+
+                        {/* 6. Aircraft Available Button */}
+                        {onToggleAircraftAvailability && (
                             <button
-                                onClick={() => setShowUserMenu(!showUserMenu)}
-                                className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
-                                title={`Logged in as ${authUser.displayName}`}
+                              onClick={onToggleAircraftAvailability}
+                              className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!showAircraftAvailability ? 'active' : ''}`}
+                              title="Toggle aircraft availability"
                             >
-                                <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                <span className="text-center leading-tight truncate w-full px-1">
-                                    {authUser.lastName || authUser.displayName || authUser.userId}
-                                </span>
-                                <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
-                                    {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : ''}
-                                </span>
+                                <span className="text-center leading-tight">Aircraft<br/>Available</span>
                             </button>
-                            {showUserMenu && (
-                                <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden" style={{ background: '#1a1f2e' }}>
-                                    <div className="px-3 py-2 border-b border-gray-700">
-                                        <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
-                                        <p className="text-[10px] text-gray-400">{authUser.userId}</p>
-                                        <p className="text-[10px] text-blue-400">{authUser.role}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}
-                                        className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
-                                    >
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                                        </svg>
-                                        Change Password
-                                    </button>
-                                    {isSuperAdmin && (
+                        )}
+
+                        {/* 7. Add Ground Tile Button */}
+                        <button 
+                            onClick={onAddGroundEvent}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                            title="Add Ground Tile"
+                        >
+                            <span className="text-center leading-tight">Add Ground<br/>Tile</span>
+                        </button>
+
+                        {/* 8. Add Flight Tile Button */}
+                        <button 
+                            onClick={onAddTile}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                            title="Add Flight Tile"
+                        >
+                            <span className="text-center leading-tight">Add Flight<br/>Tile</span>
+                        </button>
+
+                        {/* 9. NEO - Tile Button */}
+                        <button
+                            onClick={onToggleOracleMode}
+                            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
+                            title="NEO - Tile"
+                        >
+                            <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
+                        </button>
+
+                        {/* 10. Logged In As / User Button */}
+                        {authUser && (
+                            <div className="relative" style={{ marginLeft: '1px' }}>
+                                <button
+                                    onClick={() => setShowUserMenu(!showUserMenu)}
+                                    className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
+                                    title={`Logged in as ${authUser.displayName}`}
+                                >
+                                    <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    <span className="text-center leading-tight truncate w-full px-1">
+                                        {authUser.lastName || authUser.displayName || authUser.userId}
+                                    </span>
+                                    <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
+                                        {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : ''}
+                                    </span>
+                                </button>
+                                {showUserMenu && (
+                                    <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden" style={{ background: '#1a1f2e' }}>
+                                        <div className="px-3 py-2 border-b border-gray-700">
+                                            <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
+                                            <p className="text-[10px] text-gray-400">{authUser.userId}</p>
+                                            <p className="text-[10px] text-blue-400">{authUser.role}</p>
+                                        </div>
                                         <button
-                                            onClick={() => { setShowUserMenu(false); onShowAdminPanel?.(); }}
+                                            onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}
                                             className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
                                         >
                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                             </svg>
-                                            Admin Panel
+                                            Change Password
                                         </button>
-                                    )}
-                                    <div className="border-t border-gray-700">
-                                        <button
-                                            onClick={() => { setShowUserMenu(false); onLogout?.(); }}
-                                            className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-900/20 flex items-center gap-2"
-                                        >
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                            </svg>
-                                            Sign Out
-                                        </button>
+                                        {isSuperAdmin && (
+                                            <button
+                                                onClick={() => { setShowUserMenu(false); onShowAdminPanel?.(); }}
+                                                className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
+                                                Admin Panel
+                                            </button>
+                                        )}
+                                        <div className="border-t border-gray-700">
+                                            <button
+                                                onClick={() => { setShowUserMenu(false); onLogout?.(); }}
+                                                className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-900/20 flex items-center gap-2"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                                </svg>
+                                                Sign Out
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                )}
+                            </div>
+                        )}
 
-                </div>
+                    </div>
                 </div>
 
-                </header>
+            </header>
             
             {/* Audit Flyout */}
             {showAuditFlyout && (
@@ -240,4 +236,4 @@ const Header: React.FC<HeaderProps> = ({
     );
 };
 
-export default Header;// Thu Feb 19 05:53:42 UTC 2026
+export default Header;
