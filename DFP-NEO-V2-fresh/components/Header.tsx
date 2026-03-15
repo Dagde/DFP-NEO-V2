@@ -60,7 +60,7 @@ const Header: React.FC<HeaderProps> = ({
 
     return (
         <>
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center justify-center z-20 relative" style={{ gap: 0 }}>
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-20 relative" style={{ gap: 0 }}>
                 {/* Location Dropdown - left edge aligned with date window below (144px width) */}
                 <div className="absolute left-0" style={{ width: '144px' }}>
                     <select
@@ -74,8 +74,10 @@ const Header: React.FC<HeaderProps> = ({
                     </select>
                 </div>
 
-                {/* ALL BUTTONS - single centered row, 1px gap between each */}
-                <div className="flex items-center" style={{ gap: '1px' }}>
+                {/* ALL BUTTONS - centered in the remaining space, 1px gap between each */}
+                {/* Sidebars are 110px each, so buttons are centered between them */}
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="flex items-center" style={{ gap: '1px' }}>
 
                     {/* 1. Audit Log Button */}
                     <button 
@@ -222,6 +224,7 @@ const Header: React.FC<HeaderProps> = ({
                         </div>
                     )}
 
+                </div>
                 </div>
 
                 </header>
