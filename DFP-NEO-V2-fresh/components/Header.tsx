@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, createPortal } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import AuditButton from './AuditButton';
 import AuditFlyout from './AuditFlyout';
 
@@ -225,7 +226,7 @@ const Header: React.FC<HeaderProps> = ({
             </header>
             
             {/* User Menu Dropdown - rendered via portal to escape overflow-hidden containers */}
-            {showUserMenu && authUser && userButtonRef.current && createPortal(
+            {showUserMenu && authUser && userButtonRef.current && ReactDOM.createPortal(
                 <div 
                     className="fixed rounded-lg shadow-xl border border-gray-700 z-[100] overflow-hidden"
                     style={{ 
