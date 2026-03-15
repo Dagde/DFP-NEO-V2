@@ -77,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({
                 The 144px spacer on the right balances the 144px location dropdown on the left,
                 so the button group is perfectly centered in the header.
             */}
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-20 relative">
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
 
                 {/* LEFT: Location Dropdown - 144px, inline (not absolute) */}
                 <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '144px', paddingLeft: '8px', paddingRight: '8px' }}>
@@ -199,7 +199,7 @@ const Header: React.FC<HeaderProps> = ({
                                     </span>
                                 </button>
                                 {showUserMenu && (
-                                    <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-xl border border-gray-700 z-50 overflow-hidden" style={{ background: '#1a1f2e' }}>
+                                    <div className="absolute right-0 top-full mt-1 w-48 rounded-lg shadow-xl border border-gray-700 z-[100] overflow-hidden" style={{ background: '#1a1f2e' }}>
                                         <div className="px-3 py-2 border-b border-gray-700">
                                             <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
                                             <p className="text-[10px] text-gray-400">{authUser.userId}</p>
