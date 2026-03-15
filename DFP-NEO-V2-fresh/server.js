@@ -396,6 +396,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Version/commit info - reads RAILWAY_GIT_COMMIT_SHA at runtime
+app.get('/api/version', (req, res) => {
+  const commitSha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || 'unknown';
+  const shortHash = commitSha !== 'unknown' ? commitSha.substring(0, 8) : 'unknown';
+  res.json({
+    commit: shortHash,
+    commitFull: commitSha,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ============================================================
 // COURSES API
 // ============================================================
