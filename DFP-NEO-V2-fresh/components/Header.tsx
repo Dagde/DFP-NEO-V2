@@ -56,10 +56,18 @@ const Header: React.FC<HeaderProps> = ({
 
     return (
         <>
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-20 relative" style={{ gap: 0 }}>
+            {/*
+                LAYOUT:
+                The header sits between left sidebar (110px) and right sidebar (110px).
+                Header uses a 3-column flex layout:
+                  [144px location dropdown] [flex-1 centered buttons] [144px spacer]
+                The 144px spacer on the right balances the 144px location dropdown on the left,
+                so the button group is perfectly centered in the header.
+            */}
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-20 relative">
 
-                {/* Location Dropdown - absolute left, 144px wide, aligned with date window below */}
-                <div className="absolute left-0 flex items-center justify-center" style={{ width: '144px' }}>
+                {/* LEFT: Location Dropdown - 144px, inline (not absolute) */}
+                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '144px', paddingLeft: '8px', paddingRight: '8px' }}>
                     <select
                         value={activeLocation}
                         onChange={(e) => onLocationChange(e.target.value)}
@@ -71,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({
                     </select>
                 </div>
 
-                {/* ALL BUTTONS - centered in the full width, 1px gap between each */}
+                {/* CENTER: ALL BUTTONS - flex-1 centers them between the two 144px ends */}
                 <div className="flex-1 flex items-center justify-center">
                     <div className="flex items-center" style={{ gap: '1px' }}>
 
@@ -222,6 +230,10 @@ const Header: React.FC<HeaderProps> = ({
 
                     </div>
                 </div>
+
+                {/* RIGHT: 144px spacer to balance the location dropdown on the left,
+                    ensuring the button group is perfectly centered in the header */}
+                <div className="flex-shrink-0" style={{ width: '144px' }}></div>
 
             </header>
             
