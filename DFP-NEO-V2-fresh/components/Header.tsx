@@ -60,9 +60,9 @@ const Header: React.FC<HeaderProps> = ({
 
     return (
         <>
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center justify-center z-20" style={{ gap: 0 }}>
-                {/* Location Dropdown - same width as date window (144px), 7px gap before Audit Log */}
-                <div style={{ width: '144px', marginRight: '7px' }}>
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center justify-center z-20 relative" style={{ gap: 0 }}>
+                {/* Location Dropdown - left edge aligned with date window below (144px width) */}
+                <div className="absolute left-0" style={{ width: '144px' }}>
                     <select
                         value={activeLocation}
                         onChange={(e) => onLocationChange(e.target.value)}
