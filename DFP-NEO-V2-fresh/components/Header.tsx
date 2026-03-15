@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AuditButton from './AuditButton';
 import AuditFlyout from './AuditFlyout';
 
@@ -53,6 +53,19 @@ const Header: React.FC<HeaderProps> = ({
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
+
+    // Fetch the active commit hash from the server at runtime.
+    // /api/version reads RAILWAY_GIT_COMMIT_SHA from the live process environment,
+    // so it always reflects the ACTUAL running deployment - not a build-time baked value.
+    const [activeCommit, setActiveCommit] = useState<string>('...');
+    useEffect(() => {
+        fetch('/api/version')
+            .then(r => r.json())
+            .then(data => {
+                if (data.commit) setActiveCommit(data.commit);
+            })
+            .catch(() => setActiveCommit('err'));
+    }, []);
 
     return (
         <>
@@ -167,13 +180,13 @@ const Header: React.FC<HeaderProps> = ({
                             <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
                         </button>
 
-                        {/* 10. Logged In As / User Button */}
+                        {/* 10. Logged In As / User Button - shows active commit fetched from server */}
                         {authUser && (
                             <div className="relative" style={{ marginLeft: '1px' }}>
                                 <button
                                     onClick={() => setShowUserMenu(!showUserMenu)}
                                     className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
-                                    title={`Logged in as ${authUser.displayName}`}
+                                    title={`Logged in as ${authUser.displayName} | Active commit: ${activeCommit}`}
                                 >
                                     <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -182,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({
                                         {authUser.lastName || authUser.displayName || authUser.userId}
                                     </span>
                                     <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
-                                        {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : ''}
+                                        {activeCommit}
                                     </span>
                                 </button>
                                 {showUserMenu && (
@@ -191,6 +204,7 @@ const Header: React.FC<HeaderProps> = ({
                                             <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
                                             <p className="text-[10px] text-gray-400">{authUser.userId}</p>
                                             <p className="text-[10px] text-blue-400">{authUser.role}</p>
+                                            <p className="text-[10px] text-gray-500 font-mono">commit: {activeCommit}</p>
                                         </div>
                                         <button
                                             onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}

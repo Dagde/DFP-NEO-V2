@@ -396,6 +396,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Version endpoint - returns the actual running commit SHA from Railway's env var at runtime
+// This is the definitive source of truth for which commit is active in the deployed app
+app.get('/api/version', (req, res) => {
+  const commitSha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || 'unknown';
+  const shortHash = commitSha !== 'unknown' ? commitSha.substring(0, 8) : 'unknown';
+  res.json({
+    commit: shortHash,
+    commitFull: commitSha,
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // ============================================================
 // COURSES API
 // ============================================================
