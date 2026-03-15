@@ -47,5 +47,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    outDir: 'dfp-neo-platform/public/flight-school-app',
+    emptyOutDir: true,
   }
 });
