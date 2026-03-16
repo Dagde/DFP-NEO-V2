@@ -101,7 +101,14 @@ const Header: React.FC<HeaderProps> = ({
                 <p className="text-[10px] text-blue-400">{authUser.role}</p>
             </div>
             <button
-                onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}
+                onClick={(e) => { 
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Change Password clicked'); 
+                            const handler = onShowChangePassword;
+                            setShowUserMenu(false);
+                            setTimeout(() => handler?.(), 50);
+                        }}
                 className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
             >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +118,14 @@ const Header: React.FC<HeaderProps> = ({
             </button>
             {isSuperAdmin && (
                 <button
-                    onClick={() => { setShowUserMenu(false); onShowAdminPanel?.(); }}
+                    onClick={(e) => { 
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Admin Panel clicked'); 
+                                const handler = onShowAdminPanel;
+                                setShowUserMenu(false);
+                                setTimeout(() => handler?.(), 50);
+                            }}
                     className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
                 >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

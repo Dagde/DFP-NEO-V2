@@ -3470,7 +3470,24 @@ useEffect(() => {
         if (permissions.includes('Staff')) return 'Staff';
         return 'Trainee';
     };
-    const currentUserPermission = getHighestPermission(currentUser?.permissions);
+    
+    // Convert authUser role to permissions format
+    const getPermissionsFromAuthRole = (role?: string): string[] => {
+        if (!role) return ['Staff'];
+        switch (role) {
+            case 'SUPER_ADMIN': return ['Super Admin', 'Admin', 'Scheduler', 'Course Supervisor', 'Ops', 'Staff'];
+            case 'ADMIN': return ['Admin', 'Scheduler', 'Course Supervisor', 'Ops', 'Staff'];
+            case 'PILOT': return ['Staff'];
+            case 'INSTRUCTOR': return ['Staff'];
+            case 'USER': return ['Trainee'];
+            default: return ['Staff'];
+        }
+    };
+    
+    // Get permissions from authUser first, fallback to currentUser
+    const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
+    const combinedPermissions = [...authUserPermissions, ...(currentUser?.permissions || [])];
+    const currentUserPermission = getHighestPermission(combinedPermissions);
     const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
     const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
     const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
@@ -9683,27 +9700,33 @@ updates.forEach(update => {
 
             {/* Change Password Modal */}
             {showChangePassword && authUser && (
-                <ChangePasswordModal
-                    sessionToken={authSessionToken}
-                    userId={authUser.userId}
-                    isMandatory={authUser.mustChangePassword}
-                    onSuccess={() => {
-                        setShowChangePassword(false);
-                        if (authUser) {
-                            setAuthUser({ ...authUser, mustChangePassword: false });
-                        }
-                    }}
-                    onCancel={authUser.mustChangePassword ? undefined : () => setShowChangePassword(false)}
-                />
+                <>
+                    {console.log('Rendering ChangePasswordModal')}
+                    <ChangePasswordModal
+                        sessionToken={authSessionToken}
+                        userId={authUser.userId}
+                        isMandatory={authUser.mustChangePassword}
+                        onSuccess={() => {
+                            setShowChangePassword(false);
+                            if (authUser) {
+                                setAuthUser({ ...authUser, mustChangePassword: false });
+                            }
+                        }}
+                        onCancel={authUser.mustChangePassword ? undefined : () => setShowChangePassword(false)}
+                    />
+                </>
             )}
 
             {/* Admin Panel */}
             {showAdminPanel && authUser && (
-                <AdminPanel
-                    sessionToken={authSessionToken}
-                    currentUserId={authUser.userId}
-                    onClose={() => setShowAdminPanel(false)}
-                />
+                <>
+                    {console.log('Rendering AdminPanel')}
+                    <AdminPanel
+                        sessionToken={authSessionToken}
+                        currentUserId={authUser.userId}
+                        onClose={() => setShowAdminPanel(false)}
+                    />
+                </>
             )}
         </div>
 

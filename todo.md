@@ -1,14 +1,27 @@
+# TODO: Fix User Dropdown & Add Edit/Save to Scoring Matrix
+
+## Issues to Address
+1. **User Dropdown Links**: "Change Password" and "Admin Panel" buttons don't respond when clicked
+2. **Scoring Matrix Edit/Save**: Add edit mode with save buttons for each element to prevent accidental changes
+
 ## Tasks
 
-### 1. Fix the refresh button visibility
-- [ ] Check if the button is being rendered correctly
-- [ ] Ensure the build was deployed
+### Phase 1: Fix User Dropdown
+- [ ] Debug why Change Password and Admin Panel buttons don't work
+- [ ] Check if state setters are properly connected
+- [ ] Verify modal components are rendering correctly
+- [ ] Test fix
 
-### 2. Fix the average calculation
-- [ ] Fix timezone mismatch in toMinutes function
-- [ ] Ensure timestamps are compared consistently
-- [ ] Verify the calculation logic is correct
+### Phase 2: Add Edit/Save to Scoring Matrix
+- [x] Examine current ScoringMatrixFlyout component structure
+- [x] Add edit mode state management for each element
+- [x] Implement Edit button to enable editing
+- [x] Implement Save button to commit changes
+- [x] Add visual feedback for edit mode
+- [ ] Test edit/save functionality
 
-### 3. Test and commit
-- [ ] Test the changes
-- [ ] Commit and push
+## Status
+- User dropdown: BUILT WITH DEBUGGING - READY TO TEST (buttons should now respond with console logs)
+- Scoring Matrix: EDIT/SAVE FUNCTIONALITY IMPLEMENTED - READY TO TEST
+- Admin permissions: WORKING ✅
+- Build: COMPLETED SUCCESSFULLY (index-Dta8ph_6.js)

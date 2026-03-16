@@ -130,6 +130,9 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
     const [showAddElementFlyout, setShowAddElementFlyout] = useState(false);
     const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
     
+    // Edit mode state for each grade
+    const [editModeGrades, setEditModeGrades] = useState<Set<number>>(new Set());
+    
     // Convert static list to state to allow adding new elements
     const [flightElements, setFlightElements] = useState<string[]>(() => {
         const customElements = Object.keys(phraseBank).filter(key => 
@@ -141,6 +144,16 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
     const [selectedElement, setSelectedElement] = useState<string>(flightElements[0]);
 
     const currentDimension = activeTab === 'Elements' ? selectedElement : activeTab;
+
+    const toggleEditMode = (grade: number) => {
+        const newEditModeGrades = new Set(editModeGrades);
+        if (newEditModeGrades.has(grade)) {
+            newEditModeGrades.delete(grade);
+        } else {
+            newEditModeGrades.add(grade);
+        }
+        setEditModeGrades(newEditModeGrades);
+    };
 
     const handlePhraseChange = (grade: number, index: number, value: string) => {
         const currentPhrases = (phraseBank && phraseBank[currentDimension]) || {};
@@ -332,12 +345,31 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
                             <div key={grade} className={`border rounded-lg overflow-hidden ${getGradeColor(grade)}`}>
                                 <div className="px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center">
                                     <span className="text-white opacity-90">{getGradeLabel(grade)}</span>
-                                    <button 
-                                        onClick={() => handleAddPhrase(grade)}
-                                        className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
-                                    >
-                                        + Add Phrase
-                                    </button>
+                                    <div className="flex items-center space-x-2">
+                                        {editModeGrades.has(grade) ? (
+                                            <>
+                                                <button 
+                                                    onClick={() => toggleEditMode(grade)}
+                                                    className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors border border-green-500 font-semibold"
+                                                >
+                                                    ✓ Save
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleAddPhrase(grade)}
+                                                    className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
+                                                >
+                                                    + Add Phrase
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button 
+                                                onClick={() => toggleEditMode(grade)}
+                                                className="text-xs bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded transition-colors border border-sky-500 font-semibold"
+                                            >
+                                                ✎ Edit
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="p-4 space-y-2">
                                     {(phraseBank && phraseBank[currentDimension] && phraseBank[currentDimension][grade]) ? (
@@ -347,7 +379,12 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
                                                     value={phrase}
                                                     onChange={(e) => handlePhraseChange(grade, idx, e.target.value)}
                                                     rows={1}
-                                                    className="flex-1 bg-gray-800 border border-gray-600 rounded p-2 text-sm text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 resize-none overflow-hidden"
+                                                    readOnly={!editModeGrades.has(grade)}
+                                                    className={`flex-1 bg-gray-800 border rounded p-2 text-sm resize-none overflow-hidden transition-colors ${
+                                                        editModeGrades.has(grade) 
+                                                            ? 'border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500' 
+                                                            : 'border-transparent bg-transparent text-gray-300 cursor-default'
+                                                    }`}
                                                     style={{ minHeight: '38px', height: 'auto' }}
                                                     onInput={(e) => {
                                                         const target = e.currentTarget;
@@ -355,15 +392,17 @@ const ScoringMatrixFlyout: React.FC<ScoringMatrixFlyoutProps> = ({ onClose, phra
                                                         target.style.height = `${target.scrollHeight}px`;
                                                     }}
                                                 />
-                                                <button 
-                                                    onClick={() => handleDeletePhrase(grade, idx)}
-                                                    className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    title="Delete phrase"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
-                                                    </svg>
-                                                </button>
+                                                {editModeGrades.has(grade) && (
+                                                    <button 
+                                                        onClick={() => handleDeletePhrase(grade, idx)}
+                                                        className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        title="Delete phrase"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                )}
                                             </div>
                                         ))
                                     ) : (
