@@ -8,6 +8,7 @@ import TraineeDatabaseTable from "./TraineeDatabaseTable";
 import TraineeMockDataTable from "./TraineeMockDataTable";
 import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
+import OrganisationSettings from './OrganisationSettings';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
 interface SettingsViewWithMenuProps {
@@ -83,7 +84,8 @@ type SettingsSection =
     | 'validation'
     | 'timezone'
     | 'location'
-    | 'units';
+    | 'units'
+    | 'organisation';
 
 const sectionLabels: Record<SettingsSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
@@ -105,6 +107,7 @@ const sectionLabels: Record<SettingsSection, string> = {
     'timezone': 'Timezone',
     'location': 'Location',
     'units': 'Units',
+    'organisation': 'Organisation',
 };
 
 // All sections in order for the left menu
@@ -128,6 +131,7 @@ const allSections: SettingsSection[] = [
     'timezone',
     'location',
     'units',
+    'organisation',
 ];
 
 type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
@@ -264,6 +268,14 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
     </svg>
   ),
+  'organisation': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+      <line x1="8" y1="21" x2="16" y2="21"/>
+      <line x1="12" y1="17" x2="12" y2="21"/>
+      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/>
+    </svg>
+  ),
 };
 
 // Descriptions for each section
@@ -287,6 +299,7 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'timezone': 'Configure timezone settings',
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
+  'organisation': 'Fleet sharing and multi-unit configuration',
 };
 
 // Icon accent colours per section
@@ -310,6 +323,7 @@ const sectionColors: Record<SettingsSection, string> = {
   'timezone':          'from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400',
   'location':          'from-green-500/20 to-green-600/10 border-green-500/30 text-green-400',
   'units':             'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 text-yellow-400',
+  'organisation':      'from-rose-500/20 to-rose-600/10 border-rose-500/30 text-rose-400',
 };
 
 // Groups for the icon grid
@@ -336,7 +350,7 @@ const sectionGroups: { label: string; sections: SettingsSection[] }[] = [
   },
   {
     label: 'SYSTEM SETTINGS',
-    sections: ['timezone', 'location', 'units'],
+    sections: ['timezone', 'location', 'units', 'organisation'],
   },
 ];
 
@@ -524,7 +538,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'staff-combined-data' &&
                      activeSection !== 'trainee-database' &&
                      activeSection !== 'trainee-mockdata' &&
-                     activeSection !== 'data-sources' && (
+                     activeSection !== 'data-sources' &&
+                     activeSection !== 'organisation' && (
                         <SettingsView {...props} hideHeader={true} activeSection={activeSection as SettingsSection} />
                     )}
 
@@ -560,6 +575,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'data-sources' && (
                         <DataSourcesSettings
                             onShowSuccess={props.onShowSuccess}
+                        />
+                    )}
+                    {activeSection === 'organisation' && (
+                        <OrganisationSettings
+                            units={props.units}
                         />
                     )}
                     {/* End section content */}
