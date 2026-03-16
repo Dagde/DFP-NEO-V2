@@ -54,14 +54,21 @@ const Header: React.FC<HeaderProps> = ({
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const userButtonRef = useRef<HTMLDivElement>(null);
+    const dropdownMenuRef = useRef<HTMLDivElement>(null);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
 
-    // Close user menu when clicking outside
+    // Close user menu when clicking outside - must check BOTH the trigger and the portal dropdown
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (userButtonRef.current && !userButtonRef.current.contains(event.target as Node)) {
-                setShowUserMenu(false);
+            // Don't close if clicking inside the trigger button wrapper
+            if (userButtonRef.current && userButtonRef.current.contains(event.target as Node)) {
+                return;
             }
+            // Don't close if clicking inside the portal dropdown (it's in document.body, outside userButtonRef)
+            if (dropdownMenuRef.current && dropdownMenuRef.current.contains(event.target as Node)) {
+                return;
+            }
+            setShowUserMenu(false);
         };
         if (showUserMenu) {
             document.addEventListener('mousedown', handleClickOutside);
@@ -228,6 +235,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* User Menu Dropdown - rendered via portal to escape overflow-hidden containers */}
             {showUserMenu && authUser && userButtonRef.current && ReactDOM.createPortal(
                 <div 
+                    ref={dropdownMenuRef}
                     className="fixed rounded-lg shadow-xl border border-gray-700 z-[100] overflow-hidden"
                     style={{ 
                         background: '#1a1f2e',
@@ -235,7 +243,6 @@ const Header: React.FC<HeaderProps> = ({
                         right: window.innerWidth - userButtonRef.current!.getBoundingClientRect().right,
                         width: '192px'
                     }}
-                    onClick={(e) => e.stopPropagation()}
                 >
                     <div className="px-3 py-2 border-b border-gray-700">
                         <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
