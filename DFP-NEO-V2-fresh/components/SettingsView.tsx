@@ -20,6 +20,7 @@ import FormationCallsignsSection from './FormationCallsignsSection';
 import PermissionsManagerWindow from './PermissionsManagerWindow';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
+import { debouncedAuditLog } from '../utils/auditDebounce';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
 
@@ -103,6 +104,18 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
     const [showDeleteElementFlyout, setShowDeleteElementFlyout] = useState(false);
     const [newElementName, setNewElementName] = useState('');
     const [selectedToDelete, setSelectedToDelete] = useState<Set<string>>(new Set());
+    // Edit mode state for each grade - grades in this set are in edit mode
+    const [editModeGrades, setEditModeGrades] = useState<Set<number>>(new Set());
+
+    const toggleEditMode = (grade: number) => {
+        const newSet = new Set(editModeGrades);
+        if (newSet.has(grade)) {
+            newSet.delete(grade);
+        } else {
+            newSet.add(grade);
+        }
+        setEditModeGrades(newSet);
+    };
 
     const [flightElements, setFlightElements] = useState<string[]>(() => {
         const customElements = Object.keys(phraseBank).filter(key =>
@@ -234,12 +247,31 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                         <div className="px-4 py-2 font-bold text-sm border-b border-gray-700/30 flex justify-between items-center">
                             <span className="text-white opacity-90">{getGradeLabel(grade)}</span>
                             {!readOnly && (
-                                <button
-                                    onClick={() => handleAddPhrase(grade)}
-                                    className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
-                                >
-                                    + Add Phrase
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                    {editModeGrades.has(grade) ? (
+                                        <>
+                                            <button
+                                                onClick={() => toggleEditMode(grade)}
+                                                className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded transition-colors border border-green-500 font-semibold"
+                                            >
+                                                ✓ Save
+                                            </button>
+                                            <button
+                                                onClick={() => handleAddPhrase(grade)}
+                                                className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded transition-colors border border-gray-600"
+                                            >
+                                                + Add Phrase
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={() => toggleEditMode(grade)}
+                                            className="text-xs bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded transition-colors border border-sky-500 font-semibold"
+                                        >
+                                            ✎ Edit
+                                        </button>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <div className="p-4 space-y-2">
@@ -248,10 +280,16 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                                     <div key={idx} className="flex items-start space-x-2 group">
                                         <textarea
                                             value={phrase}
-                                            onChange={(e) => { if (!readOnly) handlePhraseChange(grade, idx, e.target.value); }}
-                                            readOnly={readOnly}
+                                            onChange={(e) => { if (!readOnly && editModeGrades.has(grade)) handlePhraseChange(grade, idx, e.target.value); }}
+                                            readOnly={readOnly || !editModeGrades.has(grade)}
                                             rows={1}
-                                            className={`flex-1 rounded p-2 text-sm resize-none overflow-hidden ${readOnly ? 'bg-gray-800/50 border border-gray-700 text-gray-400 cursor-default' : 'bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500'}`}
+                                            className={`flex-1 rounded p-2 text-sm resize-none overflow-hidden transition-colors ${
+                                                readOnly
+                                                    ? 'bg-gray-800/50 border border-gray-700 text-gray-400 cursor-default'
+                                                    : editModeGrades.has(grade)
+                                                        ? 'bg-gray-800 border border-gray-600 text-gray-200 focus:ring-1 focus:ring-sky-500 focus:border-sky-500'
+                                                        : 'bg-transparent border border-transparent text-gray-300 cursor-default'
+                                            }`}
                                             style={{ minHeight: '38px', height: 'auto' }}
                                             onInput={(e) => {
                                                 const target = e.currentTarget;
@@ -259,7 +297,7 @@ const ScoringMatrixInline: React.FC<ScoringMatrixInlineProps> = ({ activeTab, ph
                                                 target.style.height = `${target.scrollHeight}px`;
                                             }}
                                         />
-                                        {!readOnly && (
+                                        {!readOnly && editModeGrades.has(grade) && (
                                             <button
                                                 onClick={() => handleDeletePhrase(grade, idx)}
                                                 className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -751,12 +789,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleUpdatePhraseBank = (newBank: PhraseBank) => {
         onUpdatePhraseBank(newBank);
-        logAudit({
-            page: 'Settings - Scoring Matrix',
-            action: 'update',
-            description: 'Updated scoring matrix phrase bank',
-            changes: 'Modified scoring criteria and phrases'
-        });
+        // Use debounced audit log - waits 3 seconds after last change before recording
+        // This prevents multiple entries when typing in a textarea
+        debouncedAuditLog(
+            'scoring-matrix-phrase-bank',
+            {
+                page: 'Settings - Scoring Matrix',
+                action: 'update',
+                description: 'Updated scoring matrix phrase bank',
+                changes: 'Modified scoring criteria and phrases'
+            },
+            (page, action, description, changes) => logAudit({ page, action, description, changes })
+        );
     };
 
     // Data Loader Handlers
