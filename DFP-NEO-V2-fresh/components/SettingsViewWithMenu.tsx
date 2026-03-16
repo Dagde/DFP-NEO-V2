@@ -580,7 +580,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'organisation' && (
                         <OrganisationSettings
                             units={props.units}
-                            currentAircraftAvailable={currentAircraftAvailable}
+                            currentAircraftAvailable={props.currentAircraftAvailable}
                         />
                     )}
                     {/* End section content */}
