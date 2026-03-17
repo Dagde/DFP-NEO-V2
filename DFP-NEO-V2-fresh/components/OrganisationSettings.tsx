@@ -121,9 +121,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     }
 
     // Detect changes for audit logging (only after initial DB load and prevSettings exists)
+    console.log('[OrgSettings] 📊 Audit check — hasInit:', hasInitializedFromDB.current, '| prevRef:', !!prevSettingsRef.current, '| onAuditLog:', !!onAuditLog);
     if (hasInitializedFromDB.current && prevSettingsRef.current && onAuditLog) {
       const prev = prevSettingsRef.current;
       const changes: string[] = [];
+      console.log('[OrgSettings] 📊 Comparing prev:', JSON.stringify(prev), '| current:', JSON.stringify(currentSettings));
 
       // Check Staff Sharing changes
       if (prev.staffSharingEnabled !== staffSharingEnabled) {
