@@ -63120,7 +63120,7 @@ const OrganisationSettings = ({
       const isCurrentlySelected = prev.includes(unitCode);
       const newUnits = isCurrentlySelected ? prev.filter((u) => u !== unitCode) : [...prev, unitCode];
       const action = isCurrentlySelected ? "removed from" : "added to";
-      logAudit("Organisation Settings", "Edit", `Unit ${unitCode} ${action} Staff Sharing`);
+      logAudit("Settings - Organisation", "Edit", `Unit ${unitCode} ${action} Staff Sharing`);
       return newUnits;
     });
   };
@@ -63143,7 +63143,7 @@ const OrganisationSettings = ({
           }
           return prevIndex;
         });
-        logAudit("Organisation Settings", "Edit", `Unit ${unitCode} removed from Fleet Sharing`);
+        logAudit("Settings - Organisation", "Edit", `Unit ${unitCode} removed from Fleet Sharing`);
         return newSelected;
       } else {
         const newSelected = [...prev, unitCode];
@@ -63154,7 +63154,7 @@ const OrganisationSettings = ({
         if (prev.length === 0) {
           setRemainderUnitIndex(0);
         }
-        logAudit("Organisation Settings", "Edit", `Unit ${unitCode} added to Fleet Sharing`);
+        logAudit("Settings - Organisation", "Edit", `Unit ${unitCode} added to Fleet Sharing`);
         return newSelected;
       }
     });
@@ -63179,18 +63179,18 @@ const OrganisationSettings = ({
       ...prev,
       [unitCode]: value
     }));
-    logAudit("Organisation Settings", "Edit", `Fleet Sharing fixed allocation for ${unitCode} set to ${value} aircraft`);
+    logAudit("Settings - Organisation", "Edit", `Fleet Sharing fixed allocation for ${unitCode} set to ${value} aircraft`);
   };
   const handleRemainderUnitChange = (newIndex) => {
     setRemainderUnitIndex(newIndex);
     setValidationMessage(null);
     const unitName = selectedUnits[newIndex] ?? "unknown";
-    logAudit("Organisation Settings", "Edit", `Fleet Sharing remainder unit set to ${unitName}`);
+    logAudit("Settings - Organisation", "Edit", `Fleet Sharing remainder unit set to ${unitName}`);
   };
   const handleAllocationModeChange = (newMode) => {
     setAllocationMode(newMode);
     setValidationMessage(null);
-    logAudit("Organisation Settings", "Edit", `Fleet Sharing allocation mode changed to ${newMode}`);
+    logAudit("Settings - Organisation", "Edit", `Fleet Sharing allocation mode changed to ${newMode}`);
   };
   const isRemainderUnit = (unitCode) => {
     const index = selectedUnits.indexOf(unitCode);
@@ -63222,7 +63222,7 @@ const OrganisationSettings = ({
                 onChange: (e) => {
                   const newVal = e.target.checked;
                   setStaffSharingEnabled(newVal);
-                  logAudit("Organisation Settings", "Edit", `Staff Sharing ${newVal ? "enabled" : "disabled"}`);
+                  logAudit("Settings - Organisation", "Edit", `Staff Sharing ${newVal ? "enabled" : "disabled"}`);
                 },
                 className: "sr-only peer"
               },
@@ -63454,7 +63454,7 @@ const OrganisationSettings = ({
                 onChange: (e) => {
                   const newVal = e.target.checked;
                   setFleetSharingEnabled(newVal);
-                  logAudit("Organisation Settings", "Edit", `Fleet Sharing ${newVal ? "enabled" : "disabled"}`);
+                  logAudit("Settings - Organisation", "Edit", `Fleet Sharing ${newVal ? "enabled" : "disabled"}`);
                 },
                 className: "sr-only peer"
               },
@@ -85171,4 +85171,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-lSKeolb2.js.map
+//# sourceMappingURL=index-Be7MsC4J.js.map
