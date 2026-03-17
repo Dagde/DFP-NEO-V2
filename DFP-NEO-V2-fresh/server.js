@@ -44,6 +44,8 @@ async function getPrisma() {
     // Ensure SystemConfig table exists and seed defaults
     await ensureSystemConfigTable(prisma);
     await seedDefaultConfigIfEmpty(prisma);
+    // Ensure AppSettings table exists (for settings persistence)
+    await ensureAppSettingsTable(prisma);
     // Migrate old history records to use correct fleet size
     await migrateFleetSizeInHistory(prisma);
   }
@@ -1602,6 +1604,33 @@ async function ensureSystemConfigTable(db) {
   }
 }
 
+async function ensureAppSettingsTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AppSettings" (
+        "id"        TEXT NOT NULL,
+        "orgId"     TEXT NOT NULL DEFAULT 'default',
+        "data"      JSONB NOT NULL DEFAULT '{}',
+        "updatedBy" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "AppSettings_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "AppSettings_orgId_key"
+      ON "AppSettings"("orgId")
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "AppSettings_orgId_idx"
+      ON "AppSettings"("orgId")
+    `);
+    console.log('✅ AppSettings table ensured');
+  } catch (err) {
+    console.error('❌ Error creating AppSettings table:', err.message);
+  }
+}
+
 async function seedDefaultConfigIfEmpty(db) {
   try {
     // Check if fleet_size exists
@@ -1841,6 +1870,74 @@ app.post('/api/system-config', async (req, res) => {
 });
 
 // ━━ User Permissions Endpoints ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+// ━━ App Settings Endpoints ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// GET /api/settings - Load app settings
+app.get('/api/settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureAppSettingsTable(db);
+    const orgId = req.query.orgId || 'default';
+
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+
+    if (!rows || rows.length === 0) {
+      return res.json({ settings: null });
+    }
+
+    return res.json({ settings: rows[0].data });
+  } catch (error) {
+    console.error('❌ GET /api/settings error:', error);
+    res.status(500).json({ error: 'Failed to load settings' });
+  }
+});
+
+// POST /api/settings - Save app settings
+app.post('/api/settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureAppSettingsTable(db);
+    const { orgId = 'default', settings, updatedBy } = req.body;
+
+    if (!settings) {
+      return res.status(400).json({ error: 'Missing settings data' });
+    }
+
+    const settingsJson = JSON.stringify(settings);
+    const now = new Date().toISOString();
+
+    // Upsert: try update first, then insert
+    const existing = await db.$queryRawUnsafe(
+      `SELECT id FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+
+    if (existing && existing.length > 0) {
+      await db.$executeRawUnsafe(
+        `UPDATE "AppSettings" SET "data" = $1::jsonb, "updatedBy" = $2, "updatedAt" = $3 WHERE "orgId" = $4`,
+        settingsJson, updatedBy || null, now, orgId
+      );
+      return res.json({ success: true, id: existing[0].id });
+    } else {
+      // Generate a cuid-like id using crypto
+      const { randomBytes } = await import('crypto');
+      const id = randomBytes(12).toString('base64url');
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "createdAt", "updatedAt") VALUES ($1, $2, $3::jsonb, $4, $5, $5)`,
+        id, orgId, settingsJson, updatedBy || null, now
+      );
+      return res.json({ success: true, id });
+    }
+  } catch (error) {
+    console.error('❌ POST /api/settings error:', error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
 
 // PATCH /api/user/permissions - Update user permissions by name
 app.patch('/api/user/permissions', async (req, res) => {
