@@ -9856,7 +9856,10 @@ updates.forEach(update => {
                        settingsLoaded={settingsLoaded}
                        organisationSettings={organisationSettings}
                        onUpdateOrganisationSettings={setOrganisationSettings}
-                       onAuditLog={(description) => logAudit('Organisation Settings', 'Edit', description)}
+                       onAuditLog={(description) => {
+                       console.log('[App] 📝 Organisation Settings audit log:', description);
+                       logAudit('Organisation Settings', 'Edit', description);
+                     }}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 

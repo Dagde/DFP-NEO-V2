@@ -120,7 +120,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       onSettingsChange(currentSettings);
     }
 
-    // Detect changes for audit logging (only after initial DB load)
+    // Detect changes for audit logging (only after initial DB load and prevSettings exists)
     if (hasInitializedFromDB.current && prevSettingsRef.current && onAuditLog) {
       const prev = prevSettingsRef.current;
       const changes: string[] = [];
@@ -129,7 +129,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       if (prev.staffSharingEnabled !== staffSharingEnabled) {
         changes.push(`Staff Sharing ${staffSharingEnabled ? 'enabled' : 'disabled'}`);
       }
-      if (JSON.stringify(prev.staffSharingUnits.sort()) !== JSON.stringify(staffSharingUnits.sort())) {
+      if (JSON.stringify([...prev.staffSharingUnits].sort()) !== JSON.stringify([...staffSharingUnits].sort())) {
         if (staffSharingUnits.length === 0) {
           changes.push('Staff Sharing units cleared');
         } else {
@@ -141,7 +141,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       if (prev.fleetSharingEnabled !== fleetSharingEnabled) {
         changes.push(`Fleet Sharing ${fleetSharingEnabled ? 'enabled' : 'disabled'}`);
       }
-      if (JSON.stringify(prev.selectedUnits.sort()) !== JSON.stringify(selectedUnits.sort())) {
+      if (JSON.stringify([...prev.selectedUnits].sort()) !== JSON.stringify([...selectedUnits].sort())) {
         if (selectedUnits.length === 0) {
           changes.push('Fleet Sharing units cleared');
         } else {
@@ -175,6 +175,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
       // Log audit if there are changes (debounced)
       if (changes.length > 0) {
+        console.log('[OrgSettings] 🔍 Detected changes:', changes);
+        
         // Clear any pending audit log
         if (auditDebounceRef.current) {
           clearTimeout(auditDebounceRef.current);
@@ -183,15 +185,19 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         // Debounce audit log to capture complete user action
         auditDebounceRef.current = setTimeout(() => {
           const description = `Organisation Settings: ${changes.join('; ')}`;
-          console.log('[OrgSettings] 📝 Audit log:', description);
+          console.log('[OrgSettings] 📝 Sending audit log:', description);
           onAuditLog(description);
           auditDebounceRef.current = null;
         }, 500);
       }
+      
+      // Update previous settings ref AFTER processing changes
+      prevSettingsRef.current = currentSettings;
+    } else if (!prevSettingsRef.current && hasInitializedFromDB.current) {
+      // First run after DB init - set the previous settings
+      console.log('[OrgSettings] 📍 Setting initial prevSettingsRef');
+      prevSettingsRef.current = currentSettings;
     }
-
-    // Update previous settings ref
-    prevSettingsRef.current = currentSettings;
   }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
   
   // Actual allocations (after pro-rata adjustment if needed)
