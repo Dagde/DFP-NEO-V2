@@ -65,6 +65,8 @@ interface SettingsViewWithMenuProps {
     totalAircraft?: number;
     settingsLoaded?: boolean;
     organisationSettings?: {
+        staffSharingEnabled: boolean;
+        staffSharingUnits: string[];
         fleetSharingEnabled: boolean;
         allocationMode: 'combined' | 'fixed';
         selectedUnits: string[];
@@ -72,12 +74,15 @@ interface SettingsViewWithMenuProps {
         remainderUnitIndex: number;
     };
     onUpdateOrganisationSettings?: (settings: {
+        staffSharingEnabled: boolean;
+        staffSharingUnits: string[];
         fleetSharingEnabled: boolean;
         allocationMode: 'combined' | 'fixed';
         selectedUnits: string[];
         desiredAllocations: Record<string, number>;
         remainderUnitIndex: number;
     }) => void;
+    onAuditLog?: (description: string) => void;
 }
 
 type SettingsSection =
@@ -598,6 +603,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentAircraftAvailable={props.currentAircraftAvailable}
                             savedSettings={props.organisationSettings}
                             onSettingsChange={props.onUpdateOrganisationSettings}
+                            onAuditLog={props.onAuditLog}
                             settingsLoaded={props.settingsLoaded}
                         />
                     )}

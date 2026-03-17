@@ -9856,6 +9856,7 @@ updates.forEach(update => {
                        settingsLoaded={settingsLoaded}
                        organisationSettings={organisationSettings}
                        onUpdateOrganisationSettings={setOrganisationSettings}
+                       onAuditLog={(description) => logAudit('Organisation Settings', 'Edit', description)}
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 
