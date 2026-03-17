@@ -1883,17 +1883,18 @@ app.get('/api/settings', async (req, res) => {
 
     console.log('📖 GET /api/settings - orgId:', orgId);
 
-    const record = await db.appSettings.findUnique({
-      where: { orgId }
-    });
+    const rows = await db.$queryRawUnsafe(
+      `SELECT "data" FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
 
-    if (!record) {
+    if (!rows || rows.length === 0) {
       console.log('📖 GET /api/settings - no record found, returning null');
       return res.json({ settings: null });
     }
 
     console.log('📖 GET /api/settings - found record, returning data');
-    return res.json({ settings: record.data });
+    return res.json({ settings: rows[0].data });
   } catch (error) {
     console.error('❌ GET /api/settings error:', error);
     console.error('❌ Error message:', error.message);
@@ -1914,22 +1915,49 @@ app.post('/api/settings', async (req, res) => {
       return res.status(400).json({ error: 'Missing settings data' });
     }
 
-    const result = await db.appSettings.upsert({
-      where: { orgId },
-      update: {
-        data: settings,
-        updatedBy: updatedBy || null,
-        updatedAt: new Date(),
-      },
-      create: {
-        orgId,
-        data: settings,
-        updatedBy: updatedBy || null,
-      }
-    });
+    const settingsJson = JSON.stringify(settings);
+    const now = new Date().toISOString();
 
-    console.log('✅ POST /api/settings - saved successfully, id:', result.id);
-    return res.json({ success: true, id: result.id });
+    // Check if record exists
+    const existing = await db.$queryRawUnsafe(
+      `SELECT "id" FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+
+    let savedId;
+    if (existing && existing.length > 0) {
+      // UPDATE existing record
+      await db.$executeRawUnsafe(
+        `UPDATE "AppSettings"
+         SET "data" = $1::jsonb,
+             "updatedBy" = $2,
+             "updatedAt" = $3::timestamp
+         WHERE "orgId" = $4`,
+        settingsJson,
+        updatedBy || null,
+        now,
+        orgId
+      );
+      savedId = existing[0].id;
+      console.log('✅ POST /api/settings - updated existing record, id:', savedId);
+    } else {
+      // INSERT new record
+      const newId = require('crypto').randomUUID();
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3::jsonb, $4, $5::timestamp, $6::timestamp)`,
+        newId,
+        orgId,
+        settingsJson,
+        updatedBy || null,
+        now,
+        now
+      );
+      savedId = newId;
+      console.log('✅ POST /api/settings - inserted new record, id:', savedId);
+    }
+
+    return res.json({ success: true, id: savedId });
   } catch (error) {
     console.error('❌ POST /api/settings error:', error);
     console.error('❌ Error message:', error.message);
