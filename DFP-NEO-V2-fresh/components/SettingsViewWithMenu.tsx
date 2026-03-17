@@ -63,6 +63,7 @@ interface SettingsViewWithMenuProps {
     cancellationCodes: CancellationCode[];
     currentAircraftAvailable?: number;
     totalAircraft?: number;
+    settingsLoaded?: boolean;
     organisationSettings?: {
         fleetSharingEnabled: boolean;
         allocationMode: 'combined' | 'fixed';
@@ -597,6 +598,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentAircraftAvailable={props.currentAircraftAvailable}
                             savedSettings={props.organisationSettings}
                             onSettingsChange={props.onUpdateOrganisationSettings}
+                            settingsLoaded={props.settingsLoaded}
                         />
                     )}
                     {/* End section content */}

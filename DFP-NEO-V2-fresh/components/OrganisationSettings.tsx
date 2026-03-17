@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 interface UnitDesiredAllocation {
   unitCode: string;
@@ -23,6 +23,7 @@ interface OrganisationSettingsProps {
   currentAircraftAvailable?: number;
   savedSettings?: OrganisationSettingsSavedState;
   onSettingsChange?: (settings: OrganisationSettingsSavedState) => void;
+  settingsLoaded?: boolean;
 }
 
 type AllocationMode = 'combined' | 'fixed';
@@ -32,6 +33,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   currentAircraftAvailable = 0,
   savedSettings,
   onSettingsChange,
+  settingsLoaded = false,
 }) => {
   // Fleet Sharing enable/disable
   const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
@@ -48,8 +50,24 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   // Which unit is the auto-calculated remainder unit (index in selectedUnits array)
   const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(savedSettings?.remainderUnitIndex ?? -1);
 
-  // Notify parent of changes for persistence
+  // Ref to ensure we only sync from DB data once (prevent re-syncing on parent re-renders)
+  const hasInitializedFromDB = useRef(false);
+
+  // Sync internal state from savedSettings when DB load completes (settingsLoaded flips to true)
   useEffect(() => {
+    if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
+      hasInitializedFromDB.current = true;
+      setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
+      setAllocationMode(savedSettings.allocationMode ?? 'combined');
+      setSelectedUnits(savedSettings.selectedUnits ?? []);
+      setDesiredAllocations(savedSettings.desiredAllocations ?? {});
+      setRemainderUnitIndex(savedSettings.remainderUnitIndex ?? -1);
+    }
+  }, [settingsLoaded, savedSettings]);
+
+  // Notify parent of changes for persistence (skip during initial default state before DB load)
+  useEffect(() => {
+    if (!settingsLoaded && !hasInitializedFromDB.current) return; // Don't save defaults before DB loads
     if (onSettingsChange) {
       onSettingsChange({
         fleetSharingEnabled,
