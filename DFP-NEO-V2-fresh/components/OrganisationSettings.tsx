@@ -67,13 +67,18 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   // Ref to ensure we only sync from DB data once (prevent re-syncing on parent re-renders)
   const hasInitializedFromDB = useRef(false);
+  // Ref to block audit logging during DB initialization state updates
+  const isInitializingRef = useRef(false);
+  // Ref to track if prevSettings has been set after full DB init
+  const prevSettingsReadyRef = useRef(false);
 
   // Sync internal state from savedSettings when DB load completes (settingsLoaded flips to true)
   useEffect(() => {
-    console.log('[OrgSettings] 📡 useEffect[settingsLoaded, savedSettings] fired — settingsLoaded:', settingsLoaded, '| hasInitializedFromDB:', hasInitializedFromDB.current, '| savedSettings:', JSON.stringify(savedSettings));
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
       console.log('[OrgSettings] ✅ Applying DB settings to internal state:', JSON.stringify(savedSettings));
       hasInitializedFromDB.current = true;
+      isInitializingRef.current = true; // Block audit during init state updates
+      prevSettingsReadyRef.current = false;
       setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
       setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
@@ -82,7 +87,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       setDesiredAllocations(savedSettings.desiredAllocations ?? {});
       setRemainderUnitIndex(savedSettings.remainderUnitIndex ?? -1);
       
-      // Set initial prevSettings for change detection
+      // Store the DB values as baseline for change detection
       prevSettingsRef.current = {
         staffSharingEnabled: savedSettings.staffSharingEnabled ?? false,
         staffSharingUnits: savedSettings.staffSharingUnits ?? [],
@@ -92,15 +97,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         desiredAllocations: savedSettings.desiredAllocations ?? {},
         remainderUnitIndex: savedSettings.remainderUnitIndex ?? -1,
       };
-    } else {
-      console.log('[OrgSettings] ⏭️ Skipping DB sync — conditions not met (settingsLoaded:', settingsLoaded, ', hasInit:', hasInitializedFromDB.current, ', hasSavedSettings:', !!savedSettings, ')');
     }
   }, [settingsLoaded, savedSettings]);
 
   // Notify parent of changes for persistence (skip during initial default state before DB load)
   useEffect(() => {
     if (!settingsLoaded && !hasInitializedFromDB.current) {
-      console.log('[OrgSettings] 🚫 Blocking onSettingsChange — DB not yet loaded, preventing default overwrite');
       return;
     }
 
@@ -114,20 +116,38 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       remainderUnitIndex,
     };
 
-    console.log('[OrgSettings] 💾 Calling onSettingsChange with:', JSON.stringify(currentSettings));
-    
     if (onSettingsChange) {
       onSettingsChange(currentSettings);
     }
 
-    // Detect changes for audit logging (only after initial DB load and prevSettings exists)
-    console.log('[OrgSettings] 📊 Audit check — hasInit:', hasInitializedFromDB.current, '| prevRef:', !!prevSettingsRef.current, '| onAuditLog:', !!onAuditLog);
-    if (hasInitializedFromDB.current && prevSettingsRef.current && onAuditLog) {
+    // If we are still in the initialization phase, check if current state now matches
+    // the DB baseline — if so, mark init complete so future changes are audited
+    if (isInitializingRef.current && prevSettingsRef.current) {
+      const dbBaseline = prevSettingsRef.current;
+      const matchesBaseline = 
+        dbBaseline.staffSharingEnabled === staffSharingEnabled &&
+        JSON.stringify([...dbBaseline.staffSharingUnits].sort()) === JSON.stringify([...staffSharingUnits].sort()) &&
+        dbBaseline.fleetSharingEnabled === fleetSharingEnabled &&
+        dbBaseline.allocationMode === allocationMode &&
+        JSON.stringify([...dbBaseline.selectedUnits].sort()) === JSON.stringify([...selectedUnits].sort()) &&
+        JSON.stringify(dbBaseline.desiredAllocations) === JSON.stringify(desiredAllocations) &&
+        dbBaseline.remainderUnitIndex === remainderUnitIndex;
+
+      if (matchesBaseline) {
+        console.log('[OrgSettings] ✅ Init complete — state matches DB baseline, audit logging enabled');
+        isInitializingRef.current = false;
+        prevSettingsReadyRef.current = true;
+      } else {
+        console.log('[OrgSettings] ⏳ Still initializing — state not yet at DB baseline');
+      }
+      return; // Don't audit during init
+    }
+
+    // Audit logging — only after init is complete
+    if (prevSettingsReadyRef.current && prevSettingsRef.current && onAuditLog) {
       const prev = prevSettingsRef.current;
       const changes: string[] = [];
-      console.log('[OrgSettings] 📊 Comparing prev:', JSON.stringify(prev), '| current:', JSON.stringify(currentSettings));
 
-      // Check Staff Sharing changes
       if (prev.staffSharingEnabled !== staffSharingEnabled) {
         changes.push(`Staff Sharing ${staffSharingEnabled ? 'enabled' : 'disabled'}`);
       }
@@ -138,8 +158,6 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           changes.push(`Staff Sharing units: ${staffSharingUnits.join(', ')}`);
         }
       }
-
-      // Check Fleet Sharing changes
       if (prev.fleetSharingEnabled !== fleetSharingEnabled) {
         changes.push(`Fleet Sharing ${fleetSharingEnabled ? 'enabled' : 'disabled'}`);
       }
@@ -159,8 +177,6 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           changes.push(`Remainder unit: ${remainderUnit}`);
         }
       }
-
-      // Check desired allocations changes
       const prevAllocStr = JSON.stringify(prev.desiredAllocations);
       const currAllocStr = JSON.stringify(desiredAllocations);
       if (prevAllocStr !== currAllocStr && Object.keys(desiredAllocations).length > 0) {
@@ -175,16 +191,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         }
       }
 
-      // Log audit if there are changes (debounced)
       if (changes.length > 0) {
         console.log('[OrgSettings] 🔍 Detected changes:', changes);
-        
-        // Clear any pending audit log
         if (auditDebounceRef.current) {
           clearTimeout(auditDebounceRef.current);
         }
-        
-        // Debounce audit log to capture complete user action
         auditDebounceRef.current = setTimeout(() => {
           const description = `Organisation Settings: ${changes.join('; ')}`;
           console.log('[OrgSettings] 📝 Sending audit log:', description);
@@ -192,12 +203,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
           auditDebounceRef.current = null;
         }, 500);
       }
-      
-      // Update previous settings ref AFTER processing changes
-      prevSettingsRef.current = currentSettings;
-    } else if (!prevSettingsRef.current && hasInitializedFromDB.current) {
-      // First run after DB init - set the previous settings
-      console.log('[OrgSettings] 📍 Setting initial prevSettingsRef');
+
+      // Update prev ref AFTER comparison
       prevSettingsRef.current = currentSettings;
     }
   }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
