@@ -257,67 +257,70 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     <div className="space-y-4">
       {/* Fleet Sharing Section */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-5">
-        {/* Header and Enable Toggle - Combined Row */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold text-white mb-1">Fleet Sharing</h3>
-            <p className="text-sm text-gray-400">
+        <h3 className="text-xl font-semibold text-white mb-4">Fleet Sharing</h3>
+        
+        {/* Header Section: Fleet Sharing Info and Total Aircraft - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* Fleet Sharing Description and Enable Toggle */}
+          <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
+            <p className="text-sm text-gray-400 mb-4">
               Configure asset sharing between organisational units. Units can share aircraft, simulators, and other operational resources.
             </p>
+            <div className="flex items-center">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={fleetSharingEnabled}
+                  onChange={(e) => setFleetSharingEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                <span className="ml-3 text-sm font-medium text-white">
+                  Enable Fleet Sharing
+                </span>
+              </label>
+            </div>
           </div>
-          <div className="ml-6">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={fleetSharingEnabled}
-                onChange={(e) => setFleetSharingEnabled(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
-              <span className="ml-3 text-sm font-medium text-white">
-                Enable
-              </span>
-            </label>
+
+          {/* Total Aircraft Available */}
+          <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
+            <div className="flex items-center justify-between h-full">
+              <div>
+                <h4 className="text-base font-medium text-white mb-1">Total Available Aircraft</h4>
+                <p className="text-xs text-gray-400">Current fleet size available for sharing</p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-sky-400">{currentAircraftAvailable}</div>
+                <div className="text-xs text-gray-400">Aircraft</div>
+              </div>
+            </div>
           </div>
         </div>
 
         {fleetSharingEnabled && (
           <>
-            {/* Total Aircraft Display - Compact */}
-            <div className="mb-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-base font-medium text-white">Total Available Aircraft</h4>
-                  <p className="text-xs text-gray-400">Current fleet size available for sharing</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-sky-400">{currentAircraftAvailable}</div>
-                  <div className="text-xs text-gray-400">Aircraft</div>
-                </div>
-              </div>
-            </div>
-
             {/* Select Units and Allocation Mode - Side by Side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-              {/* Select Units Sharing Asset */}
+              {/* Select Units Sharing Asset - Narrower Width */}
               <div>
                 <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Asset</h4>
                 <p className="text-xs text-gray-400 mb-3">
                   Choose which units will have access to shared resources.
                 </p>
                 
-                <div className="grid grid-cols-2 gap-2">
+                {/* Narrower grid for units */}
+                <div className="grid grid-cols-3 gap-2">
                   {units.map(unit => (
                     <div
                       key={unit}
                       onClick={() => handleToggleUnit(unit)}
-                      className={`cursor-pointer rounded-lg border-2 p-2 transition-all ${
+                      className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
                         selectedUnits.includes(unit)
                           ? 'border-sky-500 bg-sky-500/10'
                           : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col items-center justify-center space-y-1">
                         <span className={`text-sm font-medium ${selectedUnits.includes(unit) ? 'text-sky-400' : 'text-gray-300'}`}>
                           {unit}
                         </span>
@@ -342,7 +345,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 )}
               </div>
 
-              {/* Allocation Mode Selection */}
+              {/* Allocation Mode Selection - Stacked Vertical */}
               {selectedUnits.length > 0 && (
                 <div>
                   <h4 className="text-base font-medium text-white mb-2">Allocation Mode</h4>
@@ -351,6 +354,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   </p>
                   
                   <div className="space-y-3">
+                    {/* Combined Pool Mode - Above */}
                     <button
                       onClick={() => handleAllocationModeChange('combined')}
                       className={`w-full p-3 rounded-lg text-left transition-all ${
@@ -370,6 +374,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                       </p>
                     </button>
                     
+                    {/* Fixed Allocation Mode - Below */}
                     <button
                       onClick={() => handleAllocationModeChange('fixed')}
                       className={`w-full p-3 rounded-lg text-left transition-all ${
