@@ -181,8 +181,14 @@ const saveSettingsNow = async (settings: AppSettingsData, userId?: string): Prom
     console.log('[Settings] 📥 POST /api/settings response status:', res.status);
 
     if (!res.ok) {
-      const errText = await res.text();
-      console.error('[Settings] ❌ Failed to save settings:', res.status, errText);
+      let errBody = '';
+      try { errBody = await res.text(); } catch {}
+      console.error('[Settings] ❌ Failed to save settings:', res.status, errBody);
+      // Try to parse error details
+      try {
+        const errJson = JSON.parse(errBody);
+        console.error('[Settings] ❌ Server error details:', errJson.details || errJson.error);
+      } catch {}
       return false;
     }
 

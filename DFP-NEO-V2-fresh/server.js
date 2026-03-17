@@ -1902,8 +1902,12 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
   try {
     const db = await getPrisma();
+    console.log('📝 POST /api/settings - ensuring table...');
     await ensureAppSettingsTable(db);
     const { orgId = 'default', settings, updatedBy } = req.body;
+
+    console.log('📝 POST /api/settings - orgId:', orgId, '| settings keys:', settings ? Object.keys(settings) : 'MISSING');
+    console.log('📝 POST /api/settings - payload size:', JSON.stringify(settings || {}).length, 'bytes');
 
     if (!settings) {
       return res.status(400).json({ error: 'Missing settings data' });
@@ -1912,19 +1916,25 @@ app.post('/api/settings', async (req, res) => {
     const settingsJson = JSON.stringify(settings);
     const now = new Date().toISOString();
 
+    console.log('📝 POST /api/settings - checking for existing record...');
     // Upsert: try update first, then insert
     const existing = await db.$queryRawUnsafe(
       `SELECT id FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
       orgId
     );
 
+    console.log('📝 POST /api/settings - existing record:', existing ? existing.length : 0, 'found');
+
     if (existing && existing.length > 0) {
+      console.log('📝 POST /api/settings - updating existing record id:', existing[0].id);
       await db.$executeRawUnsafe(
         `UPDATE "AppSettings" SET "data" = $1::jsonb, "updatedBy" = $2, "updatedAt" = $3 WHERE "orgId" = $4`,
         settingsJson, updatedBy || null, now, orgId
       );
+      console.log('✅ POST /api/settings - updated successfully');
       return res.json({ success: true, id: existing[0].id });
     } else {
+      console.log('📝 POST /api/settings - inserting new record...');
       // Generate a cuid-like id using crypto
       const { randomBytes } = await import('crypto');
       const id = randomBytes(12).toString('base64url');
@@ -1932,11 +1942,14 @@ app.post('/api/settings', async (req, res) => {
         `INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "createdAt", "updatedAt") VALUES ($1, $2, $3::jsonb, $4, $5, $5)`,
         id, orgId, settingsJson, updatedBy || null, now
       );
+      console.log('✅ POST /api/settings - inserted successfully, id:', id);
       return res.json({ success: true, id });
     }
   } catch (error) {
     console.error('❌ POST /api/settings error:', error);
-    res.status(500).json({ error: 'Failed to save settings' });
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to save settings', details: error.message });
   }
 });
 
