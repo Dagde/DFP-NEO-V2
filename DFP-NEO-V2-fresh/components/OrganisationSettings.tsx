@@ -186,65 +186,61 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   // Handle adding/removing units for staff sharing
   const handleToggleStaffSharingUnit = (unitCode: string) => {
+    const isCurrentlySelected = staffSharingUnits.includes(unitCode);
+    const action = isCurrentlySelected ? 'removed from' : 'added to';
+    logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} ${action} Staff Sharing`);
     setStaffSharingUnits(prev => {
-      const isCurrentlySelected = prev.includes(unitCode);
-      const newUnits = isCurrentlySelected
-        ? prev.filter(u => u !== unitCode)
-        : [...prev, unitCode];
-      const action = isCurrentlySelected ? 'removed from' : 'added to';
-      logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} ${action} Staff Sharing`);
-      return newUnits;
+      if (isCurrentlySelected) {
+        return prev.filter(u => u !== unitCode);
+      } else {
+        return [...prev, unitCode];
+      }
     });
   };
 
   // Handle adding/removing units
   const handleToggleUnit = (unitCode: string) => {
-    setSelectedUnits(prev => {
-      const isCurrentlySelected = prev.includes(unitCode);
-      
-      if (isCurrentlySelected) {
-        // Removing a unit
-        const newSelected = prev.filter(u => u !== unitCode);
-        
-        // Remove allocation data for removed unit
-        setDesiredAllocations(prevAlloc => {
-          const newAlloc = { ...prevAlloc };
-          delete newAlloc[unitCode];
-          return newAlloc;
-        });
-        
-        // Adjust remainder unit index if needed
-        const removedIndex = prev.indexOf(unitCode);
-        setRemainderUnitIndex(prevIndex => {
-          if (prevIndex === removedIndex) {
-            return newSelected.length > 0 ? newSelected.length - 1 : -1;
-          } else if (prevIndex > removedIndex) {
-            return prevIndex - 1;
-          }
-          return prevIndex;
-        });
+    const isCurrentlySelected = selectedUnits.includes(unitCode);
 
-        logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} removed from Fleet Sharing`);
-        return newSelected;
-      } else {
-        // Adding a unit
-        const newSelected = [...prev, unitCode];
-        
-        // Initialize allocation for new unit to 0
-        setDesiredAllocations(prevAlloc => ({
-          ...prevAlloc,
-          [unitCode]: 0
-        }));
-        
-        // If this is the first unit being added, set it as remainder
-        if (prev.length === 0) {
-          setRemainderUnitIndex(0);
+    if (isCurrentlySelected) {
+      logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} removed from Fleet Sharing`);
+      // Removing a unit
+      setSelectedUnits(prev => prev.filter(u => u !== unitCode));
+
+      // Remove allocation data for removed unit
+      setDesiredAllocations(prevAlloc => {
+        const newAlloc = { ...prevAlloc };
+        delete newAlloc[unitCode];
+        return newAlloc;
+      });
+
+      // Adjust remainder unit index if needed
+      const removedIndex = selectedUnits.indexOf(unitCode);
+      setRemainderUnitIndex(prevIndex => {
+        const newSelected = selectedUnits.filter(u => u !== unitCode);
+        if (prevIndex === removedIndex) {
+          return newSelected.length > 0 ? newSelected.length - 1 : -1;
+        } else if (prevIndex > removedIndex) {
+          return prevIndex - 1;
         }
+        return prevIndex;
+      });
+    } else {
+      logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} added to Fleet Sharing`);
+      // Adding a unit
+      setSelectedUnits(prev => [...prev, unitCode]);
 
-        logAudit('Settings - Organisation', 'Edit', `Unit ${unitCode} added to Fleet Sharing`);
-        return newSelected;
+      // Initialize allocation for new unit to 0
+      setDesiredAllocations(prevAlloc => ({
+        ...prevAlloc,
+        [unitCode]: 0
+      }));
+
+      // If this is the first unit being added, set it as remainder
+      if (selectedUnits.length === 0) {
+        setRemainderUnitIndex(0);
       }
-    });
+    }
   };
 
   // Handle desired allocation change
