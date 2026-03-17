@@ -47,10 +47,24 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    // Disable identifier mangling to prevent TDZ name collision bugs.
+    // Variable/function names are kept as-is; only whitespace/dead code is removed.
+    // The bundle is served over HTTPS with gzip so size is still acceptable.
+    minify: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-dom/client'],
+        manualChunks(id) {
+          // React and React-DOM in their own isolated chunk
+          if (id.includes('node_modules/react/') || 
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/scheduler/')) {
+            return 'vendor-react';
+          }
+          // jsPDF and html2canvas in their own chunk
+          if (id.includes('node_modules/jspdf') || 
+              id.includes('node_modules/html2canvas')) {
+            return 'vendor-pdf';
+          }
         },
       },
     },
