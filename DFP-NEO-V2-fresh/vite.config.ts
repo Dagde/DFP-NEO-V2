@@ -47,5 +47,12 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-dom/client'],
+        },
+      },
+    },
   }
 });
