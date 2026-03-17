@@ -66,46 +66,65 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   // Pro-rata adjustment when exceeding total
   useEffect(() => {
     setUnitConfigs(prev => {
+      // Only adjust if exceeding total and in designated mode
+      if (allocationType !== 'designated' || selectedUnits.length < 2) {
+        return prev;
+      }
+      
       // Calculate total from current state
       const currentTotal = selectedUnits.reduce((sum, unit) => sum + (prev[unit]?.designatedCount || 0), 0);
       
       // Only adjust if exceeding total
-      if (currentTotal > currentAircraftAvailable && allocationType === 'designated' && selectedUnits.length > 1) {
+      if (currentTotal > currentAircraftAvailable) {
         const excess = currentTotal - currentAircraftAvailable;
-        const adjustmentRatio = currentAircraftAvailable / currentTotal;
         
-        const newConfigs: Record<string, UnitSharingConfig> = {};
-        let adjustedUnits: string[] = [];
-        let hasChanges = false;
+        // Only adjust manual units (not the auto-calculated last unit)
+        const manualUnits = selectedUnits.slice(0, -1);
+        const lastUnit = selectedUnits[selectedUnits.length - 1];
         
-        selectedUnits.forEach((unit, index) => {
-          const originalCount = prev[unit]?.designatedCount || 0;
-          // Apply proportional reduction
-          const adjustedCount = Math.round(originalCount * adjustmentRatio);
+        // Calculate total from manual units only
+        const manualTotal = manualUnits.reduce((sum, unit) => sum + (prev[unit]?.designatedCount || 0), 0);
+        
+        // If manual units already exceed total, apply pro-rata to manual units only
+        if (manualTotal > currentAircraftAvailable) {
+          const adjustmentRatio = currentAircraftAvailable / manualTotal;
           
-          newConfigs[unit] = {
-            unitCode: unit,
-            designatedCount: adjustedCount
-          };
+          const newConfigs: Record<string, UnitSharingConfig> = {};
+          let adjustedUnits: string[] = [];
+          let hasChanges = false;
           
-          if (adjustedCount !== originalCount) {
-            adjustedUnits.push(unit);
-            hasChanges = true;
+          // Adjust only manual units
+          manualUnits.forEach((unit) => {
+            const originalCount = prev[unit]?.designatedCount || 0;
+            const adjustedCount = Math.round(originalCount * adjustmentRatio);
+            
+            newConfigs[unit] = {
+              unitCode: unit,
+              designatedCount: adjustedCount
+            };
+            
+            if (adjustedCount !== originalCount) {
+              adjustedUnits.push(unit);
+              hasChanges = true;
+            }
+          });
+          
+          // Keep last unit's current value (will be auto-calculated by the other effect)
+          newConfigs[lastUnit] = prev[lastUnit];
+          
+          // Only update if there are actual changes
+          if (hasChanges) {
+            setAdjustmentMessage(
+              `Allocation exceeded total by ${excess} aircraft. Applied pro-rata adjustment to ${adjustedUnits.length} manual unit(s).`
+            );
+            
+            // Clear message after 5 seconds
+            setTimeout(() => {
+              setAdjustmentMessage(null);
+            }, 5000);
+            
+            return newConfigs;
           }
-        });
-        
-        // Only update if there are actual changes
-        if (hasChanges) {
-          setAdjustmentMessage(
-            `Allocation exceeded total by ${excess} aircraft. Applied pro-rata adjustment to ${adjustedUnits.length} unit(s).`
-          );
-          
-          // Clear message after 5 seconds
-          setTimeout(() => {
-            setAdjustmentMessage(null);
-          }, 5000);
-          
-          return newConfigs;
         }
       } else {
         setAdjustmentMessage(null);
