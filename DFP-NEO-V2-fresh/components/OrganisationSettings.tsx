@@ -65,43 +65,55 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   // Pro-rata adjustment when exceeding total
   useEffect(() => {
-    if (allocationExceedsTotal && allocationType === 'designated' && selectedUnits.length > 1) {
-      const excess = totalDesignated - currentAircraftAvailable;
-      const adjustmentRatio = currentAircraftAvailable / totalDesignated;
+    setUnitConfigs(prev => {
+      // Calculate total from current state
+      const currentTotal = selectedUnits.reduce((sum, unit) => sum + (prev[unit]?.designatedCount || 0), 0);
       
-      const newConfigs: Record<string, UnitSharingConfig> = {};
-      let adjustedUnits: string[] = [];
-      
-      selectedUnits.forEach((unit, index) => {
-        const originalCount = unitConfigs[unit]?.designatedCount || 0;
-        // Apply proportional reduction
-        const adjustedCount = Math.round(originalCount * adjustmentRatio);
+      // Only adjust if exceeding total
+      if (currentTotal > currentAircraftAvailable && allocationType === 'designated' && selectedUnits.length > 1) {
+        const excess = currentTotal - currentAircraftAvailable;
+        const adjustmentRatio = currentAircraftAvailable / currentTotal;
         
-        newConfigs[unit] = {
-          unitCode: unit,
-          designatedCount: adjustedCount
-        };
+        const newConfigs: Record<string, UnitSharingConfig> = {};
+        let adjustedUnits: string[] = [];
+        let hasChanges = false;
         
-        if (adjustedCount !== originalCount) {
-          adjustedUnits.push(unit);
+        selectedUnits.forEach((unit, index) => {
+          const originalCount = prev[unit]?.designatedCount || 0;
+          // Apply proportional reduction
+          const adjustedCount = Math.round(originalCount * adjustmentRatio);
+          
+          newConfigs[unit] = {
+            unitCode: unit,
+            designatedCount: adjustedCount
+          };
+          
+          if (adjustedCount !== originalCount) {
+            adjustedUnits.push(unit);
+            hasChanges = true;
+          }
+        });
+        
+        // Only update if there are actual changes
+        if (hasChanges) {
+          setAdjustmentMessage(
+            `Allocation exceeded total by ${excess} aircraft. Applied pro-rata adjustment to ${adjustedUnits.length} unit(s).`
+          );
+          
+          // Clear message after 5 seconds
+          setTimeout(() => {
+            setAdjustmentMessage(null);
+          }, 5000);
+          
+          return newConfigs;
         }
-      });
-      
-      setUnitConfigs(newConfigs);
-      setAdjustmentMessage(
-        `Allocation exceeded total by ${excess} aircraft. Applied pro-rata adjustment to ${adjustedUnits.length} unit(s).`
-      );
-      
-      // Clear message after 5 seconds
-      const timer = setTimeout(() => {
+      } else {
         setAdjustmentMessage(null);
-      }, 5000);
+      }
       
-      return () => clearTimeout(timer);
-    } else {
-      setAdjustmentMessage(null);
-    }
-  }, [allocationExceedsTotal, totalDesignated, currentAircraftAvailable, selectedUnits, allocationType, unitConfigs]);
+      return prev;
+    });
+  }, [selectedUnits, allocationType, currentAircraftAvailable]);
 
   const handleToggleUnit = (unitCode: string) => {
     setSelectedUnits(prev => {
