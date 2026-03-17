@@ -11,6 +11,8 @@ interface UnitActualAllocation {
 }
 
 interface OrganisationSettingsSavedState {
+  staffSharingEnabled: boolean;
+  staffSharingUnits: string[];
   fleetSharingEnabled: boolean;
   allocationMode: 'combined' | 'fixed';
   selectedUnits: string[];
@@ -37,6 +39,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 }) => {
   console.log('[OrgSettings] 🔄 Component render — settingsLoaded:', settingsLoaded, '| savedSettings:', JSON.stringify(savedSettings));
 
+  // Staff Sharing enable/disable
+  const [staffSharingEnabled, setStaffSharingEnabled] = useState(savedSettings?.staffSharingEnabled ?? false);
+  // Selected units for staff sharing
+  const [staffSharingUnits, setStaffSharingUnits] = useState<string[]>(savedSettings?.staffSharingUnits ?? []);
+
   // Fleet Sharing enable/disable
   const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
   
@@ -61,6 +68,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
       console.log('[OrgSettings] ✅ Applying DB settings to internal state:', JSON.stringify(savedSettings));
       hasInitializedFromDB.current = true;
+      setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
+      setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
       setAllocationMode(savedSettings.allocationMode ?? 'combined');
       setSelectedUnits(savedSettings.selectedUnits ?? []);
@@ -77,9 +86,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       console.log('[OrgSettings] 🚫 Blocking onSettingsChange — DB not yet loaded, preventing default overwrite');
       return;
     }
-    console.log('[OrgSettings] 💾 Calling onSettingsChange with:', JSON.stringify({ fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex }));
+    console.log('[OrgSettings] 💾 Calling onSettingsChange with:', JSON.stringify({ staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex }));
     if (onSettingsChange) {
       onSettingsChange({
+        staffSharingEnabled,
+        staffSharingUnits,
         fleetSharingEnabled,
         allocationMode,
         selectedUnits,
@@ -87,7 +98,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         remainderUnitIndex,
       });
     }
-  }, [fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
+  }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
   
   // Actual allocations (after pro-rata adjustment if needed)
   const [actualAllocations, setActualAllocations] = useState<Record<string, number>>({});
@@ -179,6 +190,18 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
     setValidationType('warning');
 
   }, [allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex, remainderDesiredAllocation, totalDesiredAllocation, currentAircraftAvailable]);
+
+  // Handle adding/removing units for staff sharing
+  const handleToggleStaffSharingUnit = (unitCode: string) => {
+    setStaffSharingUnits(prev => {
+      const isCurrentlySelected = prev.includes(unitCode);
+      if (isCurrentlySelected) {
+        return prev.filter(u => u !== unitCode);
+      } else {
+        return [...prev, unitCode];
+      }
+    });
+  };
 
   // Handle adding/removing units
   const handleToggleUnit = (unitCode: string) => {
@@ -283,6 +306,112 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Staff Sharing Section */}
+      <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-5">
+        <h3 className="text-xl font-semibold text-white mb-4">Staff Sharing</h3>
+        
+        {/* Header Section: Staff Sharing Info and Enable Toggle */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          {/* Staff Sharing Description and Enable Toggle */}
+          <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
+            <p className="text-sm text-gray-400 mb-4">
+              Configure staff sharing between organisational units. When enabled, all staff members are available for all sorties across participating units.
+            </p>
+            <div className="flex items-center">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={staffSharingEnabled}
+                  onChange={(e) => setStaffSharingEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                <span className="ml-3 text-sm font-medium text-white">
+                  Enable Staff Sharing
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Staff Sharing Units Count */}
+          <div className="bg-gray-700/50 rounded-lg border border-gray-600 p-4">
+            <div className="flex items-center justify-between h-full">
+              <div>
+                <h4 className="text-base font-medium text-white mb-1">Units Sharing Staff</h4>
+                <p className="text-xs text-gray-400">Number of units participating in staff sharing</p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-sky-400">{staffSharingUnits.length}</div>
+                <div className="text-xs text-gray-400">Units</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {staffSharingEnabled && (
+          <>
+            {/* Select Units Sharing Staff */}
+            <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4">
+              <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Staff</h4>
+              <p className="text-xs text-gray-400 mb-3">
+                Choose which units will share staff for all sorties.
+              </p>
+              
+              {/* Grid for units */}
+              <div className="grid grid-cols-3 gap-2">
+                {units.map(unit => (
+                  <div
+                    key={unit}
+                    onClick={() => handleToggleStaffSharingUnit(unit)}
+                    className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
+                      staffSharingUnits.includes(unit)
+                        ? 'border-sky-500 bg-sky-500/10'
+                        : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-1">
+                      <span className={`text-sm font-medium ${staffSharingUnits.includes(unit) ? 'text-sky-400' : 'text-gray-300'}`}>
+                        {unit}
+                      </span>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        staffSharingUnits.includes(unit) ? 'border-sky-500 bg-sky-500' : 'border-gray-500'
+                      }`}>
+                        {staffSharingUnits.includes(unit) && (
+                          <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {staffSharingUnits.length === 0 && (
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  No units selected. Click on units above to add them.
+                </p>
+              )}
+            </div>
+
+            {/* Staff Sharing Summary */}
+            {staffSharingUnits.length > 0 && (
+              <div className="mt-4 p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+                <h5 className="text-sky-400 font-semibold text-sm mb-2">Staff Sharing Summary</h5>
+                <div className="text-xs text-gray-300 space-y-1">
+                  <div className="flex">
+                    <span><strong>Active Units:</strong> {staffSharingUnits.length}</span>
+                  </div>
+                  <div className="flex">
+                    <span><strong>Participating Units:</strong> {staffSharingUnits.join(', ')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
       {/* Fleet Sharing Section */}
       <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-5">
         <h3 className="text-xl font-semibold text-white mb-4">Fleet Sharing</h3>

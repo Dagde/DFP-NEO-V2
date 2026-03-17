@@ -4178,6 +4178,8 @@ useEffect(() => {
 
     // ─── ORGANISATION SETTINGS STATE ──────────────────────────────────────────
     const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
+        staffSharingEnabled: false,
+        staffSharingUnits: [],
         fleetSharingEnabled: false,
         allocationMode: 'combined',
         selectedUnits: [],

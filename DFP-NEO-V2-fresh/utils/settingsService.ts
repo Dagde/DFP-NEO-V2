@@ -77,6 +77,8 @@ export interface AppSettingsData {
 
   // Organisation / Fleet Sharing
   organisationSettings: {
+    staffSharingEnabled: boolean;
+    staffSharingUnits: string[];
     fleetSharingEnabled: boolean;
     allocationMode: 'combined' | 'fixed';
     selectedUnits: string[];
@@ -276,6 +278,8 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     currencyRequirements: state.currencyRequirements || [],
     syllabusDetails: state.syllabusDetails || [],
     organisationSettings: state.organisationSettings || {
+      staffSharingEnabled: false,
+      staffSharingUnits: [],
       fleetSharingEnabled: false,
       allocationMode: 'combined',
       selectedUnits: [],
