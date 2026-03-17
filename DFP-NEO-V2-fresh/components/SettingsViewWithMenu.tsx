@@ -321,28 +321,40 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'organisation': 'Fleet sharing and multi-unit configuration',
 };
 
-// Icon accent colours per section
+// Icon accent colours per section - grouped by category for consistent icon colours
+// SYSTEM CONFIGURATION: scoring-matrix, currencies, sct-events (sky blue)
+// OPERATIONS RULES: event-limits, duty-turnaround, business-rules (amber)
+// ACCESS & SECURITY: permissions, user-list (violet)
+// DATA MANAGEMENT: data-loaders, data-sources, staff-database, trainee-database, staff-combined-data, staff-mockdata, trainee-mockdata (emerald)
+// HISTORICAL & ANALYSIS: validation (rose)
+// SYSTEM SETTINGS: timezone, location, units, organisation (cyan)
 const sectionColors: Record<SettingsSection, string> = {
+  // SYSTEM CONFIGURATION - sky blue icons
   'scoring-matrix':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
-  'currencies':        'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
-  'sct-events':        'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
-  'event-limits':      'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
-  'duty-turnaround':   'from-orange-500/20 to-orange-600/10 border-orange-500/30 text-orange-400',
-  'business-rules':    'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
-  'permissions':       'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
-  'data-loaders':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
-  'data-sources':      'from-teal-500/20 to-teal-600/10 border-teal-500/30 text-teal-400',
-  'user-list':         'from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400',
-  'staff-database':    'from-indigo-500/20 to-indigo-600/10 border-indigo-500/30 text-indigo-400',
-  'trainee-database':  'from-lime-500/20 to-lime-600/10 border-lime-500/30 text-lime-400',
-  'staff-mockdata':    'from-slate-500/20 to-slate-600/10 border-slate-500/30 text-slate-400',
-  'trainee-mockdata':  'from-zinc-500/20 to-zinc-600/10 border-zinc-500/30 text-zinc-400',
-  'staff-combined-data':'from-pink-500/20 to-pink-600/10 border-pink-500/30 text-pink-400',
-  'validation':        'from-sky-500/20 to-indigo-600/10 border-sky-400/30 text-sky-300',
-  'timezone':          'from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400',
-  'location':          'from-green-500/20 to-green-600/10 border-green-500/30 text-green-400',
-  'units':             'from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 text-yellow-400',
-  'organisation':      'from-rose-500/20 to-rose-600/10 border-rose-500/30 text-rose-400',
+  'currencies':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
+  'sct-events':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
+  // OPERATIONS RULES - amber icons
+  'event-limits':      'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+  'duty-turnaround':   'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+  'business-rules':    'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+  // ACCESS & SECURITY - violet icons
+  'permissions':       'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
+  'user-list':         'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
+  // DATA MANAGEMENT - emerald icons
+  'data-loaders':      'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  'data-sources':      'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  'staff-database':    'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  'trainee-database':  'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  'staff-mockdata':    'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  'trainee-mockdata':  'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  'staff-combined-data':'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
+  // HISTORICAL & ANALYSIS - rose icons
+  'validation':        'from-rose-500/20 to-rose-600/10 border-rose-500/30 text-rose-400',
+  // SYSTEM SETTINGS - cyan icons
+  'timezone':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
 };
 
 // Groups for the icon grid

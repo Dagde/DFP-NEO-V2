@@ -1,27 +1,18 @@
-# TODO: Fix User Dropdown & Add Edit/Save to Scoring Matrix
+# Task: Make Settings Page Icons Same Color Within Each Line/Group
 
-## Issues to Address
-1. **User Dropdown Links**: "Change Password" and "Admin Panel" buttons don't respond when clicked
-2. **Scoring Matrix Edit/Save**: Add edit mode with save buttons for each element to prevent accidental changes
+## Goal
+Make icons within each line (System Configuration, Operations Rules, etc.) the same color. Each line can be a different color, but icons in the same line should match.
 
-## Tasks
+## Groups to Update
+1. SYSTEM CONFIGURATION - scoring-matrix, currencies, sct-events
+2. OPERATIONS RULES - event-limits, duty-turnaround, business-rules  
+3. ACCESS & SECURITY - permissions, user-list
+4. DATA MANAGEMENT - data-loaders, data-sources, staff-database, trainee-database, staff-combined-data, staff-mockdata, trainee-mockdata
+5. HISTORICAL & ANALYSIS - validation
+6. SYSTEM SETTINGS - timezone, location, units, organisation
 
-### Phase 1: Fix User Dropdown
-- [ ] Debug why Change Password and Admin Panel buttons don't work
-- [ ] Check if state setters are properly connected
-- [ ] Verify modal components are rendering correctly
-- [ ] Test fix
-
-### Phase 2: Add Edit/Save to Scoring Matrix
-- [x] Examine current ScoringMatrixFlyout component structure
-- [x] Add edit mode state management for each element
-- [x] Implement Edit button to enable editing
-- [x] Implement Save button to commit changes
-- [x] Add visual feedback for edit mode
-- [ ] Test edit/save functionality
-
-## Status
-- User dropdown: BUILT WITH DEBUGGING - READY TO TEST (buttons should now respond with console logs)
-- Scoring Matrix: EDIT/SAVE FUNCTIONALITY IMPLEMENTED - READY TO TEST
-- Admin permissions: WORKING ✅
-- Build: COMPLETED SUCCESSFULLY (index-Dta8ph_6.js)
+## Plan
+- [x] Examine current icon structure and color definitions
+- [ ] Update sectionColors to use consistent colors per group
+- [ ] Rebuild the bundle with npm run build
+- [ ] Commit changes to git
