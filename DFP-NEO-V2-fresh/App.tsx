@@ -3476,126 +3476,6 @@ useEffect(() => {
         };
         loadInitialData();
     }, []);
-
-    // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
-    const [settingsLoaded, setSettingsLoaded] = useState(false);
-
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const saved = await loadSettingsFromDB();
-                if (!saved) {
-                    setSettingsLoaded(true);
-                    return;
-                }
-
-                // Apply all saved settings to state
-                if (saved.locations?.length) setLocations(saved.locations);
-                if (saved.units?.length) setUnits(saved.units);
-                if (saved.unitLocations) setUnitLocations(saved.unitLocations);
-                if (saved.eventLimits) setEventLimits(saved.eventLimits);
-                if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
-                if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
-                if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
-                if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
-                if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
-                if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
-                if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
-                if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
-                if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
-                if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
-                if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
-                if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
-                if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
-                if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
-                if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
-                if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
-                if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
-                if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
-                if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
-                if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
-                if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
-                if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
-                if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
-                if (saved.masterCurrencies?.length) setMasterCurrencies(saved.masterCurrencies);
-                if (saved.currencyRequirements?.length) setCurrencyRequirements(saved.currencyRequirements);
-                if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
-                if (saved.organisationSettings) setOrganisationSettings(saved.organisationSettings);
-
-                console.log('[Settings] ✅ All settings restored from DB');
-            } catch (error) {
-                console.error('[Settings] ❌ Failed to load settings from DB:', error);
-            } finally {
-                setSettingsLoaded(true);
-            }
-        };
-        loadSettings();
-    }, []);
-
-    // ─── ORGANISATION SETTINGS STATE ──────────────────────────────────────────
-    const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
-        fleetSharingEnabled: false,
-        allocationMode: 'combined',
-        selectedUnits: [],
-        desiredAllocations: {},
-        remainderUnitIndex: -1,
-    });
-
-    // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
-    useEffect(() => {
-        if (!settingsLoaded) return; // Don't save during initial load
-
-        const snapshot = buildSettingsSnapshot({
-            locations,
-            units,
-            unitLocations,
-            eventLimits,
-            preferredDutyPeriod,
-            maxCrewDutyPeriod,
-            maxDispatchPerHour,
-            flightTurnaround,
-            ftdTurnaround,
-            cptTurnaround,
-            flyingStartTime,
-            flyingEndTime,
-            ftdStartTime,
-            ftdEndTime,
-            allowNightFlying,
-            commenceNightFlying,
-            ceaseNightFlying,
-            availableAircraftCount,
-            availableFtdCount,
-            availableCptCount,
-            timezoneOffset,
-            showDepartureDensityOverlay,
-            sctEvents,
-            formationCallsigns,
-            courseColors,
-            phraseBank,
-            cancellationCodes,
-            masterCurrencies,
-            currencyRequirements,
-            syllabusDetails,
-            organisationSettings,
-        });
-
-        saveSettingsToDB(snapshot, sessionUser?.userId);
-    }, [
-        settingsLoaded,
-        locations, units, unitLocations,
-        eventLimits,
-        preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
-        flightTurnaround, ftdTurnaround, cptTurnaround,
-        flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
-        allowNightFlying, commenceNightFlying, ceaseNightFlying,
-        availableAircraftCount, availableFtdCount, availableCptCount,
-        timezoneOffset, showDepartureDensityOverlay,
-        sctEvents, formationCallsigns, courseColors,
-        phraseBank, cancellationCodes,
-        masterCurrencies, currencyRequirements,
-        syllabusDetails, organisationSettings,
-    ]);
-
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
        //     const showCommitAlert = async () => {
@@ -4232,6 +4112,126 @@ useEffect(() => {
         { name: 'Vampire', code: 'VAMP', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
         { name: 'Voodoo', code: 'VODO', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
         { name: 'Vulcan', code: 'VULC', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' }
+    ]);
+
+
+    // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const saved = await loadSettingsFromDB();
+                if (!saved) {
+                    setSettingsLoaded(true);
+                    return;
+                }
+
+                // Apply all saved settings to state
+                if (saved.locations?.length) setLocations(saved.locations);
+                if (saved.units?.length) setUnits(saved.units);
+                if (saved.unitLocations) setUnitLocations(saved.unitLocations);
+                if (saved.eventLimits) setEventLimits(saved.eventLimits);
+                if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
+                if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
+                if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+                if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
+                if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
+                if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
+                if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
+                if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
+                if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
+                if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
+                if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
+                if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
+                if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
+                if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
+                if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
+                if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
+                if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
+                if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
+                if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
+                if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
+                if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+                if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
+                if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
+                if (saved.masterCurrencies?.length) setMasterCurrencies(saved.masterCurrencies);
+                if (saved.currencyRequirements?.length) setCurrencyRequirements(saved.currencyRequirements);
+                if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
+                if (saved.organisationSettings) setOrganisationSettings(saved.organisationSettings);
+
+                console.log('[Settings] ✅ All settings restored from DB');
+            } catch (error) {
+                console.error('[Settings] ❌ Failed to load settings from DB:', error);
+            } finally {
+                setSettingsLoaded(true);
+            }
+        };
+        loadSettings();
+    }, []);
+
+    // ─── ORGANISATION SETTINGS STATE ──────────────────────────────────────────
+    const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
+        fleetSharingEnabled: false,
+        allocationMode: 'combined',
+        selectedUnits: [],
+        desiredAllocations: {},
+        remainderUnitIndex: -1,
+    });
+
+    // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
+    useEffect(() => {
+        if (!settingsLoaded) return; // Don't save during initial load
+
+        const snapshot = buildSettingsSnapshot({
+            locations,
+            units,
+            unitLocations,
+            eventLimits,
+            preferredDutyPeriod,
+            maxCrewDutyPeriod,
+            maxDispatchPerHour,
+            flightTurnaround,
+            ftdTurnaround,
+            cptTurnaround,
+            flyingStartTime,
+            flyingEndTime,
+            ftdStartTime,
+            ftdEndTime,
+            allowNightFlying,
+            commenceNightFlying,
+            ceaseNightFlying,
+            availableAircraftCount,
+            availableFtdCount,
+            availableCptCount,
+            timezoneOffset,
+            showDepartureDensityOverlay,
+            sctEvents,
+            formationCallsigns,
+            courseColors,
+            phraseBank,
+            cancellationCodes,
+            masterCurrencies,
+            currencyRequirements,
+            syllabusDetails,
+            organisationSettings,
+        });
+
+        saveSettingsToDB(snapshot, sessionUser?.userId);
+    }, [
+        settingsLoaded,
+        locations, units, unitLocations,
+        eventLimits,
+        preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
+        flightTurnaround, ftdTurnaround, cptTurnaround,
+        flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
+        allowNightFlying, commenceNightFlying, ceaseNightFlying,
+        availableAircraftCount, availableFtdCount, availableCptCount,
+        timezoneOffset, showDepartureDensityOverlay,
+        sctEvents, formationCallsigns, courseColors,
+        phraseBank, cancellationCodes,
+        masterCurrencies, currencyRequirements,
+        syllabusDetails, organisationSettings,
     ]);
 
     // Baseline schedule state

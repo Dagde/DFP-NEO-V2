@@ -78417,132 +78417,6 @@ const App = () => {
     };
     loadInitialData();
   }, []);
-  const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
-  reactExports.useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const saved = await loadSettingsFromDB();
-        if (!saved) {
-          setSettingsLoaded(true);
-          return;
-        }
-        if (saved.locations?.length) setLocations(saved.locations);
-        if (saved.units?.length) setUnits(saved.units);
-        if (saved.unitLocations) setUnitLocations(saved.unitLocations);
-        if (saved.eventLimits) setEventLimits(saved.eventLimits);
-        if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
-        if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
-        if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
-        if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
-        if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
-        if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
-        if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
-        if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
-        if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
-        if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
-        if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
-        if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
-        if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
-        if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
-        if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
-        if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
-        if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
-        if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
-        if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
-        if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
-        if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
-        if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
-        if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
-        if (saved.masterCurrencies?.length) setMasterCurrencies(saved.masterCurrencies);
-        if (saved.currencyRequirements?.length) setCurrencyRequirements(saved.currencyRequirements);
-        if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
-        if (saved.organisationSettings) setOrganisationSettings(saved.organisationSettings);
-        console.log("[Settings] ✅ All settings restored from DB");
-      } catch (error) {
-        console.error("[Settings] ❌ Failed to load settings from DB:", error);
-      } finally {
-        setSettingsLoaded(true);
-      }
-    };
-    loadSettings();
-  }, []);
-  const [organisationSettings, setOrganisationSettings] = reactExports.useState({
-    fleetSharingEnabled: false,
-    allocationMode: "combined",
-    selectedUnits: [],
-    desiredAllocations: {},
-    remainderUnitIndex: -1
-  });
-  reactExports.useEffect(() => {
-    if (!settingsLoaded) return;
-    const snapshot = buildSettingsSnapshot({
-      locations,
-      units,
-      unitLocations,
-      eventLimits,
-      preferredDutyPeriod,
-      maxCrewDutyPeriod,
-      maxDispatchPerHour,
-      flightTurnaround,
-      ftdTurnaround,
-      cptTurnaround,
-      flyingStartTime,
-      flyingEndTime,
-      ftdStartTime,
-      ftdEndTime,
-      allowNightFlying,
-      commenceNightFlying,
-      ceaseNightFlying,
-      availableAircraftCount,
-      availableFtdCount,
-      availableCptCount,
-      timezoneOffset,
-      showDepartureDensityOverlay,
-      sctEvents,
-      formationCallsigns,
-      courseColors,
-      phraseBank,
-      cancellationCodes,
-      masterCurrencies,
-      currencyRequirements,
-      syllabusDetails,
-      organisationSettings
-    });
-    saveSettingsToDB(snapshot, sessionUser?.userId);
-  }, [
-    settingsLoaded,
-    locations,
-    units,
-    unitLocations,
-    eventLimits,
-    preferredDutyPeriod,
-    maxCrewDutyPeriod,
-    maxDispatchPerHour,
-    flightTurnaround,
-    ftdTurnaround,
-    cptTurnaround,
-    flyingStartTime,
-    flyingEndTime,
-    ftdStartTime,
-    ftdEndTime,
-    allowNightFlying,
-    commenceNightFlying,
-    ceaseNightFlying,
-    availableAircraftCount,
-    availableFtdCount,
-    availableCptCount,
-    timezoneOffset,
-    showDepartureDensityOverlay,
-    sctEvents,
-    formationCallsigns,
-    courseColors,
-    phraseBank,
-    cancellationCodes,
-    masterCurrencies,
-    currencyRequirements,
-    syllabusDetails,
-    organisationSettings
-  ]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -79070,6 +78944,132 @@ ${"=".repeat(60)}`);
     { name: "Vampire", code: "VAMP", unit: "2FTS", location: "Pearce", locationCode: "PEA" },
     { name: "Voodoo", code: "VODO", unit: "2FTS", location: "Pearce", locationCode: "PEA" },
     { name: "Vulcan", code: "VULC", unit: "2FTS", location: "Pearce", locationCode: "PEA" }
+  ]);
+  const [settingsLoaded, setSettingsLoaded] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const saved = await loadSettingsFromDB();
+        if (!saved) {
+          setSettingsLoaded(true);
+          return;
+        }
+        if (saved.locations?.length) setLocations(saved.locations);
+        if (saved.units?.length) setUnits(saved.units);
+        if (saved.unitLocations) setUnitLocations(saved.unitLocations);
+        if (saved.eventLimits) setEventLimits(saved.eventLimits);
+        if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
+        if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
+        if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+        if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
+        if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
+        if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
+        if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
+        if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
+        if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
+        if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
+        if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
+        if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
+        if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
+        if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
+        if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
+        if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
+        if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
+        if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
+        if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
+        if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
+        if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+        if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
+        if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
+        if (saved.masterCurrencies?.length) setMasterCurrencies(saved.masterCurrencies);
+        if (saved.currencyRequirements?.length) setCurrencyRequirements(saved.currencyRequirements);
+        if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
+        if (saved.organisationSettings) setOrganisationSettings(saved.organisationSettings);
+        console.log("[Settings] ✅ All settings restored from DB");
+      } catch (error) {
+        console.error("[Settings] ❌ Failed to load settings from DB:", error);
+      } finally {
+        setSettingsLoaded(true);
+      }
+    };
+    loadSettings();
+  }, []);
+  const [organisationSettings, setOrganisationSettings] = reactExports.useState({
+    fleetSharingEnabled: false,
+    allocationMode: "combined",
+    selectedUnits: [],
+    desiredAllocations: {},
+    remainderUnitIndex: -1
+  });
+  reactExports.useEffect(() => {
+    if (!settingsLoaded) return;
+    const snapshot = buildSettingsSnapshot({
+      locations,
+      units,
+      unitLocations,
+      eventLimits,
+      preferredDutyPeriod,
+      maxCrewDutyPeriod,
+      maxDispatchPerHour,
+      flightTurnaround,
+      ftdTurnaround,
+      cptTurnaround,
+      flyingStartTime,
+      flyingEndTime,
+      ftdStartTime,
+      ftdEndTime,
+      allowNightFlying,
+      commenceNightFlying,
+      ceaseNightFlying,
+      availableAircraftCount,
+      availableFtdCount,
+      availableCptCount,
+      timezoneOffset,
+      showDepartureDensityOverlay,
+      sctEvents,
+      formationCallsigns,
+      courseColors,
+      phraseBank,
+      cancellationCodes,
+      masterCurrencies,
+      currencyRequirements,
+      syllabusDetails,
+      organisationSettings
+    });
+    saveSettingsToDB(snapshot, sessionUser?.userId);
+  }, [
+    settingsLoaded,
+    locations,
+    units,
+    unitLocations,
+    eventLimits,
+    preferredDutyPeriod,
+    maxCrewDutyPeriod,
+    maxDispatchPerHour,
+    flightTurnaround,
+    ftdTurnaround,
+    cptTurnaround,
+    flyingStartTime,
+    flyingEndTime,
+    ftdStartTime,
+    ftdEndTime,
+    allowNightFlying,
+    commenceNightFlying,
+    ceaseNightFlying,
+    availableAircraftCount,
+    availableFtdCount,
+    availableCptCount,
+    timezoneOffset,
+    showDepartureDensityOverlay,
+    sctEvents,
+    formationCallsigns,
+    courseColors,
+    phraseBank,
+    cancellationCodes,
+    masterCurrencies,
+    currencyRequirements,
+    syllabusDetails,
+    organisationSettings
   ]);
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
   const isDirtyRef = reactExports.useRef(() => false);
@@ -84846,4 +84846,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-KPDi6Wg4.js.map
+//# sourceMappingURL=index-BxAE-quI.js.map
