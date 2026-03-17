@@ -40,22 +40,28 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   // Auto-calculate last unit's allocation to match total
   useEffect(() => {
     if (selectedUnits.length > 1 && allocationType === 'designated') {
-      const totalManual = selectedUnits
-        .slice(0, -1)
-        .reduce((sum, unit) => sum + (unitConfigs[unit]?.designatedCount || 0), 0);
-      
-      const lastUnit = selectedUnits[selectedUnits.length - 1];
-      const autoCalculated = Math.max(0, currentAircraftAvailable - totalManual);
-      
-      setUnitConfigs(prev => ({
-        ...prev,
-        [lastUnit]: {
-          unitCode: lastUnit,
-          designatedCount: autoCalculated
+      setUnitConfigs(prev => {
+        const totalManual = selectedUnits
+          .slice(0, -1)
+          .reduce((sum, unit) => sum + (prev[unit]?.designatedCount || 0), 0);
+        
+        const lastUnit = selectedUnits[selectedUnits.length - 1];
+        const autoCalculated = Math.max(0, currentAircraftAvailable - totalManual);
+        
+        // Only update if the value actually changed to prevent infinite loop
+        if ((prev[lastUnit]?.designatedCount || 0) !== autoCalculated) {
+          return {
+            ...prev,
+            [lastUnit]: {
+              unitCode: lastUnit,
+              designatedCount: autoCalculated
+            }
+          };
         }
-      }));
+        return prev;
+      });
     }
-  }, [selectedUnits, allocationType, currentAircraftAvailable, unitConfigs]);
+  }, [selectedUnits, allocationType, currentAircraftAvailable]);
 
   // Pro-rata adjustment when exceeding total
   useEffect(() => {
