@@ -35,6 +35,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   onSettingsChange,
   settingsLoaded = false,
 }) => {
+  console.log('[OrgSettings] 🔄 Component render — settingsLoaded:', settingsLoaded, '| savedSettings:', JSON.stringify(savedSettings));
+
   // Fleet Sharing enable/disable
   const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
   
@@ -55,19 +57,27 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   // Sync internal state from savedSettings when DB load completes (settingsLoaded flips to true)
   useEffect(() => {
+    console.log('[OrgSettings] 📡 useEffect[settingsLoaded, savedSettings] fired — settingsLoaded:', settingsLoaded, '| hasInitializedFromDB:', hasInitializedFromDB.current, '| savedSettings:', JSON.stringify(savedSettings));
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
+      console.log('[OrgSettings] ✅ Applying DB settings to internal state:', JSON.stringify(savedSettings));
       hasInitializedFromDB.current = true;
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
       setAllocationMode(savedSettings.allocationMode ?? 'combined');
       setSelectedUnits(savedSettings.selectedUnits ?? []);
       setDesiredAllocations(savedSettings.desiredAllocations ?? {});
       setRemainderUnitIndex(savedSettings.remainderUnitIndex ?? -1);
+    } else {
+      console.log('[OrgSettings] ⏭️ Skipping DB sync — conditions not met (settingsLoaded:', settingsLoaded, ', hasInit:', hasInitializedFromDB.current, ', hasSavedSettings:', !!savedSettings, ')');
     }
   }, [settingsLoaded, savedSettings]);
 
   // Notify parent of changes for persistence (skip during initial default state before DB load)
   useEffect(() => {
-    if (!settingsLoaded && !hasInitializedFromDB.current) return; // Don't save defaults before DB loads
+    if (!settingsLoaded && !hasInitializedFromDB.current) {
+      console.log('[OrgSettings] 🚫 Blocking onSettingsChange — DB not yet loaded, preventing default overwrite');
+      return;
+    }
+    console.log('[OrgSettings] 💾 Calling onSettingsChange with:', JSON.stringify({ fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex }));
     if (onSettingsChange) {
       onSettingsChange({
         fleetSharingEnabled,

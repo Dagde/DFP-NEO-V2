@@ -4158,12 +4158,18 @@ useEffect(() => {
                 if (saved.masterCurrencies?.length) setMasterCurrencies(saved.masterCurrencies);
                 if (saved.currencyRequirements?.length) setCurrencyRequirements(saved.currencyRequirements);
                 if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
-                if (saved.organisationSettings) setOrganisationSettings(saved.organisationSettings);
+                if (saved.organisationSettings) {
+                    console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
+                    setOrganisationSettings(saved.organisationSettings);
+                } else {
+                    console.warn('[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:', saved.organisationSettings);
+                }
 
                 console.log('[Settings] ✅ All settings restored from DB');
             } catch (error) {
                 console.error('[Settings] ❌ Failed to load settings from DB:', error);
             } finally {
+                console.log('[App] 🏁 Setting settingsLoaded = true');
                 setSettingsLoaded(true);
             }
         };
@@ -4181,7 +4187,12 @@ useEffect(() => {
 
     // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
     useEffect(() => {
-        if (!settingsLoaded) return; // Don't save during initial load
+        if (!settingsLoaded) {
+            console.log('[App] ⏭️ Auto-save skipped — settingsLoaded is false');
+            return;
+        }
+
+        console.log('[App] 💾 Auto-save triggered — organisationSettings:', JSON.stringify(organisationSettings));
 
         const snapshot = buildSettingsSnapshot({
             locations,
