@@ -302,7 +302,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
             {/* Select Units and Allocation Mode - Side by Side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
               {/* Select Units Sharing Asset - Narrower Width */}
-              <div>
+              <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4">
                 <h4 className="text-base font-medium text-white mb-2">Select Units Sharing Asset</h4>
                 <p className="text-xs text-gray-400 mb-3">
                   Choose which units will have access to shared resources.
@@ -345,19 +345,19 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 )}
               </div>
 
-              {/* Allocation Mode Selection - Stacked Vertical */}
+              {/* Allocation Mode Selection - Stacked Vertical with matching height */}
               {selectedUnits.length > 0 && (
-                <div>
+                <div className="bg-gray-700/30 rounded-lg border border-gray-600 p-4 flex flex-col">
                   <h4 className="text-base font-medium text-white mb-2">Allocation Mode</h4>
                   <p className="text-xs text-gray-400 mb-3">
                     Choose how aircraft are allocated between participating units.
                   </p>
                   
-                  <div className="space-y-3">
+                  <div className="flex-1 flex flex-col space-y-3">
                     {/* Combined Pool Mode - Above */}
                     <button
                       onClick={() => handleAllocationModeChange('combined')}
-                      className={`w-full p-3 rounded-lg text-left transition-all ${
+                      className={`flex-1 p-3 rounded-lg text-left transition-all ${
                         allocationMode === 'combined'
                           ? 'bg-sky-600 border-2 border-sky-500'
                           : 'bg-gray-700 border-2 border-gray-600 hover:border-gray-500'
@@ -377,7 +377,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                     {/* Fixed Allocation Mode - Below */}
                     <button
                       onClick={() => handleAllocationModeChange('fixed')}
-                      className={`w-full p-3 rounded-lg text-left transition-all ${
+                      className={`flex-1 p-3 rounded-lg text-left transition-all ${
                         allocationMode === 'fixed'
                           ? 'bg-sky-600 border-2 border-sky-500'
                           : 'bg-gray-700 border-2 border-gray-600 hover:border-gray-500'
@@ -562,23 +562,19 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
               <div className="p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg">
                 <h5 className="text-sky-400 font-semibold text-sm mb-2">Fleet Sharing Summary</h5>
                 <div className="text-xs text-gray-300 space-y-1">
-                  <div className="flex justify-between">
-                    <span><strong>Active Units:</strong></span>
-                    <span>{selectedUnits.length}</span>
+                  <div className="flex">
+                    <span><strong>Active Units:</strong> {selectedUnits.length}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span><strong>Allocation Mode:</strong></span>
-                    <span>{allocationMode === 'combined' ? 'Combined Pool' : 'Fixed Allocation'}</span>
+                  <div className="flex">
+                    <span><strong>Allocation Mode:</strong> {allocationMode === 'combined' ? 'Combined Pool' : 'Fixed Allocation'}</span>
                   </div>
                   {allocationMode === 'fixed' && (
                     <>
-                      <div className={`flex justify-between ${desiredExceedsAvailable ? 'text-amber-400' : ''}`}>
-                        <span><strong>Total Desired:</strong></span>
-                        <span>{totalDesiredAllocation} / {currentAircraftAvailable}</span>
+                      <div className={`flex ${desiredExceedsAvailable ? 'text-amber-400' : ''}`}>
+                        <span><strong>Total Desired:</strong> {totalDesiredAllocation} / {currentAircraftAvailable}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span><strong>Total Actual:</strong></span>
-                        <span>{Object.values(actualAllocations).reduce((sum, val) => sum + val, 0)}</span>
+                      <div className="flex">
+                        <span><strong>Total Actual:</strong> {Object.values(actualAllocations).reduce((sum, val) => sum + val, 0)}</span>
                       </div>
                       {desiredExceedsAvailable && (
                         <p className="text-amber-400 text-xs mt-1">
