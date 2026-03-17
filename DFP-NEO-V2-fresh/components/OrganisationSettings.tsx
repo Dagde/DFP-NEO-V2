@@ -323,6 +323,9 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                   onChange={(e) => {
                     const newVal = e.target.checked;
                     setStaffSharingEnabled(newVal);
+                    if (!newVal) {
+                      setStaffSharingUnits([]); // Clear units when disabled
+                    }
                     logAudit('Settings - Organisation', 'Edit', `Staff Sharing ${newVal ? 'enabled' : 'disabled'}`);
                   }}
                   className="sr-only peer"
@@ -343,7 +346,7 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 <p className="text-xs text-gray-400">Number of units participating in staff sharing</p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-sky-400">{staffSharingUnits.length}</div>
+                <div className="text-3xl font-bold text-sky-400">{staffSharingEnabled ? staffSharingUnits.length : 0}</div>
                 <div className="text-xs text-gray-400">Units</div>
               </div>
             </div>
