@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { logAudit } from '../utils/auditLogger';
 
 interface UnitDesiredAllocation {
   unitCode: string;
@@ -25,7 +26,6 @@ interface OrganisationSettingsProps {
   currentAircraftAvailable?: number;
   savedSettings?: OrganisationSettingsSavedState;
   onSettingsChange?: (settings: OrganisationSettingsSavedState) => void;
-  onAuditLog?: (description: string) => void;
   settingsLoaded?: boolean;
 }
 
@@ -36,11 +36,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   currentAircraftAvailable = 0,
   savedSettings,
   onSettingsChange,
-  onAuditLog,
   settingsLoaded = false,
 }) => {
-  console.log('[OrgSettings] 🔄 Component render — settingsLoaded:', settingsLoaded, '| savedSettings:', JSON.stringify(savedSettings));
-
   // Staff Sharing enable/disable
   const [staffSharingEnabled, setStaffSharingEnabled] = useState(savedSettings?.staffSharingEnabled ?? false);
   // Selected units for staff sharing
@@ -49,10 +46,6 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   // Fleet Sharing enable/disable
   const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
 
-  // Track previous settings for change detection (for audit logging)
-  const prevSettingsRef = useRef<OrganisationSettingsSavedState | null>(null);
-  const auditDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
   // Selected units to share assets with
   const [selectedUnits, setSelectedUnits] = useState<string[]>(savedSettings?.selectedUnits ?? []);
   
@@ -67,18 +60,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
 
   // Ref to ensure we only sync from DB data once (prevent re-syncing on parent re-renders)
   const hasInitializedFromDB = useRef(false);
-  // Ref to block audit logging during DB initialization state updates
-  const isInitializingRef = useRef(false);
-  // Ref to track if prevSettings has been set after full DB init
-  const prevSettingsReadyRef = useRef(false);
 
-  // Sync internal state from savedSettings when DB load completes (settingsLoaded flips to true)
+  // Sync internal state from savedSettings when DB load completes
   useEffect(() => {
     if (settingsLoaded && !hasInitializedFromDB.current && savedSettings) {
-      console.log('[OrgSettings] ✅ Applying DB settings to internal state:', JSON.stringify(savedSettings));
       hasInitializedFromDB.current = true;
-      isInitializingRef.current = true; // Block audit during init state updates
-      prevSettingsReadyRef.current = false;
       setStaffSharingEnabled(savedSettings.staffSharingEnabled ?? false);
       setStaffSharingUnits(savedSettings.staffSharingUnits ?? []);
       setFleetSharingEnabled(savedSettings.fleetSharingEnabled ?? false);
@@ -86,126 +72,24 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       setSelectedUnits(savedSettings.selectedUnits ?? []);
       setDesiredAllocations(savedSettings.desiredAllocations ?? {});
       setRemainderUnitIndex(savedSettings.remainderUnitIndex ?? -1);
-      
-      // Store the DB values as baseline for change detection
-      prevSettingsRef.current = {
-        staffSharingEnabled: savedSettings.staffSharingEnabled ?? false,
-        staffSharingUnits: savedSettings.staffSharingUnits ?? [],
-        fleetSharingEnabled: savedSettings.fleetSharingEnabled ?? false,
-        allocationMode: savedSettings.allocationMode ?? 'combined',
-        selectedUnits: savedSettings.selectedUnits ?? [],
-        desiredAllocations: savedSettings.desiredAllocations ?? {},
-        remainderUnitIndex: savedSettings.remainderUnitIndex ?? -1,
-      };
     }
   }, [settingsLoaded, savedSettings]);
 
-  // Notify parent of changes for persistence (skip during initial default state before DB load)
+  // Notify parent of changes for persistence (skip before DB has loaded)
   useEffect(() => {
     if (!settingsLoaded && !hasInitializedFromDB.current) {
       return;
     }
-
-    const currentSettings: OrganisationSettingsSavedState = {
-      staffSharingEnabled,
-      staffSharingUnits,
-      fleetSharingEnabled,
-      allocationMode,
-      selectedUnits,
-      desiredAllocations,
-      remainderUnitIndex,
-    };
-
     if (onSettingsChange) {
-      onSettingsChange(currentSettings);
-    }
-
-    // If we are still in the initialization phase, check if current state now matches
-    // the DB baseline — if so, mark init complete so future changes are audited
-    if (isInitializingRef.current && prevSettingsRef.current) {
-      const dbBaseline = prevSettingsRef.current;
-      const matchesBaseline = 
-        dbBaseline.staffSharingEnabled === staffSharingEnabled &&
-        JSON.stringify([...dbBaseline.staffSharingUnits].sort()) === JSON.stringify([...staffSharingUnits].sort()) &&
-        dbBaseline.fleetSharingEnabled === fleetSharingEnabled &&
-        dbBaseline.allocationMode === allocationMode &&
-        JSON.stringify([...dbBaseline.selectedUnits].sort()) === JSON.stringify([...selectedUnits].sort()) &&
-        JSON.stringify(dbBaseline.desiredAllocations) === JSON.stringify(desiredAllocations) &&
-        dbBaseline.remainderUnitIndex === remainderUnitIndex;
-
-      if (matchesBaseline) {
-        console.log('[OrgSettings] ✅ Init complete — state matches DB baseline, audit logging enabled');
-        isInitializingRef.current = false;
-        prevSettingsReadyRef.current = true;
-      } else {
-        console.log('[OrgSettings] ⏳ Still initializing — state not yet at DB baseline');
-      }
-      return; // Don't audit during init
-    }
-
-    // Audit logging — only after init is complete
-    if (prevSettingsReadyRef.current && prevSettingsRef.current && onAuditLog) {
-      const prev = prevSettingsRef.current;
-      const changes: string[] = [];
-
-      if (prev.staffSharingEnabled !== staffSharingEnabled) {
-        changes.push(`Staff Sharing ${staffSharingEnabled ? 'enabled' : 'disabled'}`);
-      }
-      if (JSON.stringify([...prev.staffSharingUnits].sort()) !== JSON.stringify([...staffSharingUnits].sort())) {
-        if (staffSharingUnits.length === 0) {
-          changes.push('Staff Sharing units cleared');
-        } else {
-          changes.push(`Staff Sharing units: ${staffSharingUnits.join(', ')}`);
-        }
-      }
-      if (prev.fleetSharingEnabled !== fleetSharingEnabled) {
-        changes.push(`Fleet Sharing ${fleetSharingEnabled ? 'enabled' : 'disabled'}`);
-      }
-      if (JSON.stringify([...prev.selectedUnits].sort()) !== JSON.stringify([...selectedUnits].sort())) {
-        if (selectedUnits.length === 0) {
-          changes.push('Fleet Sharing units cleared');
-        } else {
-          changes.push(`Fleet Sharing units: ${selectedUnits.join(', ')}`);
-        }
-      }
-      if (prev.allocationMode !== allocationMode) {
-        changes.push(`Allocation mode: ${allocationMode}`);
-      }
-      if (prev.remainderUnitIndex !== remainderUnitIndex && selectedUnits.length > 0) {
-        const remainderUnit = selectedUnits[remainderUnitIndex];
-        if (remainderUnit) {
-          changes.push(`Remainder unit: ${remainderUnit}`);
-        }
-      }
-      const prevAllocStr = JSON.stringify(prev.desiredAllocations);
-      const currAllocStr = JSON.stringify(desiredAllocations);
-      if (prevAllocStr !== currAllocStr && Object.keys(desiredAllocations).length > 0) {
-        const allocChanges: string[] = [];
-        for (const unit of Object.keys(desiredAllocations)) {
-          if (prev.desiredAllocations[unit] !== desiredAllocations[unit]) {
-            allocChanges.push(`${unit}: ${desiredAllocations[unit]} aircraft`);
-          }
-        }
-        if (allocChanges.length > 0) {
-          changes.push(`Fixed allocations: ${allocChanges.join(', ')}`);
-        }
-      }
-
-      if (changes.length > 0) {
-        console.log('[OrgSettings] 🔍 Detected changes:', changes);
-        if (auditDebounceRef.current) {
-          clearTimeout(auditDebounceRef.current);
-        }
-        auditDebounceRef.current = setTimeout(() => {
-          const description = `Organisation Settings: ${changes.join('; ')}`;
-          console.log('[OrgSettings] 📝 Sending audit log:', description);
-          onAuditLog(description);
-          auditDebounceRef.current = null;
-        }, 500);
-      }
-
-      // Update prev ref AFTER comparison
-      prevSettingsRef.current = currentSettings;
+      onSettingsChange({
+        staffSharingEnabled,
+        staffSharingUnits,
+        fleetSharingEnabled,
+        allocationMode,
+        selectedUnits,
+        desiredAllocations,
+        remainderUnitIndex,
+      });
     }
   }, [staffSharingEnabled, staffSharingUnits, fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
   
@@ -304,11 +188,12 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
   const handleToggleStaffSharingUnit = (unitCode: string) => {
     setStaffSharingUnits(prev => {
       const isCurrentlySelected = prev.includes(unitCode);
-      if (isCurrentlySelected) {
-        return prev.filter(u => u !== unitCode);
-      } else {
-        return [...prev, unitCode];
-      }
+      const newUnits = isCurrentlySelected
+        ? prev.filter(u => u !== unitCode)
+        : [...prev, unitCode];
+      const action = isCurrentlySelected ? 'removed from' : 'added to';
+      logAudit('Organisation Settings', 'Edit', `Unit ${unitCode} ${action} Staff Sharing`);
+      return newUnits;
     });
   };
 
@@ -332,15 +217,14 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         const removedIndex = prev.indexOf(unitCode);
         setRemainderUnitIndex(prevIndex => {
           if (prevIndex === removedIndex) {
-            // If we removed the remainder unit, set last unit as new remainder
             return newSelected.length > 0 ? newSelected.length - 1 : -1;
           } else if (prevIndex > removedIndex) {
-            // Adjust index if remainder was after removed unit
             return prevIndex - 1;
           }
           return prevIndex;
         });
-        
+
+        logAudit('Organisation Settings', 'Edit', `Unit ${unitCode} removed from Fleet Sharing`);
         return newSelected;
       } else {
         // Adding a unit
@@ -356,7 +240,8 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
         if (prev.length === 0) {
           setRemainderUnitIndex(0);
         }
-        
+
+        logAudit('Organisation Settings', 'Edit', `Unit ${unitCode} added to Fleet Sharing`);
         return newSelected;
       }
     });
@@ -388,18 +273,22 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
       ...prev,
       [unitCode]: value
     }));
+    logAudit('Organisation Settings', 'Edit', `Fleet Sharing fixed allocation for ${unitCode} set to ${value} aircraft`);
   };
 
   // Handle remainder unit selection change
   const handleRemainderUnitChange = (newIndex: number) => {
     setRemainderUnitIndex(newIndex);
     setValidationMessage(null);
+    const unitName = selectedUnits[newIndex] ?? 'unknown';
+    logAudit('Organisation Settings', 'Edit', `Fleet Sharing remainder unit set to ${unitName}`);
   };
 
   // Handle allocation mode change
   const handleAllocationModeChange = (newMode: AllocationMode) => {
     setAllocationMode(newMode);
     setValidationMessage(null);
+    logAudit('Organisation Settings', 'Edit', `Fleet Sharing allocation mode changed to ${newMode}`);
   };
 
   // Check if a unit is the remainder unit
@@ -431,7 +320,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 <input
                   type="checkbox"
                   checked={staffSharingEnabled}
-                  onChange={(e) => setStaffSharingEnabled(e.target.checked)}
+                  onChange={(e) => {
+                    const newVal = e.target.checked;
+                    setStaffSharingEnabled(newVal);
+                    logAudit('Organisation Settings', 'Edit', `Staff Sharing ${newVal ? 'enabled' : 'disabled'}`);
+                  }}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
@@ -537,7 +430,11 @@ const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({
                 <input
                   type="checkbox"
                   checked={fleetSharingEnabled}
-                  onChange={(e) => setFleetSharingEnabled(e.target.checked)}
+                  onChange={(e) => {
+                    const newVal = e.target.checked;
+                    setFleetSharingEnabled(newVal);
+                    logAudit('Organisation Settings', 'Edit', `Fleet Sharing ${newVal ? 'enabled' : 'disabled'}`);
+                  }}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-sky-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>

@@ -82,8 +82,7 @@ interface SettingsViewWithMenuProps {
         desiredAllocations: Record<string, number>;
         remainderUnitIndex: number;
     }) => void;
-    onAuditLog?: (description: string) => void;
-}
+    }
 
 type SettingsSection =
     | 'scoring-matrix'
@@ -603,7 +602,6 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentAircraftAvailable={props.currentAircraftAvailable}
                             savedSettings={props.organisationSettings}
                             onSettingsChange={props.onUpdateOrganisationSettings}
-                            onAuditLog={props.onAuditLog}
                             settingsLoaded={props.settingsLoaded}
                         />
                     )}
