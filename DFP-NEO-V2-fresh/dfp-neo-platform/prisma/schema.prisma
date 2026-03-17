@@ -307,6 +307,18 @@ model AircraftAvailabilityHistory {
   @@index([createdAt])
 }
 
+// Organisation-level app settings - persists all settings page data
+model AppSettings {
+  id        String   @id @default(cuid())
+  orgId     String   @unique @default("default")
+  data      Json
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

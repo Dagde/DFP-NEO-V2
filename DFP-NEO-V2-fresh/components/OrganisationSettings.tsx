@@ -10,31 +10,56 @@ interface UnitActualAllocation {
   actualAllocation: number;
 }
 
+interface OrganisationSettingsSavedState {
+  fleetSharingEnabled: boolean;
+  allocationMode: 'combined' | 'fixed';
+  selectedUnits: string[];
+  desiredAllocations: Record<string, number>;
+  remainderUnitIndex: number;
+}
+
 interface OrganisationSettingsProps {
   units: string[];
-  currentAircraftAvailable: number;
+  currentAircraftAvailable?: number;
+  savedSettings?: OrganisationSettingsSavedState;
+  onSettingsChange?: (settings: OrganisationSettingsSavedState) => void;
 }
 
 type AllocationMode = 'combined' | 'fixed';
 
 const OrganisationSettings: React.FC<OrganisationSettingsProps> = ({ 
   units, 
-  currentAircraftAvailable 
+  currentAircraftAvailable = 0,
+  savedSettings,
+  onSettingsChange,
 }) => {
   // Fleet Sharing enable/disable
-  const [fleetSharingEnabled, setFleetSharingEnabled] = useState(false);
+  const [fleetSharingEnabled, setFleetSharingEnabled] = useState(savedSettings?.fleetSharingEnabled ?? false);
   
   // Selected units to share assets with
-  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [selectedUnits, setSelectedUnits] = useState<string[]>(savedSettings?.selectedUnits ?? []);
   
   // Allocation mode: combined (pool) or fixed (per-unit caps)
-  const [allocationMode, setAllocationMode] = useState<AllocationMode>('combined');
+  const [allocationMode, setAllocationMode] = useState<AllocationMode>(savedSettings?.allocationMode ?? 'combined');
   
   // Desired allocations for fixed mode (user-entered values)
-  const [desiredAllocations, setDesiredAllocations] = useState<Record<string, number>>({});
+  const [desiredAllocations, setDesiredAllocations] = useState<Record<string, number>>(savedSettings?.desiredAllocations ?? {});
   
   // Which unit is the auto-calculated remainder unit (index in selectedUnits array)
-  const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(-1);
+  const [remainderUnitIndex, setRemainderUnitIndex] = useState<number>(savedSettings?.remainderUnitIndex ?? -1);
+
+  // Notify parent of changes for persistence
+  useEffect(() => {
+    if (onSettingsChange) {
+      onSettingsChange({
+        fleetSharingEnabled,
+        allocationMode,
+        selectedUnits,
+        desiredAllocations,
+        remainderUnitIndex,
+      });
+    }
+  }, [fleetSharingEnabled, allocationMode, selectedUnits, desiredAllocations, remainderUnitIndex]);
   
   // Actual allocations (after pro-rata adjustment if needed)
   const [actualAllocations, setActualAllocations] = useState<Record<string, number>>({});
