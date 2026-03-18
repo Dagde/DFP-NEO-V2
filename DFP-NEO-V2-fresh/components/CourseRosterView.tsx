@@ -8,6 +8,7 @@ import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
 import AuditButton from './AuditButton';
 import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
+import CourseEditFlyout from './CourseEditFlyout';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -32,9 +33,13 @@ interface CourseRosterViewProps {
     onProfileOpened?: () => void;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
-       onDeleteTrainee: (trainee: Trainee) => void;
-   onArchiveTrainee?: (trainee: Trainee) => void;
-   onOpenInstructorProfile?: (instructorName: string) => void;
+    onDeleteTrainee: (trainee: Trainee) => void;
+    onArchiveTrainee?: (trainee: Trainee) => void;
+    onOpenInstructorProfile?: (instructorName: string) => void;
+    // New callbacks for course editing
+    onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
+    onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
+    onBackcourseTrainee?: (trainee: Trainee, newCourse: string) => void;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -88,7 +93,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onViewLogbook,
     onDeleteTrainee,
     onArchiveTrainee,
-    onOpenInstructorProfile
+    onOpenInstructorProfile,
+    onUpdateCourseNumber,
+    onUpdateCourseUnit,
+    onBackcourseTrainee
 }) => {
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
@@ -102,6 +110,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
     const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+    // Course Edit state
+    const [courseToEdit, setCourseToEdit] = useState<string | null>(null);
 
     useEffect(() => {
         if (selectedPersonForProfile) {
@@ -278,17 +289,31 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                 <span>{courseName}</span>
                                                 {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
                                             </div>
-                                            {view === 'archived' && (
-                                                <button 
-                                                    onClick={() => setCourseToRestore(courseName)}
-                                                    className="p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors" 
-                                                    aria-label={`Restore course ${courseName}`}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                                                    </svg>
-                                                </button>
-                                            )}
+                                            <div className="flex items-center gap-1">
+                                                {view === 'active' && (
+                                                    <button 
+                                                        onClick={() => setCourseToEdit(courseName)}
+                                                        className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group" 
+                                                        aria-label={`Edit course ${courseName}`}
+                                                        title="Edit course"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                                {view === 'archived' && (
+                                                    <button 
+                                                        onClick={() => setCourseToRestore(courseName)}
+                                                        className="p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors" 
+                                                        aria-label={`Restore course ${courseName}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-3">
                                             {courseTrainees.length > 0 ? (
@@ -377,6 +402,37 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     position={flyoutPosition}
                     personName={hoveredTrainee.name}
                     personType="Trainee"
+                />
+            )}
+            {courseToEdit && (
+                <CourseEditFlyout
+                    courseName={courseToEdit}
+                    courseUnit={groupedTrainees[courseToEdit]?.[0]?.unit || ''}
+                    trainees={groupedTrainees[courseToEdit] || []}
+                    availableCourses={activeCourseNumbers}
+                    availableUnits={units}
+                    onClose={() => setCourseToEdit(null)}
+                    onUpdateCourseNumber={(oldCourse, newCourse) => {
+                        if (onUpdateCourseNumber) {
+                            onUpdateCourseNumber(oldCourse, newCourse);
+                        }
+                        setCourseToEdit(null);
+                    }}
+                    onUpdateCourseUnit={(courseNumber, newUnit) => {
+                        if (onUpdateCourseUnit) {
+                            onUpdateCourseUnit(courseNumber, newUnit);
+                        }
+                    }}
+                    onDeleteTrainee={(trainee) => {
+                        onDeleteTrainee(trainee);
+                    }}
+                    onBackcourseTrainee={(trainee, newCourse) => {
+                        if (onBackcourseTrainee) {
+                            onBackcourseTrainee(trainee, newCourse);
+                        }
+                        setCourseToEdit(null);
+                    }}
+                    courseColors={courseColors}
                 />
             )}
         </>
