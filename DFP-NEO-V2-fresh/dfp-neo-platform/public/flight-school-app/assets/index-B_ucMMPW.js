@@ -13735,12 +13735,20 @@ const CourseEditFlyout = ({
                         "button",
                         {
                           onClick: () => handleBackcourseClick(trainee),
-                          className: "w-[80px] h-[36px] flex items-center justify-center text-center px-1 py-1 text-xs font-semibold rounded-md btn-aluminium-brushed text-amber-500",
+                          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-amber-500 leading-tight",
                           title: "Move to different course",
-                          children: "Backcourse"
+                          children: [
+                            "Back",
+                            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
+                              fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
+                              lineNumber: 188,
+                              columnNumber: 53
+                            }, void 0),
+                            "Course"
+                          ]
                         },
                         void 0,
-                        false,
+                        true,
                         {
                           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
                           lineNumber: 183,
@@ -13752,7 +13760,7 @@ const CourseEditFlyout = ({
                         "button",
                         {
                           onClick: () => handleDeleteClick(trainee),
-                          className: "w-[60px] h-[36px] flex items-center justify-center text-center px-1 py-1 text-xs font-semibold rounded-md btn-aluminium-brushed text-red-500",
+                          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500",
                           title: "Delete trainee",
                           children: "Delete"
                         },
@@ -85917,4 +85925,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DjnRPr4S.js.map
+//# sourceMappingURL=index-B_ucMMPW.js.map

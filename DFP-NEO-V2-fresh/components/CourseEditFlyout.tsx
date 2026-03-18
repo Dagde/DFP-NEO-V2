@@ -182,14 +182,14 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => handleBackcourseClick(trainee)}
-                                                className="w-[80px] h-[36px] flex items-center justify-center text-center px-1 py-1 text-xs font-semibold rounded-md btn-aluminium-brushed text-amber-500"
+                                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-amber-500 leading-tight"
                                                 title="Move to different course"
                                             >
-                                                Backcourse
+                                                Back<br/>Course
                                             </button>
                                             <button
                                                 onClick={() => handleDeleteClick(trainee)}
-                                                className="w-[60px] h-[36px] flex items-center justify-center text-center px-1 py-1 text-xs font-semibold rounded-md btn-aluminium-brushed text-red-500"
+                                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
                                                 title="Delete trainee"
                                             >
                                                 Delete
