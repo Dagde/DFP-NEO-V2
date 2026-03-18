@@ -28,6 +28,10 @@ interface TraineeViewProps {
   onViewLogbook: (trainee: any) => void;
   onDeleteTrainee: (trainee: any) => void;
   onOpenInstructorProfile?: (instructorName: string) => void;
+  // Course edit callbacks
+  onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
+  onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
+  onBackcourseTrainee?: (trainee: any, newCourse: string) => void;
   
   // Props for TraineeScheduleView
   date: string;
@@ -115,6 +119,9 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onViewLogbook={props.onViewLogbook}
             onDeleteTrainee={props.onDeleteTrainee}
             onOpenInstructorProfile={props.onOpenInstructorProfile}
+            onUpdateCourseNumber={props.onUpdateCourseNumber}
+            onUpdateCourseUnit={props.onUpdateCourseUnit}
+            onBackcourseTrainee={props.onBackcourseTrainee}
           />
         )}
         {activeTab === 'schedule' && (

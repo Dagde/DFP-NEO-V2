@@ -8820,6 +8820,61 @@ updates.forEach(update => {
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
                             }}
+                            onUpdateCourseNumber={(oldCourseNumber, newCourseNumber) => {
+                                console.log(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
+                                setTraineesData(prev => prev.map(t =>
+                                    t.course === oldCourseNumber
+                                        ? { ...t, course: newCourseNumber }
+                                        : t
+                                ));
+                                setCourseColors(prev => {
+                                    const newColors = { ...prev };
+                                    if (newColors[oldCourseNumber]) {
+                                        newColors[newCourseNumber] = newColors[oldCourseNumber];
+                                        delete newColors[oldCourseNumber];
+                                    }
+                                    return newColors;
+                                });
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Course number changed`,
+                                    changes: `${oldCourseNumber} → ${newCourseNumber}`
+                                });
+                            }}
+                            onUpdateCourseUnit={(courseNumber, newUnit) => {
+                                console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                setTraineesData(prev => {
+                                    const updated = prev.map(t =>
+                                        t.course === courseNumber
+                                            ? { ...t, unit: newUnit }
+                                            : t
+                                    );
+                                    const changed = updated.filter(t => t.course === courseNumber).length;
+                                    console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                                    return updated;
+                                });
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Course unit updated`,
+                                    changes: `${courseNumber} unit changed to ${newUnit}`
+                                });
+                            }}
+                            onBackcourseTrainee={(trainee, newCourse) => {
+                                console.log(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
+                                setTraineesData(prev => prev.map(t =>
+                                    t.idNumber === trainee.idNumber
+                                        ? { ...t, course: newCourse }
+                                        : t
+                                ));
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Trainee backcoursed`,
+                                    changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
+                                });
+                            }}
                             date={date}
                             onDateChange={handleDateChange}
                             eventsForStaffTraineeSchedule={eventsForStaffTraineeSchedule}
