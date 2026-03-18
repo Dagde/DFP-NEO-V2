@@ -8926,11 +8926,17 @@ updates.forEach(update => {
                             }}
                             onUpdateCourseUnit={(courseNumber, newUnit) => {
                                 // Update unit for all trainees in the course
-                                setTraineesData(prev => prev.map(t => 
-                                    t.course === courseNumber 
-                                        ? { ...t, unit: newUnit }
-                                        : t
-                                ));
+                                console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                setTraineesData(prev => {
+                                    const updated = prev.map(t => 
+                                        t.course === courseNumber 
+                                            ? { ...t, unit: newUnit }
+                                            : t
+                                    );
+                                    const changed = updated.filter(t => t.course === courseNumber).length;
+                                    console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                                    return updated;
+                                });
                                 // Log audit
                                 logAudit({
                                     page: 'Trainee Roster',
