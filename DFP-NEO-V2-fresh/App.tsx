@@ -10232,7 +10232,9 @@ updates.forEach(update => {
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
                 />}
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {renderActiveView()}
+                </div>
             </div>
             <RightSidebar
                 activeView={activeView}
