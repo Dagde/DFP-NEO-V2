@@ -13554,11 +13554,11 @@ const CourseEditFlyout = ({
     }
   };
   const courseColor = courseColors[courseName] || "bg-gray-500";
-  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50", onClick: onClose, children: [
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 pt-8", onClick: onClose, children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
-        className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-600",
+        className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden border border-gray-600",
         onClick: (e) => e.stopPropagation(),
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${courseColor} px-6 py-4 flex justify-between items-center`, children: [
@@ -13677,22 +13677,11 @@ const CourseEditFlyout = ({
                 "button",
                 {
                   onClick: handleSaveCourseDetails,
-                  className: "mt-4 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-md transition-colors flex items-center gap-2",
-                  children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 13l4 4L19 7" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 158,
-                      columnNumber: 37
-                    }, void 0) }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 157,
-                      columnNumber: 33
-                    }, void 0),
-                    "Save Course Details"
-                  ]
+                  className: "mt-4 w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black",
+                  children: "Save"
                 },
                 void 0,
-                true,
+                false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
                   lineNumber: 153,
@@ -13707,18 +13696,18 @@ const CourseEditFlyout = ({
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("hr", { className: "border-gray-700 mb-6" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 166,
+              lineNumber: 163,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4", children: "Trainee Management" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 170,
+                lineNumber: 167,
                 columnNumber: 25
               }, void 0),
               trainees.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 italic text-center py-4", children: "No trainees in this course" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 173,
+                lineNumber: 170,
                 columnNumber: 29
               }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: trainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "div",
@@ -13728,17 +13717,17 @@ const CourseEditFlyout = ({
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 text-sm", children: trainee.rank }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                        lineNumber: 182,
+                        lineNumber: 179,
                         columnNumber: 45
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: trainee.name }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                        lineNumber: 183,
+                        lineNumber: 180,
                         columnNumber: 45
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 181,
+                      lineNumber: 178,
                       columnNumber: 41
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
@@ -13746,26 +13735,15 @@ const CourseEditFlyout = ({
                         "button",
                         {
                           onClick: () => handleBackcourseClick(trainee),
-                          className: "px-3 py-1.5 text-xs font-medium bg-amber-600/20 text-amber-400 border border-amber-600/30 rounded hover:bg-amber-600/30 transition-colors flex items-center gap-1",
+                          className: "w-[80px] h-[36px] flex items-center justify-center text-center px-1 py-1 text-xs font-semibold rounded-md btn-aluminium-brushed text-amber-500",
                           title: "Move to different course",
-                          children: [
-                            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                              lineNumber: 192,
-                              columnNumber: 53
-                            }, void 0) }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                              lineNumber: 191,
-                              columnNumber: 49
-                            }, void 0),
-                            "Backcourse"
-                          ]
+                          children: "Backcourse"
                         },
                         void 0,
-                        true,
+                        false,
                         {
                           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                          lineNumber: 186,
+                          lineNumber: 183,
                           columnNumber: 45
                         },
                         void 0
@@ -13774,33 +13752,22 @@ const CourseEditFlyout = ({
                         "button",
                         {
                           onClick: () => handleDeleteClick(trainee),
-                          className: "px-3 py-1.5 text-xs font-medium bg-red-600/20 text-red-400 border border-red-600/30 rounded hover:bg-red-600/30 transition-colors flex items-center gap-1",
+                          className: "w-[60px] h-[36px] flex items-center justify-center text-center px-1 py-1 text-xs font-semibold rounded-md btn-aluminium-brushed text-red-500",
                           title: "Delete trainee",
-                          children: [
-                            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                              lineNumber: 202,
-                              columnNumber: 53
-                            }, void 0) }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                              lineNumber: 201,
-                              columnNumber: 49
-                            }, void 0),
-                            "Delete"
-                          ]
+                          children: "Delete"
                         },
                         void 0,
-                        true,
+                        false,
                         {
                           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                          lineNumber: 196,
+                          lineNumber: 190,
                           columnNumber: 45
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 185,
+                      lineNumber: 182,
                       columnNumber: 41
                     }, void 0)
                   ]
@@ -13809,18 +13776,18 @@ const CourseEditFlyout = ({
                 true,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 177,
+                  lineNumber: 174,
                   columnNumber: 37
                 },
                 void 0
               )) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 175,
+                lineNumber: 172,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 169,
+              lineNumber: 166,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
@@ -13839,13 +13806,13 @@ const CourseEditFlyout = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 216,
+              lineNumber: 207,
               columnNumber: 21
             },
             void 0
           ) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 215,
+            lineNumber: 206,
             columnNumber: 17
           }, void 0)
         ]
@@ -13867,20 +13834,20 @@ const CourseEditFlyout = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-amber-400 mb-4", children: "Backcourse Trainee" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 232,
+            lineNumber: 223,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
             "Move ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: selectedTrainee.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 234,
+              lineNumber: 225,
               columnNumber: 34
             }, void 0),
             " to a different course:"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 233,
+            lineNumber: 224,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -13892,17 +13859,17 @@ const CourseEditFlyout = ({
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "Select target course..." }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 241,
+                  lineNumber: 232,
                   columnNumber: 29
                 }, void 0),
                 availableCourses.filter((c) => c !== courseName).map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: course, children: course }, course, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 245,
+                  lineNumber: 236,
                   columnNumber: 37
                 }, void 0)),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "__NEW__", children: "+ Create New Course" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 247,
+                  lineNumber: 238,
                   columnNumber: 29
                 }, void 0)
               ]
@@ -13911,7 +13878,7 @@ const CourseEditFlyout = ({
             true,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 236,
+              lineNumber: 227,
               columnNumber: 25
             },
             void 0
@@ -13928,7 +13895,7 @@ const CourseEditFlyout = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 250,
+              lineNumber: 241,
               columnNumber: 29
             },
             void 0
@@ -13945,7 +13912,7 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 258,
+                lineNumber: 249,
                 columnNumber: 29
               },
               void 0
@@ -13962,14 +13929,14 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 264,
+                lineNumber: 255,
                 columnNumber: 29
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 257,
+            lineNumber: 248,
             columnNumber: 25
           }, void 0)
         ]
@@ -13978,13 +13945,13 @@ const CourseEditFlyout = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-        lineNumber: 228,
+        lineNumber: 219,
         columnNumber: 21
       },
       void 0
     ) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-      lineNumber: 227,
+      lineNumber: 218,
       columnNumber: 17
     }, void 0),
     showDeleteConfirm && selectedTrainee && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/60 flex items-center justify-center z-60", onClick: () => setShowDeleteConfirm(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -13995,25 +13962,25 @@ const CourseEditFlyout = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-red-400 mb-4", children: "Delete Trainee" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 283,
+            lineNumber: 274,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
             "Are you sure you want to delete ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: selectedTrainee.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 285,
+              lineNumber: 276,
               columnNumber: 61
             }, void 0),
             "?"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 284,
+            lineNumber: 275,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-red-400/80 text-sm mb-4", children: "This action cannot be undone. All training records for this trainee will be permanently removed." }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 287,
+            lineNumber: 278,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-3", children: [
@@ -14028,7 +13995,7 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 291,
+                lineNumber: 282,
                 columnNumber: 29
               },
               void 0
@@ -14044,14 +14011,14 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 297,
+                lineNumber: 288,
                 columnNumber: 29
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 290,
+            lineNumber: 281,
             columnNumber: 25
           }, void 0)
         ]
@@ -14060,13 +14027,13 @@ const CourseEditFlyout = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-        lineNumber: 279,
+        lineNumber: 270,
         columnNumber: 21
       },
       void 0
     ) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-      lineNumber: 278,
+      lineNumber: 269,
       columnNumber: 17
     }, void 0)
   ] }, void 0, true, {
@@ -85950,4 +85917,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-CBJnp53d.js.map
+//# sourceMappingURL=index-DjnRPr4S.js.map
