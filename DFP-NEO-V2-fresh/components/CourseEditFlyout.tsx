@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trainee } from '../types';
 
 interface CourseEditFlyoutProps {
@@ -30,6 +30,12 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
 }) => {
     const [newCourseNumber, setNewCourseNumber] = useState(courseName);
     const [newUnit, setNewUnit] = useState(courseUnit);
+
+    // Sync props to state when they change (e.g., after a save operation)
+    useEffect(() => {
+        setNewCourseNumber(courseName);
+        setNewUnit(courseUnit);
+    }, [courseName, courseUnit]);
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [targetCourse, setTargetCourse] = useState<string>('');
     const [showBackcourseConfirm, setShowBackcourseConfirm] = useState(false);
@@ -51,7 +57,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
             onUpdateCourseNumber(courseName, newCourseNumber);
         }
         if (newUnit !== courseUnit) {
-            onUpdateCourseUnit(newCourseNumber, newUnit);
+            onUpdateCourseUnit(courseName, newUnit);
         }
         setHasChanges(false);
     };

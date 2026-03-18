@@ -422,6 +422,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                         if (onUpdateCourseUnit) {
                             onUpdateCourseUnit(courseNumber, newUnit);
                         }
+                        setCourseToEdit(null);
                     }}
                     onDeleteTrainee={(trainee) => {
                         onDeleteTrainee(trainee);
