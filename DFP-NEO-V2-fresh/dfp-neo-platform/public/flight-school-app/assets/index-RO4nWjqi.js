@@ -14291,7 +14291,7 @@ const CourseRosterView = ({
         lineNumber: 253,
         columnNumber: 17
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: coursesToDisplay.map((courseName) => {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 md:p-6 pb-16 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: coursesToDisplay.map((courseName) => {
         const courseTrainees = groupedTrainees[courseName] || [];
         const color = courseColorMap[courseName] || "bg-gray-500";
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
@@ -85925,4 +85925,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-B_ucMMPW.js.map
+//# sourceMappingURL=index-RO4nWjqi.js.map
