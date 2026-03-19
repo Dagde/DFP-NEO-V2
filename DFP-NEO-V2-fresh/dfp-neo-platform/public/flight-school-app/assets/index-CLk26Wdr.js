@@ -83210,7 +83210,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             events: eventSegmentsForDate,
             resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
-            traineesData,
+            traineesData: filteredTraineesData,
             timezoneOffset,
             airframeCount: 24,
             standbyCount: 4,
@@ -83361,7 +83361,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               }
               return a.name.localeCompare(b.name);
             }).map((t) => t.fullName),
-            traineesData,
+            traineesData: filteredTraineesData,
             onSelectEvent: handleOpenModal,
             onUpdateEvent: handleScheduleUpdate,
             zoomLevel,
@@ -83406,7 +83406,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               events: eventSegmentsForDate,
               instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
               instructorsData: locationFilteredInstructorsForSchedule,
-              traineesData,
+              traineesData: filteredTraineesData,
               onSelectEvent: handleOpenModal,
               onUpdateEvent: handleScheduleUpdate,
               zoomLevel,
@@ -83439,7 +83439,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
             instructors: instructorsData.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
-            traineesData,
+            traineesData: filteredTraineesData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,
@@ -83468,7 +83468,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
             trainees: traineesData.map((t) => t.fullName),
-            traineesData,
+            traineesData: filteredTraineesData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,
@@ -83497,7 +83497,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           TraineeView,
           {
             events,
-            traineesData,
+            traineesData: filteredTraineesData,
             courseColors,
             archivedCourses,
             personnelData,
@@ -83632,7 +83632,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           CourseRosterView,
           {
             events,
-            traineesData,
+            traineesData: filteredTraineesData,
             courseColors,
             archivedCourses,
             personnelData,
@@ -83895,7 +83895,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             events: nextDayEventSegments,
             resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
-            traineesData,
+            traineesData: filteredTraineesData,
             airframeCount: 24,
             standbyCount: 4,
             ftdCount: availableFtdCount,
@@ -83980,8 +83980,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onUpdateCommenceNightFlying: setCommenceNightFlying,
             ceaseNightFlying,
             onUpdateCeaseNightFlying: setCeaseNightFlying,
-            instructorsData,
-            traineesData,
+            instructorsData: filteredInstructorsData,
+            traineesData: filteredTraineesData,
             buildDfpDate,
             highestPriorityEvents,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
@@ -84149,7 +84149,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           CourseProgressView,
           {
             courses,
-            traineesData,
+            traineesData: filteredTraineesData,
             courseColors,
             scores,
             traineeLMPs,
@@ -84176,8 +84176,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onDeleteCourse: handleDeleteCourseFromTrainingRecords,
             onNavigateToCourseRoster: handleNavigateToCourseRosterFromTrainingRecords,
             onNavigateToArchivedCourses: handleNavigateToArchivedCoursesFromTrainingRecords,
-            traineesData,
-            instructorsData,
+            traineesData: filteredTraineesData,
+            instructorsData: filteredInstructorsData,
             archivedTraineesData,
             archivedInstructorsData,
             events,
@@ -84220,8 +84220,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             date: buildDfpDate,
             events: nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })),
-            instructorsData,
-            traineesData,
+            instructorsData: filteredInstructorsData,
+            traineesData: filteredTraineesData,
             activeCourses: coursePriorities,
             onNavigateAndSelectPerson: (name) => {
               const person = [...instructorsData, ...traineesData].find((p) => p.name === name || "fullName" in p && p.fullName === name);
@@ -84381,8 +84381,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           SupervisorDashboard,
           {
-            instructorsData,
-            traineesData,
+            instructorsData: filteredInstructorsData,
+            traineesData: filteredTraineesData,
             date,
             events: eventsForDate,
             onNavigate: handleNavigation,
@@ -84407,8 +84407,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             onClose: () => handleNavigation("Program Schedule"),
             events,
-            traineesData,
-            instructorsData,
+            traineesData: filteredTraineesData,
+            instructorsData: filteredInstructorsData,
             archivedInstructorsData,
             school,
             personnelData,
@@ -84504,8 +84504,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             onClose: () => handleNavigation("Program Schedule"),
             events,
-            traineesData,
-            instructorsData,
+            traineesData: filteredTraineesData,
+            instructorsData: filteredInstructorsData,
             archivedInstructorsData,
             school,
             personnelData,
@@ -84593,8 +84593,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             onClose: () => handleNavigation("Program Schedule"),
             events,
-            traineesData,
-            instructorsData,
+            traineesData: filteredTraineesData,
+            instructorsData: filteredInstructorsData,
             archivedTraineesData,
             school,
             personnelData,
@@ -84980,8 +84980,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 setSuccessMessage("Post-flight data saved!");
               },
               school,
-              traineesData,
-              instructorsData
+              traineesData: filteredTraineesData,
+              instructorsData: filteredInstructorsData
             },
             void 0,
             false,
@@ -85200,8 +85200,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           syllabusDetails,
           highlightedField,
           school,
-          traineesData,
-          instructorsData,
+          traineesData: filteredTraineesData,
+          instructorsData: filteredInstructorsData,
           courseColors,
           eventsForDate,
           onNavigateToHateSheet: (trainee) => {
@@ -85593,7 +85593,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           activeCourses: courseColors,
           allTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
-          traineesData
+          traineesData: filteredTraineesData
         },
         void 0,
         false,
@@ -85901,4 +85901,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-CM1N7qUd.js.map
+//# sourceMappingURL=index-CLk26Wdr.js.map
