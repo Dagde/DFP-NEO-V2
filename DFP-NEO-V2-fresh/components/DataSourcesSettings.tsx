@@ -44,10 +44,12 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
 
     try {
       localStorage.setItem('dataSourceSettings', JSON.stringify(newSettings));
+      console.log('[DataSourcesSettings] Saved to localStorage:', newSettings);
       
       // Dispatch custom event for same-tab updates
+      console.log('[DataSourcesSettings] Dispatching dataSourceSettingsChanged event');
       window.dispatchEvent(new CustomEvent('dataSourceSettingsChanged', { 
-        detail: { key, value: newSettings[key] } 
+        detail: { key, value: newSettings[key], settings: newSettings } 
       }));
       
       const labels: Record<keyof DataSourceSettings, string> = {

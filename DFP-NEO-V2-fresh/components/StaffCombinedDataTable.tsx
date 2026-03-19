@@ -78,7 +78,16 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
     }, []);
 
     // Combine and filter staff based on current settings
-    const updateCombinedData = useCallback(() => {
+    useEffect(() => {
+        console.log('[StaffTable] updateCombinedData triggered', {
+            instructorsCount: instructorsData.length,
+            dataSourceSettings,
+            sampleInstructor: instructorsData[0] ? {
+                name: instructorsData[0].name,
+                _dataSource: (instructorsData[0] as any)._dataSource
+            } : null
+        });
+        
         const allStaff = new Map<number, CombinedStaffRecord>();
         const includeMockData = dataSourceSettings.staff;
         
@@ -89,6 +98,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                 
                 // Skip mockdata if setting is OFF
                 if (dataSource === 'mockdata' && !includeMockData) {
+                    console.log(`[StaffTable] Filtering out mockdata staff: ${instructor.name}`);
                     return;
                 }
                 
@@ -103,12 +113,9 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
         const combined = Array.from(allStaff.values())
             .sort((a, b) => a.name.localeCompare(b.name));
         
+        console.log(`[StaffTable] Result: ${combined.length} staff (mockdata: ${includeMockData ? 'included' : 'excluded'})`);
         setCombinedData(combined);
     }, [instructorsData, deletedIds, dataSourceSettings]);
-
-    useEffect(() => {
-        updateCombinedData();
-    }, [updateCombinedData]);
 
     const mockdataCount = combinedData.filter(s => s.dataSource === 'mockdata').length;
     const databaseCount = combinedData.filter(s => s.dataSource === 'database').length;

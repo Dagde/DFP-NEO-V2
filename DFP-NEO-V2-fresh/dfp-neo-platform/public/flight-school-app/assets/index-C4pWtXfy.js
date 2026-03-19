@@ -62297,13 +62297,22 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
       window.removeEventListener("dataSourceSettingsChanged", handleCustomEvent);
     };
   }, []);
-  const updateCombinedData = reactExports.useCallback(() => {
+  reactExports.useEffect(() => {
+    console.log("[StaffTable] updateCombinedData triggered", {
+      instructorsCount: instructorsData.length,
+      dataSourceSettings,
+      sampleInstructor: instructorsData[0] ? {
+        name: instructorsData[0].name,
+        _dataSource: instructorsData[0]._dataSource
+      } : null
+    });
     const allStaff = /* @__PURE__ */ new Map();
     const includeMockData = dataSourceSettings.staff;
     instructorsData.forEach((instructor) => {
       if (!deletedIds.has(instructor.idNumber)) {
         const dataSource = instructor._dataSource || "mockdata";
         if (dataSource === "mockdata" && !includeMockData) {
+          console.log(`[StaffTable] Filtering out mockdata staff: ${instructor.name}`);
           return;
         }
         allStaff.set(instructor.idNumber, {
@@ -62313,11 +62322,9 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
       }
     });
     const combined = Array.from(allStaff.values()).sort((a, b) => a.name.localeCompare(b.name));
+    console.log(`[StaffTable] Result: ${combined.length} staff (mockdata: ${includeMockData ? "included" : "excluded"})`);
     setCombinedData(combined);
   }, [instructorsData, deletedIds, dataSourceSettings]);
-  reactExports.useEffect(() => {
-    updateCombinedData();
-  }, [updateCombinedData]);
   const mockdataCount = combinedData.filter((s) => s.dataSource === "mockdata").length;
   const databaseCount = combinedData.filter((s) => s.dataSource === "database").length;
   const handleDelete = async (staff) => {
@@ -62352,7 +62359,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-green-400", children: "Staff Combined Data" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 154,
+          lineNumber: 161,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-4", children: [
@@ -62361,7 +62368,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
             mockdataCount
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 156,
+            lineNumber: 163,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full", children: [
@@ -62369,7 +62376,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
             databaseCount
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 159,
+            lineNumber: 166,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-green-700 text-green-300 px-3 py-1 rounded-full", children: [
@@ -62377,149 +62384,136 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
             combinedData.length
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 162,
+            lineNumber: 169,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 155,
+          lineNumber: 162,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 153,
+        lineNumber: 160,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "Combined view of staff from both mockdata and database (database takes precedence)" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 167,
+        lineNumber: 174,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 152,
+      lineNumber: 159,
       columnNumber: 17
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "bg-gray-700 sticky top-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "PMKEYS" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 176,
+          lineNumber: 183,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Name" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 179,
+          lineNumber: 186,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Rank" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 182,
+          lineNumber: 189,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Role" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 185,
+          lineNumber: 192,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Unit" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 188,
+          lineNumber: 195,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Category" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 191,
+          lineNumber: 198,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Flight" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 194,
+          lineNumber: 201,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "QFI" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 197,
+          lineNumber: 204,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "OFI" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 200,
+          lineNumber: 207,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Source" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 203,
+          lineNumber: 210,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Actions" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 206,
+          lineNumber: 213,
           columnNumber: 33
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 175,
+        lineNumber: 182,
         columnNumber: 29
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 174,
+        lineNumber: 181,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: combinedData.map((staff) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-gray-700/50", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: staff.idNumber }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 214,
+          lineNumber: 221,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-white font-medium", children: staff.name }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 217,
+          lineNumber: 224,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.rank }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 220,
+          lineNumber: 227,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-1 text-xs font-medium rounded ${staff.role === "QFI" ? "bg-sky-900/50 text-sky-300" : staff.role === "OFI" ? "bg-purple-900/50 text-purple-300" : staff.role === "SIM IP" ? "bg-teal-900/50 text-teal-300" : "bg-gray-700 text-gray-300"}`, children: staff.role }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 224,
+          lineNumber: 231,
           columnNumber: 41
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 223,
+          lineNumber: 230,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.unit }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 233,
+          lineNumber: 240,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.category }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 236,
+          lineNumber: 243,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.flight || "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 239,
+          lineNumber: 246,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: staff.isQFI ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: "✓" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 244,
-          columnNumber: 45
-        }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 246,
-          columnNumber: 45
-        }, void 0) }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 242,
-          columnNumber: 37
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: staff.isOFI ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-purple-400", children: "✓" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
           lineNumber: 251,
           columnNumber: 45
@@ -62532,13 +62526,26 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
           lineNumber: 249,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-1 text-xs font-medium rounded ${staff.dataSource === "database" ? "bg-purple-900/50 text-purple-300" : "bg-sky-900/50 text-sky-300"}`, children: staff.dataSource === "database" ? "Database" : "Mockdata" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: staff.isOFI ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-purple-400", children: "✓" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 257,
-          columnNumber: 41
+          lineNumber: 258,
+          columnNumber: 45
+        }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
+          lineNumber: 260,
+          columnNumber: 45
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
           lineNumber: 256,
+          columnNumber: 37
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-1 text-xs font-medium rounded ${staff.dataSource === "database" ? "bg-purple-900/50 text-purple-300" : "bg-sky-900/50 text-sky-300"}`, children: staff.dataSource === "database" ? "Database" : "Mockdata" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
+          lineNumber: 264,
+          columnNumber: 41
+        }, void 0) }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
+          lineNumber: 263,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -62562,40 +62569,40 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 266,
+            lineNumber: 273,
             columnNumber: 41
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 265,
+          lineNumber: 272,
           columnNumber: 37
         }, void 0)
       ] }, staff.idNumber, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 213,
+        lineNumber: 220,
         columnNumber: 33
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 211,
+        lineNumber: 218,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 173,
+      lineNumber: 180,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 172,
+      lineNumber: 179,
       columnNumber: 17
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-    lineNumber: 151,
+    lineNumber: 158,
     columnNumber: 13
   }, void 0) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-    lineNumber: 150,
+    lineNumber: 157,
     columnNumber: 9
   }, void 0);
 };
@@ -63218,8 +63225,10 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     setSettings(newSettings);
     try {
       localStorage.setItem("dataSourceSettings", JSON.stringify(newSettings));
+      console.log("[DataSourcesSettings] Saved to localStorage:", newSettings);
+      console.log("[DataSourcesSettings] Dispatching dataSourceSettingsChanged event");
       window.dispatchEvent(new CustomEvent("dataSourceSettingsChanged", {
-        detail: { key, value: newSettings[key] }
+        detail: { key, value: newSettings[key], settings: newSettings }
       }));
       const labels = {
         staff: "Staff MockData",
@@ -63248,7 +63257,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 74,
+          lineNumber: 76,
           columnNumber: 7
         },
         void 0
@@ -63258,7 +63267,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     false,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 68,
+      lineNumber: 70,
       columnNumber: 5
     },
     void 0
@@ -63267,85 +63276,85 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-8 h-8 rounded-full ${iconBg} flex items-center justify-center`, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: `h-4 w-4 ${iconColor}`, viewBox: "0 0 20 20", fill: "currentColor", children: icon }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 96,
+        lineNumber: 98,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 95,
+        lineNumber: 97,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white font-semibold", children: label }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 101,
+          lineNumber: 103,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs mt-0.5", children: description }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 102,
+          lineNumber: 104,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 100,
+        lineNumber: 102,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 94,
+      lineNumber: 96,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 93,
+      lineNumber: 95,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3 ml-4", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-xs font-medium ${enabled ? labelColor : "text-gray-500"}`, children: enabled ? "ON" : "OFF" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 107,
+        lineNumber: 109,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Toggle, { enabled, onToggle }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 110,
+        lineNumber: 112,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 106,
+      lineNumber: 108,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-    lineNumber: 92,
+    lineNumber: 94,
     columnNumber: 5
   }, void 0);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-800/80 border-b border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-sky-400", children: "Data Sources" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 120,
+        lineNumber: 122,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 119,
+        lineNumber: 121,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "Control which data sources are active. Changes take effect on next app reload." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 122,
+        lineNumber: 124,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 118,
+      lineNumber: 120,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-6", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Database Records" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 131,
+          lineNumber: 133,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-3", children: [
@@ -63361,7 +63370,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-green-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z", clipRule: "evenodd" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 142,
+                lineNumber: 144,
                 columnNumber: 23
               }, void 0)
             },
@@ -63369,7 +63378,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 134,
+              lineNumber: 136,
               columnNumber: 15
             },
             void 0
@@ -63386,7 +63395,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-teal-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 153,
+                lineNumber: 155,
                 columnNumber: 23
               }, void 0)
             },
@@ -63394,30 +63403,30 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 145,
+              lineNumber: 147,
               columnNumber: 15
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 132,
+          lineNumber: 134,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 130,
+        lineNumber: 132,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-700" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 160,
+        lineNumber: 162,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "MockData" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 164,
+          lineNumber: 166,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-3", children: [
@@ -63433,7 +63442,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-sky-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 175,
+                lineNumber: 177,
                 columnNumber: 23
               }, void 0)
             },
@@ -63441,7 +63450,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 167,
+              lineNumber: 169,
               columnNumber: 15
             },
             void 0
@@ -63458,7 +63467,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-indigo-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 186,
+                lineNumber: 188,
                 columnNumber: 23
               }, void 0)
             },
@@ -63466,177 +63475,177 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 178,
+              lineNumber: 180,
               columnNumber: 15
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 165,
+          lineNumber: 167,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 163,
+        lineNumber: 165,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-700/30 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Current Configuration" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 194,
+          lineNumber: 196,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-2 text-xs", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.staffDb ? "bg-green-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 197,
+              lineNumber: 199,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Staff DB: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.staffDb ? "text-green-400" : "text-gray-500", children: settings.staffDb ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 198,
+                lineNumber: 200,
                 columnNumber: 59
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 198,
+              lineNumber: 200,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 196,
+            lineNumber: 198,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.traineeDb ? "bg-teal-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 201,
+              lineNumber: 203,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Trainee DB: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.traineeDb ? "text-teal-400" : "text-gray-500", children: settings.traineeDb ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 202,
+                lineNumber: 204,
                 columnNumber: 61
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 202,
+              lineNumber: 204,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 200,
+            lineNumber: 202,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.staff ? "bg-sky-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 205,
+              lineNumber: 207,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Staff Mock: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.staff ? "text-sky-400" : "text-gray-500", children: settings.staff ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 206,
+                lineNumber: 208,
                 columnNumber: 61
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 206,
+              lineNumber: 208,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 204,
+            lineNumber: 206,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.trainee ? "bg-indigo-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 209,
+              lineNumber: 211,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Trainee Mock: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.trainee ? "text-indigo-400" : "text-gray-500", children: settings.trainee ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 210,
+                lineNumber: 212,
                 columnNumber: 63
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 210,
+              lineNumber: 212,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 208,
+            lineNumber: 210,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 195,
+          lineNumber: 197,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 193,
+        lineNumber: 195,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-amber-900/20 border border-amber-700/50 rounded-lg", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-start space-x-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 219,
+          lineNumber: 221,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 218,
+          lineNumber: 220,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-amber-300 text-sm font-semibold", children: "Reload Required" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 222,
+            lineNumber: 224,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-amber-400/80 text-xs mt-1", children: "After toggling, reload the app (refresh the page) for changes to take effect. To use MockData only: turn DB OFF and MockData ON. To use Database only: turn MockData OFF and DB ON." }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 223,
+            lineNumber: 225,
             columnNumber: 17
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 221,
+          lineNumber: 223,
           columnNumber: 15
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 217,
+        lineNumber: 219,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 216,
+        lineNumber: 218,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 127,
+      lineNumber: 129,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-    lineNumber: 117,
+    lineNumber: 119,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-    lineNumber: 116,
+    lineNumber: 118,
     columnNumber: 5
   }, void 0);
 };
@@ -85941,4 +85950,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-CT71Pm-D.js.map
+//# sourceMappingURL=index-C4pWtXfy.js.map
