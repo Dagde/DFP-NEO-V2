@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { migratePersonnelToDatabase } from '../lib/api';
+import { ESL_DATA } from '../mockData';
 
 interface DataSourceSettings {
   staff: boolean;      // Staff MockData ON/OFF
@@ -12,6 +14,8 @@ interface DataSourcesSettingsProps {
   onSettingsChanged?: () => void;
 }
 
+type MigrationState = 'idle' | 'running' | 'done' | 'error';
+
 const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess, onSettingsChanged }) => {
   const [settings, setSettings] = useState<DataSourceSettings>({
     staff: true,
@@ -19,6 +23,13 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
     staffDb: true,
     traineeDb: true,
   });
+
+  const [migrationState, setMigrationState] = useState<MigrationState>('idle');
+  const [migrationResult, setMigrationResult] = useState<{
+    inserted?: number;
+    skipped?: number;
+    errors?: { name: string; error: string }[];
+  } | null>(null);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -55,6 +66,28 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
       if (onSettingsChanged) onSettingsChanged();
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');
+    }
+  };
+
+  const handleMigrateStaff = async () => {
+    setMigrationState('running');
+    setMigrationResult(null);
+    try {
+      const mockInstructors = ESL_DATA.instructors;
+      console.log(`🚀 Migrating ${mockInstructors.length} mock staff to database...`);
+      const result = await migratePersonnelToDatabase(mockInstructors);
+      if (result.success) {
+        setMigrationState('done');
+        setMigrationResult({ inserted: result.inserted, skipped: result.skipped, errors: result.errors });
+        onShowSuccess(`Migration complete: ${result.inserted} staff inserted, ${result.skipped} already existed.`);
+      } else {
+        setMigrationState('error');
+        setMigrationResult(null);
+        console.error('Migration failed:', result.error);
+      }
+    } catch (err) {
+      console.error('Migration error:', err);
+      setMigrationState('error');
     }
   };
 
@@ -180,6 +213,102 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
                 icon={<path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />}
               />
 
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-700" />
+
+          {/* Section: Migration Tools */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Migration Tools</p>
+            <div className="p-4 bg-gray-700/40 rounded-lg border border-gray-600 space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 rounded-full bg-violet-900/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-violet-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" />
+                    <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" />
+                    <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-white font-semibold">Migrate Mock Staff to Database</p>
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    Saves the current mock-generated staff records permanently into the database. 
+                    Existing records (by ID number) are skipped. Once migrated, staff will persist across app resets.
+                  </p>
+                </div>
+              </div>
+
+              {/* Migration result feedback */}
+              {migrationState === 'done' && migrationResult && (
+                <div className="p-3 bg-green-900/30 border border-green-700/50 rounded-lg">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-green-400 text-sm font-semibold">Migration Complete</p>
+                  </div>
+                  <div className="text-xs text-green-300/80 space-y-0.5">
+                    <p>✅ Inserted: <span className="font-semibold text-green-300">{migrationResult.inserted}</span> new staff records</p>
+                    <p>⏭️ Skipped: <span className="font-semibold text-green-300">{migrationResult.skipped}</span> already existed</p>
+                    {migrationResult.errors && migrationResult.errors.length > 0 && (
+                      <p>⚠️ Errors: <span className="font-semibold text-amber-300">{migrationResult.errors.length}</span> records failed</p>
+                    )}
+                    <p className="text-green-400/70 mt-1">Now toggle Staff MockData OFF and reload to use only database records.</p>
+                  </div>
+                </div>
+              )}
+
+              {migrationState === 'error' && (
+                <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-red-400 text-sm font-semibold">Migration Failed</p>
+                  </div>
+                  <p className="text-red-400/80 text-xs mt-1">Could not connect to the database. Check server logs for details.</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleMigrateStaff}
+                disabled={migrationState === 'running'}
+                className={`w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                  migrationState === 'running'
+                    ? 'bg-violet-800/50 text-violet-400 cursor-not-allowed'
+                    : migrationState === 'done'
+                    ? 'bg-green-800/50 text-green-300 hover:bg-green-700/50 border border-green-700/50'
+                    : 'bg-violet-700/60 text-violet-200 hover:bg-violet-600/60 border border-violet-600/50'
+                }`}
+              >
+                {migrationState === 'running' ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-violet-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>Migrating...</span>
+                  </>
+                ) : migrationState === 'done' ? (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <span>Re-run Migration</span>
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" />
+                      <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" />
+                      <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" />
+                    </svg>
+                    <span>Migrate Mock Staff to Database</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 

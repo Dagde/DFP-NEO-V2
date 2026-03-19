@@ -79,6 +79,27 @@ export async function fetchScores(): Promise<Record<string, any[]>> {
   return {};
 }
 
+// Bulk migrate personnel (mock staff) to database
+export async function migratePersonnelToDatabase(personnelList: any[]): Promise<{
+  success: boolean;
+  inserted?: number;
+  skipped?: number;
+  errors?: { name: string; error: string }[];
+  error?: string;
+}> {
+  const result = await fetchAPI<{ success: boolean; inserted: number; skipped: number; errors?: any[] }>(
+    '/personnel/bulk',
+    {
+      method: 'POST',
+      body: JSON.stringify({ personnel: personnelList }),
+    }
+  );
+  if (result.success && result.data) {
+    return result.data;
+  }
+  return { success: false, error: result.error || 'Migration failed' };
+}
+
 // Fetch schedule from API
 export async function fetchSchedule(startDate?: string, endDate?: string): Promise<any[]> {
   let endpoint = '/schedule';
