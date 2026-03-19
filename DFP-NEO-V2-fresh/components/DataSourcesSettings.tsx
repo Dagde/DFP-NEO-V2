@@ -44,6 +44,12 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
 
     try {
       localStorage.setItem('dataSourceSettings', JSON.stringify(newSettings));
+      
+      // Dispatch custom event for same-tab updates
+      window.dispatchEvent(new CustomEvent('dataSourceSettingsChanged', { 
+        detail: { key, value: newSettings[key] } 
+      }));
+      
       const labels: Record<keyof DataSourceSettings, string> = {
         staff: 'Staff MockData',
         trainee: 'Trainee MockData',
@@ -51,7 +57,7 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
         traineeDb: 'Trainee Database',
       };
       const state = newSettings[key] ? 'enabled' : 'disabled';
-      onShowSuccess(`${labels[key]} ${state}. Reload the app to apply changes.`);
+      onShowSuccess(`${labels[key]} ${state}. Changes applied immediately.`);
       if (onSettingsChanged) onSettingsChanged();
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');

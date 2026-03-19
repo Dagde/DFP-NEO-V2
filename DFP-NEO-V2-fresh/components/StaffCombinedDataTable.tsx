@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Instructor } from '../types';
 import { showDarkConfirm } from './DarkMessageModal';
 
@@ -20,21 +20,78 @@ interface CombinedStaffRecord {
     _dataSource?: 'mockdata' | 'database'; // Added by dataService.ts
 }
 
+interface DataSourceSettings {
+    staff: boolean;
+    trainee: boolean;
+    staffDb: boolean;
+    traineeDb: boolean;
+}
+
+// Helper to read data source settings from localStorage
+const getDataSourceSettings = (): DataSourceSettings => {
+    try {
+        const stored = localStorage.getItem('dataSourceSettings');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                staff: parsed.staff !== false,
+                trainee: parsed.trainee !== false,
+                staffDb: parsed.staffDb !== false,
+                traineeDb: parsed.traineeDb !== false,
+            };
+        }
+    } catch (e) {
+        console.warn('Could not read dataSourceSettings from localStorage');
+    }
+    // Defaults: all ON
+    return { staff: true, trainee: true, staffDb: true, traineeDb: true };
+};
+
 const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instructorsData }) => {
     const [combinedData, setCombinedData] = useState<CombinedStaffRecord[]>([]);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
+    const [dataSourceSettings, setDataSourceSettings] = useState<DataSourceSettings>(getDataSourceSettings);
 
+    // Listen for storage changes (from DataSourcesSettings component)
     useEffect(() => {
-        // Use instructorsData which already has _dataSource field from dataService.ts
-        // This respects the Data Sources settings (mockdata on/off)
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'dataSourceSettings') {
+                console.log('[StaffTable] dataSourceSettings changed, updating...');
+                setDataSourceSettings(getDataSourceSettings());
+            }
+        };
+
+        // Also listen for custom event (same-tab changes)
+        const handleCustomEvent = () => {
+            console.log('[StaffTable] dataSourceSettings custom event received');
+            setDataSourceSettings(getDataSourceSettings());
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('dataSourceSettingsChanged', handleCustomEvent);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('dataSourceSettingsChanged', handleCustomEvent);
+        };
+    }, []);
+
+    // Combine and filter staff based on current settings
+    const updateCombinedData = useCallback(() => {
         const allStaff = new Map<number, CombinedStaffRecord>();
+        const includeMockData = dataSourceSettings.staff;
         
-        // Add staff from instructorsData (which is already merged and tagged)
+        // Add staff from instructorsData, filtering based on settings
         instructorsData.forEach(instructor => {
             if (!deletedIds.has(instructor.idNumber)) {
-                // Use _dataSource field if present, otherwise default to 'mockdata'
                 const dataSource = (instructor as any)._dataSource || 'mockdata';
+                
+                // Skip mockdata if setting is OFF
+                if (dataSource === 'mockdata' && !includeMockData) {
+                    return;
+                }
+                
                 allStaff.set(instructor.idNumber, {
                     ...instructor,
                     dataSource: dataSource
@@ -47,7 +104,11 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
             .sort((a, b) => a.name.localeCompare(b.name));
         
         setCombinedData(combined);
-    }, [instructorsData, deletedIds]);
+    }, [instructorsData, deletedIds, dataSourceSettings]);
+
+    useEffect(() => {
+        updateCombinedData();
+    }, [updateCombinedData]);
 
     const mockdataCount = combinedData.filter(s => s.dataSource === 'mockdata').length;
     const databaseCount = combinedData.filter(s => s.dataSource === 'database').length;
