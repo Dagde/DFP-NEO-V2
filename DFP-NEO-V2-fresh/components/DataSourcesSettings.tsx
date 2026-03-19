@@ -9,7 +9,7 @@ interface DataSourceSettings {
 
 interface DataSourcesSettingsProps {
   onShowSuccess: (message: string) => void;
-  onSettingsChanged?: () => void;
+  onSettingsChanged?: (settings: DataSourceSettings) => void;
 }
 
 const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess, onSettingsChanged }) => {
@@ -60,7 +60,7 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
       };
       const state = newSettings[key] ? 'enabled' : 'disabled';
       onShowSuccess(`${labels[key]} ${state}. Changes applied immediately.`);
-      if (onSettingsChanged) onSettingsChanged();
+      if (onSettingsChanged) onSettingsChanged(newSettings);
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');
     }

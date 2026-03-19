@@ -82,6 +82,12 @@ interface SettingsViewWithMenuProps {
         desiredAllocations: Record<string, number>;
         remainderUnitIndex: number;
     }) => void;
+    onDataSourceSettingsChange?: (settings: {
+        staff: boolean;
+        trainee: boolean;
+        staffDb: boolean;
+        traineeDb: boolean;
+    }) => void;
     }
 
 type SettingsSection =
@@ -606,6 +612,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {activeSection === 'data-sources' && (
                         <DataSourcesSettings
                             onShowSuccess={props.onShowSuccess}
+                            onSettingsChanged={(newSettings) => {
+                                if (props.onDataSourceSettingsChange) {
+                                    props.onDataSourceSettingsChange(newSettings);
+                                }
+                            }}
                         />
                     )}
                     {activeSection === 'organisation' && (

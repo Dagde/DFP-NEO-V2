@@ -3185,6 +3185,28 @@ const App: React.FC = () => {
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
     const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
 
+    // Data Source Settings - manages which sources are active (drives immediate filtering)
+    const [dataSourceSettings, setDataSourceSettings] = useState<{
+        staff: boolean;
+        trainee: boolean;
+        staffDb: boolean;
+        traineeDb: boolean;
+    }>(() => {
+        try {
+            const stored = localStorage.getItem('dataSourceSettings');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                return {
+                    staff: parsed.staff !== false,
+                    trainee: parsed.trainee !== false,
+                    staffDb: parsed.staffDb !== false,
+                    traineeDb: parsed.traineeDb !== false,
+                };
+            }
+        } catch (e) {}
+        return { staff: true, trainee: true, staffDb: true, traineeDb: true };
+    });
+
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
     const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
@@ -3218,7 +3240,16 @@ useEffect(() => {
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
     const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
-       const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+    const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+
+    // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
+    const filteredInstructorsData = dataSourceSettings.staff
+        ? instructorsData
+        : instructorsData.filter(i => (i as any)._dataSource === 'database');
+
+    const filteredTraineesData = dataSourceSettings.trainee
+        ? traineesData
+        : traineesData.filter(t => (t as any)._dataSource === 'database');
     
     // ============================================================
     // AUTHENTICATION STATE
@@ -9956,8 +9987,9 @@ updates.forEach(update => {
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
-                    instructorsData={instructorsData}
-                    traineesData={traineesData}
+                    instructorsData={filteredInstructorsData}
+                    traineesData={filteredTraineesData}
+                    onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
                     syllabusDetails={syllabusDetails}
                     onBulkUpdateInstructors={handleBulkUpdateInstructors}
                     onReplaceInstructors={handleReplaceInstructors}
