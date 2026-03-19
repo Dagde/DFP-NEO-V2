@@ -379,6 +379,8 @@ interface DfpConfig {
   remedialRequests: RemedialRequest[];
   sctEvents: string[];
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
+  staffSharingEnabled: boolean;
+  staffSharingUnits: string[];
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -989,8 +991,33 @@ function generateDfpInternal(
         highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
-        getEventDayNightClassification
+        getEventDayNightClassification,
+        staffSharingEnabled, staffSharingUnits
     } = config;
+
+    // --- STAFF SHARING HELPER ---
+    // Determines if an instructor is eligible to teach a trainee based on unit sharing rules.
+    // Step 1: Identify trainee's unit.
+    // Step 2: If staff sharing OFF → only same-unit instructors eligible.
+    // Step 3: If staff sharing ON → if trainee's unit is in the sharing group AND instructor's unit is in the sharing group → eligible.
+    //         If trainee's unit is NOT in the sharing group → only same-unit instructors eligible.
+    const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
+        const traineeUnit = trainee.unit || '';
+        const instructorUnit = instructor.unit || '';
+        if (!staffSharingEnabled) {
+            // Staff sharing OFF: must be same unit
+            return instructorUnit === traineeUnit;
+        }
+        // Staff sharing ON
+        const traineeInGroup = staffSharingUnits.includes(traineeUnit);
+        if (!traineeInGroup) {
+            // Trainee's unit not in sharing group → same-unit only
+            return instructorUnit === traineeUnit;
+        }
+        // Trainee IS in the sharing group → instructor must also be in the sharing group
+        const instructorInGroup = staffSharingUnits.includes(instructorUnit);
+        return instructorInGroup;
+    };
 
     // --- HELPER FUNCTIONS ---
     
@@ -1791,67 +1818,75 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             let candidates: Instructor[] = [];
 
+            // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
             if (type === 'ftd') {
-                // NEW RULE: COMPLETE separation - NO day events for instructors with night events
-                const simIps = instructors
-                    .filter(i => 
-                        i.role === 'SIM IP' && 
-                        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
-                    )
-                    .sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                
-                // NEW RULE: COMPLETE separation - NO day events for instructors with night events
-                const availableQfis = instructors.filter(i => 
-                    i.role === 'QFI' && 
+                // FTD: SIM IPs first, then QFIs
+                const simIps = instructors.filter(i =>
+                    i.role === 'SIM IP' &&
                     !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
                 );
-                let orderedQfis: Instructor[] = [];
-                
-                if (programWithPrimaries) {
-                    const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
-                    const primaries = availableQfis.filter(i => pNames.includes(i.name));
-                    const others = availableQfis.filter(i => !pNames.includes(i.name));
-                    
-                    primaries.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                    others.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                    
-                    orderedQfis = [...primaries, ...others];
-                } else {
-                    orderedQfis = availableQfis.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                }
-                
-                candidates = [...simIps, ...orderedQfis];
+                const availableQfis = instructors.filter(i =>
+                    i.role === 'QFI' &&
+                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                );
+                candidates = [...simIps, ...availableQfis];
             } else {
-                const qualified = instructors.filter(ip => {
-                    const isQFI = ip.role === 'QFI';
-                    if (type === 'flight' && !isQFI) return false;
-                    // This applies to ALL event types including CPT and ground
-                    // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+                // FLIGHT = QFI only; CPT/GROUND = any instructor
+                candidates = instructors.filter(ip => {
+                    if (type === 'flight' && ip.role !== 'QFI') return false;
                     if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
                     return true;
                 });
+            }
 
-                if (programWithPrimaries) {
-                     const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
-                     const primaries = qualified.filter(i => pNames.includes(i.name));
-                     const others = qualified.filter(i => !pNames.includes(i.name));
-                     
-                     others.sort((a, b) => {
-                        const countA = eventCounts.get(a.name)?.flightFtd || 0;
-                        const countB = eventCounts.get(b.name)?.flightFtd || 0;
-                        if (countA !== countB) return countA - countB;
-                        return a.name.localeCompare(b.name);
-                     });
-                     
-                     candidates = [...primaries, ...others];
-                } else {
-                    candidates = qualified.sort((a, b) => {
-                        const countA = eventCounts.get(a.name)?.flightFtd || 0;
-                        const countB = eventCounts.get(b.name)?.flightFtd || 0;
-                        if (countA !== countB) return countA - countB;
-                        return a.name.localeCompare(b.name);
-                    });
-                }
+            // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
+            candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+
+            // ── STEP 3: Order candidates by staff-sharing priority ──
+            // Priority order:
+            //   1. Primary instructor from trainee's same unit
+            //   2. Secondary instructor from trainee's same unit
+            //   3. Other same-unit instructors (by event count)
+            //   4. Primary instructor from other shared units
+            //   5. Secondary instructor from other shared units
+            //   6. Other instructors from other shared units (by event count)
+            if (programWithPrimaries) {
+                const primaryName = traineeForCheck.primaryInstructor;
+                const secondaryName = traineeForCheck.secondaryInstructor;
+                const traineeUnit = traineeForCheck.unit || '';
+                const countOf = (i: Instructor) => eventCounts.get(i.name)?.flightFtd || 0;
+
+                const isSameUnit = (i: Instructor) => (i.unit || '') === traineeUnit;
+                const isPrimary = (i: Instructor) => i.name === primaryName;
+                const isSecondary = (i: Instructor) => i.name === secondaryName;
+
+                // Buckets
+                const primarySameUnit    = candidates.filter(i => isPrimary(i) && isSameUnit(i));
+                const secondarySameUnit  = candidates.filter(i => isSecondary(i) && isSameUnit(i));
+                const otherSameUnit      = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && isSameUnit(i))
+                                                      .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+                const primaryOtherUnit   = candidates.filter(i => isPrimary(i) && !isSameUnit(i));
+                const secondaryOtherUnit = candidates.filter(i => isSecondary(i) && !isSameUnit(i));
+                const otherOtherUnit     = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && !isSameUnit(i))
+                                                      .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+
+                candidates = [
+                    ...primarySameUnit,
+                    ...secondarySameUnit,
+                    ...otherSameUnit,
+                    ...primaryOtherUnit,
+                    ...secondaryOtherUnit,
+                    ...otherOtherUnit,
+                ];
+            } else {
+                // Without primary preference: same-unit first, then shared-unit, both sorted by event count
+                const traineeUnit = traineeForCheck.unit || '';
+                const countOf = (i: Instructor) => eventCounts.get(i.name)?.flightFtd || 0;
+                const sameUnit  = candidates.filter(i => (i.unit || '') === traineeUnit)
+                                            .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+                const otherUnit = candidates.filter(i => (i.unit || '') !== traineeUnit)
+                                            .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+                candidates = [...sameUnit, ...otherUnit];
             }
 
             for (const ip of candidates) {
@@ -6913,6 +6948,8 @@ useEffect(() => {
             remedialRequests: remedialRequests,
             sctEvents: sctEvents,
             getEventDayNightClassification: getEventDayNightClassification,
+            staffSharingEnabled: organisationSettings.staffSharingEnabled,
+            staffSharingUnits: organisationSettings.staffSharingUnits,
         };
 
         setTimeout(() => {
