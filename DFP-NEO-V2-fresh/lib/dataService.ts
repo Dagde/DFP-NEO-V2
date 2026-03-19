@@ -6,10 +6,12 @@ import { ESL_DATA } from '../mockData';
 
 
 // Merge database instructors with mock data, deduplicating by idNumber
-function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[] {
+// Adds _dataSource field to track origin ('database' or 'mockdata')
+function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], includeMockData: boolean): any[] {
   console.log('🔄 Merging instructor data...');
   console.log('  Database instructors:', dbInstructors.length);
   console.log('  Mock instructors:', mockInstructors.length);
+  console.log('  Include MockData:', includeMockData);
   
   // Debug: Log DB instructor details
   console.log('📊 DB INSTRUCTOR DETAILS:');
@@ -25,6 +27,7 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
 
   // Create a map of database instructors by idNumber for deduplication
   // Also create a set of DB instructor names for name-based deduplication
+  // Tag each database record with _dataSource: 'database'
   const dbInstructorMap = new Map();
   const dbInstructorNames = new Set<string>();
   dbInstructors.forEach((instructor: any) => {
@@ -40,27 +43,32 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[]): any[
       console.log(`  ⚠️ DUPLICATE IDNUMBER: ${instructor.idNumber} - ${instructor.name} overwrites ${dbInstructorMap.get(instructor.idNumber).name}`);
     }
     
-    dbInstructorMap.set(instructor.idNumber, instructor);
+    // Tag with dataSource
+    const taggedInstructor = { ...instructor, _dataSource: 'database' as const };
+    dbInstructorMap.set(instructor.idNumber, taggedInstructor);
     dbInstructorNames.add(instructor.name);
   });
   
-  // Merge mock instructors, skipping duplicates by idNumber AND by name
-  // This prevents duplicate entries when DB and mockData have same person with different idNumbers
+  // Start with database instructors (already tagged)
   const merged = Array.from(dbInstructorMap.values());
   let skippedByIdNumber = 0;
   let skippedByName = 0;
   
-  mockInstructors.forEach((instructor: any) => {
-    if (dbInstructorMap.has(instructor.idNumber)) {
-      skippedByIdNumber++;
-      console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
-    } else if (dbInstructorNames.has(instructor.name)) {
-      skippedByName++;
-      console.log(`  ⏭️ Skipped mock instructor (name match): ${instructor.name}`);
-    } else {
-      merged.push(instructor);
-    }
-  });
+  // Only add mock instructors if includeMockData is true
+  if (includeMockData) {
+    mockInstructors.forEach((instructor: any) => {
+      if (dbInstructorMap.has(instructor.idNumber)) {
+        skippedByIdNumber++;
+        console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
+      } else if (dbInstructorNames.has(instructor.name)) {
+        skippedByName++;
+        console.log(`  ⏭️ Skipped mock instructor (name match): ${instructor.name}`);
+      } else {
+        // Tag with dataSource: 'mockdata'
+        merged.push({ ...instructor, _dataSource: 'mockdata' as const });
+      }
+    });
+  }
   
   console.log(`📊 MERGE SUMMARY:`);
   console.log(`  DB instructors after dedup: ${dbInstructorMap.size}`);
@@ -132,24 +140,37 @@ function assignTraineesToBurns(instructors: any[], trainees: any[]): void {
 }
 
 // Merge database trainees with mock data, deduplicating by name
-function mergeTraineeData(dbTrainees: any[], mockTrainees: any[]): any[] {
+// Adds _dataSource field to track origin ('database' or 'mockdata')
+function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockData: boolean): any[] {
   console.log('🔄 Merging trainee data...');
   console.log('  Database trainees:', dbTrainees.length);
   console.log('  Mock trainees:', mockTrainees.length);
+  console.log('  Include MockData:', includeMockData);
   
   // Create a map of database trainees by name for deduplication
+  // Tag each database record with _dataSource: 'database'
   const dbTraineeMap = new Map();
-  dbTrainees.forEach((trainee: any) => {
+  const taggedDbTrainees = dbTrainees.map((trainee: any) => ({
+    ...trainee,
+    _dataSource: 'database' as const
+  }));
+  
+  taggedDbTrainees.forEach((trainee: any) => {
     dbTraineeMap.set(trainee.name, trainee);
   });
   
-  // Merge mock trainees, skipping duplicates
-  const merged = [...dbTrainees];
-  mockTrainees.forEach((trainee: any) => {
-    if (!dbTraineeMap.has(trainee.name)) {
-      merged.push(trainee);
-    }
-  });
+  // Start with database trainees (already tagged)
+  const merged = [...taggedDbTrainees];
+  
+  // Only add mock trainees if includeMockData is true
+  if (includeMockData) {
+    mockTrainees.forEach((trainee: any) => {
+      if (!dbTraineeMap.has(trainee.name)) {
+        // Tag with dataSource: 'mockdata'
+        merged.push({ ...trainee, _dataSource: 'mockdata' as const });
+      }
+    });
+  }
   
   // Sort by name (alphabetical)
   merged.sort((a: any, b: any) => a.name.localeCompare(b.name));
@@ -219,9 +240,11 @@ export async function initializeData() {
            console.log('🚫 Staff Database disabled - skipping DB fetch');
          }
          // Merge with mock data only if staff toggle is ON
-         if (dataSourceSettings.staff !== false) {
-           console.log('🔄 Merging database + mock data for staff (MockData ON)');
-           instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+         // Merge with mock data only if staff toggle is ON
+         const includeStaffMockData = dataSourceSettings.staff !== false;
+         instructors = mergeInstructorData(instructors, ESL_DATA.instructors, includeStaffMockData);
+         if (includeStaffMockData) {
+           console.log('🔄 Merged database + mock data for staff');
          } else {
            console.log('🚫 Staff MockData disabled - using database only');
          }
@@ -236,9 +259,11 @@ export async function initializeData() {
            console.log('🚫 Trainee Database disabled - skipping DB fetch');
          }
          // Merge with mock data only if trainee toggle is ON
-         if (dataSourceSettings.trainee !== false) {
-           console.log('🔄 Merging database + mock data for trainees (MockData ON)');
-           trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+         // Merge with mock data only if trainee toggle is ON
+         const includeTraineeMockData = dataSourceSettings.trainee !== false;
+         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
+         if (includeTraineeMockData) {
+           console.log('🔄 Merged database + mock data for trainees');
          } else {
            console.log('🚫 Trainee MockData disabled - using database only');
          }

@@ -62258,85 +62258,23 @@ const StaffMockDataTable = ({ instructorsData, onDeleteFromMockdata }) => {
   }, void 0);
 };
 const StaffCombinedDataTable = ({ instructorsData }) => {
-  const [databaseStaff, setDatabaseStaff] = reactExports.useState([]);
   const [combinedData, setCombinedData] = reactExports.useState([]);
-  const [loading, setLoading] = reactExports.useState(true);
   const [deletingId, setDeletingId] = reactExports.useState(null);
   const [deletedIds, setDeletedIds] = reactExports.useState(/* @__PURE__ */ new Set());
-  reactExports.useEffect(() => {
-    const fetchDatabaseStaff = async () => {
-      try {
-        const response = await fetch("/api/personnel", {
-          credentials: "include"
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.personnel && Array.isArray(data.personnel)) {
-            const dbStaff = data.personnel.filter((p) => p.idNumber).map((p) => ({
-              idNumber: p.idNumber,
-              name: p.name,
-              rank: p.rank || "UNKNOWN",
-              role: p.role || "STAFF",
-              unit: p.unit || "Unassigned",
-              category: p.category || "UnCat",
-              isQFI: p.isQFI || false,
-              isOFI: p.isOFI || false,
-              isCFI: p.isCFI || false,
-              flight: p.flight || "",
-              location: p.location || "",
-              email: p.email || "",
-              phoneNumber: p.phoneNumber || "",
-              callsignNumber: p.callsignNumber || 0,
-              qualifications: p.qualifications || {},
-              availability: p.availability || {},
-              preferences: p.preferences || {},
-              isAdminStaff: p.isAdminStaff || false,
-              permissions: p.permissions || [],
-              currencyStatus: {}
-            }));
-            setDatabaseStaff(dbStaff);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching database staff:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDatabaseStaff();
-  }, []);
   reactExports.useEffect(() => {
     const allStaff = /* @__PURE__ */ new Map();
     instructorsData.forEach((instructor) => {
       if (!deletedIds.has(instructor.idNumber)) {
+        const dataSource = instructor._dataSource || "mockdata";
         allStaff.set(instructor.idNumber, {
           ...instructor,
-          dataSource: "mockdata"
-        });
-      }
-    });
-    databaseStaff.forEach((instructor) => {
-      if (!deletedIds.has(instructor.idNumber)) {
-        allStaff.set(instructor.idNumber, {
-          ...instructor,
-          dataSource: "database"
+          dataSource
         });
       }
     });
     const combined = Array.from(allStaff.values()).sort((a, b) => a.name.localeCompare(b.name));
     setCombinedData(combined);
-  }, [instructorsData, databaseStaff, deletedIds]);
-  if (loading) {
-    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400", children: "Loading combined staff data..." }, void 0, false, {
-      fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 111,
-      columnNumber: 17
-    }, void 0) }, void 0, false, {
-      fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 110,
-      columnNumber: 13
-    }, void 0);
-  }
+  }, [instructorsData, deletedIds]);
   const mockdataCount = combinedData.filter((s) => s.dataSource === "mockdata").length;
   const databaseCount = combinedData.filter((s) => s.dataSource === "database").length;
   const handleDelete = async (staff) => {
@@ -62349,7 +62287,6 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
         });
         if (response.ok) {
           console.log(`✓ Deleted ${staff.name} from database`);
-          setDatabaseStaff((prev) => prev.filter((s) => s.idNumber !== staff.idNumber));
           setDeletedIds((prev) => new Set(prev).add(staff.idNumber));
         } else {
           const error = await response.json();
@@ -62372,7 +62309,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-green-400", children: "Staff Combined Data" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 158,
+          lineNumber: 93,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-4", children: [
@@ -62381,7 +62318,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
             mockdataCount
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 160,
+            lineNumber: 95,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full", children: [
@@ -62389,7 +62326,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
             databaseCount
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 163,
+            lineNumber: 98,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-green-700 text-green-300 px-3 py-1 rounded-full", children: [
@@ -62397,168 +62334,168 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
             combinedData.length
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 166,
+            lineNumber: 101,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 159,
+          lineNumber: 94,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 157,
+        lineNumber: 92,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "Combined view of staff from both mockdata and database (database takes precedence)" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 171,
+        lineNumber: 106,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 156,
+      lineNumber: 91,
       columnNumber: 17
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-sm", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "bg-gray-700 sticky top-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "PMKEYS" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 180,
+          lineNumber: 115,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Name" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 183,
+          lineNumber: 118,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Rank" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 186,
+          lineNumber: 121,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Role" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 189,
+          lineNumber: 124,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Unit" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 192,
+          lineNumber: 127,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Category" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 195,
+          lineNumber: 130,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Flight" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 198,
+          lineNumber: 133,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "QFI" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 201,
+          lineNumber: 136,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "OFI" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 204,
+          lineNumber: 139,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Source" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 207,
+          lineNumber: 142,
           columnNumber: 33
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Actions" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 210,
+          lineNumber: 145,
           columnNumber: 33
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 179,
+        lineNumber: 114,
         columnNumber: 29
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 178,
+        lineNumber: 113,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: combinedData.map((staff) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-gray-700/50", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: staff.idNumber }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 218,
+          lineNumber: 153,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-white font-medium", children: staff.name }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 221,
+          lineNumber: 156,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.rank }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 224,
+          lineNumber: 159,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-1 text-xs font-medium rounded ${staff.role === "QFI" ? "bg-sky-900/50 text-sky-300" : staff.role === "OFI" ? "bg-purple-900/50 text-purple-300" : staff.role === "SIM IP" ? "bg-teal-900/50 text-teal-300" : "bg-gray-700 text-gray-300"}`, children: staff.role }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 228,
+          lineNumber: 163,
           columnNumber: 41
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 227,
+          lineNumber: 162,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.unit }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 237,
+          lineNumber: 172,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.category }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 240,
+          lineNumber: 175,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: staff.flight || "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 243,
+          lineNumber: 178,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: staff.isQFI ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: "✓" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 248,
+          lineNumber: 183,
           columnNumber: 45
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 250,
+          lineNumber: 185,
           columnNumber: 45
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 246,
+          lineNumber: 181,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: staff.isOFI ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-purple-400", children: "✓" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 255,
+          lineNumber: 190,
           columnNumber: 45
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 257,
+          lineNumber: 192,
           columnNumber: 45
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 253,
+          lineNumber: 188,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-1 text-xs font-medium rounded ${staff.dataSource === "database" ? "bg-purple-900/50 text-purple-300" : "bg-sky-900/50 text-sky-300"}`, children: staff.dataSource === "database" ? "Database" : "Mockdata" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 261,
+          lineNumber: 196,
           columnNumber: 41
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 260,
+          lineNumber: 195,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -62582,40 +62519,40 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-            lineNumber: 270,
+            lineNumber: 205,
             columnNumber: 41
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-          lineNumber: 269,
+          lineNumber: 204,
           columnNumber: 37
         }, void 0)
       ] }, staff.idNumber, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 217,
+        lineNumber: 152,
         columnNumber: 33
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-        lineNumber: 215,
+        lineNumber: 150,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 177,
+      lineNumber: 112,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-      lineNumber: 176,
+      lineNumber: 111,
       columnNumber: 17
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-    lineNumber: 155,
+    lineNumber: 90,
     columnNumber: 13
   }, void 0) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffCombinedDataTable.tsx",
-    lineNumber: 154,
+    lineNumber: 89,
     columnNumber: 9
   }, void 0);
 };
@@ -76865,10 +76802,11 @@ async function fetchSchedule(startDate, endDate) {
   }
   return [];
 }
-function mergeInstructorData(dbInstructors, mockInstructors) {
+function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   console.log("🔄 Merging instructor data...");
   console.log("  Database instructors:", dbInstructors.length);
   console.log("  Mock instructors:", mockInstructors.length);
+  console.log("  Include MockData:", includeMockData);
   console.log("📊 DB INSTRUCTOR DETAILS:");
   dbInstructors.forEach((inst) => {
     console.log(`  DB: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit} | role: ${inst.role} | isQFI: ${inst.isQFI}`);
@@ -76888,23 +76826,26 @@ function mergeInstructorData(dbInstructors, mockInstructors) {
     if (dbInstructorMap.has(instructor.idNumber)) {
       console.log(`  ⚠️ DUPLICATE IDNUMBER: ${instructor.idNumber} - ${instructor.name} overwrites ${dbInstructorMap.get(instructor.idNumber).name}`);
     }
-    dbInstructorMap.set(instructor.idNumber, instructor);
+    const taggedInstructor = { ...instructor, _dataSource: "database" };
+    dbInstructorMap.set(instructor.idNumber, taggedInstructor);
     dbInstructorNames.add(instructor.name);
   });
   const merged = Array.from(dbInstructorMap.values());
   let skippedByIdNumber = 0;
   let skippedByName = 0;
-  mockInstructors.forEach((instructor) => {
-    if (dbInstructorMap.has(instructor.idNumber)) {
-      skippedByIdNumber++;
-      console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
-    } else if (dbInstructorNames.has(instructor.name)) {
-      skippedByName++;
-      console.log(`  ⏭️ Skipped mock instructor (name match): ${instructor.name}`);
-    } else {
-      merged.push(instructor);
-    }
-  });
+  if (includeMockData) {
+    mockInstructors.forEach((instructor) => {
+      if (dbInstructorMap.has(instructor.idNumber)) {
+        skippedByIdNumber++;
+        console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
+      } else if (dbInstructorNames.has(instructor.name)) {
+        skippedByName++;
+        console.log(`  ⏭️ Skipped mock instructor (name match): ${instructor.name}`);
+      } else {
+        merged.push({ ...instructor, _dataSource: "mockdata" });
+      }
+    });
+  }
   console.log(`📊 MERGE SUMMARY:`);
   console.log(`  DB instructors after dedup: ${dbInstructorMap.size}`);
   console.log(`  Mock instructors skipped (idNumber): ${skippedByIdNumber}`);
@@ -76956,20 +76897,27 @@ function assignTraineesToBurns(instructors, trainees) {
     console.log("  Assigned secondary:", trainee.name, "→", burns.name);
   });
 }
-function mergeTraineeData(dbTrainees, mockTrainees) {
+function mergeTraineeData(dbTrainees, mockTrainees, includeMockData) {
   console.log("🔄 Merging trainee data...");
   console.log("  Database trainees:", dbTrainees.length);
   console.log("  Mock trainees:", mockTrainees.length);
+  console.log("  Include MockData:", includeMockData);
   const dbTraineeMap = /* @__PURE__ */ new Map();
-  dbTrainees.forEach((trainee) => {
+  const taggedDbTrainees = dbTrainees.map((trainee) => ({
+    ...trainee,
+    _dataSource: "database"
+  }));
+  taggedDbTrainees.forEach((trainee) => {
     dbTraineeMap.set(trainee.name, trainee);
   });
-  const merged = [...dbTrainees];
-  mockTrainees.forEach((trainee) => {
-    if (!dbTraineeMap.has(trainee.name)) {
-      merged.push(trainee);
-    }
-  });
+  const merged = [...taggedDbTrainees];
+  if (includeMockData) {
+    mockTrainees.forEach((trainee) => {
+      if (!dbTraineeMap.has(trainee.name)) {
+        merged.push({ ...trainee, _dataSource: "mockdata" });
+      }
+    });
+  }
   merged.sort((a, b) => a.name.localeCompare(b.name));
   console.log("  Merged result:", merged.length, "trainees");
   return merged;
@@ -77023,9 +76971,10 @@ async function initializeData() {
     } else {
       console.log("🚫 Staff Database disabled - skipping DB fetch");
     }
-    if (dataSourceSettings.staff !== false) {
-      console.log("🔄 Merging database + mock data for staff (MockData ON)");
-      instructors = mergeInstructorData(instructors, ESL_DATA.instructors);
+    const includeStaffMockData = dataSourceSettings.staff !== false;
+    instructors = mergeInstructorData(instructors, ESL_DATA.instructors, includeStaffMockData);
+    if (includeStaffMockData) {
+      console.log("🔄 Merged database + mock data for staff");
     } else {
       console.log("🚫 Staff MockData disabled - using database only");
     }
@@ -77036,9 +76985,10 @@ async function initializeData() {
     } else {
       console.log("🚫 Trainee Database disabled - skipping DB fetch");
     }
-    if (dataSourceSettings.trainee !== false) {
-      console.log("🔄 Merging database + mock data for trainees (MockData ON)");
-      trainees = mergeTraineeData(trainees, ESL_DATA.trainees);
+    const includeTraineeMockData = dataSourceSettings.trainee !== false;
+    trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
+    if (includeTraineeMockData) {
+      console.log("🔄 Merged database + mock data for trainees");
     } else {
       console.log("🚫 Trainee MockData disabled - using database only");
     }
@@ -85945,4 +85895,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-Bohnuo-b.js.map
+//# sourceMappingURL=index-BEFD9LU-.js.map

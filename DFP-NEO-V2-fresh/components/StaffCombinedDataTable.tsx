@@ -17,83 +17,27 @@ interface CombinedStaffRecord {
     isQFI: boolean;
     isOFI: boolean;
     dataSource: 'mockdata' | 'database';
+    _dataSource?: 'mockdata' | 'database'; // Added by dataService.ts
 }
 
 const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instructorsData }) => {
-    const [databaseStaff, setDatabaseStaff] = useState<Instructor[]>([]);
     const [combinedData, setCombinedData] = useState<CombinedStaffRecord[]>([]);
-    const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
-        const fetchDatabaseStaff = async () => {
-            try {
-                const response = await fetch('/api/personnel', {
-                    credentials: 'include',
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.personnel && Array.isArray(data.personnel)) {
-                        const dbStaff: Instructor[] = data.personnel
-                            .filter(p => p.idNumber)
-                            .map(p => ({
-                                idNumber: p.idNumber,
-                                name: p.name,
-                                rank: p.rank || 'UNKNOWN',
-                                role: p.role || 'STAFF',
-                                unit: p.unit || 'Unassigned',
-                                category: p.category || 'UnCat',
-                                isQFI: p.isQFI || false,
-                                isOFI: p.isOFI || false,
-                                isCFI: p.isCFI || false,
-                                flight: p.flight || '',
-                                location: p.location || '',
-                                email: p.email || '',
-                                phoneNumber: p.phoneNumber || '',
-                                callsignNumber: p.callsignNumber || 0,
-                                qualifications: p.qualifications || {},
-                                availability: p.availability || {},
-                                preferences: p.preferences || {},
-                                isAdminStaff: p.isAdminStaff || false,
-                                permissions: p.permissions || [],
-                                currencyStatus: {},
-                            }));
-                        
-                        setDatabaseStaff(dbStaff);
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching database staff:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchDatabaseStaff();
-    }, []);
-
-    useEffect(() => {
-        // Combine mockdata and database staff
+        // Use instructorsData which already has _dataSource field from dataService.ts
+        // This respects the Data Sources settings (mockdata on/off)
         const allStaff = new Map<number, CombinedStaffRecord>();
         
-        // Add mockdata staff (skip deleted ones)
+        // Add staff from instructorsData (which is already merged and tagged)
         instructorsData.forEach(instructor => {
             if (!deletedIds.has(instructor.idNumber)) {
+                // Use _dataSource field if present, otherwise default to 'mockdata'
+                const dataSource = (instructor as any)._dataSource || 'mockdata';
                 allStaff.set(instructor.idNumber, {
                     ...instructor,
-                    dataSource: 'mockdata'
-                });
-            }
-        });
-        
-        // Add or update with database staff (skip deleted ones)
-        databaseStaff.forEach(instructor => {
-            if (!deletedIds.has(instructor.idNumber)) {
-                allStaff.set(instructor.idNumber, {
-                    ...instructor,
-                    dataSource: 'database'
+                    dataSource: dataSource
                 });
             }
         });
@@ -103,15 +47,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
             .sort((a, b) => a.name.localeCompare(b.name));
         
         setCombinedData(combined);
-    }, [instructorsData, databaseStaff, deletedIds]);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <div className="text-gray-400">Loading combined staff data...</div>
-            </div>
-        );
-    }
+    }, [instructorsData, deletedIds]);
 
     const mockdataCount = combinedData.filter(s => s.dataSource === 'mockdata').length;
     const databaseCount = combinedData.filter(s => s.dataSource === 'database').length;
@@ -129,8 +65,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                 
                 if (response.ok) {
                     console.log(`✓ Deleted ${staff.name} from database`);
-                    // Update local state - remove from database, add to deletedIds
-                    setDatabaseStaff(prev => prev.filter(s => s.idNumber !== staff.idNumber));
+                    // Add to deletedIds to remove from view
                     setDeletedIds(prev => new Set(prev).add(staff.idNumber));
                 } else {
                     const error = await response.json();
