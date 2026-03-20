@@ -356,6 +356,13 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// GET /api/version - returns the active git commit hash from Railway environment
+app.get('/api/version', (req, res) => {
+  const commit = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT || process.env.COMMIT_SHA || 'unknown';
+  const shortCommit = commit.length > 7 ? commit.substring(0, 7) : commit;
+  res.json({ commit: shortCommit, full: commit });
+});
+
 // ============================================================
 // SERVE STATIC VITE BUILD
 // ============================================================
