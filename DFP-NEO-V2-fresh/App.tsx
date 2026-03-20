@@ -701,7 +701,7 @@ interface BuildAnalysis {
 
 // Helper function to count possible events per course
 function countPossibleEvents(
-    traineesData: Trainee[],
+    allTraineesData: Trainee[],
     coursePriorities: string[],
     traineeLMPs: Map<string, LMP[]>,
     scores: Map<string, Score[]>,
@@ -717,7 +717,7 @@ function countPossibleEvents(
     });
     
     // Count trainees with next events per course
-    const activeTrainees = traineesData.filter(t => !t.isPaused);
+    const activeTrainees = allTraineesData.filter(t => !t.isPaused);
     
     activeTrainees.forEach(trainee => {
         if (!coursePriorities.includes(trainee.course)) return;
@@ -754,7 +754,7 @@ function analyzeBuildResults(
     coursePriorities: string[],
     availableAircraft: number,
     buildDate: string,
-    traineesData: Trainee[],
+    allTraineesData: Trainee[],
     traineeLMPs: Map<string, LMP[]>,
     scores: Map<string, Score[]>,
     syllabusDetails: SyllabusDetail[],
@@ -792,7 +792,7 @@ function analyzeBuildResults(
     });
     
     scheduledEvents.forEach(event => {
-        const trainee = traineesData.find(t => t.fullName === event.student || t.fullName === event.pilot);
+        const trainee = allTraineesData.find(t => t.fullName === event.student || t.fullName === event.pilot);
         if (trainee && coursePriorities.includes(trainee.course)) {
             const course = trainee.course;
             courseEventCounts.set(course, (courseEventCounts.get(course) || 0) + 1);
@@ -808,7 +808,7 @@ function analyzeBuildResults(
     // Build course analysis
     // Count possible events per course
     const possibleEventCounts = countPossibleEvents(
-        traineesData,
+        allTraineesData,
         coursePriorities,
         traineeLMPs,
         scores,
@@ -3209,9 +3209,9 @@ const App: React.FC = () => {
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
-    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+    const [allInstructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
     
-    // Monitor instructorsData for duplicates
+    // Monitor allInstructorsData for duplicates
     useEffect(() => {
         const instructorIds = new Map();
         const duplicates: any[] = [];
@@ -3223,13 +3223,13 @@ const App: React.FC = () => {
         });
         
         if (duplicates.length > 0) {
-            console.error('🔴 DUPLICATES FOUND IN instructorsData STATE:', duplicates.length);
+            console.error('🔴 DUPLICATES FOUND IN allInstructorsData STATE:', duplicates.length);
             console.error('Duplicate details:', duplicates);
             console.error('All Burns entries in state:', instructorsData.filter((i: any) => i.name.includes('Burns')));
         } else {
-            console.log('🟢 instructorsData state is clean - no duplicates');
+            console.log('🟢 allInstructorsData state is clean - no duplicates');
         }
-    }, [instructorsData]);
+    }, [allInstructorsData]);
 
 // DATA TRACKING: Initial data load
 useEffect(() => {
@@ -3239,25 +3239,25 @@ useEffect(() => {
 }, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+    const [allTraineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
     const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
-    const filteredInstructorsData = (() => {
+    const instructorsData = (() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
         if (!mockOn && !dbOn) return [];                                                         // Both OFF → empty
-        if (mockOn && dbOn) return instructorsData;                                              // Both ON → all
+        if (mockOn && dbOn) return allInstructorsData;                                              // Both ON → all
         if (mockOn && !dbOn) return instructorsData.filter(i => (i as any)._dataSource !== 'database');  // Mock only
         return instructorsData.filter(i => (i as any)._dataSource === 'database');               // DB only
     })();
 
-    const filteredTraineesData = (() => {
+    const traineesData = (() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
         if (!mockOn && !dbOn) return [];                                                          // Both OFF → empty
-        if (mockOn && dbOn) return traineesData;                                                  // Both ON → all
-        if (mockOn && !dbOn) return traineesData.filter(t => (t as any)._dataSource !== 'database'); // Mock only
-        return traineesData.filter(t => (t as any)._dataSource === 'database');                   // DB only
+        if (mockOn && dbOn) return allTraineesData;                                                  // Both ON → all
+        if (mockOn && !dbOn) return allTraineesData.filter(t => (t as any)._dataSource !== 'database'); // Mock only
+        return allTraineesData.filter(t => (t as any)._dataSource === 'database');                   // DB only
     })();
     
     // ============================================================
@@ -4727,7 +4727,7 @@ useEffect(() => {
             }
         });
         return data;
-    }, [instructorsData, school]);
+    }, [allInstructorsData, school]);
 
     const seatConfigs = useMemo(() => {
         const data = new Map<string, string>();
@@ -4738,14 +4738,14 @@ useEffect(() => {
             }
         });
         
-        traineesData.forEach(trainee => {
+        allTraineesData.forEach(trainee => {
             if (trainee.name && trainee.seatConfig) {
                 data.set(trainee.name, trainee.seatConfig);
             }
         });
         
         return data;
-    }, [instructorsData, traineesData]);
+    }, [allInstructorsData, allTraineesData]);
 
     // ============================================================================
     // CONFLICT DETECTION SYSTEM
@@ -5242,7 +5242,7 @@ useEffect(() => {
      */
     const unavailabilityConflicts = useMemo(() => {
         const newConflicts = new Map<string, string[]>();
-        const allPersonnel: (Instructor | Trainee)[] = [...instructorsData, ...traineesData];
+        const allPersonnel: (Instructor | Trainee)[] = [...allInstructorsData, ...allTraineesData];
         const personMap = new Map<string, Instructor | Trainee>();
         
         allPersonnel.forEach(p => {
@@ -5310,7 +5310,7 @@ useEffect(() => {
         }
         
         return newConflicts;
-    }, [eventsForDate, instructorsData, traineesData, syllabusDetails]);
+    }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
 
 
 
@@ -6087,7 +6087,7 @@ useEffect(() => {
                 } else if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
                     // Handle group events - add currency to all trainees in the group
                     event.groupTraineeIds.forEach(traineeId => {
-                        const trainee = traineesData.find(t => t.idNumber === traineeId);
+                        const trainee = allTraineesData.find(t => t.idNumber === traineeId);
                         if (trainee) {
                             addCurrencyEventToTraineeLMP(trainee.fullName, event.flightNumber);
                         }
@@ -6381,7 +6381,7 @@ useEffect(() => {
                 console.log('🔄 Updated HIGH priority SCT flight:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
-                const trainee = traineesData.find(t => t.fullName === sctReq.name);
+                const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = syllabusItem?.duration || 1.5;
                 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
@@ -6458,7 +6458,7 @@ useEffect(() => {
                 console.log('🔄 Updated HIGH priority SCT FTD:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
-                const trainee = traineesData.find(t => t.fullName === sctReq.name);
+                const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = syllabusItem?.duration || 1.5;
                 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
@@ -6516,7 +6516,7 @@ useEffect(() => {
                     console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
                 } else if (!existingEvent) {
                     // For remedial events, look in the trainee's Individual LMP first, then fallback to master syllabus
-                    const trainee = traineesData.find(t => t.idNumber === remedialReq.traineeId);
+                    const trainee = allTraineesData.find(t => t.idNumber === remedialReq.traineeId);
                     let syllabusItem = null;
                     
                     if (trainee) {
@@ -6816,7 +6816,7 @@ useEffect(() => {
     };
 
     const handleSelectTraineeFromSchedule = (traineeFullName: string) => {
-        const trainee = traineesData.find(t => t.fullName === traineeFullName);
+        const trainee = allTraineesData.find(t => t.fullName === traineeFullName);
         if (trainee) {
             setSelectedPersonForProfile(trainee);
             handleNavigation('CourseRoster');
@@ -6889,7 +6889,7 @@ useEffect(() => {
         console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
         
         // Now proceed with normal build process
-        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
@@ -6956,7 +6956,7 @@ useEffect(() => {
         
         const config: DfpConfig = {
             instructors: instructorsData,
-            trainees: traineesData,
+            trainees: allTraineesData,
             syllabus: syllabusDetails,
             scores,
             coursePriorities,
@@ -7017,7 +7017,7 @@ useEffect(() => {
                     coursePriorities,
                     availableAircraftCount,
                     buildDfpDate,
-                    traineesData,
+                    allTraineesData,
                     traineeLMPs,
                     scores,
                     syllabusDetails,
@@ -7040,7 +7040,7 @@ useEffect(() => {
                 console.log('Build analysis:', analysis);
 
                 const notifications: string[] = [];
-                const allPersonnel = [...instructorsData, ...traineesData];
+                const allPersonnel = [...allInstructorsData, ...allTraineesData];
                 generated.forEach(event => {
                     getPersonnel(event).forEach(personName => {
                         const person = allPersonnel.find(p => p.name === personName || ('fullName' in p && p.fullName === personName));
@@ -7386,14 +7386,14 @@ updates.forEach(update => {
 
     const allTraineesByCourse = useMemo(() => {
         const groups: { [course: string]: Trainee[] } = {};
-        traineesData.forEach(trainee => {
+        allTraineesData.forEach(trainee => {
             if (!groups[trainee.course]) {
                 groups[trainee.course] = [];
             }
             groups[trainee.course].push(trainee);
         });
         return groups;
-    }, [traineesData]);
+    }, [allTraineesData]);
 
     const handleSaveGroundEvent = (data: any) => {
         const syllabusItem = syllabusDetails.find(s => s.code === data.flightNumber);
@@ -7428,7 +7428,7 @@ updates.forEach(update => {
         const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
         const conflictedSyllabusId = conflictedEvent.flightNumber;
     
-        const otherTrainees = traineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
+        const otherTrainees = allTraineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
     
         for (const trainee of otherTrainees) {
             // 1. Check if their next event matches
@@ -7478,7 +7478,7 @@ updates.forEach(update => {
     
         // Sort by most needy (longest since last flight)
         return suggestions.sort((a, b) => b.trainee.daysSinceLastFlight - a.trainee.daysSinceLastFlight);
-    }, [traineesData, syllabusDetails, traineeLMPs, scores]);
+    }, [allTraineesData, syllabusDetails, traineeLMPs, scores]);
     
     const generateInstructorRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
         const suggestions: NeoInstructorRemedy[] = [];
@@ -7543,7 +7543,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails]);
+    }, [allInstructorsData, syllabusDetails]);
     
     // Generate pilot remedies for SCT events
     const generatePilotRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
@@ -7551,7 +7551,7 @@ updates.forEach(update => {
         console.log('🔍 generatePilotRemediesAtTime called for:', conflictedEvent.flightNumber, 'at time:', atTime);
         
         // Get all qualified pilots (instructors who can fly as PIC)
-        console.log('🔍 [PILOT REMEDIES DEBUG] Input instructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         console.log('🔍 [PILOT REMEDIES DEBUG] School:', school);
         
         // Filter by location first
@@ -7625,7 +7625,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails]);
+    }, [allInstructorsData, syllabusDetails]);
     
     // --- New Iterative Turnaround Fix ---
     const findClosestTurnaroundFix = (
@@ -7690,7 +7690,7 @@ updates.forEach(update => {
 
             const originalCrew = getPersonnel(problemEvent);
             for (const personName of originalCrew) {
-                const person = [...instructorsData, ...traineesData].find(p => ('fullName' in p ? p.fullName : p.name) === personName);
+                const person = [...allInstructorsData, ...allTraineesData].find(p => ('fullName' in p ? p.fullName : p.name) === personName);
                 if (!person) continue;
 
                 if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type as any)) return false;
@@ -7963,7 +7963,7 @@ updates.forEach(update => {
         // Check for static unavailability for all personnel
         const eventWindow = getEventBookingWindow(event, syllabusDetails);
         const personnel = getPersonnel(event);
-        const allPersonnelData = [...instructorsData, ...traineesData];
+        const allPersonnelData = [...allInstructorsData, ...allTraineesData];
         personnel.forEach(name => {
             const person = allPersonnelData.find(p => ('fullName' in p ? p.fullName : p.name) === name);
             if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type as any)) {
@@ -8264,7 +8264,7 @@ updates.forEach(update => {
         });
 
         
-        const traineesAnalysis: OracleTraineeAnalysis[] = traineesData.map(trainee => {
+        const traineesAnalysis: OracleTraineeAnalysis[] = allTraineesData.map(trainee => {
             const events = currentEvents.filter(e => getPersonnel(e).includes(trainee.fullName));
             
             // Count events by type for the analysis date
@@ -8327,7 +8327,7 @@ updates.forEach(update => {
         const eligibleCount = traineesAnalysis.filter(t => t.isEligible).length;
         
         setOracleAnalysis({ instructors: instructorsAnalysis, trainees: traineesAnalysis });
-    }, [instructorsData, traineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
+    }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
 
     const handleToggleOracleMode = useCallback(() => {
         const isNextDay = ['NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'Priorities', 'ProgramData'].includes(activeView);
@@ -8573,7 +8573,7 @@ updates.forEach(update => {
                            events={eventSegmentsForDate}
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
-                           traineesData={filteredTraineesData}
+                           allTraineesData={traineesData}
                            timezoneOffset={timezoneOffset}
                            airframeCount={24}
                            standbyCount={4}
@@ -8725,7 +8725,7 @@ updates.forEach(update => {
                             date={date}
                             onDateChange={handleDateChange}
                             events={eventsForStaffTraineeSchedule}
-                            trainees={[...traineesData]
+                            trainees={[...allTraineesData]
                                 .sort((a, b) => {
                                     // First sort by course
                                     if (a.course !== b.course) {
@@ -8736,7 +8736,7 @@ updates.forEach(update => {
                                 })
                                 .map(t => t.fullName)
                             }
-                            traineesData={filteredTraineesData}
+                            allTraineesData={traineesData}
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             zoomLevel={zoomLevel}
@@ -8764,7 +8764,7 @@ updates.forEach(update => {
                 
                 console.log('🔍 STAFF SCHEDULE - Location filtering applied');
                 console.log('🔍 School:', school);
-                console.log('🔍 Total instructors:', instructorsData?.length);
+                console.log('👁 Total instructors:', instructorsData?.length);
                 console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
                 console.log('🔍 Filtered instructor units:', locationFilteredInstructorsForSchedule.map(i => i.unit));
                 
@@ -8774,8 +8774,8 @@ updates.forEach(update => {
                       onDateChange={handleDateChange}
                       events={eventSegmentsForDate}
                       instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
-                      instructorsData={locationFilteredInstructorsForSchedule}
-                      traineesData={filteredTraineesData}
+                      allInstructorsData={locationFilteredInstructorsForSchedule}
+                      allTraineesData={traineesData}
                       onSelectEvent={handleOpenModal}
                       onUpdateEvent={handleScheduleUpdate}
                       zoomLevel={zoomLevel}
@@ -8797,7 +8797,7 @@ updates.forEach(update => {
                 return <NextDayInstructorScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
                     instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
-                    traineesData={filteredTraineesData}
+                    allTraineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}
@@ -8814,8 +8814,8 @@ updates.forEach(update => {
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    trainees={traineesData.map(t => t.fullName)}
-                    traineesData={filteredTraineesData}
+                    trainees={allTraineesData.map(t => t.fullName)}
+                    allTraineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}
@@ -8833,7 +8833,7 @@ updates.forEach(update => {
             case 'Trainee':
                 return <TraineeView
                             events={events}
-                            traineesData={filteredTraineesData}
+                            allTraineesData={traineesData}
                             courseColors={courseColors}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
@@ -8843,7 +8843,7 @@ updates.forEach(update => {
                             }}
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={(data) => {
-                                const isNewTrainee = !traineesData.find(t => t.idNumber === data.idNumber);
+                                const isNewTrainee = !allTraineesData.find(t => t.idNumber === data.idNumber);
                                 
                                 if (isNewTrainee) {
                                     // Initialize Individual LMP for new trainee
@@ -8968,7 +8968,7 @@ updates.forEach(update => {
             case 'CourseRoster':
                 return <CourseRosterView 
                             events={events}
-                            traineesData={filteredTraineesData}
+                            allTraineesData={traineesData}
                             courseColors={courseColors}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
@@ -8978,7 +8978,7 @@ updates.forEach(update => {
                             }}
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={(data) => {
-                                const isNewTrainee = !traineesData.find(t => t.idNumber === data.idNumber);
+                                const isNewTrainee = !allTraineesData.find(t => t.idNumber === data.idNumber);
                                 
                                 if (isNewTrainee) {
                                     // Initialize Individual LMP for new trainee
@@ -9240,7 +9240,7 @@ updates.forEach(update => {
                             events={nextDayEventSegments}
                             resources={buildResources}
                             instructors={instructorsData.map(i => i.name)}
-                            traineesData={filteredTraineesData}
+                            allTraineesData={traineesData}
                             airframeCount={24}
                             standbyCount={4}
                             ftdCount={availableFtdCount}
@@ -9317,8 +9317,8 @@ updates.forEach(update => {
                     onUpdateCommenceNightFlying={setCommenceNightFlying}
                     ceaseNightFlying={ceaseNightFlying}
                     onUpdateCeaseNightFlying={setCeaseNightFlying}
-                    instructorsData={filteredInstructorsData}
-                    traineesData={filteredTraineesData}
+                    allInstructorsData={instructorsData}
+                    allTraineesData={traineesData}
                     buildDfpDate={buildDfpDate}
                     highestPriorityEvents={highestPriorityEvents}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
@@ -9483,7 +9483,7 @@ updates.forEach(update => {
             case 'CourseProgress':
                 return <CourseProgressView
                             courses={courses}
-                            traineesData={filteredTraineesData}
+                            allTraineesData={traineesData}
                             courseColors={courseColors}
                             scores={scores}
                             traineeLMPs={traineeLMPs}
@@ -9499,8 +9499,8 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
-                    traineesData={filteredTraineesData}
-                    instructorsData={filteredInstructorsData}
+                    allTraineesData={traineesData}
+                    allInstructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}
                     archivedInstructorsData={archivedInstructorsData}
                     events={events}
@@ -9521,11 +9521,11 @@ updates.forEach(update => {
                  return <BuildIntelligenceView
                             date={buildDfpDate}
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
-                            instructorsData={filteredInstructorsData}
-                            traineesData={filteredTraineesData}
+                            allInstructorsData={instructorsData}
+                            allTraineesData={traineesData}
                             activeCourses={coursePriorities}
                             onNavigateAndSelectPerson={(name) => {
-                                const person = [...instructorsData, ...traineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
+                                const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
                                 if (person) {
                                     if ('role' in person) handleSelectInstructorFromSchedule(name);
                                     else handleSelectTraineeFromSchedule(name);
@@ -9566,7 +9566,7 @@ updates.forEach(update => {
                                 console.log('Found event:', event);
                                 
                                 // Find the trainee
-                                const trainee = traineesData.find(t => t.fullName === assessment.traineeFullName);
+                                const trainee = allTraineesData.find(t => t.fullName === assessment.traineeFullName);
                                 console.log('Found trainee:', trainee);
                                 
                                 if (event && trainee) {
@@ -9586,7 +9586,7 @@ updates.forEach(update => {
                                         traineeFound: !!trainee,
                                         searchingForEventId: assessment.eventId,
                                         availableEventIds: allPublishedEvents.map(e => e.id).slice(0, 10),
-                                        availableTrainees: traineesData.map(t => t.fullName).slice(0, 10),
+                                        availableTrainees: allTraineesData.map(t => t.fullName).slice(0, 10),
                                         eventsForSameFlightNumber: allPublishedEvents.filter(e => e.flightNumber === assessment.flightNumber).map(e => ({id: e.id, date: e.date, instructor: e.instructor}))
                                     });
                                     
@@ -9687,8 +9687,8 @@ updates.forEach(update => {
                         />;
             case 'SupervisorDashboard':
                 return <SupervisorDashboard
-                            instructorsData={filteredInstructorsData}
-                            traineesData={filteredTraineesData}
+                            allInstructorsData={instructorsData}
+                            allTraineesData={traineesData}
                             date={date}
                             events={eventsForDate}
                             onNavigate={handleNavigation}
@@ -9703,8 +9703,8 @@ updates.forEach(update => {
                 return <StaffView
                             onClose={() => handleNavigation('Program Schedule')}
                             events={events}
-                            traineesData={filteredTraineesData}
-                            instructorsData={filteredInstructorsData}
+                            allTraineesData={traineesData}
+                            allInstructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
                             school={school}
                             personnelData={personnelData}
@@ -9797,8 +9797,8 @@ updates.forEach(update => {
                 return <InstructorListView 
                             onClose={() => handleNavigation('Program Schedule')}
                             events={events}
-                            traineesData={filteredTraineesData}
-                            instructorsData={filteredInstructorsData}
+                            allTraineesData={traineesData}
+                            allInstructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
                             school={school}
                             personnelData={personnelData}
@@ -9883,8 +9883,8 @@ updates.forEach(update => {
                     return <TraineeListView 
                                 onClose={() => handleNavigation('Program Schedule')}
                                 events={events}
-                                traineesData={filteredTraineesData}
-                                instructorsData={filteredInstructorsData}
+                                allTraineesData={traineesData}
+                                allInstructorsData={instructorsData}
                                 archivedTraineesData={archivedTraineesData}
                                 school={school}
                                 personnelData={personnelData}
@@ -9900,7 +9900,7 @@ updates.forEach(update => {
                                 onNavigateToCurrency={handleNavigateToCurrency}
                                 onBulkUpdateTrainees={handleBulkUpdateTrainees}
                                 onArchiveTrainee={(id) => {
-                                    const trainee = traineesData.find(t => t.idNumber === id);
+                                    const trainee = allTraineesData.find(t => t.idNumber === id);
                                     if (trainee) {
                                         setArchivedTraineesData(prev => [...prev, trainee]);
                                         setTraineesData(prev => prev.filter(t => t.idNumber !== id));
@@ -9996,8 +9996,8 @@ updates.forEach(update => {
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
-                    instructorsData={filteredInstructorsData}
-                    traineesData={filteredTraineesData}
+                    allInstructorsData={instructorsData}
+                    allTraineesData={traineesData}
                     onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
                     syllabusDetails={syllabusDetails}
                     onBulkUpdateInstructors={handleBulkUpdateInstructors}
@@ -10188,8 +10188,8 @@ updates.forEach(update => {
                                     setSuccessMessage('Post-flight data saved!');
                                 }}
                                 school={school}
-                                traineesData={filteredTraineesData}
-                                instructorsData={filteredInstructorsData}
+                                allTraineesData={traineesData}
+                                allInstructorsData={instructorsData}
                            />;
                 }
                 return null;
@@ -10341,7 +10341,7 @@ updates.forEach(update => {
                     onDeleteRequest={handleDeleteEvent}
                     isEditingDefault={isEditingDefault}
                     instructors={instructorsData.map(i => i.name)}
-                    trainees={traineesData.map(t => t.fullName)}
+                    trainees={allTraineesData.map(t => t.fullName)}
                     syllabus={(() => {
                         console.log('addTileSyllabusOptions length:', addTileSyllabusOptions.length);
                         console.log('syllabusForModal length:', syllabusForModal.length);
@@ -10350,8 +10350,8 @@ updates.forEach(update => {
                     syllabusDetails={syllabusDetails}
                     highlightedField={highlightedField}
                     school={school}
-                    traineesData={filteredTraineesData}
-                    instructorsData={filteredInstructorsData}
+                    allTraineesData={traineesData}
+                    allInstructorsData={instructorsData}
                     courseColors={courseColors}
                     eventsForDate={eventsForDate}
                     onNavigateToHateSheet={(trainee) => {
@@ -10540,7 +10540,7 @@ updates.forEach(update => {
                     activeCourses={courseColors}
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
-                    traineesData={filteredTraineesData}
+                    allTraineesData={traineesData}
                 />
             )}
             {showAuthFlyout && eventForAuth && 
@@ -10593,7 +10593,7 @@ updates.forEach(update => {
                     onClose={() => setShowUnavailabilityReport(false)}
                     date={date}
                     instructors={instructorsData}
-                    trainees={traineesData}
+                    trainees={allTraineesData}
                     events={eventsForDate}
                 />
             )}

@@ -77711,12 +77711,12 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   }
   return { next: nextEvt, plusOne: plusOneEvt };
 };
-function countPossibleEvents(traineesData, coursePriorities, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate) {
+function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate) {
   const possibleEventCounts = /* @__PURE__ */ new Map();
   coursePriorities.forEach((course) => {
     possibleEventCounts.set(course, 0);
   });
-  const activeTrainees = traineesData.filter((t) => !t.isPaused);
+  const activeTrainees = allTraineesData.filter((t) => !t.isPaused);
   activeTrainees.forEach((trainee) => {
     if (!coursePriorities.includes(trainee.course)) return;
     const { next, plusOne } = computeNextEventsForTrainee(
@@ -77738,7 +77738,7 @@ function countPossibleEvents(traineesData, coursePriorities, traineeLMPs, scores
   });
   return possibleEventCounts;
 }
-function analyzeBuildResults(events, coursePercentages, coursePriorities, availableAircraft, buildDate, traineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
+function analyzeBuildResults(events, coursePercentages, coursePriorities, availableAircraft, buildDate, allTraineesData, traineeLMPs, scores, syllabusDetails, publishedSchedules) {
   const scheduledEvents = events.filter(
     (e) => !e.flightNumber.includes("Duty Sup") && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")
   );
@@ -77760,7 +77760,7 @@ function analyzeBuildResults(events, coursePercentages, coursePriorities, availa
     courseEventsByType.set(course, { flight: 0, ftd: 0, cpt: 0, ground: 0 });
   });
   scheduledEvents.forEach((event) => {
-    const trainee = traineesData.find((t) => t.fullName === event.student || t.fullName === event.pilot);
+    const trainee = allTraineesData.find((t) => t.fullName === event.student || t.fullName === event.pilot);
     if (trainee && coursePriorities.includes(trainee.course)) {
       const course = trainee.course;
       courseEventCounts.set(course, (courseEventCounts.get(course) || 0) + 1);
@@ -77772,7 +77772,7 @@ function analyzeBuildResults(events, coursePercentages, coursePriorities, availa
     }
   });
   const possibleEventCounts = countPossibleEvents(
-    traineesData,
+    allTraineesData,
     coursePriorities,
     traineeLMPs,
     scores,
@@ -79389,7 +79389,7 @@ const App = () => {
     return { staff: true, trainee: true, staffDb: true, traineeDb: true };
   });
   const [school, setSchool] = reactExports.useState("ESL");
-  const [instructorsData, setInstructorsData] = reactExports.useState(ESL_DATA.instructors);
+  const [allInstructorsData, setInstructorsData] = reactExports.useState(ESL_DATA.instructors);
   reactExports.useEffect(() => {
     const instructorIds = /* @__PURE__ */ new Map();
     const duplicates = [];
@@ -79400,34 +79400,34 @@ const App = () => {
       instructorIds.set(instructor.idNumber, instructor);
     });
     if (duplicates.length > 0) {
-      console.error("🔴 DUPLICATES FOUND IN instructorsData STATE:", duplicates.length);
+      console.error("🔴 DUPLICATES FOUND IN allInstructorsData STATE:", duplicates.length);
       console.error("Duplicate details:", duplicates);
       console.error("All Burns entries in state:", instructorsData.filter((i) => i.name.includes("Burns")));
     } else {
-      console.log("🟢 instructorsData state is clean - no duplicates");
+      console.log("🟢 allInstructorsData state is clean - no duplicates");
     }
-  }, [instructorsData]);
+  }, [allInstructorsData]);
   reactExports.useEffect(() => {
     console.log("🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors");
     console.log("🔍 [DATA TRACKING v3] Total instructors from mockdata:", instructorsData.length);
     console.log("🔍 [DATA TRACKING v3] First 3 instructors:", instructorsData.slice(0, 3).map((i) => ({ id: i.idNumber, name: i.name, category: i.category })));
   }, []);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
-  const [traineesData, setTraineesData] = reactExports.useState(ESL_DATA.trainees);
+  const [allTraineesData, setTraineesData] = reactExports.useState(ESL_DATA.trainees);
   const [archivedTraineesData, setArchivedTraineesData] = reactExports.useState([]);
-  const filteredInstructorsData = (() => {
+  const instructorsData = (() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     if (!mockOn && !dbOn) return [];
-    if (mockOn && dbOn) return instructorsData;
+    if (mockOn && dbOn) return allInstructorsData;
     if (mockOn && !dbOn) return instructorsData.filter((i) => i._dataSource !== "database");
     return instructorsData.filter((i) => i._dataSource === "database");
   })();
-  const filteredTraineesData = (() => {
+  const traineesData = (() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
     if (!mockOn && !dbOn) return [];
-    if (mockOn && dbOn) return traineesData;
-    if (mockOn && !dbOn) return traineesData.filter((t) => t._dataSource !== "database");
-    return traineesData.filter((t) => t._dataSource === "database");
+    if (mockOn && dbOn) return allTraineesData;
+    if (mockOn && !dbOn) return allTraineesData.filter((t) => t._dataSource !== "database");
+    return allTraineesData.filter((t) => t._dataSource === "database");
   })();
   const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
   const [authUser, setAuthUser] = reactExports.useState(null);
@@ -80570,7 +80570,7 @@ ${"=".repeat(60)}`);
       }
     });
     return data;
-  }, [instructorsData, school]);
+  }, [allInstructorsData, school]);
   const seatConfigs = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     instructorsData.forEach((instructor) => {
@@ -80578,13 +80578,13 @@ ${"=".repeat(60)}`);
         data.set(instructor.name, instructor.seatConfig);
       }
     });
-    traineesData.forEach((trainee) => {
+    allTraineesData.forEach((trainee) => {
       if (trainee.name && trainee.seatConfig) {
         data.set(trainee.name, trainee.seatConfig);
       }
     });
     return data;
-  }, [instructorsData, traineesData]);
+  }, [allInstructorsData, allTraineesData]);
   const checkTimeOverlap = reactExports.useCallback((event1, event2) => {
     const start1 = event1.startTime;
     const end1 = event1.startTime + event1.duration;
@@ -80903,7 +80903,7 @@ ${"=".repeat(60)}`);
   }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
   const unavailabilityConflicts = reactExports.useMemo(() => {
     const newConflicts = /* @__PURE__ */ new Map();
-    const allPersonnel = [...instructorsData, ...traineesData];
+    const allPersonnel = [...allInstructorsData, ...allTraineesData];
     const personMap = /* @__PURE__ */ new Map();
     allPersonnel.forEach((p) => {
       personMap.set("fullName" in p ? p.fullName : p.name, p);
@@ -80956,7 +80956,7 @@ ${"=".repeat(60)}`);
       }
     }
     return newConflicts;
-  }, [eventsForDate, instructorsData, traineesData, syllabusDetails]);
+  }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
   const registerDirtyCheck = reactExports.useCallback((isDirty, onSave, onDiscard) => {
     isDirtyRef.current = isDirty;
     onSaveRef.current = onSave;
@@ -81576,7 +81576,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           addCurrencyEventToTraineeLMP(traineeName, event.flightNumber);
         } else if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
           event.groupTraineeIds.forEach((traineeId) => {
-            const trainee = traineesData.find((t) => t.idNumber === traineeId);
+            const trainee = allTraineesData.find((t) => t.idNumber === traineeId);
             if (trainee) {
               addCurrencyEventToTraineeLMP(trainee.fullName, event.flightNumber);
             }
@@ -81794,7 +81794,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.log("🔄 Updated HIGH priority SCT flight:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
-        traineesData.find((t) => t.fullName === sctReq.name);
+        allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
@@ -81865,7 +81865,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.log("🔄 Updated HIGH priority SCT FTD:", sctReq.event, "for", sctReq.name, "at", sctReq.requestedTime || "08:00");
       } else if (!existingInNextDay) {
         const syllabusItem = syllabusDetails.find((s) => s.code === sctReq.event);
-        traineesData.find((t) => t.fullName === sctReq.name);
+        allTraineesData.find((t) => t.fullName === sctReq.name);
         const duration = syllabusItem?.duration || 1.5;
         let startTime = 8;
         if (sctReq.requestedTime) {
@@ -81919,7 +81919,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         if (existingEvent) {
           console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
         } else if (!existingEvent) {
-          const trainee = traineesData.find((t) => t.idNumber === remedialReq.traineeId);
+          const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
           let syllabusItem = null;
           if (trainee) {
             const individualLMP = traineeLMPs.get(trainee.fullName);
@@ -82138,7 +82138,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
   };
   const handleSelectTraineeFromSchedule = (traineeFullName) => {
-    const trainee = traineesData.find((t) => t.fullName === traineeFullName);
+    const trainee = allTraineesData.find((t) => t.fullName === traineeFullName);
     if (trainee) {
       setSelectedPersonForProfile(trainee);
       handleNavigation("CourseRoster");
@@ -82190,7 +82190,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("DEBUG ===== PRE-BUILD ANALYSIS END =====");
     const finalPreservedEvents = newHighestPriorityEvents;
     console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
-    const activeTrainees = traineesData.filter((t) => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
+    const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
     activeTrainees.forEach((trainee) => {
       const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
@@ -82236,7 +82236,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🔍 [NEO BUILD CONFIG DEBUG] Total instructors in config:", instructorsData.length);
     const config = {
       instructors: instructorsData,
-      trainees: traineesData,
+      trainees: allTraineesData,
       syllabus: syllabusDetails,
       scores,
       coursePriorities,
@@ -82292,7 +82292,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           coursePriorities,
           availableAircraftCount,
           buildDfpDate,
-          traineesData,
+          allTraineesData,
           traineeLMPs,
           scores,
           syllabusDetails,
@@ -82309,7 +82309,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }));
         console.log("Build analysis:", analysis);
         const notifications = [];
-        const allPersonnel = [...instructorsData, ...traineesData];
+        const allPersonnel = [...allInstructorsData, ...allTraineesData];
         generated.forEach((event) => {
           getPersonnel(event).forEach((personName) => {
             const person = allPersonnel.find((p) => p.name === personName || "fullName" in p && p.fullName === personName);
@@ -82588,14 +82588,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   };
   const allTraineesByCourse = reactExports.useMemo(() => {
     const groups = {};
-    traineesData.forEach((trainee) => {
+    allTraineesData.forEach((trainee) => {
       if (!groups[trainee.course]) {
         groups[trainee.course] = [];
       }
       groups[trainee.course].push(trainee);
     });
     return groups;
-  }, [traineesData]);
+  }, [allTraineesData]);
   const handleSaveGroundEvent = (data) => {
     const syllabusItem = syllabusDetails.find((s) => s.code === data.flightNumber);
     if (!syllabusItem) return;
@@ -82624,7 +82624,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const suggestions = [];
     const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
     const conflictedSyllabusId = conflictedEvent.flightNumber;
-    const otherTrainees = traineesData.filter((t) => t.fullName !== conflictedEvent.student && !t.isPaused);
+    const otherTrainees = allTraineesData.filter((t) => t.fullName !== conflictedEvent.student && !t.isPaused);
     for (const trainee of otherTrainees) {
       const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
       if (nextEvents.next?.id !== conflictedSyllabusId) {
@@ -82663,7 +82663,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       });
     }
     return suggestions.sort((a, b) => b.trainee.daysSinceLastFlight - a.trainee.daysSinceLastFlight);
-  }, [traineesData, syllabusDetails, traineeLMPs, scores]);
+  }, [allTraineesData, syllabusDetails, traineeLMPs, scores]);
   const generateInstructorRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
     console.log("🔍 generateInstructorRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
@@ -82723,11 +82723,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [instructorsData, syllabusDetails]);
+  }, [allInstructorsData, syllabusDetails]);
   const generatePilotRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
     console.log("🔍 generatePilotRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
-    console.log("🔍 [PILOT REMEDIES DEBUG] Input instructorsData:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+    console.log("🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:", instructorsData.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
     console.log("🔍 [PILOT REMEDIES DEBUG] School:", school);
     const locationFilteredInstructors = instructorsData.filter((i) => {
       if (school === "ESL") {
@@ -82788,9 +82788,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [instructorsData, syllabusDetails]);
+  }, [allInstructorsData, syllabusDetails]);
   const findClosestTurnaroundFix = (problemEvent, allEvents, context, flyingWindow) => {
-    const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, instructorsData: instructorsData2, traineesData: traineesData2, getPersonnel: getPersonnel2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
+    const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, getPersonnel: getPersonnel2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
     const eventsOnResource = allEvents.filter((e) => e.resourceId === problemEvent.resourceId && e.id !== problemEvent.id).sort((a, b) => a.startTime - b.startTime);
     const prevEvent = eventsOnResource.filter((e) => e.startTime < problemEvent.startTime).pop();
     const nextEvent = eventsOnResource.find((e) => e.startTime > problemEvent.startTime);
@@ -82834,7 +82834,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
       const originalCrew = getPersonnel2(problemEvent);
       for (const personName of originalCrew) {
-        const person = [...instructorsData2, ...traineesData2].find((p) => ("fullName" in p ? p.fullName : p.name) === personName);
+        const person = [...allInstructorsData, ...allTraineesData].find((p) => ("fullName" in p ? p.fullName : p.name) === personName);
         if (!person) continue;
         if (isPersonStaticallyUnavailable2(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type)) return false;
         const hasOverlap = allEvents.some((e) => {
@@ -82904,7 +82904,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const isTurnaroundViolationOnly = errors.every((e) => e.toLowerCase().includes("turnaround")) && errors.length > 0;
     const instructorIsConflicted = errors.some((e) => event.instructor && e.includes(event.instructor.split(",")[0]));
     if (isTurnaroundViolationOnly || !instructorIsConflicted) {
-      const context = { flightTurnaround, ftdTurnaround, syllabusDetails, instructorsData, traineesData, getPersonnel, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
+      const context = { flightTurnaround, ftdTurnaround, syllabusDetails, getPersonnel, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
       const timeRemedy = findClosestTurnaroundFix(event, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
       if (timeRemedy) {
         setTimeOnlyRemedyForConfirmation(timeRemedy);
@@ -83053,7 +83053,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     const eventWindow = getEventBookingWindow(event, syllabusDetails);
     const personnel = getPersonnel(event);
-    const allPersonnelData = [...instructorsData, ...traineesData];
+    const allPersonnelData = [...allInstructorsData, ...allTraineesData];
     personnel.forEach((name) => {
       const person = allPersonnelData.find((p) => ("fullName" in p ? p.fullName : p.name) === name);
       if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type)) {
@@ -83238,7 +83238,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       currentEvents.filter((e) => getPersonnel(e).includes(instructor.name));
       return { instructor, availableWindows: [] };
     });
-    const traineesAnalysis = traineesData.map((trainee) => {
+    const traineesAnalysis = allTraineesData.map((trainee) => {
       const events2 = currentEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
       const hasFtd = events2.some((e) => e.type === "ftd" && e.date === analysisDate);
       const hasFlight = events2.some((e) => e.type === "flight" && e.date === analysisDate);
@@ -83278,7 +83278,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
     traineesAnalysis.filter((t) => t.isEligible).length;
     setOracleAnalysis({ instructors: instructorsAnalysis, trainees: traineesAnalysis });
-  }, [instructorsData, traineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
+  }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
   const handleToggleOracleMode = reactExports.useCallback(() => {
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
     setOracleContext(isNextDay ? "nextDayBuild" : "program");
@@ -83476,7 +83476,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             events: eventSegmentsForDate,
             resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             timezoneOffset,
             airframeCount: 24,
             standbyCount: 4,
@@ -83621,13 +83621,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             date,
             onDateChange: handleDateChange,
             events: eventsForStaffTraineeSchedule,
-            trainees: [...traineesData].sort((a, b) => {
+            trainees: [...allTraineesData].sort((a, b) => {
               if (a.course !== b.course) {
                 return a.course.localeCompare(b.course);
               }
               return a.name.localeCompare(b.name);
             }).map((t) => t.fullName),
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             onSelectEvent: handleOpenModal,
             onUpdateEvent: handleScheduleUpdate,
             zoomLevel,
@@ -83660,7 +83660,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         });
         console.log("🔍 STAFF SCHEDULE - Location filtering applied");
         console.log("🔍 School:", school);
-        console.log("🔍 Total instructors:", instructorsData?.length);
+        console.log("👁 Total instructors:", instructorsData?.length);
         console.log("🔍 Filtered instructors:", locationFilteredInstructorsForSchedule?.length);
         console.log("🔍 Filtered instructor units:", locationFilteredInstructorsForSchedule.map((i) => i.unit));
         try {
@@ -83671,8 +83671,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               onDateChange: handleDateChange,
               events: eventSegmentsForDate,
               instructors: locationFilteredInstructorsForSchedule.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
-              instructorsData: locationFilteredInstructorsForSchedule,
-              traineesData: filteredTraineesData,
+              allInstructorsData: locationFilteredInstructorsForSchedule,
+              allTraineesData: traineesData,
               onSelectEvent: handleOpenModal,
               onUpdateEvent: handleScheduleUpdate,
               zoomLevel,
@@ -83705,7 +83705,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
             instructors: instructorsData.map((i) => ({ name: i.name, rank: i.rank, unit: i.unit })),
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,
@@ -83733,8 +83733,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           NextDayTraineeScheduleView,
           {
             events: nextDayEventsForStaffTraineeSchedule.map((e) => ({ ...e, date: buildDfpDate })),
-            trainees: traineesData.map((t) => t.fullName),
-            traineesData: filteredTraineesData,
+            trainees: allTraineesData.map((t) => t.fullName),
+            allTraineesData: traineesData,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onUpdateEvent: handleNextDayScheduleUpdate,
             zoomLevel,
@@ -83763,7 +83763,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           TraineeView,
           {
             events,
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             courseColors,
             archivedCourses,
             personnelData,
@@ -83774,7 +83774,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onRestoreCourse: () => {
             },
             onUpdateTrainee: (data) => {
-              const isNewTrainee = !traineesData.find((t) => t.idNumber === data.idNumber);
+              const isNewTrainee = !allTraineesData.find((t) => t.idNumber === data.idNumber);
               if (isNewTrainee) {
                 const lmpType = data.lmpType || "BPC+IPC";
                 const masterLMP = syllabusDetails.filter((item) => {
@@ -83898,7 +83898,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           CourseRosterView,
           {
             events,
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             courseColors,
             archivedCourses,
             personnelData,
@@ -83909,7 +83909,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onRestoreCourse: () => {
             },
             onUpdateTrainee: (data) => {
-              const isNewTrainee = !traineesData.find((t) => t.idNumber === data.idNumber);
+              const isNewTrainee = !allTraineesData.find((t) => t.idNumber === data.idNumber);
               if (isNewTrainee) {
                 const lmpType = data.lmpType || "BPC+IPC";
                 const masterLMP = syllabusDetails.filter((item) => {
@@ -84161,7 +84161,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             events: nextDayEventSegments,
             resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             airframeCount: 24,
             standbyCount: 4,
             ftdCount: availableFtdCount,
@@ -84246,8 +84246,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onUpdateCommenceNightFlying: setCommenceNightFlying,
             ceaseNightFlying,
             onUpdateCeaseNightFlying: setCeaseNightFlying,
-            instructorsData: filteredInstructorsData,
-            traineesData: filteredTraineesData,
+            allInstructorsData: instructorsData,
+            allTraineesData: traineesData,
             buildDfpDate,
             highestPriorityEvents,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
@@ -84415,7 +84415,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           CourseProgressView,
           {
             courses,
-            traineesData: filteredTraineesData,
+            allTraineesData: traineesData,
             courseColors,
             scores,
             traineeLMPs,
@@ -84442,8 +84442,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onDeleteCourse: handleDeleteCourseFromTrainingRecords,
             onNavigateToCourseRoster: handleNavigateToCourseRosterFromTrainingRecords,
             onNavigateToArchivedCourses: handleNavigateToArchivedCoursesFromTrainingRecords,
-            traineesData: filteredTraineesData,
-            instructorsData: filteredInstructorsData,
+            allTraineesData: traineesData,
+            allInstructorsData: instructorsData,
             archivedTraineesData,
             archivedInstructorsData,
             events,
@@ -84486,11 +84486,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             date: buildDfpDate,
             events: nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })),
-            instructorsData: filteredInstructorsData,
-            traineesData: filteredTraineesData,
+            allInstructorsData: instructorsData,
+            allTraineesData: traineesData,
             activeCourses: coursePriorities,
             onNavigateAndSelectPerson: (name) => {
-              const person = [...instructorsData, ...traineesData].find((p) => p.name === name || "fullName" in p && p.fullName === name);
+              const person = [...allInstructorsData, ...allTraineesData].find((p) => p.name === name || "fullName" in p && p.fullName === name);
               if (person) {
                 if ("role" in person) handleSelectInstructorFromSchedule(name);
                 else handleSelectTraineeFromSchedule(name);
@@ -84536,7 +84536,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               console.log("Total events available:", allPublishedEvents.length);
               const event = allPublishedEvents.find((e) => e.id === assessment.eventId);
               console.log("Found event:", event);
-              const trainee = traineesData.find((t) => t.fullName === assessment.traineeFullName);
+              const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
               console.log("Found trainee:", trainee);
               if (event && trainee) {
                 console.log("✅ Setting event and trainee, navigating to PT051");
@@ -84553,7 +84553,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   traineeFound: !!trainee,
                   searchingForEventId: assessment.eventId,
                   availableEventIds: allPublishedEvents.map((e) => e.id).slice(0, 10),
-                  availableTrainees: traineesData.map((t) => t.fullName).slice(0, 10),
+                  availableTrainees: allTraineesData.map((t) => t.fullName).slice(0, 10),
                   eventsForSameFlightNumber: allPublishedEvents.filter((e) => e.flightNumber === assessment.flightNumber).map((e) => ({ id: e.id, date: e.date, instructor: e.instructor }))
                 });
                 console.log("🔄 Attempting fallback search...");
@@ -84647,8 +84647,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           SupervisorDashboard,
           {
-            instructorsData: filteredInstructorsData,
-            traineesData: filteredTraineesData,
+            allInstructorsData: instructorsData,
+            allTraineesData: traineesData,
             date,
             events: eventsForDate,
             onNavigate: handleNavigation,
@@ -84673,8 +84673,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             onClose: () => handleNavigation("Program Schedule"),
             events,
-            traineesData: filteredTraineesData,
-            instructorsData: filteredInstructorsData,
+            allTraineesData: traineesData,
+            allInstructorsData: instructorsData,
             archivedInstructorsData,
             school,
             personnelData,
@@ -84770,8 +84770,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             onClose: () => handleNavigation("Program Schedule"),
             events,
-            traineesData: filteredTraineesData,
-            instructorsData: filteredInstructorsData,
+            allTraineesData: traineesData,
+            allInstructorsData: instructorsData,
             archivedInstructorsData,
             school,
             personnelData,
@@ -84859,8 +84859,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           {
             onClose: () => handleNavigation("Program Schedule"),
             events,
-            traineesData: filteredTraineesData,
-            instructorsData: filteredInstructorsData,
+            allTraineesData: traineesData,
+            allInstructorsData: instructorsData,
             archivedTraineesData,
             school,
             personnelData,
@@ -84876,7 +84876,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToCurrency: handleNavigateToCurrency,
             onBulkUpdateTrainees: handleBulkUpdateTrainees,
             onArchiveTrainee: (id) => {
-              const trainee = traineesData.find((t) => t.idNumber === id);
+              const trainee = allTraineesData.find((t) => t.idNumber === id);
               if (trainee) {
                 setArchivedTraineesData((prev) => [...prev, trainee]);
                 setTraineesData((prev) => prev.filter((t) => t.idNumber !== id));
@@ -85011,8 +85011,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onUpdateUnits: setUnits,
             unitLocations,
             onUpdateUnitLocations: setUnitLocations,
-            instructorsData: filteredInstructorsData,
-            traineesData: filteredTraineesData,
+            allInstructorsData: instructorsData,
+            allTraineesData: traineesData,
             onDataSourceSettingsChange: (newSettings) => setDataSourceSettings(newSettings),
             syllabusDetails,
             onBulkUpdateInstructors: handleBulkUpdateInstructors,
@@ -85246,8 +85246,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 setSuccessMessage("Post-flight data saved!");
               },
               school,
-              traineesData: filteredTraineesData,
-              instructorsData: filteredInstructorsData
+              allTraineesData: traineesData,
+              allInstructorsData: instructorsData
             },
             void 0,
             false,
@@ -85457,7 +85457,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           onDeleteRequest: handleDeleteEvent,
           isEditingDefault,
           instructors: instructorsData.map((i) => i.name),
-          trainees: traineesData.map((t) => t.fullName),
+          trainees: allTraineesData.map((t) => t.fullName),
           syllabus: (() => {
             console.log("addTileSyllabusOptions length:", addTileSyllabusOptions.length);
             console.log("syllabusForModal length:", syllabusForModal.length);
@@ -85466,8 +85466,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           syllabusDetails,
           highlightedField,
           school,
-          traineesData: filteredTraineesData,
-          instructorsData: filteredInstructorsData,
+          allTraineesData: traineesData,
+          allInstructorsData: instructorsData,
           courseColors,
           eventsForDate,
           onNavigateToHateSheet: (trainee) => {
@@ -85859,7 +85859,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           activeCourses: courseColors,
           allTraineesByCourse,
           instructors: instructorsData.map((i) => i.name),
-          traineesData: filteredTraineesData
+          allTraineesData: traineesData
         },
         void 0,
         false,
@@ -85939,7 +85939,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           onClose: () => setShowUnavailabilityReport(false),
           date,
           instructors: instructorsData,
-          trainees: traineesData,
+          trainees: allTraineesData,
           events: eventsForDate
         },
         void 0,
@@ -86167,4 +86167,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-jUXvvdCn.js.map
+//# sourceMappingURL=index--ZFaAF1Z.js.map
