@@ -11,7 +11,7 @@ interface DataSourceSettings {
 
 interface DataSourcesSettingsProps {
   onShowSuccess: (message: string) => void;
-  onSettingsChanged?: () => void;
+  onSettingsChanged?: (newSettings: DataSourceSettings) => void;
 }
 
 type MigrationState = 'idle' | 'running' | 'done' | 'error';
@@ -63,7 +63,7 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
       };
       const state = newSettings[key] ? 'enabled' : 'disabled';
       onShowSuccess(`${labels[key]} ${state}. Reload the app to apply changes.`);
-      if (onSettingsChanged) onSettingsChanged();
+      if (onSettingsChanged) onSettingsChanged(newSettings);
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');
     }
