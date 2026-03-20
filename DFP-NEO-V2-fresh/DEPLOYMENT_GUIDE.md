@@ -1,53 +1,155 @@
 # DFP-NEO Deployment Guide
 
+## ⚠️ CRITICAL: Railway Deployment Configuration
+
+### The #1 Most Important Thing to Know
+
+**Railway deploys from the `DFP-NEO-V2-fresh` subdirectory, NOT from the repository root!**
+
+This is configured via `DFP-NEO-V2-fresh/railway.json`. All changes must be made within this subdirectory for them to be deployed.
+
+### Common Mistake to Avoid
+
+❌ **WRONG**: Making changes at repository root (`/server.js`, `/lib/api.ts`, etc.)
+```
+/workspace/server.js          ← WRONG - Railway will NOT see this
+/workspace/lib/api.ts         ← WRONG - Railway will NOT see this
+```
+
+✅ **CORRECT**: Making changes inside the `DFP-NEO-V2-fresh` subdirectory
+```
+/workspace/DFP-NEO-V2-fresh/server.js     ← CORRECT - Railway WILL deploy this
+/workspace/DFP-NEO-V2-fresh/lib/api.ts    ← CORRECT - Railway WILL deploy this
+```
+
+---
+
 ## Production Build Ready! ✅
 
-Your app has been successfully built for production. The `dist/` folder contains everything needed to deploy your flight scheduling application.
+Your app has been successfully built for production. The build output is in `dfp-neo-platform/public/flight-school-app/` folder.
 
 ## Build Summary
-- **Bundle Size**: 971.66 kB (246.12 kB gzipped)
-- **Build Time**: 3.38s
-- **Modules**: 154 modules transformed
+- **Working Directory**: `DFP-NEO-V2-fresh/`
+- **Build Command**: `npm run build`
+- **Output Location**: `dfp-neo-platform/public/flight-school-app/assets/`
 - **Status**: ✅ Production Ready
 
-## Deployment Options
+---
 
-### Option 1: Static Hosting (Recommended)
-**Services**: Netlify, Vercel, GitHub Pages, Cloudflare Pages
+## Deployment Architecture
 
-**Steps:**
-1. Push `dist/` folder to your hosting provider
-2. Configure as a static site
-3. Set up custom domain if needed
-4. Enable HTTPS (usually automatic)
-
-**Example for Netlify:**
-```bash
-# Drag and drop the dist folder to netlify.com
-# Or connect your GitHub repository for auto-deployment
+```
+Repository Root (Dagde/DFP-NEO-V2)
+│
+├── DFP-NEO-V2-fresh/          ← Railway deploys from HERE
+│   ├── railway.json           ← Railway configuration
+│   ├── server.js              ← Express server (deployed)
+│   ├── lib/                   ← Backend libraries (deployed)
+│   ├── components/            ← React components (deployed after build)
+│   ├── dfp-neo-platform/      ← Build output directory
+│   │   └── public/flight-school-app/
+│   │       └── assets/        ← Built JS/CSS files served to users
+│   └── package.json
+│
+├── (other directories)        ← NOT deployed by Railway
+└── (files at root)            ← NOT deployed by Railway
 ```
 
-### Option 2: Traditional Web Hosting
-**Steps:**
-1. Upload entire `dist/` folder to your web server's public directory
-2. Ensure your server serves static files (HTML, CSS, JS)
-3. Configure routing to handle client-side routes
+---
 
-### Option 3: Your Current Python Server
+## Deployment Workflow
+
+### 1. Always Work in the Correct Directory
 ```bash
-cd DFP---NEO/dist
-python -m http.server 80
-# Then access at http://your-domain.com
+cd /workspace/DFP-NEO-V2-fresh
 ```
 
-## Files in dist/
-- `index.html` - Main application entry point
-- `assets/` - CSS and JavaScript bundles
-- `icons/` - PWA icons and manifests
-- Template files (Excel spreadsheets)
-- Icon images
+### 2. Pull Latest Changes
+```bash
+git pull origin feature/comprehensive-build-algorithm
+```
+
+### 3. Make Your Changes
+Edit files within `DFP-NEO-V2-fresh/` directory only.
+
+### 4. Build the Frontend
+```bash
+npm run build
+```
+
+This generates built files in `dfp-neo-platform/public/flight-school-app/assets/`.
+
+**Important**: Railway serves the built files, NOT the source TypeScript. You must rebuild after making changes to React components.
+
+### 5. Commit and Push
+```bash
+git add .
+git commit -m "Your descriptive commit message"
+git push https://x-access-token:$GITHUB_TOKEN@github.com/Dagde/DFP-NEO-V2.git HEAD:feature/comprehensive-build-algorithm
+```
+
+### 6. Verify Deployment
+- Check Railway dashboard for deployment status
+- The `/api/version` endpoint returns the active commit hash
+- The User ID button in the app displays the commit hash
+
+---
+
+## File Locations Quick Reference
+
+| What You're Changing | Correct Location |
+|---------------------|------------------|
+| Express server code | `DFP-NEO-V2-fresh/server.js` |
+| API functions | `DFP-NEO-V2-fresh/lib/api.ts` |
+| React components | `DFP-NEO-V2-fresh/components/` |
+| Mock data | `DFP-NEO-V2-fresh/mockData.ts` |
+| Database schema | `DFP-NEO-V2-fresh/prisma/schema.prisma` |
+| Package dependencies | `DFP-NEO-V2-fresh/package.json` |
+| Railway config | `DFP-NEO-V2-fresh/railway.json` |
+
+---
+
+## Troubleshooting
+
+### "My changes aren't showing up in the deployed app"
+1. Verify you're working in `DFP-NEO-V2-fresh/` directory
+2. Run `npm run build` after changing React components
+3. Check that built files were committed (files in `dfp-neo-platform/public/`)
+4. Verify the commit hash in the app matches your pushed commit
+
+### "I edited server.js but the API didn't change"
+- Make sure you edited `DFP-NEO-V2-fresh/server.js`, NOT `/server.js` at root
+- Server changes don't require a rebuild, but do require a push
+
+### "The button/component I added isn't visible"
+- You likely edited source TypeScript but didn't rebuild
+- Run `npm run build` and commit the new built files
+
+---
+
+## Branch Information
+
+- **Working Branch**: `feature/comprehensive-build-algorithm`
+- **Do NOT push to**: `main` branch
+
+---
+
+## Lessons Learned (Historical Context)
+
+### March 2026: Migration Button Not Appearing
+
+**Problem**: Added Migration Tools button to DataSourcesSettings.tsx but it wasn't visible in the deployed app.
+
+**Root Cause**: Changes were being pushed to the repository root instead of the `DFP-NEO-V2-fresh` subdirectory where Railway actually deploys from.
+
+**Solution**: Work exclusively within `DFP-NEO-V2-fresh/` directory, rebuild, and push from there.
+
+**Key Takeaway**: Always verify the Railway configuration path before making changes. The `railway.json` location reveals where Railway expects to find your application code.
+
+---
 
 ## Key Features Deployed
+
 ✅ Complete flight scheduling interface  
 ✅ Personnel management system  
 ✅ Aircraft availability calculations  
@@ -55,20 +157,9 @@ python -m http.server 80
 ✅ Bulk import/export functionality  
 ✅ Mobile-responsive design  
 ✅ PWA capabilities  
+✅ Staff data migration to database (Migration Tools button in Settings → Data Sources)
 
-## Post-Deployment Checklist
-- [ ] Test all major features work
-- [ ] Verify file uploads work (templates)
-- [ ] Test mobile responsiveness
-- [ ] Check PWA installation
-- [ ] Confirm data persistence (localStorage)
+---
 
-## Next Steps (Future Enhancements)
-When you're ready for a backend:
-- User authentication
-- Multi-user collaboration
-- Cloud data sync
-- Real-time updates
-
-## Support
-Your application is fully functional as a standalone PWA. Users can immediately start using it with all current features working perfectly.
+*Last Updated: March 2026*
+*Purpose: Prevent future developers (and AI assistants) from making the same deployment mistakes*
