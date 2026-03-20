@@ -124,6 +124,33 @@ app.post('/api/personnel', async (req, res) => {
   }
 });
 
+// DELETE /api/personnel/:id - Delete a personnel record
+app.delete('/api/personnel/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Personnel ID is required' });
+    }
+
+    // Check if the personnel exists
+    const existing = await db.personnel.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Personnel not found' });
+    }
+
+    // Delete the personnel record
+    await db.personnel.delete({ where: { id } });
+
+    console.log(`✅ DELETE /api/personnel/${id} - deleted: ${existing.name}`);
+    res.json({ success: true, deleted: { id, name: existing.name } });
+  } catch (error) {
+    console.error('❌ DELETE /api/personnel error:', error);
+    res.status(500).json({ error: 'Failed to delete personnel', details: error.message });
+  }
+});
+
 // POST /api/personnel/bulk - Bulk insert personnel (for mock data migration)
 app.post('/api/personnel/bulk', async (req, res) => {
   try {
@@ -223,6 +250,68 @@ app.post('/api/personnel/bulk', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/personnel/bulk error:', error);
     res.status(500).json({ error: 'Failed to bulk insert personnel', details: error.message });
+  }
+});
+
+// ============================================================
+// TRAINEE API ROUTES
+// ============================================================
+
+// GET /api/trainees
+app.get('/api/trainees', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course, isActive, search } = req.query;
+
+    const where = {};
+    if (course) where.course = course;
+    if (isActive === 'true') where.isActive = true;
+    if (isActive === 'false') where.isActive = false;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { rank: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const trainees = await db.trainee.findMany({
+      where,
+      orderBy: { name: 'asc' },
+    });
+
+    console.log(`✅ GET /api/trainees - returning ${trainees.length} records`);
+    res.json({ trainees });
+  } catch (error) {
+    console.error('❌ GET /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to fetch trainees', details: error.message });
+  }
+});
+
+// DELETE /api/trainees/:id - Delete a trainee record
+app.delete('/api/trainees/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Trainee ID is required' });
+    }
+
+    // Check if the trainee exists
+    const existing = await db.trainee.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Trainee not found' });
+    }
+
+    // Delete the trainee record
+    await db.trainee.delete({ where: { id } });
+
+    console.log(`✅ DELETE /api/trainees/${id} - deleted: ${existing.name}`);
+    res.json({ success: true, deleted: { id, name: existing.name } });
+  } catch (error) {
+    console.error('❌ DELETE /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to delete trainee', details: error.message });
   }
 });
 

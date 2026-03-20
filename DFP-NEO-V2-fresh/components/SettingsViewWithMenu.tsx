@@ -589,7 +589,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         />
                     )}
                     {activeSection === 'staff-database' && (
-                        <StaffDatabaseTable />
+                        <StaffDatabaseTable 
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                        />
                     )}
                     {activeSection === 'staff-mockdata' && (
                         <StaffMockDataTable
@@ -601,7 +604,10 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <StaffCombinedDataTable instructorsData={props.instructorsData} />
                     )}
                     {activeSection === 'trainee-database' && (
-                        <TraineeDatabaseTable />
+                        <TraineeDatabaseTable 
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                        />
                     )}
                     {activeSection === 'trainee-mockdata' && (
                         <TraineeMockDataTable

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 interface StaffDatabaseTableProps {
-  // No props needed - fetches data from API
+  currentUserPermission?: string;
+  onShowSuccess?: (message: string) => void;
 }
 
 interface DatabaseStaff {
@@ -20,15 +21,19 @@ interface DatabaseStaff {
   isCFI?: boolean;
   isActive?: boolean;
   isAdminStaff?: boolean;
-  userId?: string; // This identifies real database staff (not mockdata)
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
+const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
   useEffect(() => {
     fetchDatabaseStaff();
@@ -92,6 +97,37 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     }
   };
 
+  const handleDeleteStaff = async (staffId: string, staffName: string) => {
+    try {
+      setDeletingId(staffId);
+      
+      const response = await fetch(`/api/personnel/${staffId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete staff');
+      }
+
+      // Remove from local state
+      setStaffData(prev => prev.filter(s => s.id !== staffId));
+      
+      if (onShowSuccess) {
+        onShowSuccess(`Deleted staff: ${staffName}`);
+      }
+      
+      console.log(`✅ Deleted staff: ${staffName}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Error deleting staff:', err);
+      setError(msg);
+    } finally {
+      setDeletingId(null);
+      setShowDeleteConfirm(null);
+    }
+  };
+
   // Determine type based on role and category
   const getType = (staff: DatabaseStaff): 'STAFF' | 'TRAINEE' => {
     // Trainees are typically in categories UnCat, D, C
@@ -142,18 +178,27 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     );
   }
 
-  if (staffData.length === 0) {
-    return (
-      <div className="w-full flex items-center justify-center py-12">
-        <div className="text-gray-400 text-sm">
-          No staff records found in the database
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
+      {/* Header with title and buttons */}
+      <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4">
+        <div className="p-4 bg-gray-800/80 border-b border-gray-700">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-bold text-sky-400">Staff Database</h3>
+              <p className="text-sm text-gray-400 mt-1">
+                All personnel records from the database
+              </p>
+            </div>
+            <div className="flex items-center">
+              <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
+                {staffData.length} Staff
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -177,6 +222,11 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                 ROLE
               </th>
+              {isAdmin && (
+                <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
+                  ACTIONS
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -214,6 +264,35 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.role || 'N/A'}
                   </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3 text-sm">
+                      {showDeleteConfirm === staff.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                            disabled={deletingId === staff.id}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
+                          >
+                            {deletingId === staff.id ? 'Deleting...' : 'Confirm'}
+                          </button>
+                          <button
+                            onClick={() => setShowDeleteConfirm(null)}
+                            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowDeleteConfirm(staff.id)}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
+                          title="Delete this staff record"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

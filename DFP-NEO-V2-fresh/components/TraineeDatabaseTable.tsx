@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 interface TraineeDatabaseTableProps {
-  // No props needed - fetches data from API
+  currentUserPermission?: string;
+  onShowSuccess?: (message: string) => void;
 }
 
 interface DatabaseTrainee {
@@ -29,10 +30,14 @@ interface DatabaseTrainee {
   updatedAt: string;
 }
 
-const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
+const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess }) => {
   const [traineeData, setTraineeData] = useState<DatabaseTrainee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
   useEffect(() => {
     fetchDatabaseTrainees();
@@ -91,6 +96,37 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteTrainee = async (traineeId: string, traineeName: string) => {
+    try {
+      setDeletingId(traineeId);
+      
+      const response = await fetch(`/api/trainees/${traineeId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete trainee');
+      }
+
+      // Remove from local state
+      setTraineeData(prev => prev.filter(t => t.id !== traineeId));
+      
+      if (onShowSuccess) {
+        onShowSuccess(`Deleted trainee: ${traineeName}`);
+      }
+      
+      console.log(`✅ Deleted trainee: ${traineeName}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Error deleting trainee:', err);
+      setError(msg);
+    } finally {
+      setDeletingId(null);
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -192,6 +228,11 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
               <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                 STATUS
               </th>
+              {isAdmin && (
+                <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
+                  ACTIONS
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -239,6 +280,35 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
                       </span>
                     )}
                   </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3 text-sm">
+                      {showDeleteConfirm === trainee.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDeleteTrainee(trainee.id, trainee.name)}
+                            disabled={deletingId === trainee.id}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
+                          >
+                            {deletingId === trainee.id ? 'Deleting...' : 'Confirm'}
+                          </button>
+                          <button
+                            onClick={() => setShowDeleteConfirm(null)}
+                            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setShowDeleteConfirm(trainee.id)}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
+                          title="Delete this trainee record"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
