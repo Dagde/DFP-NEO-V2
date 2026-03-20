@@ -64278,7 +64278,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
         traineeDb: "Trainee Database"
       };
       const state = newSettings[key] ? "enabled" : "disabled";
-      onShowSuccess(`${labels[key]} ${state}. Reload the app to apply changes.`);
+      onShowSuccess(`${labels[key]} ${state}.`);
       if (onSettingsChanged) onSettingsChanged(newSettings);
     } catch (e) {
       console.error("Could not save dataSourceSettings to localStorage");
@@ -86167,4 +86167,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DgM19jSY.js.map
+//# sourceMappingURL=index-whbFcEDX.js.map

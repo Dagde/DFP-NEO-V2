@@ -62,7 +62,7 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
         traineeDb: 'Trainee Database',
       };
       const state = newSettings[key] ? 'enabled' : 'disabled';
-      onShowSuccess(`${labels[key]} ${state}. Reload the app to apply changes.`);
+      onShowSuccess(`${labels[key]} ${state}.`);
       if (onSettingsChanged) onSettingsChanged(newSettings);
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');
