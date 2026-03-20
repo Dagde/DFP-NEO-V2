@@ -77229,16 +77229,12 @@ async function initializeData() {
     console.log("👨‍🏫 Fetching instructors from API...");
     if (dataSourceSettings.staffDb !== false) {
       const allPersonnel = await fetchInstructors();
-      instructors = allPersonnel.filter((p) => p.userId && p.userId !== "");
-      console.log("✅ Staff DB loaded:", instructors.length, "(filtered from", allPersonnel.length, "total personnel)");
-      console.log("📊 ALL DB PERSONNEL (before userId filter):");
+      instructors = allPersonnel;
+      console.log("✅ Staff DB loaded:", instructors.length, "personnel records");
+      console.log("📊 ALL DB PERSONNEL:");
       allPersonnel.forEach((inst) => {
         const hasUserId = inst.userId && inst.userId !== "";
         console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
-      });
-      console.log("📊 FILTERED DB PERSONNEL (with userId):");
-      instructors.forEach((inst) => {
-        console.log(`  Filtered: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false}`);
       });
     } else {
       console.log("🚫 Staff Database disabled - skipping DB fetch");
@@ -86186,4 +86182,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DjM-JUq3.js.map
+//# sourceMappingURL=index-B2CqyLmY.js.map

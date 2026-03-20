@@ -221,20 +221,15 @@ export async function initializeData() {
          console.log('👨‍🏫 Fetching instructors from API...');
          if (dataSourceSettings.staffDb !== false) {
            const allPersonnel = await fetchInstructors();
-           // Filter to only include personnel with userId set (real linked staff)
-           // This excludes old/incomplete records that don't have a user account
-           instructors = allPersonnel.filter((p: any) => p.userId && p.userId !== '');
-           console.log('✅ Staff DB loaded:', instructors.length, '(filtered from', allPersonnel.length, 'total personnel)');
-           // Debug: Log ALL personnel from DB (before filtering)
-           console.log('📊 ALL DB PERSONNEL (before userId filter):');
+           // Include ALL personnel from database (both linked users and migrated mock staff)
+           // Previously filtered by userId but that excluded migrated staff who don't have user accounts
+           instructors = allPersonnel;
+           console.log('✅ Staff DB loaded:', instructors.length, 'personnel records');
+           // Debug: Log all personnel from DB
+           console.log('📊 ALL DB PERSONNEL:');
            allPersonnel.forEach((inst: any) => {
              const hasUserId = inst.userId && inst.userId !== '';
              console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
-           });
-           // Debug: Log filtered personnel
-           console.log('📊 FILTERED DB PERSONNEL (with userId):');
-           instructors.forEach((inst: any) => {
-             console.log(`  Filtered: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false}`);
            });
          } else {
            console.log('🚫 Staff Database disabled - skipping DB fetch');
