@@ -3243,13 +3243,22 @@ useEffect(() => {
     const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
-    const filteredInstructorsData = dataSourceSettings.staff
-        ? instructorsData
-        : instructorsData.filter(i => (i as any)._dataSource === 'database');
+    // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
+    const filteredInstructorsData = (() => {
+        const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
+        if (!mockOn && !dbOn) return [];                                                         // Both OFF → empty
+        if (mockOn && dbOn) return instructorsData;                                              // Both ON → all
+        if (mockOn && !dbOn) return instructorsData.filter(i => (i as any)._dataSource !== 'database');  // Mock only
+        return instructorsData.filter(i => (i as any)._dataSource === 'database');               // DB only
+    })();
 
-    const filteredTraineesData = dataSourceSettings.trainee
-        ? traineesData
-        : traineesData.filter(t => (t as any)._dataSource === 'database');
+    const filteredTraineesData = (() => {
+        const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
+        if (!mockOn && !dbOn) return [];                                                          // Both OFF → empty
+        if (mockOn && dbOn) return traineesData;                                                  // Both ON → all
+        if (mockOn && !dbOn) return traineesData.filter(t => (t as any)._dataSource !== 'database'); // Mock only
+        return traineesData.filter(t => (t as any)._dataSource === 'database');                   // DB only
+    })();
     
     // ============================================================
     // AUTHENTICATION STATE
