@@ -1,32 +1,8 @@
 // API Client for fetching data from backend
 // Uses plain objects (NOT Maps) for React compatibility
 
-// API base URL - can be configured via environment variable for cross-origin deployments
-// Default: '/api' for same-origin (Next.js serves frontend at /flight-school-app/)
-// Set VITE_API_BASE_URL for cross-origin (e.g., 'https://api.example.com/api')
-const getApiBase = (): string => {
-  // Check for environment variable (injected at build time)
-  const envApiBase = (window as any).VITE_API_BASE_URL || (window as any).DFP_API_BASE;
-  if (envApiBase) {
-    console.log('🌐 API Base URL from environment:', envApiBase);
-    return envApiBase;
-  }
-  
-  // Check for current origin - if we're on the Railway backend, use relative
-  const currentOrigin = window.location.origin;
-  const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
-  
-  if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
-    console.log('🌐 API Base URL: relative (same origin as backend)');
-    return '/api';
-  }
-  
-  // If accessing from different origin, use the Railway backend URL
-  console.log('🌐 API Base URL: absolute (cross-origin to Railway backend)');
-  return `${railwayBackend}/api`;
-};
-
-const API_BASE = getApiBase();
+// API base URL - relative to the Next.js platform (same origin when served as iframe)
+const API_BASE = '/api';
 
 interface FetchResult<T> {
   success: boolean;
@@ -71,11 +47,11 @@ export async function fetchInstructors(): Promise<any[]> {
   return [];
 }
 
-// Fetch trainees from API - queries the Trainee table directly
+// Fetch trainees from API
 export async function fetchTrainees(): Promise<any[]> {
-  const result = await fetchAPI<{ trainees: any[] }>('/trainees');
-  if (result.success && result.data?.trainees) {
-    return result.data.trainees;
+  const result = await fetchAPI<{ personnel: any[] }>('/personnel?role=TRAINEE');
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel;
   }
   return [];
 }
@@ -101,6 +77,27 @@ export async function fetchScores(): Promise<Record<string, any[]>> {
     return scoresObj;
   }
   return {};
+}
+
+// Bulk migrate personnel (mock staff) to database
+export async function migratePersonnelToDatabase(personnelList: any[]): Promise<{
+  success: boolean;
+  inserted?: number;
+  skipped?: number;
+  errors?: { name: string; error: string }[];
+  error?: string;
+}> {
+  const result = await fetchAPI<{ success: boolean; inserted: number; skipped: number; errors?: any[] }>(
+    '/personnel/bulk',
+    {
+      method: 'POST',
+      body: JSON.stringify({ personnel: personnelList }),
+    }
+  );
+  if (result.success && result.data) {
+    return result.data;
+  }
+  return { success: false, error: result.error || 'Migration failed' };
 }
 
 // Fetch schedule from API
