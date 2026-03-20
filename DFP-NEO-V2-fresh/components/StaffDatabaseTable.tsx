@@ -76,11 +76,9 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
 
       if (data.personnel && Array.isArray(data.personnel)) {
         addDebug(`Total personnel: ${data.personnel.length}`);
-        const realStaff = data.personnel.filter((staff: DatabaseStaff) =>
-          staff.userId !== null && staff.userId !== undefined && staff.userId !== ''
-        );
-        addDebug(`Staff with userId: ${realStaff.length}`);
-        setStaffData(realStaff);
+        // Show ALL database personnel (not just those with userId linked to a user account)
+        setStaffData(data.personnel);
+        addDebug(`Showing all ${data.personnel.length} database staff`);
       } else {
         throw new Error(`Invalid format. Keys: ${Object.keys(data).join(', ')}`);
       }
@@ -148,7 +146,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     return (
       <div className="w-full flex items-center justify-center py-12">
         <div className="text-gray-400 text-sm">
-          No real database staff records found (staff with userId)
+          No staff records found in the database
         </div>
       </div>
     );
