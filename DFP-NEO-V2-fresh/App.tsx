@@ -3215,7 +3215,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const instructorIds = new Map();
         const duplicates: any[] = [];
-        instructorsData.forEach((instructor: any) => {
+        allInstructorsData.forEach((instructor: any) => {
             if (instructorIds.has(instructor.idNumber)) {
                 duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
             }
@@ -3225,7 +3225,7 @@ const App: React.FC = () => {
         if (duplicates.length > 0) {
             console.error('🔴 DUPLICATES FOUND IN allInstructorsData STATE:', duplicates.length);
             console.error('Duplicate details:', duplicates);
-            console.error('All Burns entries in state:', instructorsData.filter((i: any) => i.name.includes('Burns')));
+            console.error('All Burns entries in state:', allInstructorsData.filter((i: any) => i.name.includes('Burns')));
         } else {
             console.log('🟢 allInstructorsData state is clean - no duplicates');
         }
@@ -3234,8 +3234,8 @@ const App: React.FC = () => {
 // DATA TRACKING: Initial data load
 useEffect(() => {
   console.log('🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors');
-  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', instructorsData.length);
-  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', instructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
+  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', allInstructorsData.length);
+  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', allInstructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
 }, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
@@ -3246,10 +3246,10 @@ useEffect(() => {
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
     const instructorsData = (() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
-        if (!mockOn && !dbOn) return [];                                                         // Both OFF → empty
-        if (mockOn && dbOn) return allInstructorsData;                                              // Both ON → all
-        if (mockOn && !dbOn) return instructorsData.filter(i => (i as any)._dataSource !== 'database');  // Mock only
-        return instructorsData.filter(i => (i as any)._dataSource === 'database');               // DB only
+        if (!mockOn && !dbOn) return [];                                                                    // Both OFF → empty
+        if (mockOn && dbOn) return allInstructorsData;                                                      // Both ON → all
+        if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');  // Mock only
+        return allInstructorsData.filter(i => (i as any)._dataSource === 'database');                       // DB only
     })();
 
     const traineesData = (() => {

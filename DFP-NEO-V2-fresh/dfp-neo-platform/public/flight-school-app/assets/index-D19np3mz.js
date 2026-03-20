@@ -79393,7 +79393,7 @@ const App = () => {
   reactExports.useEffect(() => {
     const instructorIds = /* @__PURE__ */ new Map();
     const duplicates = [];
-    instructorsData.forEach((instructor) => {
+    allInstructorsData.forEach((instructor) => {
       if (instructorIds.has(instructor.idNumber)) {
         duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
       }
@@ -79402,15 +79402,15 @@ const App = () => {
     if (duplicates.length > 0) {
       console.error("🔴 DUPLICATES FOUND IN allInstructorsData STATE:", duplicates.length);
       console.error("Duplicate details:", duplicates);
-      console.error("All Burns entries in state:", instructorsData.filter((i) => i.name.includes("Burns")));
+      console.error("All Burns entries in state:", allInstructorsData.filter((i) => i.name.includes("Burns")));
     } else {
       console.log("🟢 allInstructorsData state is clean - no duplicates");
     }
   }, [allInstructorsData]);
   reactExports.useEffect(() => {
     console.log("🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors");
-    console.log("🔍 [DATA TRACKING v3] Total instructors from mockdata:", instructorsData.length);
-    console.log("🔍 [DATA TRACKING v3] First 3 instructors:", instructorsData.slice(0, 3).map((i) => ({ id: i.idNumber, name: i.name, category: i.category })));
+    console.log("🔍 [DATA TRACKING v3] Total instructors from mockdata:", allInstructorsData.length);
+    console.log("🔍 [DATA TRACKING v3] First 3 instructors:", allInstructorsData.slice(0, 3).map((i) => ({ id: i.idNumber, name: i.name, category: i.category })));
   }, []);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
   const [allTraineesData, setTraineesData] = reactExports.useState(ESL_DATA.trainees);
@@ -79419,8 +79419,8 @@ const App = () => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     if (!mockOn && !dbOn) return [];
     if (mockOn && dbOn) return allInstructorsData;
-    if (mockOn && !dbOn) return instructorsData.filter((i) => i._dataSource !== "database");
-    return instructorsData.filter((i) => i._dataSource === "database");
+    if (mockOn && !dbOn) return allInstructorsData.filter((i) => i._dataSource !== "database");
+    return allInstructorsData.filter((i) => i._dataSource === "database");
   })();
   const traineesData = (() => {
     const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
@@ -86167,4 +86167,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index--ZFaAF1Z.js.map
+//# sourceMappingURL=index-D19np3mz.js.map
