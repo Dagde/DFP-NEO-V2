@@ -8573,7 +8573,7 @@ updates.forEach(update => {
                            events={eventSegmentsForDate}
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
-                           allTraineesData={traineesData}
+                           traineesData={traineesData}
                            timezoneOffset={timezoneOffset}
                            airframeCount={24}
                            standbyCount={4}
@@ -8736,7 +8736,7 @@ updates.forEach(update => {
                                 })
                                 .map(t => t.fullName)
                             }
-                            allTraineesData={traineesData}
+                            traineesData={traineesData}
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             zoomLevel={zoomLevel}
@@ -8774,8 +8774,8 @@ updates.forEach(update => {
                       onDateChange={handleDateChange}
                       events={eventSegmentsForDate}
                       instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
-                      allInstructorsData={locationFilteredInstructorsForSchedule}
-                      allTraineesData={traineesData}
+                      instructorsData={locationFilteredInstructorsForSchedule}
+                      traineesData={traineesData}
                       onSelectEvent={handleOpenModal}
                       onUpdateEvent={handleScheduleUpdate}
                       zoomLevel={zoomLevel}
@@ -8797,7 +8797,7 @@ updates.forEach(update => {
                 return <NextDayInstructorScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
                     instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
-                    allTraineesData={traineesData}
+                    traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}
@@ -8815,7 +8815,7 @@ updates.forEach(update => {
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
                     trainees={allTraineesData.map(t => t.fullName)}
-                    allTraineesData={traineesData}
+                    traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
                     zoomLevel={zoomLevel}
@@ -8833,7 +8833,7 @@ updates.forEach(update => {
             case 'Trainee':
                 return <TraineeView
                             events={events}
-                            allTraineesData={traineesData}
+                            traineesData={traineesData}
                             courseColors={courseColors}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
@@ -8968,7 +8968,7 @@ updates.forEach(update => {
             case 'CourseRoster':
                 return <CourseRosterView 
                             events={events}
-                            allTraineesData={traineesData}
+                            traineesData={traineesData}
                             courseColors={courseColors}
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
@@ -9240,7 +9240,7 @@ updates.forEach(update => {
                             events={nextDayEventSegments}
                             resources={buildResources}
                             instructors={instructorsData.map(i => i.name)}
-                            allTraineesData={traineesData}
+                            traineesData={traineesData}
                             airframeCount={24}
                             standbyCount={4}
                             ftdCount={availableFtdCount}
@@ -9317,8 +9317,8 @@ updates.forEach(update => {
                     onUpdateCommenceNightFlying={setCommenceNightFlying}
                     ceaseNightFlying={ceaseNightFlying}
                     onUpdateCeaseNightFlying={setCeaseNightFlying}
-                    allInstructorsData={instructorsData}
-                    allTraineesData={traineesData}
+                    instructorsData={instructorsData}
+                    traineesData={traineesData}
                     buildDfpDate={buildDfpDate}
                     highestPriorityEvents={highestPriorityEvents}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
@@ -9483,7 +9483,7 @@ updates.forEach(update => {
             case 'CourseProgress':
                 return <CourseProgressView
                             courses={courses}
-                            allTraineesData={traineesData}
+                            traineesData={traineesData}
                             courseColors={courseColors}
                             scores={scores}
                             traineeLMPs={traineeLMPs}
@@ -9499,8 +9499,8 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
-                    allTraineesData={traineesData}
-                    allInstructorsData={instructorsData}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}
                     archivedInstructorsData={archivedInstructorsData}
                     events={events}
@@ -9521,8 +9521,8 @@ updates.forEach(update => {
                  return <BuildIntelligenceView
                             date={buildDfpDate}
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
-                            allInstructorsData={instructorsData}
-                            allTraineesData={traineesData}
+                            instructorsData={instructorsData}
+                            traineesData={traineesData}
                             activeCourses={coursePriorities}
                             onNavigateAndSelectPerson={(name) => {
                                 const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
@@ -9687,8 +9687,8 @@ updates.forEach(update => {
                         />;
             case 'SupervisorDashboard':
                 return <SupervisorDashboard
-                            allInstructorsData={instructorsData}
-                            allTraineesData={traineesData}
+                            instructorsData={instructorsData}
+                            traineesData={traineesData}
                             date={date}
                             events={eventsForDate}
                             onNavigate={handleNavigation}
@@ -9703,8 +9703,8 @@ updates.forEach(update => {
                 return <StaffView
                             onClose={() => handleNavigation('Program Schedule')}
                             events={events}
-                            allTraineesData={traineesData}
-                            allInstructorsData={instructorsData}
+                            traineesData={traineesData}
+                            instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
                             school={school}
                             personnelData={personnelData}
@@ -9797,8 +9797,8 @@ updates.forEach(update => {
                 return <InstructorListView 
                             onClose={() => handleNavigation('Program Schedule')}
                             events={events}
-                            allTraineesData={traineesData}
-                            allInstructorsData={instructorsData}
+                            traineesData={traineesData}
+                            instructorsData={instructorsData}
                             archivedInstructorsData={archivedInstructorsData}
                             school={school}
                             personnelData={personnelData}
@@ -9883,8 +9883,8 @@ updates.forEach(update => {
                     return <TraineeListView 
                                 onClose={() => handleNavigation('Program Schedule')}
                                 events={events}
-                                allTraineesData={traineesData}
-                                allInstructorsData={instructorsData}
+                                traineesData={traineesData}
+                                instructorsData={instructorsData}
                                 archivedTraineesData={archivedTraineesData}
                                 school={school}
                                 personnelData={personnelData}
@@ -9996,8 +9996,8 @@ updates.forEach(update => {
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
-                    allInstructorsData={instructorsData}
-                    allTraineesData={traineesData}
+                    instructorsData={instructorsData}
+                    traineesData={traineesData}
                     onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
                     syllabusDetails={syllabusDetails}
                     onBulkUpdateInstructors={handleBulkUpdateInstructors}
@@ -10188,8 +10188,8 @@ updates.forEach(update => {
                                     setSuccessMessage('Post-flight data saved!');
                                 }}
                                 school={school}
-                                allTraineesData={traineesData}
-                                allInstructorsData={instructorsData}
+                                traineesData={traineesData}
+                                instructorsData={instructorsData}
                            />;
                 }
                 return null;
@@ -10350,8 +10350,8 @@ updates.forEach(update => {
                     syllabusDetails={syllabusDetails}
                     highlightedField={highlightedField}
                     school={school}
-                    allTraineesData={traineesData}
-                    allInstructorsData={instructorsData}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
                     courseColors={courseColors}
                     eventsForDate={eventsForDate}
                     onNavigateToHateSheet={(trainee) => {
@@ -10540,7 +10540,7 @@ updates.forEach(update => {
                     activeCourses={courseColors}
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
-                    allTraineesData={traineesData}
+                    traineesData={traineesData}
                 />
             )}
             {showAuthFlyout && eventForAuth && 
