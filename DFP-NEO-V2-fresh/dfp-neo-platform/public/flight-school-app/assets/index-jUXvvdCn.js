@@ -77105,7 +77105,7 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   const merged = Array.from(dbInstructorMap.values());
   let skippedByIdNumber = 0;
   let skippedByName = 0;
-  if (includeMockData) {
+  {
     mockInstructors.forEach((instructor) => {
       if (dbInstructorMap.has(instructor.idNumber)) {
         skippedByIdNumber++;
@@ -77183,7 +77183,7 @@ function mergeTraineeData(dbTrainees, mockTrainees, includeMockData) {
     dbTraineeMap.set(trainee.name, trainee);
   });
   const merged = [...taggedDbTrainees];
-  if (includeMockData) {
+  {
     mockTrainees.forEach((trainee) => {
       if (!dbTraineeMap.has(trainee.name)) {
         merged.push({ ...trainee, _dataSource: "mockdata" });
@@ -77227,39 +77227,20 @@ async function initializeData() {
   try {
     console.log("🌐 Initializing data from API...");
     console.log("👨‍🏫 Fetching instructors from API...");
-    if (dataSourceSettings.staffDb !== false) {
-      const allPersonnel = await fetchInstructors();
-      instructors = allPersonnel;
-      console.log("✅ Staff DB loaded:", instructors.length, "personnel records");
-      console.log("📊 ALL DB PERSONNEL:");
-      allPersonnel.forEach((inst) => {
-        const hasUserId = inst.userId && inst.userId !== "";
-        console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
-      });
-    } else {
-      console.log("🚫 Staff Database disabled - skipping DB fetch");
-    }
-    const includeStaffMockData = dataSourceSettings.staff !== false;
-    instructors = mergeInstructorData(instructors, ESL_DATA.instructors, includeStaffMockData);
-    if (includeStaffMockData) {
-      console.log("🔄 Merged database + mock data for staff");
-    } else {
-      console.log("🚫 Staff MockData disabled - using database only");
-    }
+    const allPersonnel = await fetchInstructors();
+    instructors = allPersonnel;
+    console.log("✅ Staff DB loaded:", instructors.length, "personnel records");
+    allPersonnel.forEach((inst) => {
+      const hasUserId = inst.userId && inst.userId !== "";
+      console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
+    });
+    instructors = mergeInstructorData(instructors, ESL_DATA.instructors, true);
+    console.log("🔄 Loaded all staff (DB + mock) with _dataSource tags for UI filtering");
     console.log("👨‍🎓 Fetching trainees from API...");
-    if (dataSourceSettings.traineeDb !== false) {
-      trainees = await fetchTrainees();
-      console.log("✅ Trainee DB loaded:", trainees.length);
-    } else {
-      console.log("🚫 Trainee Database disabled - skipping DB fetch");
-    }
-    const includeTraineeMockData = dataSourceSettings.trainee !== false;
-    trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
-    if (includeTraineeMockData) {
-      console.log("🔄 Merged database + mock data for trainees");
-    } else {
-      console.log("🚫 Trainee MockData disabled - using database only");
-    }
+    trainees = await fetchTrainees();
+    console.log("✅ Trainee DB loaded:", trainees.length);
+    trainees = mergeTraineeData(trainees, ESL_DATA.trainees, true);
+    console.log("🔄 Loaded all trainees (DB + mock) with _dataSource tags for UI filtering");
     assignTraineesToBurns(instructors, trainees);
     console.log("✈️ Fetching aircraft from API...");
     aircraft = await fetchAircraft();
@@ -77271,20 +77252,12 @@ async function initializeData() {
     events = await fetchSchedule();
     console.log("✅ Schedule loaded:", events.length);
     if (instructors.length === 0) {
-      if (dataSourceSettings.staff !== false) {
-        console.log("⚠️ No instructors from API, falling back to mock data");
-        instructors = ESL_DATA.instructors;
-      } else {
-        console.log("⚠️ No instructors from API and MockData disabled");
-      }
+      console.log("⚠️ No instructors from API, falling back to mock data");
+      instructors = ESL_DATA.instructors.map((i) => ({ ...i, _dataSource: "mockdata" }));
     }
     if (trainees.length === 0) {
-      if (dataSourceSettings.trainee !== false) {
-        console.log("⚠️ No trainees from API, falling back to mock data");
-        trainees = ESL_DATA.trainees;
-      } else {
-        console.log("⚠️ No trainees from API and MockData disabled");
-      }
+      console.log("⚠️ No trainees from API, falling back to mock data");
+      trainees = ESL_DATA.trainees.map((t) => ({ ...t, _dataSource: "mockdata" }));
     }
     if (aircraft.length === 0) {
       console.log("⚠️ No aircraft from API, using mock data");
@@ -86194,4 +86167,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-CgTmMFih.js.map
+//# sourceMappingURL=index-jUXvvdCn.js.map

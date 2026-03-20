@@ -217,51 +217,34 @@ export async function initializeData() {
   try {
     console.log('🌐 Initializing data from API...');
     
-         // Fetch instructors
+         // Fetch instructors - ALWAYS load all data regardless of toggle settings
+         // Filtering is handled in App.tsx UI layer, not here at load time
+         // This ensures toggling ON after app load shows data correctly
          console.log('👨‍🏫 Fetching instructors from API...');
-         if (dataSourceSettings.staffDb !== false) {
-           const allPersonnel = await fetchInstructors();
-           // Include ALL personnel from database (both linked users and migrated mock staff)
-           // Previously filtered by userId but that excluded migrated staff who don't have user accounts
-           instructors = allPersonnel;
-           console.log('✅ Staff DB loaded:', instructors.length, 'personnel records');
-           // Debug: Log all personnel from DB
-           console.log('📊 ALL DB PERSONNEL:');
-           allPersonnel.forEach((inst: any) => {
-             const hasUserId = inst.userId && inst.userId !== '';
-             console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
-           });
-         } else {
-           console.log('🚫 Staff Database disabled - skipping DB fetch');
-         }
-         // Merge with mock data only if staff toggle is ON
-         // Merge with mock data only if staff toggle is ON
-         const includeStaffMockData = dataSourceSettings.staff !== false;
-         instructors = mergeInstructorData(instructors, ESL_DATA.instructors, includeStaffMockData);
-         if (includeStaffMockData) {
-           console.log('🔄 Merged database + mock data for staff');
-         } else {
-           console.log('🚫 Staff MockData disabled - using database only');
-         }
+         const allPersonnel = await fetchInstructors();
+         instructors = allPersonnel;
+         console.log('✅ Staff DB loaded:', instructors.length, 'personnel records');
+         allPersonnel.forEach((inst: any) => {
+           const hasUserId = inst.userId && inst.userId !== '';
+           console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
+         });
+
+         // Always merge both DB and mock data with _dataSource tags
+         // App.tsx filtering will decide what to show based on toggle state
+         instructors = mergeInstructorData(instructors, ESL_DATA.instructors, true);
+         console.log('🔄 Loaded all staff (DB + mock) with _dataSource tags for UI filtering');
    
 
-         // Fetch trainees
+         // Fetch trainees - ALWAYS load all data regardless of toggle settings
+         // Filtering is handled in App.tsx UI layer, not here at load time
          console.log('👨‍🎓 Fetching trainees from API...');
-         if (dataSourceSettings.traineeDb !== false) {
-           trainees = await fetchTrainees();
-           console.log('✅ Trainee DB loaded:', trainees.length);
-         } else {
-           console.log('🚫 Trainee Database disabled - skipping DB fetch');
-         }
-         // Merge with mock data only if trainee toggle is ON
-         // Merge with mock data only if trainee toggle is ON
-         const includeTraineeMockData = dataSourceSettings.trainee !== false;
-         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
-         if (includeTraineeMockData) {
-           console.log('🔄 Merged database + mock data for trainees');
-         } else {
-           console.log('🚫 Trainee MockData disabled - using database only');
-         }
+         trainees = await fetchTrainees();
+         console.log('✅ Trainee DB loaded:', trainees.length);
+
+         // Always merge both DB and mock data with _dataSource tags
+         // App.tsx filtering will decide what to show based on toggle state
+         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, true);
+         console.log('🔄 Loaded all trainees (DB + mock) with _dataSource tags for UI filtering');
        
        // Assign trainees to Burns (real database instructor)
        assignTraineesToBurns(instructors, trainees);
@@ -281,23 +264,15 @@ export async function initializeData() {
     events = await fetchSchedule();
     console.log('✅ Schedule loaded:', events.length);
     
-    // If API returned no data, fallback to mock data
+    // If API returned no data, fallback to mock data (always tagged with _dataSource)
     if (instructors.length === 0) {
-        if (dataSourceSettings.staff !== false) {
-          console.log('⚠️ No instructors from API, falling back to mock data');
-          instructors = ESL_DATA.instructors;
-        } else {
-          console.log('⚠️ No instructors from API and MockData disabled');
-        }
+        console.log('⚠️ No instructors from API, falling back to mock data');
+        instructors = ESL_DATA.instructors.map((i: any) => ({ ...i, _dataSource: 'mockdata' }));
     }
     
     if (trainees.length === 0) {
-        if (dataSourceSettings.trainee !== false) {
-          console.log('⚠️ No trainees from API, falling back to mock data');
-          trainees = ESL_DATA.trainees;
-        } else {
-          console.log('⚠️ No trainees from API and MockData disabled');
-        }
+        console.log('⚠️ No trainees from API, falling back to mock data');
+        trainees = ESL_DATA.trainees.map((t: any) => ({ ...t, _dataSource: 'mockdata' }));
     }
     
     if (aircraft.length === 0) {
