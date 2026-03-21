@@ -1004,6 +1004,15 @@ function generateDfpInternal(
     const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
         const traineeUnit = trainee.unit || '';
         const instructorUnit = instructor.unit || '';
+
+        // ALWAYS allow primary and secondary instructors regardless of unit rules
+        // Primary/secondary pairing takes priority over unit eligibility
+        if (programWithPrimaries) {
+            if (instructor.name === trainee.primaryInstructor || instructor.name === trainee.secondaryInstructor) {
+                return true;
+            }
+        }
+
         if (!staffSharingEnabled) {
             // Staff sharing OFF: must be same unit
             return instructorUnit === traineeUnit;
