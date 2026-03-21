@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface StaffDatabaseTableProps {
   currentUserPermission?: string;
@@ -12,6 +12,7 @@ interface DatabaseStaff {
   rank?: string;
   role?: string;
   category?: string;
+  unit?: string;
   flight?: string;
   location?: string;
   email?: string;
@@ -26,12 +27,19 @@ interface DatabaseStaff {
   updatedAt: string;
 }
 
+type SortField = 'name' | 'rank' | 'unit' | 'flight' | 'idNumber' | 'type' | 'role';
+type SortDirection = 'asc' | 'desc';
+
 const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
@@ -137,6 +145,90 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
     return 'STAFF';
   };
 
+  // Sorting function
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorted data using useMemo
+  const sortedStaffData = useMemo(() => {
+    const sorted = [...staffData].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'rank':
+          aValue = a.rank?.toLowerCase() || '';
+          bValue = b.rank?.toLowerCase() || '';
+          break;
+        case 'unit':
+          aValue = a.unit?.toLowerCase() || '';
+          bValue = b.unit?.toLowerCase() || '';
+          break;
+        case 'flight':
+          aValue = (a.flight || a.location || '')?.toLowerCase() || '';
+          bValue = (b.flight || b.location || '')?.toLowerCase() || '';
+          break;
+        case 'idNumber':
+          aValue = a.idNumber || 0;
+          bValue = b.idNumber || 0;
+          break;
+        case 'type':
+          aValue = getType(a);
+          bValue = getType(b);
+          break;
+        case 'role':
+          aValue = a.role?.toLowerCase() || '';
+          bValue = b.role?.toLowerCase() || '';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [staffData, sortField, sortDirection]);
+
+  // Sort indicator component
+  const SortIndicator = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <span className="ml-1 text-gray-500">⇅</span>;
+    }
+    return (
+      <span className="ml-1 text-sky-400">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
+  // Clickable header component
+  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-left text-sm font-semibold tracking-wide cursor-pointer hover:bg-blue-800/40 select-none transition-colors ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <span className="flex items-center">
+        {children}
+        <SortIndicator field={field} />
+      </span>
+    </th>
+  );
+
   if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
@@ -187,7 +279,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
             <div>
               <h3 className="text-lg font-bold text-sky-400">Staff Database</h3>
               <p className="text-sm text-gray-400 mt-1">
-                All personnel records from the database
+                All personnel records from the database (click column headers to sort)
               </p>
             </div>
             <div className="flex items-center">
@@ -204,24 +296,13 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
         <table className="w-full">
           <thead>
             <tr className="bg-blue-900/40 text-white">
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                NAME
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                RANK/SERVICE
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                UNIT/FLIGHT
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                PMKEYS/ID
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                TYPE
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                ROLE
-              </th>
+              <SortableHeader field="name">NAME</SortableHeader>
+              <SortableHeader field="rank">RANK/SERVICE</SortableHeader>
+              <SortableHeader field="unit">UNIT</SortableHeader>
+              <SortableHeader field="flight">FLIGHT/LOCATION</SortableHeader>
+              <SortableHeader field="idNumber">PMKEYS/ID</SortableHeader>
+              <SortableHeader field="type">TYPE</SortableHeader>
+              <SortableHeader field="role">ROLE</SortableHeader>
               {isAdmin && (
                 <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                   ACTIONS
@@ -230,7 +311,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
             </tr>
           </thead>
           <tbody>
-            {staffData.map((staff, index) => {
+            {sortedStaffData.map((staff, index) => {
               const type = getType(staff);
               const typeBadgeColor = type === 'TRAINEE' 
                 ? 'bg-green-600 text-white' 
@@ -249,6 +330,9 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.rank || 'N/A'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-white">
+                    {staff.unit || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.flight || staff.location || 'N/A'}

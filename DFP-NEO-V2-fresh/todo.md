@@ -1,10 +1,8 @@
-# Delete Functionality Implementation
+# Sorting and Unit Column Implementation
 
 ## Tasks
-- [x] Review current state of server.js, StaffDatabaseTable, and TraineeDatabaseTable
-- [x] Add GET /api/trainees endpoint in server.js
-- [x] Add DELETE /api/trainees/:id endpoint in server.js  
-- [x] Update StaffDatabaseTable with delete button and admin check
-- [x] Update TraineeDatabaseTable with delete button and admin check
-- [x] Update SettingsViewWithMenu to pass currentUserPermission prop
+- [ ] Update StaffDatabaseTable with sorting functionality
+- [ ] Add Unit column to StaffDatabaseTable
+- [ ] Update TraineeDatabaseTable with sorting functionality
 - [ ] Build and test the implementation
+- [ ] Commit and push changes

@@ -61757,6 +61757,8 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
   const [error, setError] = reactExports.useState(null);
   const [deletingId, setDeletingId] = reactExports.useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(null);
+  const [sortField, setSortField] = reactExports.useState("name");
+  const [sortDirection, setSortDirection] = reactExports.useState("asc");
   const isAdmin = currentUserPermission === "Super Admin" || currentUserPermission === "Admin";
   reactExports.useEffect(() => {
     fetchDatabaseStaff();
@@ -61838,14 +61840,105 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
     }
     return "STAFF";
   };
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+  const sortedStaffData = reactExports.useMemo(() => {
+    const sorted = [...staffData].sort((a, b) => {
+      let aValue;
+      let bValue;
+      switch (sortField) {
+        case "name":
+          aValue = a.name?.toLowerCase() || "";
+          bValue = b.name?.toLowerCase() || "";
+          break;
+        case "rank":
+          aValue = a.rank?.toLowerCase() || "";
+          bValue = b.rank?.toLowerCase() || "";
+          break;
+        case "unit":
+          aValue = a.unit?.toLowerCase() || "";
+          bValue = b.unit?.toLowerCase() || "";
+          break;
+        case "flight":
+          aValue = (a.flight || a.location || "")?.toLowerCase() || "";
+          bValue = (b.flight || b.location || "")?.toLowerCase() || "";
+          break;
+        case "idNumber":
+          aValue = a.idNumber || 0;
+          bValue = b.idNumber || 0;
+          break;
+        case "type":
+          aValue = getType(a);
+          bValue = getType(b);
+          break;
+        case "role":
+          aValue = a.role?.toLowerCase() || "";
+          bValue = b.role?.toLowerCase() || "";
+          break;
+        default:
+          return 0;
+      }
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [staffData, sortField, sortDirection]);
+  const SortIndicator = ({ field }) => {
+    if (sortField !== field) {
+      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 text-gray-500", children: "⇅" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+        lineNumber: 210,
+        columnNumber: 14
+      }, void 0);
+    }
+    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 text-sky-400", children: sortDirection === "asc" ? "↑" : "↓" }, void 0, false, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+      lineNumber: 213,
+      columnNumber: 7
+    }, void 0);
+  };
+  const SortableHeader = ({ field, children, className = "" }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "th",
+    {
+      className: `px-4 py-3 text-left text-sm font-semibold tracking-wide cursor-pointer hover:bg-blue-800/40 select-none transition-colors ${className}`,
+      onClick: () => handleSort(field),
+      children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center", children: [
+        children,
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortIndicator, { field }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+          lineNumber: 227,
+          columnNumber: 9
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+        lineNumber: 225,
+        columnNumber: 7
+      }, void 0)
+    },
+    void 0,
+    false,
+    {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+      lineNumber: 221,
+      columnNumber: 5
+    },
+    void 0
+  );
   if (loading) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full flex items-center justify-center py-12", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-sm", children: "Loading database staff..." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 143,
+      lineNumber: 235,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 142,
+      lineNumber: 234,
       columnNumber: 7
     }, void 0);
   }
@@ -61853,12 +61946,12 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-red-900/40 border border-red-700 rounded-lg p-4 mb-4", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-300 text-sm font-semibold mb-2", children: "Error Loading Database" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 154,
+        lineNumber: 246,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-400 text-xs mb-3 font-mono break-all", children: error }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 157,
+        lineNumber: 249,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -61872,7 +61965,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 160,
+          lineNumber: 252,
           columnNumber: 11
         },
         void 0
@@ -61880,26 +61973,26 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
       debugInfo.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3 bg-black/60 border border-gray-600 rounded p-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-yellow-400 text-xs font-semibold mb-2", children: "🔍 Debug Trace:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 168,
+          lineNumber: 260,
           columnNumber: 15
         }, void 0),
         debugInfo.map((line, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-green-300 text-xs font-mono break-all leading-5", children: line }, i, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 170,
+          lineNumber: 262,
           columnNumber: 17
         }, void 0))
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 167,
+        lineNumber: 259,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 153,
+      lineNumber: 245,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 152,
+      lineNumber: 244,
       columnNumber: 7
     }, void 0);
   }
@@ -61908,17 +62001,17 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-sky-400", children: "Staff Database" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 188,
+          lineNumber: 280,
           columnNumber: 15
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "All personnel records from the database" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "All personnel records from the database (click column headers to sort)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 189,
+          lineNumber: 281,
           columnNumber: 15
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 187,
+        lineNumber: 279,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full", children: [
@@ -61926,73 +62019,78 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
         " Staff"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 194,
+        lineNumber: 286,
         columnNumber: 15
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 193,
+        lineNumber: 285,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 186,
+      lineNumber: 278,
       columnNumber: 11
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 185,
+      lineNumber: 277,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 184,
+      lineNumber: 276,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "bg-blue-900/40 text-white", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "NAME" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "name", children: "NAME" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 207,
+          lineNumber: 299,
           columnNumber: 15
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "RANK/SERVICE" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "rank", children: "RANK/SERVICE" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 210,
+          lineNumber: 300,
           columnNumber: 15
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "UNIT/FLIGHT" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "unit", children: "UNIT" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 213,
+          lineNumber: 301,
           columnNumber: 15
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "PMKEYS/ID" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "flight", children: "FLIGHT/LOCATION" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 216,
+          lineNumber: 302,
           columnNumber: 15
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "TYPE" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "idNumber", children: "PMKEYS/ID" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 219,
+          lineNumber: 303,
           columnNumber: 15
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ROLE" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "type", children: "TYPE" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 222,
+          lineNumber: 304,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "role", children: "ROLE" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+          lineNumber: 305,
           columnNumber: 15
         }, void 0),
         isAdmin && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ACTIONS" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-          lineNumber: 226,
+          lineNumber: 307,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 206,
+        lineNumber: 298,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 205,
+        lineNumber: 297,
         columnNumber: 11
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: staffData.map((staff, index) => {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: sortedStaffData.map((staff, index) => {
         const type = getType(staff);
         const typeBadgeColor = type === "TRAINEE" ? "bg-green-600 text-white" : "bg-blue-600 text-white";
         const rowBackgroundColor = index % 2 === 0 ? "bg-blue-950/30" : "bg-blue-900/40";
@@ -62003,36 +62101,41 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: staff.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 247,
+                lineNumber: 328,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: staff.rank || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 250,
+                lineNumber: 331,
+                columnNumber: 19
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: staff.unit || "N/A" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
+                lineNumber: 334,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: staff.flight || staff.location || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 253,
+                lineNumber: 337,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: staff.idNumber || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 256,
+                lineNumber: 340,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-3 py-1 rounded-full text-xs font-semibold ${typeBadgeColor}`, children: type }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 260,
+                lineNumber: 344,
                 columnNumber: 21
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 259,
+                lineNumber: 343,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: staff.role || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 264,
+                lineNumber: 348,
                 columnNumber: 19
               }, void 0),
               isAdmin && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: showDeleteConfirm === staff.id ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
@@ -62048,7 +62151,7 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                    lineNumber: 271,
+                    lineNumber: 355,
                     columnNumber: 27
                   },
                   void 0
@@ -62064,14 +62167,14 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                    lineNumber: 278,
+                    lineNumber: 362,
                     columnNumber: 27
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 270,
+                lineNumber: 354,
                 columnNumber: 25
               }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "button",
@@ -62085,13 +62188,13 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                  lineNumber: 286,
+                  lineNumber: 370,
                   columnNumber: 25
                 },
                 void 0
               ) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-                lineNumber: 268,
+                lineNumber: 352,
                 columnNumber: 21
               }, void 0)
             ]
@@ -62100,29 +62203,29 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-            lineNumber: 243,
+            lineNumber: 324,
             columnNumber: 17
           },
           void 0
         );
       }) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 232,
+        lineNumber: 313,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 204,
+      lineNumber: 296,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 203,
+      lineNumber: 295,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-4 flex justify-between items-center text-sm", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400", children: "Source: Database" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 305,
+        lineNumber: 389,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-xs", children: [
@@ -62130,17 +62233,17 @@ const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
         staffData.length
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-        lineNumber: 308,
+        lineNumber: 392,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-      lineNumber: 304,
+      lineNumber: 388,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/StaffDatabaseTable.tsx",
-    lineNumber: 182,
+    lineNumber: 274,
     columnNumber: 5
   }, void 0);
 };
@@ -62658,6 +62761,8 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
   const [error, setError] = reactExports.useState(null);
   const [deletingId, setDeletingId] = reactExports.useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = reactExports.useState(null);
+  const [sortField, setSortField] = reactExports.useState("name");
+  const [sortDirection, setSortDirection] = reactExports.useState("asc");
   const isAdmin = currentUserPermission === "Super Admin" || currentUserPermission === "Admin";
   reactExports.useEffect(() => {
     fetchDatabaseTrainees();
@@ -62732,14 +62837,109 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
       setShowDeleteConfirm(null);
     }
   };
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+  const sortedTraineeData = reactExports.useMemo(() => {
+    const sorted = [...traineeData].sort((a, b) => {
+      let aValue;
+      let bValue;
+      switch (sortField) {
+        case "name":
+          aValue = a.name?.toLowerCase() || "";
+          bValue = b.name?.toLowerCase() || "";
+          break;
+        case "role":
+          aValue = "trainee";
+          bValue = "trainee";
+          break;
+        case "rank":
+          aValue = (a.rank || a.service || "")?.toLowerCase() || "";
+          bValue = (b.rank || b.service || "")?.toLowerCase() || "";
+          break;
+        case "course":
+          aValue = (a.course || "")?.toLowerCase() || "";
+          bValue = (b.course || "")?.toLowerCase() || "";
+          break;
+        case "unit":
+          aValue = (a.unit || a.flight || "")?.toLowerCase() || "";
+          bValue = (b.unit || b.flight || "")?.toLowerCase() || "";
+          break;
+        case "idNumber":
+          aValue = a.idNumber || 0;
+          bValue = b.idNumber || 0;
+          break;
+        case "primaryInstructor":
+          aValue = a.primaryInstructor?.toLowerCase() || "";
+          bValue = b.primaryInstructor?.toLowerCase() || "";
+          break;
+        case "status":
+          aValue = a.isPaused ? "paused" : "active";
+          bValue = b.isPaused ? "paused" : "active";
+          break;
+        default:
+          return 0;
+      }
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [traineeData, sortField, sortDirection]);
+  const SortIndicator = ({ field }) => {
+    if (sortField !== field) {
+      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 text-gray-500", children: "⇅" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+        lineNumber: 206,
+        columnNumber: 14
+      }, void 0);
+    }
+    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 text-sky-400", children: sortDirection === "asc" ? "↑" : "↓" }, void 0, false, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+      lineNumber: 209,
+      columnNumber: 7
+    }, void 0);
+  };
+  const SortableHeader = ({ field, children, className = "" }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    "th",
+    {
+      className: `px-4 py-3 text-left text-sm font-semibold tracking-wide cursor-pointer hover:bg-green-800/40 select-none transition-colors ${className}`,
+      onClick: () => handleSort(field),
+      children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center", children: [
+        children,
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortIndicator, { field }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 223,
+          columnNumber: 9
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+        lineNumber: 221,
+        columnNumber: 7
+      }, void 0)
+    },
+    void 0,
+    false,
+    {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+      lineNumber: 217,
+      columnNumber: 5
+    },
+    void 0
+  );
   if (loading) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full flex items-center justify-center py-12", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-sm", children: "Loading database trainees..." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 136,
+      lineNumber: 231,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 135,
+      lineNumber: 230,
       columnNumber: 7
     }, void 0);
   }
@@ -62747,12 +62947,12 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-red-900/40 border border-red-700 rounded-lg p-4 mb-4", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-300 text-sm font-semibold mb-2", children: "Error Loading Database" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 147,
+        lineNumber: 242,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-400 text-xs mb-3 font-mono break-all", children: error }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 150,
+        lineNumber: 245,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -62766,7 +62966,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 153,
+          lineNumber: 248,
           columnNumber: 11
         },
         void 0
@@ -62774,132 +62974,136 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
       debugInfo.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3 bg-black/60 border border-gray-600 rounded p-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-yellow-400 text-xs font-semibold mb-2", children: "🔍 Debug Trace:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 161,
+          lineNumber: 256,
           columnNumber: 15
         }, void 0),
         debugInfo.map((line, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-green-300 text-xs font-mono break-all leading-5", children: line }, i, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 163,
+          lineNumber: 258,
           columnNumber: 17
         }, void 0))
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 160,
+        lineNumber: 255,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 146,
+      lineNumber: 241,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 145,
+      lineNumber: 240,
       columnNumber: 7
     }, void 0);
   }
   if (traineeData.length === 0) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full flex items-center justify-center py-12", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-sm", children: "No trainee records found in database" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 177,
+      lineNumber: 272,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 176,
+      lineNumber: 271,
       columnNumber: 7
     }, void 0);
   }
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-800/80 border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-800/80 border-b border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-sky-400", children: "Trainee Database" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 191,
-          columnNumber: 15
+          lineNumber: 287,
+          columnNumber: 17
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full", children: [
-          traineeData.length,
-          " Trainees"
-        ] }, void 0, true, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "All trainee records from the database (click column headers to sort)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 192,
-          columnNumber: 15
-        }, void 0)
-      ] }, void 0, true, {
-        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 190,
-        columnNumber: 13
-      }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "All trainee records from the database" }, void 0, false, {
-        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 196,
-        columnNumber: 13
-      }, void 0)
-    ] }, void 0, true, {
-      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 189,
-      columnNumber: 11
-    }, void 0) }, void 0, false, {
-      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 188,
-      columnNumber: 9
-    }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full", children: [
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "bg-green-900/40 text-white", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "NAME" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 207,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ROLE" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 210,
-          columnNumber: 18
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "RANK/SERVICE" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 213,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "COURSE/LMP" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 216,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "UNIT/FLIGHT" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 219,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "PMKEYS/ID" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 222,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "PRIMARY INSTR" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 225,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "STATUS" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 228,
-          columnNumber: 15
-        }, void 0),
-        isAdmin && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ACTIONS" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-          lineNumber: 232,
+          lineNumber: 288,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 206,
+        lineNumber: 286,
+        columnNumber: 15
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full", children: [
+        traineeData.length,
+        " Trainees"
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+        lineNumber: 292,
+        columnNumber: 15
+      }, void 0)
+    ] }, void 0, true, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+      lineNumber: 285,
+      columnNumber: 13
+    }, void 0) }, void 0, false, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+      lineNumber: 284,
+      columnNumber: 11
+    }, void 0) }, void 0, false, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+      lineNumber: 283,
+      columnNumber: 9
+    }, void 0),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "bg-green-900/40 text-white", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "name", children: "NAME" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 304,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "role", children: "ROLE" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 305,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "rank", children: "RANK/SERVICE" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 306,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "course", children: "COURSE/LMP" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 307,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "unit", children: "UNIT/FLIGHT" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 308,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "idNumber", children: "PMKEYS/ID" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 309,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "primaryInstructor", children: "PRIMARY INSTR" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 310,
+          columnNumber: 15
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortableHeader, { field: "status", children: "STATUS" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 311,
+          columnNumber: 15
+        }, void 0),
+        isAdmin && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold tracking-wide", children: "ACTIONS" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+          lineNumber: 313,
+          columnNumber: 17
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
+        lineNumber: 303,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 205,
+        lineNumber: 302,
         columnNumber: 11
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: traineeData.map((trainee, index) => {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: sortedTraineeData.map((trainee, index) => {
         const rowBackgroundColor = index % 2 === 0 ? "bg-green-950/30" : "bg-green-900/20";
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "tr",
@@ -62908,17 +63112,17 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 249,
+                lineNumber: 330,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: "Trainee" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 252,
-                columnNumber: 22
+                lineNumber: 333,
+                columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: [trainee.rank, trainee.service].filter(Boolean).join(" / ") || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 255,
+                lineNumber: 336,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.course ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -62929,48 +63133,48 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                   ")"
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                  lineNumber: 260,
+                  lineNumber: 341,
                   columnNumber: 66
                 }, void 0) : null
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 260,
+                lineNumber: 341,
                 columnNumber: 25
               }, void 0) : "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 258,
+                lineNumber: 339,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: [trainee.unit, trainee.flight].filter(Boolean).join(" / ") || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 263,
+                lineNumber: 344,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.idNumber || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 266,
+                lineNumber: 347,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.primaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 italic", children: "Unassigned" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 270,
+                lineNumber: 351,
                 columnNumber: 51
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 269,
+                lineNumber: 350,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: trainee.isPaused ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-3 py-1 rounded-full text-xs font-semibold bg-amber-600 text-white", children: "Paused" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 274,
+                lineNumber: 355,
                 columnNumber: 23
               }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white", children: "Active" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 278,
+                lineNumber: 359,
                 columnNumber: 23
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 272,
+                lineNumber: 353,
                 columnNumber: 19
               }, void 0),
               isAdmin && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: showDeleteConfirm === trainee.id ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
@@ -62986,7 +63190,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                    lineNumber: 287,
+                    lineNumber: 368,
                     columnNumber: 27
                   },
                   void 0
@@ -63002,14 +63206,14 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                    lineNumber: 294,
+                    lineNumber: 375,
                     columnNumber: 27
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 286,
+                lineNumber: 367,
                 columnNumber: 25
               }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "button",
@@ -63023,13 +63227,13 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                  lineNumber: 302,
+                  lineNumber: 383,
                   columnNumber: 25
                 },
                 void 0
               ) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-                lineNumber: 284,
+                lineNumber: 365,
                 columnNumber: 21
               }, void 0)
             ]
@@ -63038,29 +63242,29 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-            lineNumber: 245,
+            lineNumber: 326,
             columnNumber: 17
           },
           void 0
         );
       }) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 238,
+        lineNumber: 319,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 204,
+      lineNumber: 301,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 203,
+      lineNumber: 300,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-4 flex justify-between items-center text-sm", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400", children: "Source: Database" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 321,
+        lineNumber: 402,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-xs", children: [
@@ -63068,17 +63272,17 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess }) => {
         traineeData.length
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-        lineNumber: 324,
+        lineNumber: 405,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-      lineNumber: 320,
+      lineNumber: 401,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
-    lineNumber: 185,
+    lineNumber: 280,
     columnNumber: 5
   }, void 0);
 };
@@ -86397,4 +86601,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DYNMwm7q.js.map
+//# sourceMappingURL=index-wWXFeId-.js.map

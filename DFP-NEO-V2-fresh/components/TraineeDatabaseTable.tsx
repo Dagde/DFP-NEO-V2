@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface TraineeDatabaseTableProps {
   currentUserPermission?: string;
@@ -30,12 +30,19 @@ interface DatabaseTrainee {
   updatedAt: string;
 }
 
+type SortField = 'name' | 'role' | 'rank' | 'course' | 'unit' | 'idNumber' | 'primaryInstructor' | 'status';
+type SortDirection = 'asc' | 'desc';
+
 const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess }) => {
   const [traineeData, setTraineeData] = useState<DatabaseTrainee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
@@ -130,6 +137,94 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
     }
   };
 
+  // Sorting function
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorted data using useMemo
+  const sortedTraineeData = useMemo(() => {
+    const sorted = [...traineeData].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'role':
+          aValue = 'trainee';
+          bValue = 'trainee';
+          break;
+        case 'rank':
+          aValue = (a.rank || a.service || '')?.toLowerCase() || '';
+          bValue = (b.rank || b.service || '')?.toLowerCase() || '';
+          break;
+        case 'course':
+          aValue = (a.course || '')?.toLowerCase() || '';
+          bValue = (b.course || '')?.toLowerCase() || '';
+          break;
+        case 'unit':
+          aValue = (a.unit || a.flight || '')?.toLowerCase() || '';
+          bValue = (b.unit || b.flight || '')?.toLowerCase() || '';
+          break;
+        case 'idNumber':
+          aValue = a.idNumber || 0;
+          bValue = b.idNumber || 0;
+          break;
+        case 'primaryInstructor':
+          aValue = a.primaryInstructor?.toLowerCase() || '';
+          bValue = b.primaryInstructor?.toLowerCase() || '';
+          break;
+        case 'status':
+          aValue = a.isPaused ? 'paused' : 'active';
+          bValue = b.isPaused ? 'paused' : 'active';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [traineeData, sortField, sortDirection]);
+
+  // Sort indicator component
+  const SortIndicator = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <span className="ml-1 text-gray-500">⇅</span>;
+    }
+    return (
+      <span className="ml-1 text-sky-400">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
+  // Clickable header component
+  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-left text-sm font-semibold tracking-wide cursor-pointer hover:bg-green-800/40 select-none transition-colors ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <span className="flex items-center">
+        {children}
+        <SortIndicator field={field} />
+      </span>
+    </th>
+  );
+
   if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
@@ -188,14 +283,16 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4">
           <div className="p-4 bg-gray-800/80 border-b border-gray-700">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-sky-400">Trainee Database</h3>
+              <div>
+                <h3 className="text-lg font-bold text-sky-400">Trainee Database</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  All trainee records from the database (click column headers to sort)
+                </p>
+              </div>
               <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
                 {traineeData.length} Trainees
               </span>
             </div>
-            <p className="text-sm text-gray-400 mt-1">
-              All trainee records from the database
-            </p>
           </div>
         </div>
 
@@ -204,30 +301,14 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
         <table className="w-full">
           <thead>
             <tr className="bg-green-900/40 text-white">
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                NAME
-              </th>
-                 <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                   ROLE
-                 </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                RANK/SERVICE
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                COURSE/LMP
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                UNIT/FLIGHT
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                PMKEYS/ID
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                PRIMARY INSTR
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                STATUS
-              </th>
+              <SortableHeader field="name">NAME</SortableHeader>
+              <SortableHeader field="role">ROLE</SortableHeader>
+              <SortableHeader field="rank">RANK/SERVICE</SortableHeader>
+              <SortableHeader field="course">COURSE/LMP</SortableHeader>
+              <SortableHeader field="unit">UNIT/FLIGHT</SortableHeader>
+              <SortableHeader field="idNumber">PMKEYS/ID</SortableHeader>
+              <SortableHeader field="primaryInstructor">PRIMARY INSTR</SortableHeader>
+              <SortableHeader field="status">STATUS</SortableHeader>
               {isAdmin && (
                 <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
                   ACTIONS
@@ -236,7 +317,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
             </tr>
           </thead>
           <tbody>
-            {traineeData.map((trainee, index) => {
+            {sortedTraineeData.map((trainee, index) => {
               const rowBackgroundColor = index % 2 === 0
                 ? 'bg-green-950/30'
                 : 'bg-green-900/20';
@@ -249,9 +330,9 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
                   <td className="px-4 py-3 text-sm text-white">
                     {trainee.name}
                   </td>
-                     <td className="px-4 py-3 text-sm text-white">
-                       Trainee
-                     </td>
+                  <td className="px-4 py-3 text-sm text-white">
+                    Trainee
+                  </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {[trainee.rank, trainee.service].filter(Boolean).join(' / ') || 'N/A'}
                   </td>
