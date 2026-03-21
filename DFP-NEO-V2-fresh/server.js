@@ -624,6 +624,80 @@ app.post('/api/cleanup-duplicate-personnel', async (req, res) => {
   }
 });
 
+// POST /api/merge-burns-accounts - Consolidate Burns user accounts
+// Links Personnel to alexander.burns, deletes 8201112 user, sets role to INSTRUCTOR + ADMIN
+app.post('/api/merge-burns-accounts', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { confirmToken } = req.body;
+
+    if (confirmToken !== 'CONFIRM_MERGE_BURNS_ACCOUNTS') {
+      return res.status(400).json({ error: 'Invalid confirmation token. Send { confirmToken: "CONFIRM_MERGE_BURNS_ACCOUNTS" }' });
+    }
+
+    const results = [];
+
+    // Target user account (alexander.burns) - will be the primary account
+    const targetUserId = 'cmlw89air0001ml3apfk5l1sz';
+    // Source user account (8201112) - will be deleted
+    const sourceUserId = 'cmkdynoqv0000o30fwtqqwkzw';
+    // Personnel record to re-link
+    const personnelId = 'cmkivhycv0001k30fbih64ptl';
+
+    // Step 1: Update Personnel to link to alexander.burns account
+    await db.personnel.update({
+      where: { id: personnelId },
+      data: { userId: targetUserId }
+    });
+    results.push(`Linked Personnel ${personnelId} to User ${targetUserId} (alexander.burns)`);
+
+    // Step 2: Update alexander.burns user to have both INSTRUCTOR and ADMIN roles
+    // Check if there's a single role field or if we need to handle multiple roles
+    await db.user.update({
+      where: { id: targetUserId },
+      data: { role: 'ADMIN' } // Keep ADMIN as primary, INSTRUCTOR implied by Personnel link
+    });
+    results.push(`Updated User ${targetUserId} role to ADMIN (INSTRUCTOR via Personnel link)`);
+
+    // Step 3: Delete the 8201112 user account
+    try {
+      await db.user.delete({ where: { id: sourceUserId } });
+      results.push(`Deleted User ${sourceUserId} (8201112)`);
+    } catch (e) {
+      results.push(`Failed to delete User ${sourceUserId}: ${e.message}`);
+    }
+
+    // Verify the merge
+    const personnel = await db.personnel.findUnique({
+      where: { id: personnelId },
+      select: { id: true, name: true, rank: true, userId: true }
+    });
+    const user = await db.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, username: true, firstName: true, lastName: true, role: true }
+    });
+    const remainingUsers = await db.user.findMany({
+      where: { OR: [
+        { firstName: { contains: 'Burns', mode: 'insensitive' } },
+        { lastName: { contains: 'Burns', mode: 'insensitive' } },
+        { username: { contains: 'burns', mode: 'insensitive' } }
+      ]},
+      select: { id: true, username: true, firstName: true, lastName: true, role: true }
+    });
+
+    res.json({
+      success: true,
+      actions: results,
+      linkedPersonnel: personnel,
+      primaryUser: user,
+      allBurnsUsers: remainingUsers
+    });
+  } catch (error) {
+    console.error('Merge error:', error);
+    res.status(500).json({ error: 'Merge failed', details: error.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
