@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 interface StaffDatabaseTableProps {
   currentUserPermission?: string;
   onShowSuccess?: (message: string) => void;
+  onDataChanged?: () => void;  // Callback to refresh parent data
 }
 
 interface DatabaseStaff {
@@ -30,7 +31,7 @@ interface DatabaseStaff {
 type SortField = 'name' | 'rank' | 'unit' | 'flight' | 'idNumber' | 'type' | 'role';
 type SortDirection = 'asc' | 'desc';
 
-const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess }) => {
+const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +124,11 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
       
       if (onShowSuccess) {
         onShowSuccess(`Deleted staff: ${staffName}`);
+      }
+      
+      // Notify parent to refresh data (Staff Profile list, etc.)
+      if (onDataChanged) {
+        onDataChanged();
       }
       
       console.log(`✅ Deleted staff: ${staffName}`);

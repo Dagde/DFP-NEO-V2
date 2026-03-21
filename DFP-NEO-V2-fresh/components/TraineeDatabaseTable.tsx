@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 interface TraineeDatabaseTableProps {
   currentUserPermission?: string;
   onShowSuccess?: (message: string) => void;
+  onDataChanged?: () => void;  // Callback to refresh parent data
 }
 
 interface DatabaseTrainee {
@@ -33,7 +34,7 @@ interface DatabaseTrainee {
 type SortField = 'name' | 'role' | 'rank' | 'course' | 'unit' | 'idNumber' | 'primaryInstructor' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess }) => {
+const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged }) => {
   const [traineeData, setTraineeData] = useState<DatabaseTrainee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +125,11 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
       
       if (onShowSuccess) {
         onShowSuccess(`Deleted trainee: ${traineeName}`);
+      }
+      
+      // Notify parent to refresh data (Trainee Profile list, etc.)
+      if (onDataChanged) {
+        onDataChanged();
       }
       
       console.log(`✅ Deleted trainee: ${traineeName}`);

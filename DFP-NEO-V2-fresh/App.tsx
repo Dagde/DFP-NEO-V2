@@ -7343,6 +7343,49 @@ updates.forEach(update => {
         setSuccessMessage('Trainees successfully replaced!');
     }, []);
     
+    // Refresh database data (personnel and trainees) - called when database is modified
+    const handleDatabaseDataChanged = useCallback(async () => {
+        console.log('🔄 Refreshing database data after database modification...');
+        
+        try {
+            // Fetch fresh personnel data
+            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
+            if (personnelRes.ok) {
+                const personnelData = await personnelRes.json();
+                const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
+                    ...p,
+                    _dataSource: 'database' as const,
+                }));
+                
+                // Update instructors - remove old database entries and add fresh ones
+                setInstructorsData(prev => {
+                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
+                    return [...nonDbInstructors, ...dbPersonnel];
+                });
+                console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
+            }
+            
+            // Fetch fresh trainees data
+            const traineesRes = await fetch('/api/trainees', { credentials: 'include' });
+            if (traineesRes.ok) {
+                const traineesData = await traineesRes.json();
+                const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
+                    ...t,
+                    _dataSource: 'database' as const,
+                }));
+                
+                // Update trainees - remove old database entries and add fresh ones
+                setTraineesData(prev => {
+                    const nonDbTrainees = prev.filter(t => (t as any)._dataSource !== 'database');
+                    return [...nonDbTrainees, ...dbTrainees];
+                });
+                console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+            }
+        } catch (error) {
+            console.error('❌ Error refreshing database data:', error);
+        }
+    }, []);
+    
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
         setSyllabusDetails(prevSyllabus => {
@@ -9999,6 +10042,7 @@ updates.forEach(update => {
                     instructorsData={instructorsData}
                     traineesData={traineesData}
                     onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
+                    onDatabaseDataChanged={handleDatabaseDataChanged}
                     syllabusDetails={syllabusDetails}
                     onBulkUpdateInstructors={handleBulkUpdateInstructors}
                     onReplaceInstructors={handleReplaceInstructors}

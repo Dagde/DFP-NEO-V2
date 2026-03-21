@@ -88,6 +88,7 @@ interface SettingsViewWithMenuProps {
         staffDb: boolean;
         traineeDb: boolean;
     }) => void;
+    onDatabaseDataChanged?: () => void;  // Called when staff/trainee database is modified
     }
 
 type SettingsSection =
@@ -592,6 +593,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <StaffDatabaseTable 
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
+                            onDataChanged={props.onDatabaseDataChanged}
                         />
                     )}
                     {activeSection === 'staff-mockdata' && (
@@ -607,6 +609,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <TraineeDatabaseTable 
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
+                            onDataChanged={props.onDatabaseDataChanged}
                         />
                     )}
                     {activeSection === 'trainee-mockdata' && (
