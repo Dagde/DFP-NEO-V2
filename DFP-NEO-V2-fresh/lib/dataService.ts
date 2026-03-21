@@ -180,7 +180,7 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
 }
 
 export async function initializeData() {
-  console.log('🔧 initializeData() v2.2 - Starting data initialization');
+  console.log('🔧 initializeData() v2.3-debug - Starting data initialization');
   
     // Read data source settings from localStorage
     // Defaults match DataSourcesSettings.tsx: all ON by default
