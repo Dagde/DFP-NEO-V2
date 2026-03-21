@@ -8787,16 +8787,39 @@ updates.forEach(update => {
             case 'InstructorSchedule':
                 // Filter instructors by location (not unit) for Staff Schedule
                 // ESL = East Sale, PEA = Pearce
-                const locationFilteredInstructorsForSchedule = instructorsData.filter(i => {
-                    const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                    return i.location === locationFullName;
-                });
+                // Rank precedence for sorting (higher rank = lower number)
+                const rankPrecedence: Record<string, number> = {
+                    'WGCDR': 1,
+                    'SQNLDR': 2,
+                    'FLTLT': 3,
+                    'FLGOFF': 4,
+                    'PLTOFF': 5,
+                    'Mr': 6
+                };
                 
-                console.log('🔍 STAFF SCHEDULE - Location filtering applied');
+                const locationFilteredInstructorsForSchedule = instructorsData
+                    .filter(i => {
+                        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                        return i.location === locationFullName;
+                    })
+                    .sort((a, b) => {
+                        // First sort by unit (group by unit)
+                        const unitA = a.unit || 'ZZZ'; // Put staff without unit at the end
+                        const unitB = b.unit || 'ZZZ';
+                        if (unitA !== unitB) {
+                            return unitA.localeCompare(unitB);
+                        }
+                        // Within same unit, sort by rank (higher rank first)
+                        const rankA = rankPrecedence[a.rank] || 99;
+                        const rankB = rankPrecedence[b.rank] || 99;
+                        return rankA - rankB;
+                    });
+                
+                console.log('🔍 STAFF SCHEDULE - Location filtering and sorting applied');
                 console.log('🔍 School:', school);
                 console.log('👁 Total instructors:', instructorsData?.length);
                 console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
-                console.log('🔍 Filtered instructor locations:', locationFilteredInstructorsForSchedule.map(i => i.location));
+                console.log('🔍 Sorted instructors (unit then rank):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
                 
                 try {
                     return <InstructorScheduleView
@@ -8824,9 +8847,35 @@ updates.forEach(update => {
                     throw error;
                 }
             case 'NextDayInstructorSchedule':
+                // Apply same sorting for Next Day view: group by unit, sort by rank within unit
+                const nextDayRankPrecedence: Record<string, number> = {
+                    'WGCDR': 1,
+                    'SQNLDR': 2,
+                    'FLTLT': 3,
+                    'FLGOFF': 4,
+                    'PLTOFF': 5,
+                    'Mr': 6
+                };
+                
+                const sortedNextDayInstructors = instructorsData
+                    .filter(i => {
+                        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                        return i.location === locationFullName;
+                    })
+                    .sort((a, b) => {
+                        const unitA = a.unit || 'ZZZ';
+                        const unitB = b.unit || 'ZZZ';
+                        if (unitA !== unitB) {
+                            return unitA.localeCompare(unitB);
+                        }
+                        const rankA = nextDayRankPrecedence[a.rank] || 99;
+                        const rankB = nextDayRankPrecedence[b.rank] || 99;
+                        return rankA - rankB;
+                    });
+                
                 return <NextDayInstructorScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+                    instructors={sortedNextDayInstructors.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
                     traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
