@@ -9808,6 +9808,11 @@ updates.forEach(update => {
                                 setInstructorForSct(instructor);
                                 setShowSctRequest(true);
                             }}
+                            locations={locations}
+                            units={units}
+                            selectedPersonForProfile={selectedPersonForProfile as any}
+                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            onViewLogbook={handleViewLogbook}
                         />;
             case 'Instructors':
                 return <InstructorListView 

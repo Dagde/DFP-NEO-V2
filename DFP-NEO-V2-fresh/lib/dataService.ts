@@ -2,7 +2,7 @@
 // Returns plain objects for React compatibility
 
 import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule } from './api';
-import { ESL_DATA } from '../mockData';
+import { ESL_DATA, PEA_DATA } from '../mockData';
 
 
 // Merge database instructors with mock data, deduplicating by idNumber
@@ -231,7 +231,9 @@ export async function initializeData() {
 
          // Always merge both DB and mock data with _dataSource tags
          // App.tsx filtering will decide what to show based on toggle state
-         instructors = mergeInstructorData(instructors, ESL_DATA.instructors, true);
+         // Merge both ESL and PEA mock instructors so both locations are available
+         const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
+         instructors = mergeInstructorData(instructors, allMockInstructors, true);
          console.log('🔄 Loaded all staff (DB + mock) with _dataSource tags for UI filtering');
    
 
@@ -267,7 +269,7 @@ export async function initializeData() {
     // If API returned no data, fallback to mock data (always tagged with _dataSource)
     if (instructors.length === 0) {
         console.log('⚠️ No instructors from API, falling back to mock data');
-        instructors = ESL_DATA.instructors.map((i: any) => ({ ...i, _dataSource: 'mockdata' }));
+        instructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors].map((i: any) => ({ ...i, _dataSource: 'mockdata' }));
     }
     
     if (trainees.length === 0) {

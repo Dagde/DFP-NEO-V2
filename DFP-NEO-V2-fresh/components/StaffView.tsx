@@ -17,6 +17,11 @@ interface StaffViewProps {
   onArchiveInstructor: (id: number) => void;
   onRestoreInstructor: (id: number) => void;
   onRequestSct?: (instructor: any) => void;
+  locations?: string[];
+  units?: string[];
+  selectedPersonForProfile?: any;
+  onProfileOpened?: () => void;
+  onViewLogbook?: (person: any) => void;
   
   // Props for InstructorScheduleView
   date: string;
@@ -125,6 +130,11 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onArchiveInstructor={props.onArchiveInstructor}
             onRestoreInstructor={props.onRestoreInstructor}
             onRequestSct={props.onRequestSct}
+            locations={props.locations}
+            units={props.units}
+            selectedPersonForProfile={props.selectedPersonForProfile}
+            onProfileOpened={props.onProfileOpened}
+            onViewLogbook={props.onViewLogbook}
           />
         )}
         {activeTab === 'schedule' && (
