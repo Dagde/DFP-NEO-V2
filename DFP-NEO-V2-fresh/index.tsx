@@ -10,6 +10,10 @@ console.log('ReactDOM imported');
 import App from './App';
 console.log('App imported');
 
+// Theme system
+import './theme.css';
+import { ThemeProvider } from './context/ThemeContext';
+
 const rootElement = document.getElementById('root');
 console.log('Root element:', rootElement);
 
@@ -56,7 +60,9 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

@@ -9,6 +9,7 @@ import TraineeMockDataTable from "./TraineeMockDataTable";
 import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
 import OrganisationSettings from './OrganisationSettings';
+import AppearanceSettings from './AppearanceSettings';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
 interface SettingsViewWithMenuProps {
@@ -111,7 +112,8 @@ type SettingsSection =
     | 'timezone'
     | 'location'
     | 'units'
-    | 'organisation';
+    | 'organisation'
+    | 'appearance';
 
 const sectionLabels: Record<SettingsSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
@@ -134,6 +136,7 @@ const sectionLabels: Record<SettingsSection, string> = {
     'location': 'Location',
     'units': 'Units',
     'organisation': 'Organisation',
+    'appearance': 'App Appearance',
 };
 
 // All sections in order for the left menu
@@ -158,6 +161,7 @@ const allSections: SettingsSection[] = [
     'location',
     'units',
     'organisation',
+    'appearance',
 ];
 
 type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
@@ -302,6 +306,13 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/>
     </svg>
   ),
+  'appearance': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      <path d="M12 8a4 4 0 00-4 4"/>
+    </svg>
+  ),
 };
 
 // Descriptions for each section
@@ -326,6 +337,7 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
+  'appearance': 'Choose dark or light display theme',
 };
 
 // Icon accent colours per section - grouped by category for consistent icon colours
@@ -362,6 +374,7 @@ const sectionColors: Record<SettingsSection, string> = {
   'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
 };
 
 // Groups for the icon grid
@@ -389,6 +402,10 @@ const sectionGroups: { label: string; sections: SettingsSection[] }[] = [
   {
     label: 'SYSTEM SETTINGS',
     sections: ['timezone', 'location', 'units', 'organisation'],
+  },
+  {
+    label: 'DISPLAY',
+    sections: ['appearance'],
   },
 ];
 
@@ -577,7 +594,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'trainee-database' &&
                      activeSection !== 'trainee-mockdata' &&
                      activeSection !== 'data-sources' &&
-                     activeSection !== 'organisation' && (
+                     activeSection !== 'organisation' &&
+                     activeSection !== 'appearance' && (
                         <SettingsView {...props} hideHeader={true} activeSection={activeSection as SettingsSection} />
                     )}
 
@@ -636,6 +654,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onSettingsChange={props.onUpdateOrganisationSettings}
                             settingsLoaded={props.settingsLoaded}
                         />
+                    )}
+                    {activeSection === 'appearance' && (
+                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+                            <AppearanceSettings />
+                        </div>
                     )}
                     {/* End section content */}
                     </div>

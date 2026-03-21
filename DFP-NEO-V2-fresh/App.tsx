@@ -3,6 +3,7 @@ console.log("🚨🚨🚨 NEW BUILD V3 LOADED 🚨🚨🚨");
 console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useTheme } from './context/ThemeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
@@ -2983,6 +2984,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 const App: React.FC = () => {
        // Default zoom level (fixed at 1 since zoom functionality was removed)
        const zoomLevel = 1;
+    
+    // Theme
+    const { theme } = useTheme();
 
     // Wrap String.prototype.split to catch errors
     React.useEffect(() => {
@@ -10345,7 +10349,7 @@ updates.forEach(update => {
     };
     return (
     <>
-        <div id="app-content" className="flex h-screen bg-gray-900 text-white">
+        <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}
                 onNavigate={handleNavigation}
