@@ -435,10 +435,11 @@ app.get('/api/users-with-personnel', async (req, res) => {
     });
     
     // Get all personnel records (to see which have users linked)
+    const parsedId = search ? parseInt(search) : NaN;
     const personnelWhere = search ? {
       OR: [
         { name: { contains: search, mode: 'insensitive' } },
-        { idNumber: { contains: search, mode: 'insensitive' } }
+        ...(!isNaN(parsedId) ? [{ idNumber: { equals: parsedId } }] : [])
       ]
     } : {};
     
