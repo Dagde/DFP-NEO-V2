@@ -8,6 +8,7 @@ import TraineeDatabaseTable from "./TraineeDatabaseTable";
 import TraineeMockDataTable from "./TraineeMockDataTable";
 import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
+import AppearanceSettings from './AppearanceSettings';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
 interface SettingsViewWithMenuProps {
@@ -64,7 +65,7 @@ interface SettingsViewWithMenuProps {
 
 type SettingsCategory = 'airmanship' | 'preparation' | 'technique' | 'elements';
 
-type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data' | 'data-sources' | 'trainee-database' | 'trainee-mockdata';
+type SettingsSection = 'validation' | 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'data-loaders' | 'event-limits' | 'permissions' | 'business-rules' | 'timezone' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'appearance';
 
 const categoryConfig: Record<SettingsCategory, { label: string; sections: SettingsSection[] }> = {
     airmanship: {
@@ -77,7 +78,7 @@ const categoryConfig: Record<SettingsCategory, { label: string; sections: Settin
     },
     technique: {
         label: 'Technique',
-        sections: ['duty-turnaround', 'business-rules', 'permissions']
+        sections: ['duty-turnaround', 'business-rules', 'permissions', 'appearance']
     },
     elements: {
         label: 'Elements',
@@ -104,7 +105,8 @@ const sectionLabels: Record<SettingsSection, string> = {
     'trainee-database': 'Trainee Database',
     'staff-mockdata': 'Staff MockData',
     'trainee-mockdata': 'Trainee MockData',
-    'staff-combined-data': 'Staff Combined Data'
+    'staff-combined-data': 'Staff Combined Data',
+    'appearance': 'App Appearance'
 };
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
@@ -231,6 +233,9 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <DataSourcesSettings
                                 onShowSuccess={props.onShowSuccess}
                             />
+                        )}
+                        {activeSection === 'appearance' && (
+                            <AppearanceSettings />
                         )}
                     </div>
                 </div>

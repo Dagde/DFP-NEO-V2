@@ -6,6 +6,11 @@ console.log('React imported');
 import ReactDOM from 'react-dom/client';
 console.log('ReactDOM imported');
 
+// Import theme styles and provider
+import './theme.css';
+import { ThemeProvider } from './src/context/ThemeContext';
+console.log('Theme imported');
+
 // FIX: Use default import for App component as it is exported as a default.
 import App from './App';
 console.log('App imported');
@@ -55,8 +60,10 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
 
 root.render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </ThemeProvider>
   </React.StrictMode>
 );
