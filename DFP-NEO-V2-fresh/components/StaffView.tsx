@@ -41,6 +41,7 @@ interface StaffViewProps {
 
 const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
 
   // Define rank order for sorting
   const rankOrder: { [key: string]: number } = {

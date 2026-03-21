@@ -75,6 +75,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onViewLogbook,
     onRequestSct
 }) => {
+  console.log(`🏫 [INSTRUCTORLISTVIEW RENDER] school=${school}, instructorsData.length=${instructorsData.length}`);
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
