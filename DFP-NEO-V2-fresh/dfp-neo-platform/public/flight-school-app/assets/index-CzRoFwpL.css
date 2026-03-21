@@ -90,11 +90,11 @@
     --border-secondary:#e2e8f0; /* slate-200 */
     --border-light:    rgba(203,213,225,0.7);
 
-    /* Text */
-    --text-primary:    #0f172a; /* slate-900 */
-    --text-secondary:  #334155; /* slate-700 */
-    --text-muted:      #64748b; /* slate-500 */
-    --text-faint:      #94a3b8; /* slate-400 */
+    /* Text - All dark colors for readability on light backgrounds */
+    --text-primary:    #0f172a; /* slate-900 - near black */
+    --text-secondary:  #1e293b; /* slate-800 - dark grey */
+    --text-muted:      #334155; /* slate-700 - medium-dark grey */
+    --text-faint:      #475569; /* slate-600 - medium grey */
     --text-inverse:    #f9fafb;
     --text-on-dark:    #f9fafb;
 
@@ -171,24 +171,27 @@
     background-color: #94a3b8 !important;
 }
 
-/* Text colors */
+/* Text colors - All dark greys for light mode readability */
 [data-theme="light"] .text-white {
     color: var(--text-primary) !important;
 }
 [data-theme="light"] .text-gray-100 {
-    color: #1e293b !important;
+    color: #0f172a !important; /* slate-900 - near black */
 }
 [data-theme="light"] .text-gray-200 {
-    color: #334155 !important;
+    color: #1e293b !important; /* slate-800 - dark grey */
 }
 [data-theme="light"] .text-gray-300 {
-    color: var(--text-secondary) !important;
+    color: #334155 !important; /* slate-700 - medium-dark grey */
 }
 [data-theme="light"] .text-gray-400 {
-    color: var(--text-muted) !important;
+    color: #475569 !important; /* slate-600 - medium grey */
 }
 [data-theme="light"] .text-gray-500 {
-    color: var(--text-faint) !important;
+    color: #64748b !important; /* slate-500 - medium grey */
+}
+[data-theme="light"] .text-gray-600 {
+    color: #475569 !important; /* slate-600 - medium grey */
 }
 
 /* Borders */
@@ -383,5 +386,24 @@
 
 /* Opacity utilities in light mode */
 [data-theme="light"] .text-gray-400\/60 {
-    color: rgba(100,116,139,0.6) !important;
+    color: rgba(71,85,105,0.7) !important; /* slate-600 at 70% opacity */
+}
+
+/* Additional text color overrides for light mode */
+[data-theme="light"] .text-slate-400 {
+    color: #475569 !important; /* slate-600 */
+}
+[data-theme="light"] .text-slate-500 {
+    color: #64748b !important; /* slate-500 */
+}
+[data-theme="light"] .text-slate-300 {
+    color: #334155 !important; /* slate-700 */
+}
+
+/* Ensure text in cards/tiles is dark */
+[data-theme="light"] .text-gray-300\/80 {
+    color: rgba(51,65,85,0.9) !important;
+}
+[data-theme="light"] .text-gray-400\/80 {
+    color: rgba(71,85,105,0.9) !important;
 }
