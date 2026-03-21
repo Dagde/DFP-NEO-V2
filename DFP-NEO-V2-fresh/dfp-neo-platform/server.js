@@ -503,6 +503,88 @@ app.get('/api/users-with-personnel', async (req, res) => {
   }
 });
 
+// POST /api/cleanup-duplicate-personnel - Remove specific duplicate personnel records
+// This endpoint safely deletes only the confirmed duplicate Burns records
+app.post('/api/cleanup-duplicate-personnel', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { confirmToken } = req.body;
+
+    // Safety check - require a confirmation token
+    if (confirmToken !== 'CONFIRM_DELETE_BURNS_DUPLICATES') {
+      return res.status(400).json({ error: 'Invalid confirmation token. Send { confirmToken: "CONFIRM_DELETE_BURNS_DUPLICATES" }' });
+    }
+
+    // These are the confirmed duplicate Personnel IDs to delete
+    // Keeping: cmkivhycv0001k30fbih64ptl (FLTLT, linked to active user cmkdynoqv0000o30fwtqqwkzw)
+    const personnelToDelete = [
+      'cmkdj92gx0001p10ffa85av90',  // FLTLT, no user
+      'cmkdj9co60003p10flx1glphw',  // SQNLDR, no user
+      'cmkdhs9cv0003pn0frh9ql1yj',  // FLTLT, no user
+      'cmkdhghjs0001pn0fwek3zkx2',  // SQNLDR, no user
+      'cmkdkjq610001mq0f5v72mj56',  // SQNLDR, linked to duplicate user cmk3m3d8w0000kymjmsdlxsy9
+    ];
+
+    // The duplicate User account linked to the SQNLDR personnel record
+    const duplicateUserId = 'cmk3m3d8w0000kymjmsdlxsy9';
+
+    const results = [];
+
+    // First unlink the SQNLDR personnel from its user (set userId to null) before deleting
+    await db.personnel.update({
+      where: { id: 'cmkdkjq610001mq0f5v72mj56' },
+      data: { userId: null }
+    });
+    results.push('Unlinked SQNLDR personnel from duplicate user account');
+
+    // Delete the 5 duplicate personnel records
+    for (const id of personnelToDelete) {
+      try {
+        await db.personnel.delete({ where: { id } });
+        results.push(`Deleted personnel: ${id}`);
+      } catch (e) {
+        results.push(`Failed to delete personnel ${id}: ${e.message}`);
+      }
+    }
+
+    // Delete the duplicate SQNLDR User account
+    try {
+      await db.user.delete({ where: { id: duplicateUserId } });
+      results.push(`Deleted duplicate user account: ${duplicateUserId}`);
+    } catch (e) {
+      results.push(`Failed to delete duplicate user ${duplicateUserId}: ${e.message}`);
+    }
+
+    // Verify the cleanup
+    const remaining = await db.personnel.findMany({
+      where: { name: { contains: 'Burns', mode: 'insensitive' } },
+      select: { id: true, name: true, rank: true, userId: true }
+    });
+
+    const remainingUsers = await db.user.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: 'Burns', mode: 'insensitive' } },
+          { lastName: { contains: 'Burns', mode: 'insensitive' } },
+          { username: { contains: 'burns', mode: 'insensitive' } }
+        ]
+      },
+      select: { id: true, username: true, firstName: true, lastName: true, role: true }
+    });
+
+    console.log('✅ Cleanup complete:', results);
+    res.json({
+      success: true,
+      actions: results,
+      remainingPersonnel: remaining,
+      remainingUsers: remainingUsers
+    });
+  } catch (error) {
+    console.error('❌ Cleanup error:', error);
+    res.status(500).json({ error: 'Cleanup failed', details: error.message });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
