@@ -132,14 +132,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               const isQFI = i.role === 'QFI' || i.isQFI === true;
               if (!isQFI) return false;
               
-              // Filter by location
-              if (school === 'ESL') {
-                  // ESL: Only 1FTS and CFS staff
-                  return i.unit === '1FTS' || i.unit === 'CFS';
-              } else {
-                  // PEA: Only 2FTS staff
-                  return i.unit === '2FTS';
-              }
+              // Filter by location (not unit)
+              // ESL = East Sale, PEA = Pearce
+              const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+              return i.location === locationFullName;
           })
           .sort((a, b) => {
               const rankA = rankOrder[a.rank] || 99;
@@ -172,22 +168,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const isSimIp = i.role === 'SIM IP';
             if (!isSimIp) return false;
             
-            // Filter by location
-            if (school === 'ESL') {
-                // ESL: Only 1FTS Sim IPs (CFS has NO Sim IPs)
-                const isValid = i.unit === '1FTS';
-                if (isSimIp && isValid) {
-                    console.log(`🔍 [SIM IP FILTER] Found ESL SIM IP: ${i.name} (${i.rank}) - Unit: ${i.unit}`);
-                }
-                return isValid;
-            } else {
-                // PEA: Only 2FTS Sim IPs
-                const isValid = i.unit === '2FTS';
-                if (isSimIp && isValid) {
-                    console.log(`🔍 [SIM IP FILTER] Found PEA SIM IP: ${i.name} (${i.rank}) - Unit: ${i.unit}`);
-                }
-                return isValid;
+            // Filter by location (not unit)
+            // ESL = East Sale, PEA = Pearce
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            const isValid = i.location === locationFullName;
+            if (isSimIp && isValid) {
+                console.log(`🔍 [SIM IP FILTER] Found ${school} SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
             }
+            return isValid;
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
         
@@ -226,18 +214,12 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             if (!isOfi) return false;
             
-            // Filter by location
-            if (school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff
-                const isValid = i.unit === '1FTS' || i.unit === 'CFS';
-                console.log(`🔍 [OFI FILTER] ESL - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, unit=${i.unit}, isValid=${isValid}`);
-                return isValid;
-            } else {
-                // PEA: Only 2FTS staff
-                const isValid = i.unit === '2FTS';
-                console.log(`🔍 [OFI FILTER] PEA - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, unit=${i.unit}, isValid=${isValid}`);
-                return isValid;
-            }
+            // Filter by location (not unit)
+            // ESL = East Sale, PEA = Pearce
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            const isValid = i.location === locationFullName;
+            console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}, isValid=${isValid}`);
+            return isValid;
         });
         
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
@@ -286,22 +268,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const isOther = !isQfi && !isSimIp && !isOfi;
             if (!isOther) return false;
             
-            // Filter by location
-            if (school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff
-                const isValid = i.unit === '1FTS' || i.unit === 'CFS';
-                if (isOther && isValid) {
-                    console.log(`🔍 [OTHER STAFF] Found ESL other staff: ${i.name} (${i.rank}) - role: ${i.role}, unit: ${i.unit}`);
-                }
-                return isValid;
-            } else {
-                // PEA: Only 2FTS staff
-                const isValid = i.unit === '2FTS';
-                if (isOther && isValid) {
-                    console.log(`🔍 [OTHER STAFF] Found PEA other staff: ${i.name} (${i.rank}) - role: ${i.role}, unit: ${i.unit}`);
-                }
-                return isValid;
+            // Filter by location (not unit)
+            // ESL = East Sale, PEA = Pearce
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            const isValid = i.location === locationFullName;
+            if (isOther && isValid) {
+                console.log(`🔍 [OTHER STAFF] Found ${school} other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
             }
+            return isValid;
         });
         
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);

@@ -47,15 +47,11 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   };
 
   // Filter and sort instructors by location for Staff Schedule
+  // Filter by location field (not unit) - ESL = East Sale, PEA = Pearce
   const locationFilteredInstructorsForSchedule = props.instructorsData
     .filter(i => {
-      if (props.school === 'ESL') {
-        // ESL: Only 1FTS and CFS staff
-        return i.unit === '1FTS' || i.unit === 'CFS';
-      } else {
-        // PEA: Only 2FTS staff
-        return i.unit === '2FTS';
-      }
+      const locationFullName = props.school === 'ESL' ? 'East Sale' : 'Pearce';
+      return i.location === locationFullName;
     })
     .sort((a, b) => {
       // First sort by Role - QFIs before SIM IPs

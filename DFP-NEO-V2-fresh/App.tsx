@@ -2497,18 +2497,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
         console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:', config.school);
         
-        // Filter instructors by location first
+        // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
         const locationFilteredInstructors = instructors.filter(i => {
-            if (config.school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff (CFS has no Sim IPs)
-                return i.unit === '1FTS' || i.unit === 'CFS';
-            } else {
-                // PEA: Only 2FTS staff
-                return i.unit === '2FTS';
-            }
+            const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
+            return i.location === locationFullName;
         });
         
         console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
@@ -7594,18 +7589,13 @@ updates.forEach(update => {
         console.log('🔍 generatePilotRemediesAtTime called for:', conflictedEvent.flightNumber, 'at time:', atTime);
         
         // Get all qualified pilots (instructors who can fly as PIC)
-        console.log('🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
         console.log('🔍 [PILOT REMEDIES DEBUG] School:', school);
         
-        // Filter by location first
+        // Filter by location (not unit) - ESL = East Sale, PEA = Pearce
         const locationFilteredInstructors = instructorsData.filter(i => {
-            if (school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff
-                return i.unit === '1FTS' || i.unit === 'CFS';
-            } else {
-                // PEA: Only 2FTS staff
-                return i.unit === '2FTS';
-            }
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            return i.location === locationFullName;
         });
         
         console.log('🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
@@ -8794,22 +8784,18 @@ updates.forEach(update => {
                             courseColors={courseColors}
                        />;
             case 'InstructorSchedule':
-                // Filter instructors by location for Staff Schedule
+                // Filter instructors by location (not unit) for Staff Schedule
+                // ESL = East Sale, PEA = Pearce
                 const locationFilteredInstructorsForSchedule = instructorsData.filter(i => {
-                    if (school === 'ESL') {
-                        // ESL: Only 1FTS and CFS staff
-                        return i.unit === '1FTS' || i.unit === 'CFS';
-                    } else {
-                        // PEA: Only 2FTS staff
-                        return i.unit === '2FTS';
-                    }
+                    const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                    return i.location === locationFullName;
                 });
                 
                 console.log('🔍 STAFF SCHEDULE - Location filtering applied');
                 console.log('🔍 School:', school);
                 console.log('👁 Total instructors:', instructorsData?.length);
                 console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
-                console.log('🔍 Filtered instructor units:', locationFilteredInstructorsForSchedule.map(i => i.unit));
+                console.log('🔍 Filtered instructor locations:', locationFilteredInstructorsForSchedule.map(i => i.location));
                 
                 try {
                     return <InstructorScheduleView
