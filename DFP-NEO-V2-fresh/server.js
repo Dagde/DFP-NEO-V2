@@ -734,6 +734,6 @@ app.get('*', (req, res) => {
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 DFP-NEO V2 Server running on port ${PORT}`);
+  console.log(`🚀 DFP-NEO V2 Server running on port ${PORT} [theme-system-v1 build:${new Date().toISOString()}]`);
   console.log(`📊 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
 });
