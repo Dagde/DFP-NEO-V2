@@ -3241,10 +3241,13 @@ useEffect(() => {
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
     const instructorsData = (() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
+        console.log(`🏫 [SCHOOL CHANGE DEBUG] school=${school}, allInstructorsData.length=${allInstructorsData.length}, mockOn=${mockOn}, dbOn=${dbOn}`);
         if (!mockOn && !dbOn) return [];                                                                    // Both OFF → empty
         if (mockOn && dbOn) return allInstructorsData;                                                      // Both ON → all
         if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');  // Mock only
-        return allInstructorsData.filter(i => (i as any)._dataSource === 'database');                       // DB only
+        const dbOnly = allInstructorsData.filter(i => (i as any)._dataSource === 'database');
+        console.log(`🏫 [SCHOOL CHANGE DEBUG] DB-only filter: ${dbOnly.length} instructors, locations: ${[...new Set(dbOnly.map((i: any) => i.location))].join(', ')}`);
+        return dbOnly;
     })();
 
     const traineesData = (() => {
