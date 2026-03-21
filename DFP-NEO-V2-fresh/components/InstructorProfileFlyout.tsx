@@ -453,6 +453,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
                       </Dropdown>
                       <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
+                        <option value="">Select...</option>
                         {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
                       </Dropdown>
                     </div>

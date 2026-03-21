@@ -5501,24 +5501,11 @@ useEffect(() => {
         setIsLocalityChangeVisible(true);
         setTimeout(() => setIsLocalityChangeVisible(false), 2000);
 
-        const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
-        setInstructorsData(data.instructors);
-        setTraineesData(data.trainees);
-        setEvents(data.events);
-        setCourses(data.courses);
-        setScores(data.scores);
-        setPt051Assessments(data.pt051Assessments);
-        setCourseColors(data.courseColors);
-        setArchivedCourses(data.archivedCourses);
-        setCoursePriorities(data.coursePriorities);
-        setCoursePercentages(data.coursePercentages);
-        setTraineeLMPs(data.traineeLMPs); // Load the correct LMPs for the new school
+        // Don't replace instructors/trainees data - keep the database data
+        // The filtering is done in components based on the school state
+        // Only reset UI state that is specific to each school
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
-        
-        // Reset baseline on school change to avoid stale comparisons
-        const todayStr = getLocalDateString();
-        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(data.events.filter(e => e.date === todayStr))) });
     };
     
     useEffect(() => {
