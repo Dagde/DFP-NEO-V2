@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
@@ -402,9 +402,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         resetState();
         setIsEditing(isCreating);
     }, [trainee, isCreating]);
-    // Log view on component mount (only if not creating)
+    
+    // Use ref to prevent double-logging in React StrictMode
+    const hasLoggedViewRef = useRef(false);
     useEffect(() => {
-        if (!isCreating) {
+        if (!isCreating && !hasLoggedViewRef.current) {
+            hasLoggedViewRef.current = true;
             logAudit({
                 action: 'View',
                 description: `Viewed trainee profile for ${trainee.rank} ${trainee.name}`,

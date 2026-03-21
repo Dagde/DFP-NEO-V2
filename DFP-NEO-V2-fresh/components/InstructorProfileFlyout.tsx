@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
@@ -179,8 +179,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   useEffect(() => { resetState(); setIsEditing(isCreating); }, [instructor, isCreating]);
+  
+  // Use ref to prevent double-logging in React StrictMode
+  const hasLoggedViewRef = useRef(false);
   useEffect(() => {
-    if (!isCreating) logAudit({ action: 'View', description: `Viewed staff profile for ${instructor.rank} ${instructor.name}`, changes: `Role: ${instructor.role}, Unit: ${instructor.unit}`, page: 'Staff' });
+    if (!isCreating && !hasLoggedViewRef.current) {
+      hasLoggedViewRef.current = true;
+      logAudit({ action: 'View', description: `Viewed staff profile for ${instructor.rank} ${instructor.name}`, changes: `Role: ${instructor.role}, Unit: ${instructor.unit}`, page: 'Staff' });
+    }
   }, []);
 
   const handleEdit = () => setIsEditing(true);
@@ -199,7 +205,39 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor, isAdminStaff, isQFI, isOFI
     };
     flushPendingAudits();
-    if (isCreating) logAudit({ action: 'Add', description: `Added new staff ${rank} ${name}`, changes: `Role: ${role}, Unit: ${unit}, Location: ${location}`, page: 'Staff' });
+    
+    if (isCreating) {
+      logAudit({ action: 'Add', description: `Added new staff ${rank} ${name}`, changes: `Role: ${role}, Unit: ${unit}, Location: ${location}`, page: 'Staff' });
+    } else {
+      // Track what changed for edit audit log
+      const changes: string[] = [];
+      if (instructor.name !== name) changes.push(`Name: ${instructor.name} → ${name}`);
+      if (instructor.rank !== rank) changes.push(`Rank: ${instructor.rank} → ${rank}`);
+      if (instructor.role !== role) changes.push(`Role: ${instructor.role} → ${role}`);
+      if (instructor.unit !== unit) changes.push(`Unit: ${instructor.unit || '(none)'} → ${unit || '(none)'}`);
+      if (instructor.flight !== flight) changes.push(`Flight: ${instructor.flight || '(none)'} → ${flight || '(none)'}`);
+      if (instructor.location !== location) changes.push(`Location: ${instructor.location || '(none)'} → ${location || '(none)'}`);
+      if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || '(none)'} → ${phoneNumber || '(none)'}`);
+      if (instructor.email !== email) changes.push(`Email: ${instructor.email || '(none)'} → ${email || '(none)'}`);
+      if (instructor.category !== category) changes.push(`Category: ${instructor.category} → ${category}`);
+      if (instructor.seatConfig !== seatConfig) changes.push(`Seat Config: ${instructor.seatConfig} → ${seatConfig}`);
+      if (instructor.service !== service) changes.push(`Service: ${instructor.service || '(none)'} → ${service || '(none)'}`);
+      if (instructor.isTestingOfficer !== isTestingOfficer) changes.push(`Testing Officer: ${instructor.isTestingOfficer} → ${isTestingOfficer}`);
+      if (instructor.isExecutive !== isExecutive) changes.push(`Executive: ${instructor.isExecutive} → ${isExecutive}`);
+      if (instructor.isFlyingSupervisor !== isFlyingSupervisor) changes.push(`Flying Supervisor: ${instructor.isFlyingSupervisor} → ${isFlyingSupervisor}`);
+      if (instructor.isIRE !== isIRE) changes.push(`IRE: ${instructor.isIRE} → ${isIRE}`);
+      if (instructor.isCommandingOfficer !== isCommandingOfficer) changes.push(`CO: ${instructor.isCommandingOfficer} → ${isCommandingOfficer}`);
+      if (instructor.isCFI !== isCFI) changes.push(`CFI: ${instructor.isCFI} → ${isCFI}`);
+      if (instructor.isDeputyFlightCommander !== isDeputyFlightCommander) changes.push(`Deputy FC: ${instructor.isDeputyFlightCommander} → ${isDeputyFlightCommander}`);
+      if (instructor.isContractor !== isContractor) changes.push(`Contractor: ${instructor.isContractor} → ${isContractor}`);
+      if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
+      if (instructor.isQFI !== isQFI) changes.push(`QFI: ${instructor.isQFI} → ${isQFI}`);
+      if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
+      
+      const changesStr = changes.length > 0 ? changes.join(', ') : 'No field changes';
+      logAudit({ action: 'Edit', description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: 'Staff' });
+    }
+    
     onUpdateInstructor(updatedInstructor);
     try {
       const cleanName = name.replace(/,\s/g, '_');

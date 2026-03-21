@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { logAudit } from '../utils/auditLogger';
 
 interface StaffDatabaseTableProps {
   currentUserPermission?: string;
@@ -106,7 +107,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
     }
   };
 
-  const handleDeleteStaff = async (staffId: string, staffName: string) => {
+  const handleDeleteStaff = async (staffId: string, staffName: string, staffRank?: string) => {
     try {
       setDeletingId(staffId);
       
@@ -118,6 +119,9 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete staff');
       }
+
+      // Log the deletion
+      logAudit({ action: 'Delete', description: `Deleted staff ${staffRank ? staffRank + ' ' : ''}${staffName}`, page: 'Staff' });
 
       // Remove from local state
       setStaffData(prev => prev.filter(s => s.id !== staffId));
@@ -359,7 +363,7 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
                       {showDeleteConfirm === staff.id ? (
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                            onClick={() => handleDeleteStaff(staff.id, staff.name, staff.rank)}
                             disabled={deletingId === staff.id}
                             className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
                           >

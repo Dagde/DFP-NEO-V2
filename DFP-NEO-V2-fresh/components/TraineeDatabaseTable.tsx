@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { logAudit } from '../utils/auditLogger';
 
 interface TraineeDatabaseTableProps {
   currentUserPermission?: string;
@@ -107,7 +108,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
     }
   };
 
-  const handleDeleteTrainee = async (traineeId: string, traineeName: string) => {
+  const handleDeleteTrainee = async (traineeId: string, traineeName: string, traineeRank?: string) => {
     try {
       setDeletingId(traineeId);
       
@@ -119,6 +120,9 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete trainee');
       }
+
+      // Log the deletion
+      logAudit({ action: 'Delete', description: `Deleted trainee ${traineeRank ? traineeRank + ' ' : ''}${traineeName}`, page: 'Trainee Roster' });
 
       // Remove from local state
       setTraineeData(prev => prev.filter(t => t.id !== traineeId));
@@ -372,7 +376,7 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
                       {showDeleteConfirm === trainee.id ? (
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => handleDeleteTrainee(trainee.id, trainee.name)}
+                            onClick={() => handleDeleteTrainee(trainee.id, trainee.name, trainee.rank)}
                             disabled={deletingId === trainee.id}
                             className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
                           >
