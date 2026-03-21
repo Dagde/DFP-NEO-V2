@@ -3241,12 +3241,23 @@ useEffect(() => {
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
     const instructorsData = (() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
-        console.log(`🏫 [SCHOOL CHANGE DEBUG] school=${school}, allInstructorsData.length=${allInstructorsData.length}, mockOn=${mockOn}, dbOn=${dbOn}`);
-        if (!mockOn && !dbOn) return [];                                                                    // Both OFF → empty
-        if (mockOn && dbOn) return allInstructorsData;                                                      // Both ON → all
-        if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');  // Mock only
+        console.log(`🏫 [INSTRUCTORS DEBUG] school=${school}, allInstructorsData.length=${allInstructorsData.length}, mockOn=${mockOn}, dbOn=${dbOn}`);
+        if (!mockOn && !dbOn) {
+            console.log(`🏫 [INSTRUCTORS DEBUG] Both OFF - returning empty array`);
+            return [];
+        }
+        if (mockOn && dbOn) {
+            const locations = [...new Set(allInstructorsData.map((i: any) => i.location))];
+            console.log(`🏫 [INSTRUCTORS DEBUG] Both ON - returning all ${allInstructorsData.length} instructors. Locations: ${locations.join(', ')}`);
+            return allInstructorsData;
+        }
+        if (mockOn && !dbOn) {
+            const mockOnly = allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
+            console.log(`🏫 [INSTRUCTORS DEBUG] Mock only - ${mockOnly.length} instructors`);
+            return mockOnly;
+        }
         const dbOnly = allInstructorsData.filter(i => (i as any)._dataSource === 'database');
-        console.log(`🏫 [SCHOOL CHANGE DEBUG] DB-only filter: ${dbOnly.length} instructors, locations: ${[...new Set(dbOnly.map((i: any) => i.location))].join(', ')}`);
+        console.log(`🏫 [INSTRUCTORS DEBUG] DB only - ${dbOnly.length} instructors. Locations: ${[...new Set(dbOnly.map((i: any) => i.location))].join(', ')}`);
         return dbOnly;
     })();
 
@@ -9719,6 +9730,7 @@ updates.forEach(update => {
                             }}
                         />;
             case 'Staff':
+                console.log(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
                             onClose={() => handleNavigation('Program Schedule')}
                             events={events}
