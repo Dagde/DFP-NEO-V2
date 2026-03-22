@@ -315,6 +315,31 @@ app.delete('/api/trainees/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/trainees/bulk-unit - Bulk update unit for trainees in a course
+// NOTE: This must be defined BEFORE /api/trainees/:id to avoid route conflict
+app.patch('/api/trainees/bulk-unit', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseNumber, newUnit } = req.body;
+
+    if (!courseNumber || !newUnit) {
+      return res.status(400).json({ error: 'courseNumber and newUnit are required' });
+    }
+
+    // Update all trainees in the course
+    const result = await db.trainee.updateMany({
+      where: { course: courseNumber },
+      data: { unit: newUnit }
+    });
+
+    console.log(`✅ PATCH /api/trainees/bulk-unit - updated ${result.count} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+    res.json({ success: true, count: result.count });
+  } catch (error) {
+    console.error('❌ PATCH /api/trainees/bulk-unit error:', error);
+    res.status(500).json({ error: 'Failed to update trainees', details: error.message });
+  }
+});
+
 // PATCH /api/trainees/:id - Update a trainee record
 app.patch('/api/trainees/:id', async (req, res) => {
   try {
@@ -343,30 +368,6 @@ app.patch('/api/trainees/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ PATCH /api/trainees error:', error);
     res.status(500).json({ error: 'Failed to update trainee', details: error.message });
-  }
-});
-
-// PATCH /api/trainees/bulk-unit - Bulk update unit for trainees in a course
-app.patch('/api/trainees/bulk-unit', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { courseNumber, newUnit } = req.body;
-
-    if (!courseNumber || !newUnit) {
-      return res.status(400).json({ error: 'courseNumber and newUnit are required' });
-    }
-
-    // Update all trainees in the course
-    const result = await db.trainee.updateMany({
-      where: { course: courseNumber },
-      data: { unit: newUnit }
-    });
-
-    console.log(`✅ PATCH /api/trainees/bulk-unit - updated ${result.count} trainees in course "${courseNumber}" to unit "${newUnit}"`);
-    res.json({ success: true, count: result.count });
-  } catch (error) {
-    console.error('❌ PATCH /api/trainees/bulk-unit error:', error);
-    res.status(500).json({ error: 'Failed to update trainees', details: error.message });
   }
 });
 
