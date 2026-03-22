@@ -146,36 +146,42 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
   console.log('  Database trainees:', dbTrainees.length);
   console.log('  Mock trainees:', mockTrainees.length);
   console.log('  Include MockData:', includeMockData);
-  
-  // Create a map of database trainees by name for deduplication
+
+  // Log DB trainee courses for debugging
+  const dbCourses = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
+  console.log('  DB trainee courses:', dbCourses);
+
   // Tag each database record with _dataSource: 'database'
+  // Use idNumber as dedup key since it's unique (name could have duplicates)
   const dbTraineeMap = new Map();
   const taggedDbTrainees = dbTrainees.map((trainee: any) => ({
     ...trainee,
     _dataSource: 'database' as const
   }));
-  
+
   taggedDbTrainees.forEach((trainee: any) => {
-    dbTraineeMap.set(trainee.name, trainee);
+    dbTraineeMap.set(trainee.idNumber, trainee);
   });
-  
+
   // Start with database trainees (already tagged)
   const merged = [...taggedDbTrainees];
-  
+
   // Only add mock trainees if includeMockData is true
   if (includeMockData) {
     mockTrainees.forEach((trainee: any) => {
-      if (!dbTraineeMap.has(trainee.name)) {
+      // Only add mock trainee if no DB trainee with same idNumber exists
+      if (!dbTraineeMap.has(trainee.idNumber)) {
         // Tag with dataSource: 'mockdata'
         merged.push({ ...trainee, _dataSource: 'mockdata' as const });
       }
     });
   }
-  
+
   // Sort by name (alphabetical)
   merged.sort((a: any, b: any) => a.name.localeCompare(b.name));
-  
+
   console.log('  Merged result:', merged.length, 'trainees');
+  console.log('  Merged courses:', [...new Set(merged.map((t: any) => t.course).filter(Boolean))]);
   return merged;
 }
 

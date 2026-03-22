@@ -770,15 +770,16 @@ app.get('/api/debug/courses', async (req, res) => {
   try {
     const db = await getPrisma();
     const trainees = await db.trainee.findMany({
-      select: { course: true, unit: true, name: true },
+      select: { course: true, unit: true, location: true, name: true },
       orderBy: { course: 'asc' }
     });
-    // Group by course and show unit values
+    // Group by course and show unit/location values
     const grouped = {};
     trainees.forEach((t) => {
       const c = t.course || '(null)';
-      if (!grouped[c]) grouped[c] = { units: new Set(), count: 0, sample: [] };
+      if (!grouped[c]) grouped[c] = { units: new Set(), locations: new Set(), count: 0, sample: [] };
       grouped[c].units.add(t.unit || '(null)');
+      grouped[c].locations.add(t.location || '(null)');
       grouped[c].count++;
       if (grouped[c].sample.length < 3) grouped[c].sample.push(t.name);
     });
@@ -786,9 +787,26 @@ app.get('/api/debug/courses', async (req, res) => {
       course,
       count: data.count,
       units: [...data.units],
+      locations: [...data.locations],
       sample: data.sample
     }));
     res.json({ courses: result, total: trainees.length });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/trainees/:course - Show trainees for a specific course
+app.get('/api/debug/trainees/:course', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course } = req.params;
+    const trainees = await db.trainee.findMany({
+      where: { course: course },
+      select: { idNumber: true, name: true, course: true, unit: true, location: true },
+      orderBy: { name: 'asc' }
+    });
+    res.json({ course, count: trainees.length, trainees });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

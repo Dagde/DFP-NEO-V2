@@ -78015,24 +78015,27 @@ function mergeTraineeData(dbTrainees, mockTrainees, includeMockData) {
   console.log("  Database trainees:", dbTrainees.length);
   console.log("  Mock trainees:", mockTrainees.length);
   console.log("  Include MockData:", includeMockData);
+  const dbCourses = [...new Set(dbTrainees.map((t) => t.course).filter(Boolean))];
+  console.log("  DB trainee courses:", dbCourses);
   const dbTraineeMap = /* @__PURE__ */ new Map();
   const taggedDbTrainees = dbTrainees.map((trainee) => ({
     ...trainee,
     _dataSource: "database"
   }));
   taggedDbTrainees.forEach((trainee) => {
-    dbTraineeMap.set(trainee.name, trainee);
+    dbTraineeMap.set(trainee.idNumber, trainee);
   });
   const merged = [...taggedDbTrainees];
   {
     mockTrainees.forEach((trainee) => {
-      if (!dbTraineeMap.has(trainee.name)) {
+      if (!dbTraineeMap.has(trainee.idNumber)) {
         merged.push({ ...trainee, _dataSource: "mockdata" });
       }
     });
   }
   merged.sort((a, b) => a.name.localeCompare(b.name));
   console.log("  Merged result:", merged.length, "trainees");
+  console.log("  Merged courses:", [...new Set(merged.map((t) => t.course).filter(Boolean))]);
   return merged;
 }
 async function initializeData() {
@@ -87189,4 +87192,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-lxVi_9IA.js.map
+//# sourceMappingURL=index-C-KkljDE.js.map
