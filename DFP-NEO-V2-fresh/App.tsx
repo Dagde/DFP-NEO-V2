@@ -9011,8 +9011,10 @@ updates.forEach(update => {
                                     changes: `${oldCourseNumber} → ${newCourseNumber}`
                                 });
                             }}
-                            onUpdateCourseUnit={(courseNumber, newUnit) => {
+                            onUpdateCourseUnit={async (courseNumber, newUnit) => {
                                 console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                
+                                // Update local state immediately for UI responsiveness
                                 setTraineesData(prev => {
                                     const updated = prev.map(t =>
                                         t.course === courseNumber
@@ -9023,6 +9025,23 @@ updates.forEach(update => {
                                     console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
                                     return updated;
                                 });
+                                
+                                // Persist to database
+                                try {
+                                    const response = await fetch('/api/trainees/bulk-unit', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ courseNumber, newUnit })
+                                    });
+                                    if (response.ok) {
+                                        console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                                    } else {
+                                        console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
+                                    }
+                                } catch (err) {
+                                    console.error(`[CourseEdit] ❌ Error saving unit change:`, err);
+                                }
+                                
                                 logAudit({
                                     page: 'Trainee Roster',
                                     action: 'edit',
@@ -9148,9 +9167,11 @@ updates.forEach(update => {
                                     changes: `${oldCourseNumber} → ${newCourseNumber}`
                                 });
                             }}
-                            onUpdateCourseUnit={(courseNumber, newUnit) => {
+                            onUpdateCourseUnit={async (courseNumber, newUnit) => {
                                 // Update unit for all trainees in the course
                                 console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                
+                                // Update local state immediately for UI responsiveness
                                 setTraineesData(prev => {
                                     const updated = prev.map(t => 
                                         t.course === courseNumber 
@@ -9161,6 +9182,23 @@ updates.forEach(update => {
                                     console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
                                     return updated;
                                 });
+                                
+                                // Persist to database
+                                try {
+                                    const response = await fetch('/api/trainees/bulk-unit', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ courseNumber, newUnit })
+                                    });
+                                    if (response.ok) {
+                                        console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                                    } else {
+                                        console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
+                                    }
+                                } catch (err) {
+                                    console.error(`[CourseEdit] ❌ Error saving unit change:`, err);
+                                }
+                                
                                 // Log audit
                                 logAudit({
                                     page: 'Trainee Roster',

@@ -315,6 +315,61 @@ app.delete('/api/trainees/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/trainees/:id - Update a trainee record
+app.patch('/api/trainees/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Trainee ID is required' });
+    }
+
+    // Check if the trainee exists
+    const existing = await db.trainee.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Trainee not found' });
+    }
+
+    // Update the trainee record
+    const updated = await db.trainee.update({
+      where: { id },
+      data: updates
+    });
+
+    console.log(`✅ PATCH /api/trainees/${id} - updated: ${updated.name}`);
+    res.json({ success: true, trainee: updated });
+  } catch (error) {
+    console.error('❌ PATCH /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to update trainee', details: error.message });
+  }
+});
+
+// PATCH /api/trainees/bulk-unit - Bulk update unit for trainees in a course
+app.patch('/api/trainees/bulk-unit', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseNumber, newUnit } = req.body;
+
+    if (!courseNumber || !newUnit) {
+      return res.status(400).json({ error: 'courseNumber and newUnit are required' });
+    }
+
+    // Update all trainees in the course
+    const result = await db.trainee.updateMany({
+      where: { course: courseNumber },
+      data: { unit: newUnit }
+    });
+
+    console.log(`✅ PATCH /api/trainees/bulk-unit - updated ${result.count} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+    res.json({ success: true, count: result.count });
+  } catch (error) {
+    console.error('❌ PATCH /api/trainees/bulk-unit error:', error);
+    res.status(500).json({ error: 'Failed to update trainees', details: error.message });
+  }
+});
+
 // GET /api/aircraft
 app.get('/api/aircraft', async (req, res) => {
   try {
