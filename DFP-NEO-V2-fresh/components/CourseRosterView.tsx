@@ -292,9 +292,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                             <div>
                                                 <span>{courseName}</span>
                                                 {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
-                                                <span className="ml-2 text-xs font-normal opacity-70">
-                                                    ({activeCount} active{pausedCount > 0 && `, ${pausedCount} paused`})
-                                                </span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {view === 'active' && (
@@ -321,6 +318,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                     </button>
                                                 )}
                                             </div>
+                                        </div>
+                                        <div className="px-4 py-1 text-right text-xs text-white opacity-70">
+                                            {activeCount} active{pausedCount > 0 && `, ${pausedCount} paused`}
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-3">
                                             {courseTrainees.length > 0 ? (
