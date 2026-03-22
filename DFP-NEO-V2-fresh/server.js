@@ -765,6 +765,29 @@ app.get('/api/version', (req, res) => {
   res.json({ commit: shortCommit, full: commit });
 });
 
+// PATCH /api/trainees/fix-location - Fix location for trainees based on course
+app.patch('/api/trainees/fix-location', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course, correctLocation } = req.body;
+
+    if (!course || !correctLocation) {
+      return res.status(400).json({ error: 'course and correctLocation are required' });
+    }
+
+    const result = await db.trainee.updateMany({
+      where: { course: course },
+      data: { location: correctLocation }
+    });
+
+    console.log(`✅ Fixed location for ${result.count} trainees in course "${course}" to "${correctLocation}"`);
+    res.json({ success: true, updated: result.count, course, correctLocation });
+  } catch (error) {
+    console.error('❌ Error fixing trainee locations:', error);
+    res.status(500).json({ error: 'Failed to fix trainee locations', details: error.message });
+  }
+});
+
 // GET /api/debug/courses - Show distinct courses and their unit values in DB
 app.get('/api/debug/courses', async (req, res) => {
   try {
