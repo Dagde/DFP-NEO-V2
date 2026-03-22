@@ -3279,15 +3279,24 @@ useEffect(() => {
         const dbCount = allTraineesData.filter(t => (t as any)._dataSource === 'database').length;
         const mockCount = allTraineesData.filter(t => (t as any)._dataSource !== 'database').length;
         console.log(`[traineesData] mockOn=${mockOn}, dbOn=${dbOn}, total=${allTraineesData.length}, db=${dbCount}, mock=${mockCount}`);
-        
+
+        // Filter by location (ESL = East Sale, PEA = Pearce)
+        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+        const locationFilteredTrainees = allTraineesData.filter(t => {
+            // If no location specified, include (for backward compatibility)
+            if (!t.location) return true;
+            return t.location === locationFullName;
+        });
+        console.log(`[traineesData] Location filter: ${school} -> ${locationFullName}, filtered from ${allTraineesData.length} to ${locationFilteredTrainees.length} trainees`);
+
         if (!mockOn && !dbOn) return [];                                                          // Both OFF → empty
-        if (mockOn && !dbOn) return allTraineesData.filter(t => (t as any)._dataSource !== 'database'); // Mock only
-        if (!mockOn && dbOn) return allTraineesData.filter(t => (t as any)._dataSource === 'database'); // DB only
+        if (mockOn && !dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource !== 'database'); // Mock only
+        if (!mockOn && dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database'); // DB only
         // Both ON → DB records take precedence: exclude mock trainees for courses that have DB records
-        const dbTrainees = allTraineesData.filter(t => (t as any)._dataSource === 'database');
+        const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
         const dbCourses = new Set(dbTrainees.map(t => t.course));
         console.log(`[traineesData] DB courses:`, [...dbCourses]);
-        const mockTrainees = allTraineesData.filter(t => (t as any)._dataSource !== 'database' && !dbCourses.has(t.course));
+        const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource !== 'database' && !dbCourses.has(t.course));
         console.log(`[traineesData] Returning ${mockTrainees.length} mock + ${dbTrainees.length} DB = ${mockTrainees.length + dbTrainees.length} total`);
         return [...mockTrainees, ...dbTrainees];
     })();
