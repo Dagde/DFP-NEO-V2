@@ -774,8 +774,8 @@ app.get('/api/debug/courses', async (req, res) => {
       orderBy: { course: 'asc' }
     });
     // Group by course and show unit values
-    const grouped: { [course: string]: { units: Set<string>, count: number, sample: string[] } } = {};
-    trainees.forEach((t: any) => {
+    const grouped = {};
+    trainees.forEach((t) => {
       const c = t.course || '(null)';
       if (!grouped[c]) grouped[c] = { units: new Set(), count: 0, sample: [] };
       grouped[c].units.add(t.unit || '(null)');
@@ -789,7 +789,7 @@ app.get('/api/debug/courses', async (req, res) => {
       sample: data.sample
     }));
     res.json({ courses: result, total: trainees.length });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
