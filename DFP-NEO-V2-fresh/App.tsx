@@ -10445,26 +10445,34 @@ updates.forEach(update => {
     
 
     const handleNavigateToProfile = (user: any) => {
-       console.log('🎹 Navigating to profile:', user);
+       console.log('🎡 Navigating to profile:', user);
        console.log('user:', JSON.stringify(user));
-       
+
+       // Determine if this is a trainee or staff based on available fields
+       // Trainees have 'course' field, staff don't
+       const isTrainee = user.userType === 'TRAINEE' || user.course || user._dataSource === 'trainee';
+       const isStaff = user.userType === 'STAFF' || (!isTrainee && (user.isQFI || user.isOFI || user.isCFI || user.role === 'INSTRUCTOR'));
+
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster
-       if (user.userType === 'STAFF') {
+       if (isStaff) {
           console.log('Opening staff profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.pmkeysId || user.idNumber,
+             rank: user.rank,
              role: 'INSTRUCTOR'
           } as Instructor);
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-       } else if (user.userType === 'TRAINEE') {
+       } else if (isTrainee) {
           console.log('Opening trainee profile:', user.name);
           setSelectedPersonForProfile({
              name: user.name,
-             idNumber: user.pmkeysId,
-             role: 'TRAINEE'
+             idNumber: user.pmkeysId || user.idNumber,
+             rank: user.rank,
+             role: 'TRAINEE',
+             course: user.course
           } as Trainee);
           handleNavigation('CourseRoster');
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);

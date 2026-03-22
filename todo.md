@@ -1,21 +1,17 @@
-# Trainee Roster Edit Course - Bug Fix
+# Trainee Display Fix
 
-## Issue
-Course unit changes are not being reflected after save.
+## Problem
+- 127 trainees in database (Trainee table) with FIC211/CFS not showing in Trainee Roster
+- Only 10 trainees showing (from mock data)
 
-## Root Causes Identified
-1. **Flyout doesn't close after unit update** - `onUpdateCourseUnit` callback doesn't call `setCourseToEdit(null)`
-2. **Props not synced to state** - CourseEditFlyout uses `useState` with initial props but no `useEffect` to sync when props change
-3. **Wrong parameter passed** - `onUpdateCourseUnit(newCourseNumber, newUnit)` passes `newCourseNumber` instead of `courseName`
-4. **Wrong build being served** - The build was going to `public/flight-school-app/` but Railway was serving from `dfp-neo-platform/assets/` with old index files
+## Root Cause Found
+- `fetchTrainees()` in `lib/api.ts` was querying `/api/personnel?role=TRAINEE` (Personnel table)
+- BUT trainees are stored in the `Trainee` table (separate from Personnel)
+- The `/api/trainees` endpoint exists and queries the correct table
 
-## Fixes Applied
-- [x] Add `useEffect` to sync props to state in CourseEditFlyout
-- [x] Close flyout after unit update in CourseRosterView
-- [x] Pass `courseName` instead of `newCourseNumber` to `onUpdateCourseUnit`
-- [x] Copy new build files to `dfp-neo-platform/assets/`
-- [x] Update `dfp-neo-platform/index.html` to point to new build
-- [x] Rebuild and push
+## Fix Applied
+- [x] Changed `fetchTrainees()` to use `/api/trainees` instead of `/api/personnel?role=TRAINEE`
+- [x] Pushed to GitHub (commit: d6af8ef5)
 
-## Status: Complete ✓
-Pushed to `feature/comprehensive-build-algorithm` branch (commits: `4896d342`, `15b5866c`)
+## Status: Deployed ✓
+Waiting for Railway to rebuild and deploy.

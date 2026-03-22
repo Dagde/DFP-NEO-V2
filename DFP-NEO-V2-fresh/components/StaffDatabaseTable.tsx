@@ -5,6 +5,7 @@ interface StaffDatabaseTableProps {
   currentUserPermission?: string;
   onShowSuccess?: (message: string) => void;
   onDataChanged?: () => void;  // Callback to refresh parent data
+  onNavigateToProfile?: (user: any) => void;  // Navigate to staff profile for editing
 }
 
 interface DatabaseStaff {
@@ -32,7 +33,7 @@ interface DatabaseStaff {
 type SortField = 'name' | 'rank' | 'unit' | 'flight' | 'idNumber' | 'type' | 'role';
 type SortDirection = 'asc' | 'desc';
 
-const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged }) => {
+const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -360,31 +361,42 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-sm">
-                      {showDeleteConfirm === staff.id ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleDeleteStaff(staff.id, staff.name, staff.rank)}
-                            disabled={deletingId === staff.id}
-                            className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
-                          >
-                            {deletingId === staff.id ? 'Deleting...' : 'Confirm'}
-                          </button>
-                          <button
-                            onClick={() => setShowDeleteConfirm(null)}
-                            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
+                      <div className="flex items-center gap-1">
+                        {/* Edit Button */}
                         <button
-                          onClick={() => setShowDeleteConfirm(staff.id)}
-                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
-                          title="Delete this staff record"
+                          onClick={() => onNavigateToProfile?.({ ...staff, _dataSource: 'database' })}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors"
+                          title="Edit this staff record"
                         >
-                          Delete
+                          Edit
                         </button>
-                      )}
+                        {/* Delete Button */}
+                        {showDeleteConfirm === staff.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDeleteStaff(staff.id, staff.name, staff.rank)}
+                              disabled={deletingId === staff.id}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
+                            >
+                              {deletingId === staff.id ? 'Deleting...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(null)}
+                              className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowDeleteConfirm(staff.id)}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
+                            title="Delete this staff record"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

@@ -612,6 +612,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
+                            onNavigateToProfile={props.onNavigateToProfile}
                         />
                     )}
                     {activeSection === 'staff-mockdata' && (
@@ -628,6 +629,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
                             onDataChanged={props.onDatabaseDataChanged}
+                            onNavigateToProfile={props.onNavigateToProfile}
                         />
                     )}
                     {activeSection === 'trainee-mockdata' && (

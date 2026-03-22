@@ -5,6 +5,7 @@ interface TraineeDatabaseTableProps {
   currentUserPermission?: string;
   onShowSuccess?: (message: string) => void;
   onDataChanged?: () => void;  // Callback to refresh parent data
+  onNavigateToProfile?: (trainee: any) => void;  // Navigate to trainee profile for editing
 }
 
 interface DatabaseTrainee {
@@ -35,7 +36,7 @@ interface DatabaseTrainee {
 type SortField = 'name' | 'role' | 'rank' | 'course' | 'unit' | 'idNumber' | 'primaryInstructor' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged }) => {
+const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [traineeData, setTraineeData] = useState<DatabaseTrainee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -373,31 +374,42 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-sm">
-                      {showDeleteConfirm === trainee.id ? (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleDeleteTrainee(trainee.id, trainee.name, trainee.rank)}
-                            disabled={deletingId === trainee.id}
-                            className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
-                          >
-                            {deletingId === trainee.id ? 'Deleting...' : 'Confirm'}
-                          </button>
-                          <button
-                            onClick={() => setShowDeleteConfirm(null)}
-                            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
+                      <div className="flex items-center gap-1">
+                        {/* Edit Button */}
                         <button
-                          onClick={() => setShowDeleteConfirm(trainee.id)}
-                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
-                          title="Delete this trainee record"
+                          onClick={() => onNavigateToProfile?.({ ...trainee, _dataSource: 'database' })}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors"
+                          title="Edit this trainee record"
                         >
-                          Delete
+                          Edit
                         </button>
-                      )}
+                        {/* Delete Button */}
+                        {showDeleteConfirm === trainee.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDeleteTrainee(trainee.id, trainee.name, trainee.rank)}
+                              disabled={deletingId === trainee.id}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
+                            >
+                              {deletingId === trainee.id ? 'Deleting...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(null)}
+                              className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowDeleteConfirm(trainee.id)}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
+                            title="Delete this trainee record"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
