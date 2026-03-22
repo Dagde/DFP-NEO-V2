@@ -3281,11 +3281,21 @@ useEffect(() => {
         console.log(`[traineesData] mockOn=${mockOn}, dbOn=${dbOn}, total=${allTraineesData.length}, db=${dbCount}, mock=${mockCount}`);
 
         // Filter by location (ESL = East Sale, PEA = Pearce)
+        // Check both location field AND unit field for location inference
         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredTrainees = allTraineesData.filter(t => {
-            // If no location specified, include (for backward compatibility)
-            if (!t.location) return true;
-            return t.location === locationFullName;
+            // If location field is set, use it directly
+            if (t.location) {
+                return t.location === locationFullName;
+            }
+            // If no location but has unit, infer location from unit
+            // 1FTS and CFS are at East Sale, 2FTS is at Pearce
+            if (t.unit) {
+                if (t.unit === '2FTS') return locationFullName === 'Pearce';
+                if (t.unit === '1FTS' || t.unit === 'CFS') return locationFullName === 'East Sale';
+            }
+            // If no location or unit info, include (for backward compatibility)
+            return true;
         });
         console.log(`[traineesData] Location filter: ${school} -> ${locationFullName}, filtered from ${allTraineesData.length} to ${locationFilteredTrainees.length} trainees`);
 
