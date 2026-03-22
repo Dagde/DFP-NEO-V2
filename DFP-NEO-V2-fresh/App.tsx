@@ -3306,6 +3306,16 @@ useEffect(() => {
         const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
         const dbCourses = new Set(dbTrainees.map(t => t.course));
         console.log(`[traineesData] DB courses:`, [...dbCourses]);
+
+        // Debug: Show FIC211 specifically
+        const fic211DbTrainees = dbTrainees.filter(t => t.course && t.course.includes('FIC') && t.course.includes('211'));
+        const fic211MockTrainees = locationFilteredTrainees.filter(t =>
+            (t as any)._dataSource !== 'database' &&
+            t.course && t.course.includes('FIC') && t.course.includes('211')
+        );
+        console.log(`[traineesData] FIC211 Debug: ${fic211DbTrainees.length} DB trainees, ${fic211MockTrainees.length} mock trainees`);
+        console.log(`[traineesData] FIC211 DB trainee units:`, fic211DbTrainees.map(t => `${t.name}: unit=${t.unit}, loc=${t.location}`));
+
         const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource !== 'database' && !dbCourses.has(t.course));
         console.log(`[traineesData] Returning ${mockTrainees.length} mock + ${dbTrainees.length} DB = ${mockTrainees.length + dbTrainees.length} total`);
         return [...mockTrainees, ...dbTrainees];
