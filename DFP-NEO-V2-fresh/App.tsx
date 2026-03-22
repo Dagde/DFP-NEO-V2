@@ -3276,13 +3276,19 @@ useEffect(() => {
 
     const traineesData = (() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
+        const dbCount = allTraineesData.filter(t => (t as any)._dataSource === 'database').length;
+        const mockCount = allTraineesData.filter(t => (t as any)._dataSource !== 'database').length;
+        console.log(`[traineesData] mockOn=${mockOn}, dbOn=${dbOn}, total=${allTraineesData.length}, db=${dbCount}, mock=${mockCount}`);
+        
         if (!mockOn && !dbOn) return [];                                                          // Both OFF → empty
         if (mockOn && !dbOn) return allTraineesData.filter(t => (t as any)._dataSource !== 'database'); // Mock only
         if (!mockOn && dbOn) return allTraineesData.filter(t => (t as any)._dataSource === 'database'); // DB only
         // Both ON → DB records take precedence: exclude mock trainees for courses that have DB records
         const dbTrainees = allTraineesData.filter(t => (t as any)._dataSource === 'database');
         const dbCourses = new Set(dbTrainees.map(t => t.course));
+        console.log(`[traineesData] DB courses:`, [...dbCourses]);
         const mockTrainees = allTraineesData.filter(t => (t as any)._dataSource !== 'database' && !dbCourses.has(t.course));
+        console.log(`[traineesData] Returning ${mockTrainees.length} mock + ${dbTrainees.length} DB = ${mockTrainees.length + dbTrainees.length} total`);
         return [...mockTrainees, ...dbTrainees];
     })();
     
