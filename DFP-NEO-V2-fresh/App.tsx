@@ -3575,6 +3575,31 @@ useEffect(() => {
                 setInstructorsData(data.instructors);
                 setTraineesData(data.trainees);
                 setEvents(data.events);
+
+                // Register any DB trainee courses that aren't in courseColors yet
+                // Without this, DB-only mode shows zero trainees because CourseRosterView
+                // only renders courses that exist in courseColors
+                const defaultColors = [
+                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
+                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
+                    'bg-red-400/50', 'bg-cyan-400/50'
+                ];
+                const dbTraineesFromLoad = data.trainees.filter((t: any) => t._dataSource === 'database');
+                const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t: any) => t.course).filter(Boolean))] as string[];
+                if (dbCourseNamesFromLoad.length > 0) {
+                    setCourseColors(prev => {
+                        const updated = { ...prev };
+                        let colorIndex = Object.keys(updated).length;
+                        dbCourseNamesFromLoad.forEach((course: string) => {
+                            if (!updated[course]) {
+                                updated[course] = defaultColors[colorIndex % defaultColors.length];
+                                colorIndex++;
+                                console.log(`[Initial Load] Added missing courseColor for "${course}"`);
+                            }
+                        });
+                        return updated;
+                    });
+                }
                 
                 console.log('✅ State updated successfully');
             } catch (error) {
