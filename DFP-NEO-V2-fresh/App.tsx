@@ -7392,6 +7392,27 @@ updates.forEach(update => {
                     const nonDbTrainees = prev.filter(t => (t as any)._dataSource !== 'database');
                     return [...nonDbTrainees, ...dbTrainees];
                 });
+
+                // Register any DB trainee courses that aren't in courseColors yet
+                const defaultColors = [
+                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
+                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
+                    'bg-red-400/50', 'bg-cyan-400/50'
+                ];
+                const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
+                setCourseColors(prev => {
+                    const updated = { ...prev };
+                    let colorIndex = Object.keys(updated).length;
+                    dbCourseNames.forEach((course: any) => {
+                        if (!updated[course]) {
+                            updated[course] = defaultColors[colorIndex % defaultColors.length];
+                            colorIndex++;
+                            console.log(`[DB Load] Added missing courseColor for "${course}"`);
+                        }
+                    });
+                    return updated;
+                });
+
                 console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
             }
         } catch (error) {
