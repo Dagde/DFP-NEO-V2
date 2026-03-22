@@ -14332,22 +14332,35 @@ const CourseRosterView = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 md:p-6 pb-16 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: coursesToDisplay.map((courseName) => {
         const courseTrainees = groupedTrainees[courseName] || [];
         const color = courseColorMap[courseName] || "bg-gray-500";
+        const activeCount = courseTrainees.filter((t) => !t.isPaused).length;
+        const pausedCount = courseTrainees.filter((t) => t.isPaused).length;
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: courseName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 289,
+                lineNumber: 293,
                 columnNumber: 49
               }, void 0),
               courseTrainees.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 290,
+                lineNumber: 294,
                 columnNumber: 79
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs font-normal opacity-70", children: [
+                "(",
+                activeCount,
+                " active",
+                pausedCount > 0 && `, ${pausedCount} paused`,
+                ")"
+              ] }, void 0, true, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                lineNumber: 295,
+                columnNumber: 49
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 288,
+              lineNumber: 292,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
@@ -14360,11 +14373,11 @@ const CourseRosterView = ({
                   title: "Edit course",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 301,
+                    lineNumber: 308,
                     columnNumber: 61
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 300,
+                    lineNumber: 307,
                     columnNumber: 57
                   }, void 0)
                 },
@@ -14372,7 +14385,7 @@ const CourseRosterView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                  lineNumber: 294,
+                  lineNumber: 301,
                   columnNumber: 53
                 },
                 void 0
@@ -14385,11 +14398,11 @@ const CourseRosterView = ({
                   "aria-label": `Restore course ${courseName}`,
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 312,
+                    lineNumber: 319,
                     columnNumber: 61
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 311,
+                    lineNumber: 318,
                     columnNumber: 57
                   }, void 0)
                 },
@@ -14397,19 +14410,19 @@ const CourseRosterView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                  lineNumber: 306,
+                  lineNumber: 313,
                   columnNumber: 53
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 292,
+              lineNumber: 299,
               columnNumber: 45
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 287,
+            lineNumber: 291,
             columnNumber: 41
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
@@ -14423,7 +14436,7 @@ const CourseRosterView = ({
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee.rank }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 331,
+                    lineNumber: 338,
                     columnNumber: 65
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14437,7 +14450,7 @@ const CourseRosterView = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                      lineNumber: 332,
+                      lineNumber: 339,
                       columnNumber: 65
                     },
                     void 0
@@ -14448,27 +14461,27 @@ const CourseRosterView = ({
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 325,
+                lineNumber: 332,
                 columnNumber: 61
               },
               void 0
             );
           }) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 320,
+            lineNumber: 327,
             columnNumber: 49
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 text-sm italic text-center py-4", children: "No trainees assigned." }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 343,
+            lineNumber: 350,
             columnNumber: 49
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 318,
+            lineNumber: 325,
             columnNumber: 41
           }, void 0)
         ] }, courseName, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-          lineNumber: 286,
+          lineNumber: 290,
           columnNumber: 37
         }, void 0);
       }) }, void 0, false, {
@@ -14500,7 +14513,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 354,
+        lineNumber: 361,
         columnNumber: 17
       },
       void 0
@@ -14519,7 +14532,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 361,
+        lineNumber: 368,
         columnNumber: 17
       },
       void 0
@@ -14557,7 +14570,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 371,
+        lineNumber: 378,
         columnNumber: 17
       },
       void 0
@@ -14574,7 +14587,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 400,
+        lineNumber: 407,
         columnNumber: 17
       },
       void 0
@@ -14615,7 +14628,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 408,
+        lineNumber: 415,
         columnNumber: 17
       },
       void 0
@@ -87077,4 +87090,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DggEz6zZ.js.map
+//# sourceMappingURL=index-CBHLfSnI.js.map

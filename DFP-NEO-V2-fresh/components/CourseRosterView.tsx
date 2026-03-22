@@ -281,6 +281,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             {coursesToDisplay.map(courseName => {
                                 const courseTrainees = groupedTrainees[courseName] || [];
                                 const color = courseColorMap[courseName] || 'bg-gray-500';
+                                
+                                // Calculate active and paused counts
+                                const activeCount = courseTrainees.filter(t => !t.isPaused).length;
+                                const pausedCount = courseTrainees.filter(t => t.isPaused).length;
 
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
@@ -288,6 +292,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                             <div>
                                                 <span>{courseName}</span>
                                                 {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
+                                                <span className="ml-2 text-xs font-normal opacity-70">
+                                                    ({activeCount} active{pausedCount > 0 && `, ${pausedCount} paused`})
+                                                </span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {view === 'active' && (
