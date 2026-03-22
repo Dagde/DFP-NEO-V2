@@ -49,9 +49,9 @@ export async function fetchInstructors(): Promise<any[]> {
 
 // Fetch trainees from API
 export async function fetchTrainees(): Promise<any[]> {
-  const result = await fetchAPI<{ personnel: any[] }>('/personnel?role=TRAINEE');
-  if (result.success && result.data?.personnel) {
-    return result.data.personnel;
+  const result = await fetchAPI<{ trainees: any[] }>('/trainees');
+  if (result.success && result.data?.trainees) {
+    return result.data.trainees;
   }
   return [];
 }
