@@ -765,6 +765,35 @@ app.get('/api/version', (req, res) => {
   res.json({ commit: shortCommit, full: commit });
 });
 
+// GET /api/debug/courses - Show distinct courses and their unit values in DB
+app.get('/api/debug/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const trainees = await db.trainee.findMany({
+      select: { course: true, unit: true, name: true },
+      orderBy: { course: 'asc' }
+    });
+    // Group by course and show unit values
+    const grouped: { [course: string]: { units: Set<string>, count: number, sample: string[] } } = {};
+    trainees.forEach((t: any) => {
+      const c = t.course || '(null)';
+      if (!grouped[c]) grouped[c] = { units: new Set(), count: 0, sample: [] };
+      grouped[c].units.add(t.unit || '(null)');
+      grouped[c].count++;
+      if (grouped[c].sample.length < 3) grouped[c].sample.push(t.name);
+    });
+    const result = Object.entries(grouped).map(([course, data]) => ({
+      course,
+      count: data.count,
+      units: [...data.units],
+      sample: data.sample
+    }));
+    res.json({ courses: result, total: trainees.length });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
 // SERVE STATIC VITE BUILD
 // ============================================================
