@@ -1223,10 +1223,10 @@ app.get('/api/cancellation-codes', async (req, res) => {
     const db = await getPrisma();
     const codes = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" ORDER BY "category" ASC, "code" ASC`);
     const serialized = codes.map(c => ({ ...c, id: Number(c.id) }));
-    res.json({ codes: serialized });
+    res.json({ success: true, codes: serialized });
   } catch (error) {
     console.error('❌ GET /api/cancellation-codes error:', error);
-    res.status(500).json({ error: 'Failed to fetch cancellation codes', details: error.message });
+    res.status(500).json({ success: false, error: 'Failed to fetch cancellation codes', details: error.message });
   }
 });
 
@@ -1235,7 +1235,7 @@ app.post('/api/cancellation-codes', async (req, res) => {
   try {
     const db = await getPrisma();
     const { code, category, description, isActive } = req.body;
-    if (!code) return res.status(400).json({ error: 'code is required' });
+    if (!code) return res.status(400).json({ success: false, error: 'code is required' });
     await db.$executeRawUnsafe(`
       INSERT INTO "CancellationCode" ("code", "category", "description", "isActive", "updatedAt")
       VALUES ($1, $2, $3, $4, NOW())
@@ -1247,10 +1247,10 @@ app.post('/api/cancellation-codes', async (req, res) => {
     `, code, category || 'Other', description || '', isActive !== false);
     const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
     const record = updated[0];
-    res.json({ code: { ...record, id: Number(record.id) } });
+    res.json({ success: true, code: { ...record, id: Number(record.id) } });
   } catch (error) {
     console.error('❌ POST /api/cancellation-codes error:', error);
-    res.status(500).json({ error: 'Failed to save cancellation code', details: error.message });
+    res.status(500).json({ success: false, error: 'Failed to save cancellation code', details: error.message });
   }
 });
 
@@ -1263,12 +1263,12 @@ app.patch('/api/cancellation-codes/:code/toggle', async (req, res) => {
       UPDATE "CancellationCode" SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE "code" = $1
     `, code);
     const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
-    if (!updated.length) return res.status(404).json({ error: 'Code not found' });
+    if (!updated.length) return res.status(404).json({ success: false, error: 'Code not found' });
     const record = updated[0];
-    res.json({ code: { ...record, id: Number(record.id) } });
+    res.json({ success: true, code: { ...record, id: Number(record.id) } });
   } catch (error) {
     console.error('❌ PATCH /api/cancellation-codes toggle error:', error);
-    res.status(500).json({ error: 'Failed to toggle cancellation code', details: error.message });
+    res.status(500).json({ success: false, error: 'Failed to toggle cancellation code', details: error.message });
   }
 });
 
@@ -1278,12 +1278,12 @@ app.delete('/api/cancellation-codes/:code', async (req, res) => {
     const db = await getPrisma();
     const { code } = req.params;
     const existing = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
-    if (!existing.length) return res.status(404).json({ error: 'Code not found' });
+    if (!existing.length) return res.status(404).json({ success: false, error: 'Code not found' });
     await db.$executeRawUnsafe(`DELETE FROM "CancellationCode" WHERE "code" = $1`, code);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ DELETE /api/cancellation-codes error:', error);
-    res.status(500).json({ error: 'Failed to delete cancellation code', details: error.message });
+    res.status(500).json({ success: false, error: 'Failed to delete cancellation code', details: error.message });
   }
 });
 
