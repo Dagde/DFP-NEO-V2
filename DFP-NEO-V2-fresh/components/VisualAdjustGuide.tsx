@@ -45,6 +45,15 @@ export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
 
     const handleMouseDown = (isStart: boolean) => (e: React.MouseEvent) => {
         e.preventDefault();
+        // System freeze check - prevent dragging when frozen
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen) {
+                alert('System is currently frozen. Dragging events is not permitted during a system freeze.');
+                return;
+            }
+        }
         if (isStart) {
             setIsDraggingStart(true);
         } else {

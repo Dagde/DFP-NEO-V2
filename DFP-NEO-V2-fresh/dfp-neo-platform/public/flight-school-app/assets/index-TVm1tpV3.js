@@ -7107,6 +7107,14 @@ const VisualAdjustGuide = ({
   };
   const handleMouseDown = (isStart) => (e) => {
     e.preventDefault();
+    const freezeRaw = localStorage.getItem("systemFreezeState");
+    if (freezeRaw) {
+      const freeze = JSON.parse(freezeRaw);
+      if (freeze.isFrozen) {
+        alert("System is currently frozen. Dragging events is not permitted during a system freeze.");
+        return;
+      }
+    }
     if (isStart) {
       setIsDraggingStart(true);
     } else {
@@ -7164,12 +7172,12 @@ const VisualAdjustGuide = ({
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute -top-1 -left-2 w-4 h-4 bg-blue-500 rounded-full cursor-ew-resize" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-                lineNumber: 112,
+                lineNumber: 121,
                 columnNumber: 17
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute -bottom-1 -left-2 w-4 h-4 bg-blue-500 rounded-full cursor-ew-resize" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-                lineNumber: 114,
+                lineNumber: 123,
                 columnNumber: 17
               }, void 0)
             ]
@@ -7178,7 +7186,7 @@ const VisualAdjustGuide = ({
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-            lineNumber: 106,
+            lineNumber: 115,
             columnNumber: 13
           },
           void 0
@@ -7192,12 +7200,12 @@ const VisualAdjustGuide = ({
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute -top-1 -left-2 w-4 h-4 bg-red-500 rounded-full cursor-ew-resize" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-                lineNumber: 124,
+                lineNumber: 133,
                 columnNumber: 17
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute -bottom-1 -left-2 w-4 h-4 bg-red-500 rounded-full cursor-ew-resize" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-                lineNumber: 126,
+                lineNumber: 135,
                 columnNumber: 17
               }, void 0)
             ]
@@ -7206,7 +7214,7 @@ const VisualAdjustGuide = ({
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-            lineNumber: 118,
+            lineNumber: 127,
             columnNumber: 13
           },
           void 0
@@ -7224,7 +7232,7 @@ const VisualAdjustGuide = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-            lineNumber: 130,
+            lineNumber: 139,
             columnNumber: 13
           },
           void 0
@@ -7235,7 +7243,7 @@ const VisualAdjustGuide = ({
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/VisualAdjustGuide.tsx",
-      lineNumber: 100,
+      lineNumber: 109,
       columnNumber: 9
     },
     void 0
@@ -88269,4 +88277,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DWw3QlLV.js.map
+//# sourceMappingURL=index-TVm1tpV3.js.map
