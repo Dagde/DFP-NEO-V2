@@ -86,6 +86,15 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
     const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                alert('System is frozen. Aircraft Availability modifications are not permitted.');
+                return;
+            }
+        }
         const newSnapshot: AircraftAvailabilitySnapshot = {
             timestamp: new Date(),
             available: newAvailable,
@@ -111,6 +120,14 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     };
 
     const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                return;
+            }
+        }
         const value = parseInt(e.target.value);
         setCurrentAvailable(value);
         lastSetByPanel.current = value;
@@ -121,6 +138,14 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     };
 
     const handleSliderRelease = () => {
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                return;
+            }
+        }
         handleAvailabilityChange(currentAvailable);
     };
 

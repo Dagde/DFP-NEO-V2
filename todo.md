@@ -1,17 +1,13 @@
-# Trainee Display Fix
+# System Freeze Implementation
 
-## Problem
-- 127 trainees in database (Trainee table) with FIC211/CFS not showing in Trainee Roster
-- Only 10 trainees showing (from mock data)
-
-## Root Cause Found
-- `fetchTrainees()` in `lib/api.ts` was querying `/api/personnel?role=TRAINEE` (Personnel table)
-- BUT trainees are stored in the `Trainee` table (separate from Personnel)
-- The `/api/trainees` endpoint exists and queries the correct table
-
-## Fix Applied
-- [x] Changed `fetchTrainees()` to use `/api/trainees` instead of `/api/personnel?role=TRAINEE`
-- [x] Pushed to GitHub (commit: d6af8ef5)
-
-## Status: Deployed ✓
-Waiting for Railway to rebuild and deploy.
+## Tasks
+- [x] Update EmergencyPage.tsx to use SystemFreezeContext instead of local state
+- [x] Restructure to allow selecting options BEFORE freezing
+- [x] Create SystemFreezeBanner component to show freeze status at top of app
+- [x] Integrate freeze checks into key modification points
+  - [x] Flight event modifications (handleSaveEvents)
+  - [x] Post Flight Times entries
+  - [x] PT-051 entries
+  - [x] Flight Authorisation entries (read-only view)
+  - [x] Aircraft Availability entries (read-only view)
+- [x] Build and push changes
