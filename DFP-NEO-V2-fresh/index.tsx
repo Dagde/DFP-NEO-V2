@@ -13,6 +13,7 @@ console.log('App imported');
 // Theme system
 import './theme.css';
 import { ThemeProvider } from './context/ThemeContext';
+import { SystemFreezeProvider } from './context/SystemFreezeContext';
 
 const rootElement = document.getElementById('root');
 console.log('Root element:', rootElement);
@@ -61,7 +62,9 @@ root.render(
   <React.StrictMode>
     <ErrorBoundary>
       <ThemeProvider>
-        <App />
+        <SystemFreezeProvider>
+          <App />
+        </SystemFreezeProvider>
       </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>

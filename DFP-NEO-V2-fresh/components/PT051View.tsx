@@ -4,6 +4,7 @@ import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051O
 import AuditButton from './AuditButton';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { showDarkConfirm } from './DarkMessageModal';
+import { useSystemFreeze } from '../context/SystemFreezeContext';
 
 interface PT051ViewProps {
     trainee: Trainee;
@@ -200,6 +201,7 @@ const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' }
 
 const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
+    const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved'>('Saved');
     const isFirstRender = useRef(true);
@@ -620,6 +622,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const handleSave = (isAutoSave = false) => {
         // Include timing data from currentEvent in the assessment
+        // System freeze check - prevent PT-051 modifications when frozen
+        if (!checkAndWarn('pt051Entries', 'PT-051 Entry')) {
+            return;
+        }
         const finalAssessment: Pt051Assessment = {
             ...assessment,
             overallGrade,

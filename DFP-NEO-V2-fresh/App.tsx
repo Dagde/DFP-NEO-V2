@@ -4,6 +4,7 @@ console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from './context/ThemeContext';
+import { useSystemFreeze } from './context/SystemFreezeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
@@ -17,6 +18,7 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 import DarkMessageModal from './components/DarkMessageModal';
+import SystemFreezeBanner from './components/SystemFreezeBanner';
 
 
 // Import types
@@ -3004,6 +3006,7 @@ const App: React.FC = () => {
     
     // Theme
     const { theme } = useTheme();
+    const { checkAndWarn, freezeState } = useSystemFreeze();
 
     // Wrap String.prototype.split to catch errors
     React.useEffect(() => {
@@ -6003,6 +6006,12 @@ useEffect(() => {
     const handleSaveEvents = (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
         console.log('🔵 ========== handleSaveEvents START ==========');
         console.log('🔵 Called from:', new Error().stack?.split('\\n')[2]?.trim());
+        
+        // System freeze check - prevent modifications when system is frozen
+        if (freezeState.isFrozen) {
+            alert('System is currently frozen. No modifications are allowed during a system freeze.');
+            return;
+        }
         console.log('🔵 Events to save:', eventsToSave.length);
         console.log('🔵 First event details:', {
             id: eventsToSave[0]?.id,
@@ -10496,6 +10505,7 @@ updates.forEach(update => {
     };
     return (
     <>
+        <SystemFreezeBanner />
         <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}

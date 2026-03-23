@@ -6,6 +6,7 @@ import UnsavedChangesWarning from './UnsavedChangesWarning';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import { useSystemFreeze } from '../context/SystemFreezeContext';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -18,6 +19,7 @@ interface PostFlightViewProps {
 
 // FIX: Changed to a named export to resolve module resolution errors.
 export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData }) => {
+    const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
         const personName = event.student || event.pilot;
@@ -304,6 +306,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     };
 
     const handleSave = async (isAutoSave = false) => {
+        // System freeze check - prevent post flight times modifications when frozen
+        if (!checkAndWarn('postFlightTimes', 'Post Flight Times Entry')) {
+            return;
+        }
         const saveData = {
             result,
             aircraftNumber,
