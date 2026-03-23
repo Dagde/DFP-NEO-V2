@@ -298,6 +298,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         console.log('Event target:', e.target);
         console.log('Current target:', e.currentTarget);
         if (e.button !== 0) return;
+        // System freeze check - prevent dragging when frozen
+        if (event) {
+            const freezeRaw = localStorage.getItem('systemFreezeState');
+            if (freezeRaw) {
+                const freeze = JSON.parse(freezeRaw);
+                if (freeze.isFrozen) {
+                    alert('System is currently frozen. Dragging events is not permitted during a system freeze.');
+                    return;
+                }
+            }
+        }
         didDragRef.current = false;
         document.body.classList.add('no-select');
 
