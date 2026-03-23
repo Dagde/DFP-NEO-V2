@@ -6482,6 +6482,15 @@ useEffect(() => {
     // Visual Adjust handlers
     const handleVisualAdjustStart = (event: ScheduleEvent) => {
         console.log('Visual Adjust Start - Event:', event);
+        // System freeze check - prevent dragging when frozen
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                alert('System is currently frozen. Dragging events is not permitted during a system freeze.');
+                return;
+            }
+        }
         setIsVisualAdjustMode(true);
         setVisualAdjustEvent(event);
         console.log('Visual Adjust Mode set to true');
@@ -7088,6 +7097,15 @@ useEffect(() => {
     };
 
     const handleBuildDfp = () => {
+        // System freeze check - prevent NEO Build when frozen
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                alert('System is currently frozen. NEO Build is not permitted during a system freeze.');
+                return;
+            }
+        }
         console.log('🚀 [NEO-Build] handleBuildDfp called');
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         
@@ -7256,6 +7274,15 @@ useEffect(() => {
 
     const handlePublish = () => {
         if(nextDayBuildEvents.length > 0) {
+        // System freeze check - prevent publishing when frozen
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                alert('System is currently frozen. Publishing from NEO Build is not permitted during a system freeze.');
+                return;
+            }
+        }
             setShowPublishConfirm(true);
         } else {
             showDarkAlert("No DFP has been built to publish. Please run 'Build DFP' first.", 'Publish Error', 'warning');
