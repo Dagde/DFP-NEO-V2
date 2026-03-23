@@ -124,10 +124,12 @@ const SystemFreezeProvider = ({ children }) => {
       frozenBy: frozenBy || "Unknown",
       allowedActions
     });
+    setTimeout(() => window.dispatchEvent(new CustomEvent("systemFreezeChanged")), 50);
   }, []);
   const unfreezeSystem = reactExports.useCallback(() => {
     setFreezeState(defaultFreezeState);
     localStorage.removeItem(STORAGE_KEY);
+    setTimeout(() => window.dispatchEvent(new CustomEvent("systemFreezeChanged")), 50);
   }, []);
   const isActionAllowed = reactExports.useCallback((action) => {
     if (!freezeState.isFrozen) return true;
@@ -148,7 +150,7 @@ const SystemFreezeProvider = ({ children }) => {
     checkAndWarn
   }, children }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/context/SystemFreezeContext.tsx",
-    lineNumber: 114,
+    lineNumber: 118,
     columnNumber: 9
   }, void 0);
 };
@@ -10104,32 +10106,50 @@ const TraineeScheduleView = ({ date, onDateChange, events, trainees, onSelectEve
     columnNumber: 5
   }, void 0);
 };
+const FREEZE_KEY = "systemFreezeState";
+const FREEZE_EVENT = "systemFreezeChanged";
 const useSystemFreeze = () => {
-  const [isFrozen, setIsFrozen] = reactExports.useState(false);
+  const [isFrozen, setIsFrozen] = reactExports.useState(() => {
+    const raw = localStorage.getItem(FREEZE_KEY);
+    if (raw) {
+      try {
+        return JSON.parse(raw).isFrozen === true;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   reactExports.useEffect(() => {
     const checkFreeze = () => {
-      const freezeRaw = localStorage.getItem("systemFreezeState");
-      if (freezeRaw) {
-        const freeze = JSON.parse(freezeRaw);
-        setIsFrozen(freeze.isFrozen);
+      const raw = localStorage.getItem(FREEZE_KEY);
+      if (raw) {
+        try {
+          const freeze = JSON.parse(raw);
+          setIsFrozen(freeze.isFrozen === true);
+        } catch {
+          setIsFrozen(false);
+        }
       } else {
         setIsFrozen(false);
       }
     };
-    checkFreeze();
-    const handleStorageChange = () => {
-      checkFreeze();
-    };
-    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener(FREEZE_EVENT, checkFreeze);
+    window.addEventListener("storage", checkFreeze);
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener(FREEZE_EVENT, checkFreeze);
+      window.removeEventListener("storage", checkFreeze);
     };
   }, []);
   const isActionAllowed = (action) => {
-    const freezeRaw = localStorage.getItem("systemFreezeState");
-    if (freezeRaw) {
-      const freeze = JSON.parse(freezeRaw);
-      return !freeze.isFrozen || freeze.allowedActions[action];
+    const raw = localStorage.getItem(FREEZE_KEY);
+    if (raw) {
+      try {
+        const freeze = JSON.parse(raw);
+        return !freeze.isFrozen || freeze.allowedActions[action];
+      } catch {
+        return true;
+      }
     }
     return true;
   };
@@ -13130,17 +13150,17 @@ const TraineeProfileFlyout = ({
               lineNumber: 1183,
               columnNumber: 27
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleHateSheetClick, className: btnClass, children: "PT-051" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleHateSheetClick, disabled: isFrozen, className: btnClass, children: "PT-051" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
               lineNumber: 1184,
               columnNumber: 27
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleIndividualLMPClick, className: btnClass, children: "View Individual LMP" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleIndividualLMPClick, disabled: isFrozen, className: btnClass, children: "View Individual LMP" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
               lineNumber: 1185,
               columnNumber: 27
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onAddRemedialPackage(trainee), disabled: isFrozen, className: btnClass, children: "Add Remedial Package" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
               lineNumber: 1186,
               columnNumber: 27
@@ -13171,7 +13191,7 @@ const TraineeProfileFlyout = ({
             columnNumber: 25
           }, void 0),
           isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: btnClass, children: "Save" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, disabled: isFrozen, className: btnClass, children: "Save" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
               lineNumber: 1195,
               columnNumber: 27
@@ -28478,7 +28498,7 @@ const InstructorProfileFlyout = ({
             columnNumber: 46
           }, void 0),
           isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: btnClass, children: "Save" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, disabled: isFrozen, className: btnClass, children: "Save" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/InstructorProfileFlyout.tsx",
               lineNumber: 732,
               columnNumber: 17
@@ -88374,4 +88394,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-Duhi473u.js.map
+//# sourceMappingURL=index-BBjzdNyZ.js.map

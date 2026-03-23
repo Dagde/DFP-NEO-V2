@@ -14,42 +14,59 @@ export interface SystemFreezeState {
     allowedActions: AllowedActions;
 }
 
+const FREEZE_KEY = 'systemFreezeState';
+const FREEZE_EVENT = 'systemFreezeChanged';
+
+// Dispatch a custom event whenever freeze state changes (same-tab communication)
+export const dispatchFreezeChange = () => {
+    window.dispatchEvent(new CustomEvent(FREEZE_EVENT));
+};
+
 export const useSystemFreeze = () => {
-    const [isFrozen, setIsFrozen] = useState(false);
-    
+    const [isFrozen, setIsFrozen] = useState(() => {
+        const raw = localStorage.getItem(FREEZE_KEY);
+        if (raw) {
+            try { return JSON.parse(raw).isFrozen === true; } catch { return false; }
+        }
+        return false;
+    });
+
     useEffect(() => {
         const checkFreeze = () => {
-            const freezeRaw = localStorage.getItem('systemFreezeState');
-            if (freezeRaw) {
-                const freeze: SystemFreezeState = JSON.parse(freezeRaw);
-                setIsFrozen(freeze.isFrozen);
+            const raw = localStorage.getItem(FREEZE_KEY);
+            if (raw) {
+                try {
+                    const freeze: SystemFreezeState = JSON.parse(raw);
+                    setIsFrozen(freeze.isFrozen === true);
+                } catch {
+                    setIsFrozen(false);
+                }
             } else {
                 setIsFrozen(false);
             }
         };
-        
-        checkFreeze();
-        
-        // Listen for storage changes
-        const handleStorageChange = () => {
-            checkFreeze();
-        };
-        
-        window.addEventListener('storage', handleStorageChange);
-        
+
+        // Listen for same-tab custom events
+        window.addEventListener(FREEZE_EVENT, checkFreeze);
+        // Listen for cross-tab storage events
+        window.addEventListener('storage', checkFreeze);
+
         return () => {
-            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener(FREEZE_EVENT, checkFreeze);
+            window.removeEventListener('storage', checkFreeze);
         };
     }, []);
-    
+
     const isActionAllowed = (action: keyof AllowedActions): boolean => {
-        const freezeRaw = localStorage.getItem('systemFreezeState');
-        if (freezeRaw) {
-            const freeze: SystemFreezeState = JSON.parse(freezeRaw);
-            return !freeze.isFrozen || freeze.allowedActions[action];
+        const raw = localStorage.getItem(FREEZE_KEY);
+        if (raw) {
+            try {
+                const freeze: SystemFreezeState = JSON.parse(raw);
+                return !freeze.isFrozen || freeze.allowedActions[action];
+            } catch { return true; }
         }
         return true;
     };
-    
+
     return { isFrozen, isActionAllowed };
 };

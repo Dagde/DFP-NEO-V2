@@ -1181,9 +1181,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                          <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
-                          <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
-                          <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
+                          <button onClick={handleHateSheetClick} disabled={isFrozen} className={btnClass}>PT-051</button>
+                          <button onClick={handleIndividualLMPClick} disabled={isFrozen} className={btnClass}>View Individual LMP</button>
+                          <button onClick={() => onAddRemedialPackage(trainee)} disabled={isFrozen} className={btnClass}>Add Remedial Package</button>
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
@@ -1192,7 +1192,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
                       {isEditing && (
                         <>
-                          <button onClick={handleSave} className={btnClass}>Save</button>
+                          <button onClick={handleSave} disabled={isFrozen} className={btnClass}>Save</button>
                           <button onClick={handleCancel} className={btnClass}>Cancel</button>
                         </>
                       )}

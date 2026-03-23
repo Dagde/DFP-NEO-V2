@@ -87,11 +87,15 @@ export const SystemFreezeProvider: React.FC<{ children: React.ReactNode }> = ({ 
             frozenBy: frozenBy || 'Unknown',
             allowedActions
         });
+        // Notify all useSystemFreeze hooks in the same tab
+        setTimeout(() => window.dispatchEvent(new CustomEvent('systemFreezeChanged')), 50);
     }, []);
 
     const unfreezeSystem = useCallback(() => {
         setFreezeState(defaultFreezeState);
         localStorage.removeItem(STORAGE_KEY);
+        // Notify all useSystemFreeze hooks in the same tab
+        setTimeout(() => window.dispatchEvent(new CustomEvent('systemFreezeChanged')), 50);
     }, []);
 
     const isActionAllowed = useCallback((action: keyof AllowedActions): boolean => {

@@ -729,7 +729,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
-                <button onClick={handleSave} className={btnClass}>Save</button>
+                <button onClick={handleSave} disabled={isFrozen} className={btnClass}>Save</button>
                 <button onClick={handleCancel} className={btnClass}>Cancel</button>
               </>)}
             </div>
