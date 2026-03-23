@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
-import { showDarkConfirm } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 
 interface PT051ViewProps {
@@ -620,13 +620,13 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }));
     }, [commentFields]);
 
-    const handleSave = (isAutoSave = false) => {
+    const handleSave = async (isAutoSave = false) => {
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
-                alert('System is currently frozen. PT-051 entries are not permitted during a system freeze.');
+                await showDarkAlert('System is currently frozen. PT-051 entries are not permitted during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }

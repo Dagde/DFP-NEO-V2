@@ -1,3 +1,4 @@
+import { showDarkAlert } from './DarkMessageModal';
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
@@ -154,13 +155,14 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
 
     // Handle drag start on the solid line
-    const handleLineMouseDown = (e: React.MouseEvent) => {
+    const handleLineMouseDown = async (e: React.MouseEvent) => {
+    if (arguments.length === 0) return;
         // Check if system is frozen and aircraft availability is not allowed
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
             const freeze = JSON.parse(freezeRaw);
             if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
-                alert('System is frozen. Aircraft Availability modifications are not permitted.');
+                await showDarkAlert('System is frozen. Aircraft Availability modifications are not permitted.', 'System Frozen', 'error');
                 return;
             }
         }

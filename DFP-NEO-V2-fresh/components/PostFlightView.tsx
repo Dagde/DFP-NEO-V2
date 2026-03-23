@@ -1,3 +1,4 @@
+import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ScheduleEvent, Trainee, Instructor } from '../types';
@@ -311,7 +312,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen && !_freeze.allowedActions?.postFlightTimes) {
-                alert('System is currently frozen. Post Flight Times entries are not permitted during a system freeze.');
+                await showDarkAlert('System is currently frozen. Post Flight Times entries are not permitted during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }

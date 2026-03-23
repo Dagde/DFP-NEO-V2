@@ -1,3 +1,4 @@
+import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
@@ -1005,13 +1006,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setStartTime(formatTime(visualAdjustStartTime));
         setDuration(visualAdjustEndTime - visualAdjustStartTime);
     };
-    const handleSave = () => {
+    const handleSave = async () => {
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen) {
-                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                await showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }

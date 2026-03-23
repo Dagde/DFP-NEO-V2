@@ -6007,7 +6007,7 @@ useEffect(() => {
         });
     };
 
-    const handleSaveEvents = (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
+    const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
         console.log('🔵 ========== handleSaveEvents START ==========');
         console.log('🔵 Called from:', new Error().stack?.split('\\n')[2]?.trim());
         
@@ -6016,7 +6016,7 @@ useEffect(() => {
         const _freezeData = localStorage.getItem('systemFreezeState');
         const _isFrozen = _freezeData ? JSON.parse(_freezeData).isFrozen === true : false;
         if (_isFrozen) {
-            alert('System is currently frozen. No modifications are allowed during a system freeze.');
+            showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
             return;
         }
         console.log('🔵 Events to save:', eventsToSave.length);
@@ -6339,13 +6339,13 @@ useEffect(() => {
         console.log('🔵 ========== handleSaveEvents END ==========');
     };
 
-    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+    const handleCancelEvent = async (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen) {
-                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -6427,13 +6427,13 @@ useEffect(() => {
         
     };
     
-    const handleDeleteEvent = () => {
+    const handleDeleteEvent = async () => {
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen) {
-                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -6480,14 +6480,14 @@ useEffect(() => {
     };
     
     // Visual Adjust handlers
-    const handleVisualAdjustStart = (event: ScheduleEvent) => {
+    const handleVisualAdjustStart = async (event: ScheduleEvent) => {
         console.log('Visual Adjust Start - Event:', event);
         // System freeze check - prevent dragging when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen) {
-                alert('System is currently frozen. Dragging events is not permitted during a system freeze.');
+                showDarkAlert('System is currently frozen. Dragging events is not permitted during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -6978,13 +6978,13 @@ useEffect(() => {
         );
     };
 
-    const handleDeletePriorityEvent = (eventId: string) => {
+    const handleDeletePriorityEvent = async (eventId: string) => {
         // System freeze check
         const _freezeRaw2 = localStorage.getItem('systemFreezeState');
         if (_freezeRaw2) {
             const _freeze2 = JSON.parse(_freezeRaw2);
             if (_freeze2.isFrozen) {
-                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -7096,13 +7096,13 @@ useEffect(() => {
         }, 3000);
     };
 
-    const handleBuildDfp = () => {
+    const handleBuildDfp = async () => {
         // System freeze check - prevent NEO Build when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen) {
-                alert('System is currently frozen. NEO Build is not permitted during a system freeze.');
+                showDarkAlert('System is currently frozen. NEO Build is not permitted during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -7272,14 +7272,14 @@ useEffect(() => {
         }, 500);
     };
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         if(nextDayBuildEvents.length > 0) {
         // System freeze check - prevent publishing when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen) {
-                alert('System is currently frozen. Publishing from NEO Build is not permitted during a system freeze.');
+                showDarkAlert('System is currently frozen. Publishing from NEO Build is not permitted during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -7462,13 +7462,13 @@ updates.forEach(update => {
         return options;
     }, [syllabusDetails]);
     
-    const handleAuthorise = (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
+    const handleAuthorise = async (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen && !_freeze.allowedActions?.flightAuthorisation) {
-                alert('System is currently frozen. Flight Authorisation entries are not permitted during a system freeze.');
+                showDarkAlert('System is currently frozen. Flight Authorisation entries are not permitted during a system freeze.', 'System Frozen', 'error');
                 return;
             }
         }

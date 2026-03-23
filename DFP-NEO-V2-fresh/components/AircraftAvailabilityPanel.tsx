@@ -1,3 +1,4 @@
+import { showDarkAlert } from './DarkMessageModal';
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatTime, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
@@ -85,13 +86,14 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         }
     }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
-    const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
+    const handleAvailabilityChange = async (newAvailable: number, notes?: string) => {
+    if (arguments.length === 0) return; // Prevent direct call without arguments
         // Check if system is frozen and aircraft availability is not allowed
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
             const freeze = JSON.parse(freezeRaw);
             if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
-                alert('System is frozen. Aircraft Availability modifications are not permitted.');
+                await showDarkAlert('System is frozen. Aircraft Availability modifications are not permitted.', 'System Frozen', 'error');
                 return;
             }
         }
@@ -119,7 +121,7 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         setIsDragging(false);
     };
 
-    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSliderChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         // Check if system is frozen and aircraft availability is not allowed
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
@@ -137,7 +139,7 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         }
     };
 
-    const handleSliderRelease = () => {
+    const handleSliderRelease = async () => {
         // Check if system is frozen and aircraft availability is not allowed
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {

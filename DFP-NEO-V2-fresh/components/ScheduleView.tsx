@@ -1,3 +1,4 @@
+import { showDarkAlert } from './DarkMessageModal';
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
@@ -293,7 +294,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         return null;
     }, [syllabusDetails]);
 
-    const handleMouseDown = (e: MouseEvent<HTMLDivElement>, event?: ScheduleEvent) => {
+    const handleMouseDown = async (e: MouseEvent<HTMLDivElement>, event?: ScheduleEvent) => {
         console.log('handleMouseDown called, event:', event?.id, 'isMultiSelectMode:', isMultiSelectMode);
         console.log('Event target:', e.target);
         console.log('Current target:', e.currentTarget);
@@ -304,7 +305,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             if (freezeRaw) {
                 const freeze = JSON.parse(freezeRaw);
                 if (freeze.isFrozen) {
-                    alert('System is currently frozen. Dragging events is not permitted during a system freeze.');
+                    await showDarkAlert('System is currently frozen. Dragging events is not permitted during a system freeze.', 'System Frozen', 'error');
                     return;
                 }
             }
