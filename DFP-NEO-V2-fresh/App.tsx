@@ -6340,6 +6340,15 @@ useEffect(() => {
     };
 
     const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                return;
+            }
+        }
         if (!selectedEvent) {
             return;
         }
@@ -6419,6 +6428,15 @@ useEffect(() => {
     };
     
     const handleDeleteEvent = () => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                return;
+            }
+        }
         if (!selectedEvent) return;
         const eventDate = selectedEvent.date;
 
@@ -6952,6 +6970,15 @@ useEffect(() => {
     };
 
     const handleDeletePriorityEvent = (eventId: string) => {
+        // System freeze check
+        const _freezeRaw2 = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw2) {
+            const _freeze2 = JSON.parse(_freezeRaw2);
+            if (_freeze2.isFrozen) {
+                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                return;
+            }
+        }
         setHighestPriorityEvents(prevEvents => 
             prevEvents.filter(event => event.id !== eventId)
         );
@@ -7409,6 +7436,15 @@ updates.forEach(update => {
     }, [syllabusDetails]);
     
     const handleAuthorise = (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen && !_freeze.allowedActions?.flightAuthorisation) {
+                alert('System is currently frozen. Flight Authorisation entries are not permitted during a system freeze.');
+                return;
+            }
+        }
         const now = new Date().toISOString();
         const authoSigner = selectedPersonName; // Use the selected person's name, not current user
         
