@@ -10136,9 +10136,11 @@ const useSystemFreeze = () => {
     };
     window.addEventListener(FREEZE_EVENT, checkFreeze);
     window.addEventListener("storage", checkFreeze);
+    const poll = setInterval(checkFreeze, 500);
     return () => {
       window.removeEventListener(FREEZE_EVENT, checkFreeze);
       window.removeEventListener("storage", checkFreeze);
+      clearInterval(poll);
     };
   }, []);
   const isActionAllowed = (action) => {
@@ -88394,4 +88396,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-BBjzdNyZ.js.map
+//# sourceMappingURL=index-83qeAMay.js.map

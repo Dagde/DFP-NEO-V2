@@ -50,10 +50,13 @@ export const useSystemFreeze = () => {
         window.addEventListener(FREEZE_EVENT, checkFreeze);
         // Listen for cross-tab storage events
         window.addEventListener('storage', checkFreeze);
+        // Polling fallback every 500ms to guarantee reactivity
+        const poll = setInterval(checkFreeze, 500);
 
         return () => {
             window.removeEventListener(FREEZE_EVENT, checkFreeze);
             window.removeEventListener('storage', checkFreeze);
+            clearInterval(poll);
         };
     }, []);
 
@@ -69,4 +72,4 @@ export const useSystemFreeze = () => {
     };
 
     return { isFrozen, isActionAllowed };
-};
+};// freeze-fix-v2
