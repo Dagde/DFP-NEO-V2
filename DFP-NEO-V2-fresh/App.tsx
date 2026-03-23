@@ -3007,6 +3007,10 @@ const App: React.FC = () => {
     // Theme
     const { theme } = useTheme();
     const { checkAndWarn, freezeState } = useSystemFreeze();
+    const freezeStateRef = React.useRef(freezeState);
+    React.useEffect(() => {
+        freezeStateRef.current = freezeState;
+    }, [freezeState]);
 
     // Wrap String.prototype.split to catch errors
     React.useEffect(() => {
@@ -6008,7 +6012,10 @@ useEffect(() => {
         console.log('🔵 Called from:', new Error().stack?.split('\\n')[2]?.trim());
         
         // System freeze check - prevent modifications when system is frozen
-        if (freezeState.isFrozen) {
+        // Read directly from localStorage as most reliable freeze check
+        const _freezeData = localStorage.getItem('systemFreezeState');
+        const _isFrozen = _freezeData ? JSON.parse(_freezeData).isFrozen === true : false;
+        if (_isFrozen) {
             alert('System is currently frozen. No modifications are allowed during a system freeze.');
             return;
         }

@@ -621,11 +621,16 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     }, [commentFields]);
 
     const handleSave = (isAutoSave = false) => {
-        // Include timing data from currentEvent in the assessment
-        // System freeze check - prevent PT-051 modifications when frozen
-        if (!checkAndWarn('pt051Entries', 'PT-051 Entry')) {
-            return;
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
+                alert('System is currently frozen. PT-051 entries are not permitted during a system freeze.');
+                return;
+            }
         }
+        // Include timing data from currentEvent in the assessment
         const finalAssessment: Pt051Assessment = {
             ...assessment,
             overallGrade,

@@ -306,9 +306,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     };
 
     const handleSave = async (isAutoSave = false) => {
-        // System freeze check - prevent post flight times modifications when frozen
-        if (!checkAndWarn('postFlightTimes', 'Post Flight Times Entry')) {
-            return;
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen && !_freeze.allowedActions?.postFlightTimes) {
+                alert('System is currently frozen. Post Flight Times entries are not permitted during a system freeze.');
+                return;
+            }
         }
         const saveData = {
             result,

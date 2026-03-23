@@ -1006,6 +1006,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setDuration(visualAdjustEndTime - visualAdjustStartTime);
     };
     const handleSave = () => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                alert('System is currently frozen. No modifications are allowed during a system freeze.');
+                return;
+            }
+        }
         const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
             let eventColor = event.color;
             
