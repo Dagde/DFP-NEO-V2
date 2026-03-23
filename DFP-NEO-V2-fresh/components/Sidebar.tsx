@@ -16,6 +16,8 @@ interface SidebarProps {
     currentUserRank: string;
     instructorsList: Array<{name: string; rank: string; unit?: string; pin?: string}>;
     onUserChange: (userName: string) => void;
+    school?: string;
+    allTraineesData?: any[];
 }
 
 const formatCourseName = (name: string): string => {
@@ -25,7 +27,7 @@ const formatCourseName = (name: string): string => {
   return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
   
@@ -98,9 +100,35 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     return a.localeCompare(b);
   });
 
-  // Show all courses in left sidebar
-  const courses = Object.entries(courseColors);
-  const allCourses = courses;
+  // Filter courses by school/location - only show courses that have trainees at the current school
+  const filteredCourses = React.useMemo(() => {
+    if (!school || !allTraineesData) {
+      return Object.entries(courseColors);
+    }
+    
+    // Map school to location name
+    const locationMap: Record<string, string> = {
+      'ESL': 'East Sale',
+      'PEA': 'Pearce'
+    };
+    
+    const targetLocation = locationMap[school] || school;
+    
+    // Find all courses that have trainees at this location
+    const coursesAtLocation = new Set<string>();
+    allTraineesData.forEach(trainee => {
+      if (trainee.location === targetLocation && trainee.course) {
+        coursesAtLocation.add(trainee.course);
+      }
+    });
+    
+    // Filter courseColors to only include courses at this location
+    return Object.entries(courseColors).filter(([courseName]) => 
+      coursesAtLocation.has(courseName)
+    );
+  }, [school, allTraineesData, courseColors]);
+
+  const allCourses = filteredCourses;
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);

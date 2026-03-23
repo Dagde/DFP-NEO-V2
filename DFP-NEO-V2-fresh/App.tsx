@@ -3290,9 +3290,10 @@ useEffect(() => {
             }
             // If no location but has unit, infer location from unit
             // 1FTS and CFS are at East Sale, 2FTS is at Pearce
+            // Unit may have flight appended (e.g. "CFS/D", "1FTS/A", "2FTS/B") so use startsWith
             if (t.unit) {
-                if (t.unit === '2FTS') return locationFullName === 'Pearce';
-                if (t.unit === '1FTS' || t.unit === 'CFS') return locationFullName === 'East Sale';
+                if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
             }
             // If no location or unit info, include (for backward compatibility)
             return true;
@@ -5483,6 +5484,50 @@ useEffect(() => {
         
         setSuccessMessage('New Trainee Added!');
     }, [syllabusDetails]);
+
+    // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
+    const handleUpdateTrainee = useCallback(async (data: Trainee) => {
+        // Update in-memory state immediately
+        setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
+
+        // If this is a DB trainee, persist changes to the database
+        const dbId = (data as any).id;
+        if (dbId && (data as any)._dataSource === 'database') {
+            try {
+                const response = await fetch(`/api/trainees/${dbId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: data.name,
+                        fullName: data.fullName,
+                        rank: data.rank,
+                        course: data.course,
+                        lmpType: data.lmpType,
+                        unit: data.unit,
+                        flight: data.flight,
+                        location: data.location,
+                        service: data.service,
+                        seatConfig: data.seatConfig,
+                        isPaused: data.isPaused,
+                        traineeCallsign: data.traineeCallsign,
+                        primaryInstructor: data.primaryInstructor,
+                        secondaryInstructor: data.secondaryInstructor,
+                        phoneNumber: data.phoneNumber,
+                        email: data.email,
+                    })
+                });
+                if (response.ok) {
+                    console.log(`✅ DB trainee updated: ${data.name}`);
+                } else {
+                    const err = await response.text();
+                    console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
+                }
+            } catch (err) {
+                console.error(`❌ Error updating DB trainee ${data.name}:`, err);
+            }
+        }
+    }, []);
 
     const handleSaveRemedialPackage = (
         trainee: Trainee,
@@ -9019,31 +9064,7 @@ updates.forEach(update => {
                                 handleNavigation('HateSheet');
                             }}
                             onRestoreCourse={() => {}}
-                            onUpdateTrainee={(data) => {
-                                const isNewTrainee = !allTraineesData.find(t => t.idNumber === data.idNumber);
-                                
-                                if (isNewTrainee) {
-                                    // Initialize Individual LMP for new trainee
-                                    const lmpType = data.lmpType || 'BPC+IPC';
-                                    const masterLMP = syllabusDetails.filter(item => {
-                                        if (lmpType === 'BPC+IPC') {
-                                            return !item.lmpType || item.lmpType === 'Master LMP';
-                                        }
-                                        return item.courses.includes(lmpType);
-                                    });
-                                    
-                                    if (masterLMP.length > 0) {
-                                        setTraineeLMPs(prev => {
-                                            const newLMPs = new Map(prev);
-                                            newLMPs.set(data.fullName, [...masterLMP]);
-                                            console.log(`[Individual LMP] Initialized ${data.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
-                                            return newLMPs;
-                                        });
-                                    }
-                                }
-                                
-                                setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
-                            }}
+                            onUpdateTrainee={handleUpdateTrainee}
                             onAddTrainee={handleAddTrainee}
                             school={school}
                             scores={scores}
@@ -9173,31 +9194,7 @@ updates.forEach(update => {
                                 handleNavigation('HateSheet');
                             }}
                             onRestoreCourse={() => {}}
-                            onUpdateTrainee={(data) => {
-                                const isNewTrainee = !allTraineesData.find(t => t.idNumber === data.idNumber);
-                                
-                                if (isNewTrainee) {
-                                    // Initialize Individual LMP for new trainee
-                                    const lmpType = data.lmpType || 'BPC+IPC';
-                                    const masterLMP = syllabusDetails.filter(item => {
-                                        if (lmpType === 'BPC+IPC') {
-                                            return !item.lmpType || item.lmpType === 'Master LMP';
-                                        }
-                                        return item.courses.includes(lmpType);
-                                    });
-                                    
-                                    if (masterLMP.length > 0) {
-                                        setTraineeLMPs(prev => {
-                                            const newLMPs = new Map(prev);
-                                            newLMPs.set(data.fullName, [...masterLMP]);
-                                            console.log(`[Individual LMP] Initialized ${data.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
-                                            return newLMPs;
-                                        });
-                                    }
-                                }
-                                
-                                setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
-                            }}
+                            onUpdateTrainee={handleUpdateTrainee}
                             onAddTrainee={handleAddTrainee}
                             school={school}
                             scores={scores}
@@ -10109,15 +10106,7 @@ updates.forEach(update => {
                                 archivedTraineesData={archivedTraineesData}
                                 school={school}
                                 personnelData={personnelData}
-                                onUpdateTrainee={(data) => {
-                                    setTraineesData(prev => {
-                                        const exists = prev.some(t => t.idNumber === data.idNumber);
-                                        if (exists) {
-                                            return prev.map(t => t.idNumber === data.idNumber ? data : t);
-                                        }
-                                        return [...prev, data];
-                                    });
-                                }}
+                                onUpdateTrainee={handleUpdateTrainee}
                                 onNavigateToCurrency={handleNavigateToCurrency}
                                 onBulkUpdateTrainees={handleBulkUpdateTrainees}
                                 onArchiveTrainee={(id) => {
@@ -10457,7 +10446,11 @@ updates.forEach(update => {
        // This works the same way as clicking on a trainee name in CourseRoster
        if (isStaff) {
           console.log('Opening staff profile:', user.name);
-          setSelectedPersonForProfile({
+          // Try to find the full instructor object from instructorsData first
+          const fullInstructor = instructorsData.find(i =>
+             i.idNumber === (user.pmkeysId || user.idNumber) || i.name === user.name
+          );
+          setSelectedPersonForProfile(fullInstructor || {
              name: user.name,
              idNumber: user.pmkeysId || user.idNumber,
              rank: user.rank,
@@ -10467,7 +10460,13 @@ updates.forEach(update => {
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
        } else if (isTrainee) {
           console.log('Opening trainee profile:', user.name);
-          setSelectedPersonForProfile({
+          // Try to find the full trainee object from allTraineesData first (unfiltered)
+          // This ensures all DB fields (unit, location, flight, etc.) are populated
+          // Must use allTraineesData not traineesData (which is location-filtered)
+          const fullTrainee = allTraineesData.find(t =>
+             t.idNumber === (user.pmkeysId || user.idNumber) || t.name === user.name
+          );
+          setSelectedPersonForProfile(fullTrainee || {
              name: user.name,
              idNumber: user.pmkeysId || user.idNumber,
              rank: user.rank,
@@ -10510,6 +10509,8 @@ updates.forEach(update => {
                     pin: inst.pin || '1111'
                 }))}
                 onUserChange={handleUserChange}
+                school={school}
+                allTraineesData={allTraineesData}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
