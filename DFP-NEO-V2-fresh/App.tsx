@@ -1002,23 +1002,32 @@ function generateDfpInternal(
     // Step 2: If staff sharing OFF → only same-unit instructors eligible.
     // Step 3: If staff sharing ON → if trainee's unit is in the sharing group AND instructor's unit is in the sharing group → eligible.
     //         If trainee's unit is NOT in the sharing group → only same-unit instructors eligible.
-    const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
-        const traineeUnit = trainee.unit || '';
-        const instructorUnit = instructor.unit || '';
+    // Normalise a unit string by stripping any flight-suffix (e.g. "CFS/D" → "CFS", "1FTS/A" → "1FTS")
+    const normalizeUnit = (unit: string): string => {
+        if (!unit) return '';
+        const slashIdx = unit.indexOf('/');
+        return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
+    };
 
-        // ALWAYS allow primary and secondary instructors regardless of unit rules
-        // Primary/secondary pairing takes priority over unit eligibility
+    const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
+        const traineeUnit = normalizeUnit(trainee.unit || '');
+        const instructorUnit = normalizeUnit(instructor.unit || '');
+
+        if (!staffSharingEnabled) {
+            // Staff sharing OFF: must be same unit (normalised).
+            // Primary/secondary preference is respected in ordering (STEP 3) but NOT as a
+            // unit-eligibility bypass — cross-unit primaries are still blocked when sharing is OFF.
+            return instructorUnit === traineeUnit;
+        }
+
+        // Staff sharing ON — primary/secondary from ANY shared unit are eligible
         if (programWithPrimaries) {
             if (instructor.name === trainee.primaryInstructor || instructor.name === trainee.secondaryInstructor) {
                 return true;
             }
         }
 
-        if (!staffSharingEnabled) {
-            // Staff sharing OFF: must be same unit
-            return instructorUnit === traineeUnit;
-        }
-        // Staff sharing ON
+        // Staff sharing ON — standard group check
         const traineeInGroup = staffSharingUnits.includes(traineeUnit);
         if (!traineeInGroup) {
             // Trainee's unit not in sharing group → same-unit only
@@ -1856,29 +1865,38 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             // Priority order:
             //   1. Primary instructor from trainee's same unit
             //   2. Secondary instructor from trainee's same unit
-            //   3. Other same-unit instructors (by event count)
+            //   3. Other same-unit instructors (by weighted workload)
             //   4. Primary instructor from other shared units
             //   5. Secondary instructor from other shared units
-            //   6. Other instructors from other shared units (by event count)
+            //   6. Other instructors from other shared units (by weighted workload)
+            //
+            // Weighted workload score: flight/FTD = 2pts, CPT/ground = 1pt
+            // This ensures the daily workload is distributed as evenly as possible
+            // across all instructors within each unit (per-unit balancing).
+            const workloadOf = (i: Instructor): number => {
+                const c = eventCounts.get(i.name);
+                if (!c) return 0;
+                return (c.flightFtd * 2) + (c.cpt) + (c.ground);
+            };
+
             if (programWithPrimaries) {
                 const primaryName = traineeForCheck.primaryInstructor;
                 const secondaryName = traineeForCheck.secondaryInstructor;
-                const traineeUnit = traineeForCheck.unit || '';
-                const countOf = (i: Instructor) => eventCounts.get(i.name)?.flightFtd || 0;
+                const traineeUnit = normalizeUnit(traineeForCheck.unit || '');
 
-                const isSameUnit = (i: Instructor) => (i.unit || '') === traineeUnit;
+                const isSameUnit = (i: Instructor) => normalizeUnit(i.unit || '') === traineeUnit;
                 const isPrimary = (i: Instructor) => i.name === primaryName;
                 const isSecondary = (i: Instructor) => i.name === secondaryName;
 
-                // Buckets
+                // Buckets — non-primary/secondary slots sorted by weighted workload ascending
                 const primarySameUnit    = candidates.filter(i => isPrimary(i) && isSameUnit(i));
                 const secondarySameUnit  = candidates.filter(i => isSecondary(i) && isSameUnit(i));
                 const otherSameUnit      = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && isSameUnit(i))
-                                                      .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
                 const primaryOtherUnit   = candidates.filter(i => isPrimary(i) && !isSameUnit(i));
                 const secondaryOtherUnit = candidates.filter(i => isSecondary(i) && !isSameUnit(i));
                 const otherOtherUnit     = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && !isSameUnit(i))
-                                                      .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
 
                 candidates = [
                     ...primarySameUnit,
@@ -1889,13 +1907,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ...otherOtherUnit,
                 ];
             } else {
-                // Without primary preference: same-unit first, then shared-unit, both sorted by event count
-                const traineeUnit = traineeForCheck.unit || '';
-                const countOf = (i: Instructor) => eventCounts.get(i.name)?.flightFtd || 0;
-                const sameUnit  = candidates.filter(i => (i.unit || '') === traineeUnit)
-                                            .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
-                const otherUnit = candidates.filter(i => (i.unit || '') !== traineeUnit)
-                                            .sort((a, b) => countOf(a) - countOf(b) || a.name.localeCompare(b.name));
+                // Without primary preference: same-unit first, then shared-unit, both sorted by weighted workload
+                const traineeUnit = normalizeUnit(traineeForCheck.unit || '');
+                const sameUnit  = candidates.filter(i => normalizeUnit(i.unit || '') === traineeUnit)
+                                            .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
+                const otherUnit = candidates.filter(i => normalizeUnit(i.unit || '') !== traineeUnit)
+                                            .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
                 candidates = [...sameUnit, ...otherUnit];
             }
 
