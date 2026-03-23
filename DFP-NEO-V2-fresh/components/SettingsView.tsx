@@ -23,13 +23,14 @@ import { logAudit } from '../utils/auditLogger';
 import { debouncedAuditLog } from '../utils/auditDebounce';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
+import EmergencyPage from './EmergencyPage';
 
 
 declare var XLSX: any;
 
 interface SettingsViewProps {
     hideHeader?: boolean;
-    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data';
+    activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data' | 'organisation' | 'appearance' | 'emergency';
     locations: string[];
     onUpdateLocations: (locations: string[]) => void;
     units: string[];
@@ -2113,6 +2114,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           currentUserPermission={currentUserPermission}
                    />
 
+                   )}
+                   {/* Emergency Page */}
+                   {shouldShowSection('emergency') && (
+                   <EmergencyPage
+                       currentUserRole={currentUserPermission}
+                       onShowSuccess={onShowSuccess}
+                   />
                    )}
                </div>
                {showScoringMatrix && <ScoringMatrixFlyout onClose={() => setShowScoringMatrix(false)} phraseBank={phraseBank} onUpdatePhraseBank={handleUpdatePhraseBank} initialTab={scoringMatrixTab} />}

@@ -113,7 +113,8 @@ type SettingsSection =
     | 'location'
     | 'units'
     | 'organisation'
-    | 'appearance';
+    | 'appearance'
+    | 'emergency';
 
 const sectionLabels: Record<SettingsSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
@@ -137,6 +138,7 @@ const sectionLabels: Record<SettingsSection, string> = {
     'units': 'Units',
     'organisation': 'Organisation',
     'appearance': 'App Appearance',
+    'emergency': 'Emergency',
 };
 
 // All sections in order for the left menu
@@ -162,6 +164,7 @@ const allSections: SettingsSection[] = [
     'units',
     'organisation',
     'appearance',
+    'emergency',
 ];
 
 type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
@@ -313,6 +316,17 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
       <path d="M12 8a4 4 0 00-4 4"/>
     </svg>
   ),
+  'emergency': (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-b from-red-400 to-red-600 
+        border-2 border-red-500 shadow-[0_3px_0_0_rgba(153,27,27,1),0_4px_8px_rgba(0,0,0,0.4)]
+        flex items-center justify-center">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white drop-shadow">
+          <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+        </svg>
+      </div>
+    </div>
+  ),
 };
 
 // Descriptions for each section
@@ -338,6 +352,7 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'appearance': 'Choose dark or light display theme',
+  'emergency': 'System freeze and emergency controls',
 };
 
 // Icon accent colours per section - grouped by category for consistent icon colours
@@ -375,6 +390,8 @@ const sectionColors: Record<SettingsSection, string> = {
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
+  // EMERGENCY - red icons
+  'emergency':         'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
 };
 
 // Groups for the icon grid
@@ -406,6 +423,10 @@ const sectionGroups: { label: string; sections: SettingsSection[] }[] = [
   {
     label: 'DISPLAY',
     sections: ['appearance'],
+  },
+  {
+    label: 'EMERGENCY',
+    sections: ['emergency'],
   },
 ];
 
