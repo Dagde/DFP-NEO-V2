@@ -32,6 +32,13 @@ async function getPrisma() {
     prisma = new PrismaClient();
     await prisma.$connect();
     console.log('✅ Prisma connected to database');
+    // Ensure AircraftAvailabilityHistory table exists (create if missing)
+    await ensureAircraftAvailabilityTable(prisma);
+    // Ensure AircraftAvailabilityEvent table exists (create if missing)
+    await ensureAircraftAvailabilityEventTable(prisma);
+    // Ensure CancellationCode table exists and seed defaults
+    await ensureCancellationCodesTable(prisma);
+    await seedCancellationCodesIfEmpty(prisma);
   }
   return prisma;
 }
@@ -312,6 +319,30 @@ app.delete('/api/trainees/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ DELETE /api/trainees error:', error);
     res.status(500).json({ error: 'Failed to delete trainee', details: error.message });
+  }
+});
+
+// PATCH /api/trainees/fix-location - Fix location for all trainees in a course
+// NOTE: Must be defined BEFORE /api/trainees/:id to avoid route conflict
+app.patch('/api/trainees/fix-location', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course, correctLocation } = req.body;
+
+    if (!course || !correctLocation) {
+      return res.status(400).json({ error: 'course and correctLocation are required' });
+    }
+
+    const result = await db.trainee.updateMany({
+      where: { course: course },
+      data: { location: correctLocation }
+    });
+
+    console.log(`✅ Fixed location for ${result.count} trainees in course "${course}" to "${correctLocation}"`);
+    res.json({ success: true, updated: result.count, course, correctLocation });
+  } catch (error) {
+    console.error('❌ Error fixing trainee locations:', error);
+    res.status(500).json({ error: 'Failed to fix trainee locations', details: error.message });
   }
 });
 
@@ -765,29 +796,6 @@ app.get('/api/version', (req, res) => {
   res.json({ commit: shortCommit, full: commit });
 });
 
-// PATCH /api/trainees/fix-location - Fix location for trainees based on course
-app.patch('/api/trainees/fix-location', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { course, correctLocation } = req.body;
-
-    if (!course || !correctLocation) {
-      return res.status(400).json({ error: 'course and correctLocation are required' });
-    }
-
-    const result = await db.trainee.updateMany({
-      where: { course: course },
-      data: { location: correctLocation }
-    });
-
-    console.log(`✅ Fixed location for ${result.count} trainees in course "${course}" to "${correctLocation}"`);
-    res.json({ success: true, updated: result.count, course, correctLocation });
-  } catch (error) {
-    console.error('❌ Error fixing trainee locations:', error);
-    res.status(500).json({ error: 'Failed to fix trainee locations', details: error.message });
-  }
-});
-
 // GET /api/debug/courses - Show distinct courses and their unit values in DB
 app.get('/api/debug/courses', async (req, res) => {
   try {
@@ -845,6 +853,439 @@ if (fs.existsSync(staticPath)) {
   app.use(express.static(staticPath));
   console.log(`✅ Serving static files from: ${staticPath}`);
 }
+
+// ============================================================
+// AIRCRAFT AVAILABILITY & CANCELLATION CODES ENDPOINTS
+// ============================================================
+
+// Create AircraftAvailabilityHistory table if it doesn't exist
+async function ensureAircraftAvailabilityTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AircraftAvailabilityHistory" (
+        "id" SERIAL NOT NULL,
+        "date" TEXT NOT NULL,
+        "totalFleet" INTEGER NOT NULL DEFAULT 0,
+        "dailyAverage" DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "flyingWindowStart" TEXT,
+        "flyingWindowEnd" TEXT,
+        "lastCalculatedAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "AircraftAvailabilityHistory_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_date_key"
+      ON "AircraftAvailabilityHistory"("date");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_date_idx"
+      ON "AircraftAvailabilityHistory"("date");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "AircraftAvailabilityHistory_createdAt_idx"
+      ON "AircraftAvailabilityHistory"("createdAt");
+    `);
+    // Add missing columns if they don't exist (migration)
+    try {
+      await db.$executeRawUnsafe(`
+          ALTER TABLE "AircraftAvailabilityHistory" 
+          ADD COLUMN IF NOT EXISTS "flyingWindowStart" TEXT,
+          ADD COLUMN IF NOT EXISTS "flyingWindowEnd" TEXT,
+          ADD COLUMN IF NOT EXISTS "lastCalculatedAt" TIMESTAMP(3);
+      `);
+    } catch (alterErr) {
+      // Columns may already exist, ignore
+    }
+    console.log('✅ AircraftAvailabilityHistory table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure AircraftAvailabilityHistory table:', err.message);
+  }
+}
+
+// Ensure AircraftAvailabilityEvent table exists
+async function ensureAircraftAvailabilityEventTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AircraftAvailabilityEvent" (
+        "id" SERIAL NOT NULL,
+        "date" TEXT NOT NULL,
+        "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "availableCount" INTEGER NOT NULL,
+        "totalFleet" INTEGER NOT NULL,
+        "notes" TEXT,
+        CONSTRAINT "AircraftAvailabilityEvent_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_date ON "AircraftAvailabilityEvent"("date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_timestamp ON "AircraftAvailabilityEvent"("timestamp")`);
+    console.log('✅ AircraftAvailabilityEvent table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure AircraftAvailabilityEvent table:', err.message);
+  }
+}
+
+// GET /api/aircraft-availability-history
+// Returns history records, optionally filtered by startDate and endDate
+app.get('/api/aircraft-availability-history', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { startDate, endDate } = req.query;
+    let query = `SELECT * FROM "AircraftAvailabilityHistory"`;
+    const params = [];
+    if (startDate && endDate) {
+      query += ` WHERE "date" >= $1 AND "date" <= $2`;
+      params.push(startDate, endDate);
+    } else if (startDate) {
+      query += ` WHERE "date" >= $1`;
+      params.push(startDate);
+    } else if (endDate) {
+      query += ` WHERE "date" <= $1`;
+      params.push(endDate);
+    }
+    query += ` ORDER BY "date" ASC`;
+    const records = await db.$queryRawUnsafe(query, ...params);
+    console.log(`✅ GET /api/aircraft-availability-history - returning ${records.length} records`);
+    res.json({ history: records });
+  } catch (error) {
+    console.error('❌ GET /api/aircraft-availability-history error:', error);
+    res.status(500).json({ error: 'Failed to fetch aircraft availability history', details: error.message });
+  }
+});
+
+// POST /api/aircraft-availability-history
+// Upserts (insert or update) a daily summary record
+app.post('/api/aircraft-availability-history', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { date, totalFleet, dailyAverage, flyingWindowStart, flyingWindowEnd } = req.body;
+    if (!date) return res.status(400).json({ error: 'date is required' });
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      ON CONFLICT ("date") DO UPDATE SET
+        "totalFleet" = EXCLUDED."totalFleet",
+        "dailyAverage" = EXCLUDED."dailyAverage",
+        "flyingWindowStart" = EXCLUDED."flyingWindowStart",
+        "flyingWindowEnd" = EXCLUDED."flyingWindowEnd",
+        "lastCalculatedAt" = NOW(),
+        "updatedAt" = NOW()
+    `, date, totalFleet || 0, dailyAverage || 0, flyingWindowStart || null, flyingWindowEnd || null);
+    const updated = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1`, date
+    );
+    console.log(`✅ POST /api/aircraft-availability-history - upserted record for date: ${date}`);
+    res.json({ record: updated[0] });
+  } catch (error) {
+    console.error('❌ POST /api/aircraft-availability-history error:', error);
+    res.status(500).json({ error: 'Failed to save aircraft availability history', details: error.message });
+  }
+});
+
+// DELETE /api/aircraft-availability-history/:id
+app.delete('/api/aircraft-availability-history/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    await db.$executeRawUnsafe(`DELETE FROM "AircraftAvailabilityHistory" WHERE "id" = $1`, id);
+    console.log(`✅ DELETE /api/aircraft-availability-history/${id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/aircraft-availability-history error:', error);
+    res.status(500).json({ error: 'Failed to delete aircraft availability history record', details: error.message });
+  }
+});
+
+// GET /api/aircraft-availability-events - Get events for a date
+app.get('/api/aircraft-availability-events', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'date query param required' });
+    const events = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" ASC`,
+      date
+    );
+    // Convert BigInt ids to numbers
+    const serialized = events.map(e => ({ ...e, id: Number(e.id) }));
+    res.json({ events: serialized });
+  } catch (error) {
+    console.error('❌ GET /api/aircraft-availability-events error:', error);
+    res.status(500).json({ error: 'Failed to fetch events', details: error.message });
+  }
+});
+
+// POST /api/aircraft-availability-events - Create a new event
+app.post('/api/aircraft-availability-events', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { date, availableCount, totalFleet, notes, timestamp } = req.body;
+    if (!date || availableCount === undefined || !totalFleet) {
+      return res.status(400).json({ error: 'date, availableCount, totalFleet required' });
+    }
+    const ts = timestamp ? new Date(timestamp) : new Date();
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalFleet", "notes")
+       VALUES ($1, $2, $3, $4, $5)`,
+      date, ts, availableCount, totalFleet, notes || null
+    );
+    const inserted = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "id" DESC LIMIT 1`, date
+    );
+    const record = inserted[0];
+    res.json({ event: { ...record, id: Number(record.id) } });
+  } catch (error) {
+    console.error('❌ POST /api/aircraft-availability-events error:', error);
+    res.status(500).json({ error: 'Failed to create event', details: error.message });
+  }
+});
+
+// POST /api/aircraft-availability-recalculate - Recalculate summary for a date
+app.post('/api/aircraft-availability-recalculate', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, clientTimezoneOffset } = req.body;
+    if (!date) return res.status(400).json({ error: 'date is required' });
+
+    const events = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" ASC`,
+      date
+    );
+
+    if (!events || events.length === 0) {
+      return res.json({ message: 'No events found for this date', dailyAverage: 0, date });
+    }
+
+    const toMinutes = (ts) => {
+      const d = new Date(ts);
+      // Adjust for client timezone: server is UTC, client is local time
+      const offsetMinutes = clientTimezoneOffset !== undefined ? clientTimezoneOffset : 0;
+      return (d.getUTCHours() + offsetMinutes / 60) * 60 + d.getUTCMinutes();
+    };
+
+    const parseWindowTime = (timeStr) => {
+      if (!timeStr) return null;
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + (m || 0);
+    };
+
+    const windowStartMin = flyingWindowStart ? parseWindowTime(flyingWindowStart) : 8 * 60;
+    const windowEndMin = flyingWindowEnd ? parseWindowTime(flyingWindowEnd) : 17 * 60;
+    const windowDuration = windowEndMin - windowStartMin;
+
+    // Calculate time-weighted average within flying window
+    let weightedSum = 0;
+    let totalTime = 0;
+    const now = new Date();
+    const nowMinutes = toMinutes(now);
+    const effectiveEnd = Math.min(nowMinutes, windowEndMin);
+
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
+      const eventMinutes = toMinutes(event.timestamp);
+      const nextEventMinutes = i + 1 < events.length ? toMinutes(events[i + 1].timestamp) : effectiveEnd;
+
+      // Clamp to flying window
+      const segStart = Math.max(eventMinutes, windowStartMin);
+      const segEnd = Math.min(nextEventMinutes, effectiveEnd);
+
+      if (segEnd > segStart) {
+        const duration = segEnd - segStart;
+        weightedSum += event.availableCount * duration;
+        totalTime += duration;
+      }
+    }
+
+    const dailyAverage = totalTime > 0 ? weightedSum / totalTime : 0;
+
+    // Upsert the summary
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      ON CONFLICT ("date") DO UPDATE SET
+        "totalFleet" = EXCLUDED."totalFleet",
+        "dailyAverage" = EXCLUDED."dailyAverage",
+        "flyingWindowStart" = EXCLUDED."flyingWindowStart",
+        "flyingWindowEnd" = EXCLUDED."flyingWindowEnd",
+        "lastCalculatedAt" = NOW(),
+        "updatedAt" = NOW()
+    `, date, totalFleet || 0, dailyAverage, flyingWindowStart || null, flyingWindowEnd || null);
+
+    const updated = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1`, date
+    );
+
+    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}`);
+    res.json({ record: updated[0], dailyAverage, date, eventCount: events.length });
+  } catch (error) {
+    console.error('❌ POST /api/aircraft-availability-recalculate error:', error);
+    res.status(500).json({ error: 'Failed to recalculate', details: error.message });
+  }
+});
+
+// GET /api/aircraft-availability-current - Get the current aircraft availability
+app.get('/api/aircraft-availability-current', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const today = new Date().toISOString().split('T')[0];
+    const events = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" DESC LIMIT 1`,
+      today
+    );
+    if (events.length === 0) {
+      return res.json({ current: null, date: today });
+    }
+    const latest = events[0];
+    res.json({
+      current: {
+        availableCount: latest.availableCount,
+        totalFleet: latest.totalFleet,
+        timestamp: latest.timestamp,
+        id: Number(latest.id)
+      },
+      date: today
+    });
+  } catch (error) {
+    console.error('❌ GET /api/aircraft-availability-current error:', error);
+    res.status(500).json({ error: 'Failed to get current availability', details: error.message });
+  }
+});
+
+// ============================================================
+// CANCELLATION CODES ENDPOINTS
+// ============================================================
+
+async function ensureCancellationCodesTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CancellationCode" (
+        "id" SERIAL NOT NULL,
+        "code" TEXT NOT NULL,
+        "category" TEXT NOT NULL DEFAULT 'Other',
+        "description" TEXT NOT NULL DEFAULT '',
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CancellationCode_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "CancellationCode_code_key" ON "CancellationCode"("code");
+    `);
+    console.log('✅ CancellationCode table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure CancellationCode table:', err.message);
+  }
+}
+
+async function seedCancellationCodesIfEmpty(db) {
+  try {
+    const existing = await db.$queryRawUnsafe(`SELECT COUNT(*) as count FROM "CancellationCode"`);
+    const count = Number(existing[0].count);
+    if (count > 0) {
+      console.log(`ℹ️  CancellationCode table already has ${count} codes - skipping seed`);
+      return;
+    }
+    const defaults = [
+      { code: 'WX', category: 'Weather', description: 'Weather - general adverse conditions' },
+      { code: 'WX-CB', category: 'Weather', description: 'Weather - cumulonimbus / thunderstorm' },
+      { code: 'WX-FOG', category: 'Weather', description: 'Weather - fog / low visibility' },
+      { code: 'WX-WIND', category: 'Weather', description: 'Weather - wind above limits' },
+      { code: 'AC-SVC', category: 'Aircraft', description: 'Aircraft unserviceable - scheduled maintenance' },
+      { code: 'AC-UNSVC', category: 'Aircraft', description: 'Aircraft unserviceable - unscheduled defect' },
+      { code: 'AC-INSUF', category: 'Aircraft', description: 'Aircraft insufficient - not enough available' },
+      { code: 'STU-SIC', category: 'Student', description: 'Student sick / medically unfit' },
+      { code: 'STU-GND', category: 'Student', description: 'Student grounded / suspended' },
+      { code: 'STU-UNAV', category: 'Student', description: 'Student unavailable - other reason' },
+      { code: 'IP-SIC', category: 'Instructor', description: 'Instructor sick / medically unfit' },
+      { code: 'IP-UNAV', category: 'Instructor', description: 'Instructor unavailable - other reason' },
+      { code: 'OPS-TEMPO', category: 'Operations', description: 'Operational tempo / tasking conflict' },
+      { code: 'OPS-AIRSP', category: 'Operations', description: 'Airspace not available' },
+      { code: 'ADMIN', category: 'Administrative', description: 'Administrative cancellation' },
+      { code: 'OTHER', category: 'Other', description: 'Other reason (see notes)' },
+    ];
+    for (const d of defaults) {
+      await db.$executeRawUnsafe(
+        `INSERT INTO "CancellationCode" ("code", "category", "description") VALUES ($1, $2, $3) ON CONFLICT ("code") DO NOTHING`,
+        d.code, d.category, d.description
+      );
+    }
+    console.log(`✅ Seeded ${defaults.length} default cancellation codes`);
+  } catch (err) {
+    console.error('❌ Failed to seed cancellation codes:', err.message);
+  }
+}
+
+// GET /api/cancellation-codes - Return all codes
+app.get('/api/cancellation-codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const codes = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" ORDER BY "category" ASC, "code" ASC`);
+    const serialized = codes.map(c => ({ ...c, id: Number(c.id) }));
+    res.json({ codes: serialized });
+  } catch (error) {
+    console.error('❌ GET /api/cancellation-codes error:', error);
+    res.status(500).json({ error: 'Failed to fetch cancellation codes', details: error.message });
+  }
+});
+
+// POST /api/cancellation-codes - Create or update a code (upsert)
+app.post('/api/cancellation-codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { code, category, description, isActive } = req.body;
+    if (!code) return res.status(400).json({ error: 'code is required' });
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CancellationCode" ("code", "category", "description", "isActive", "updatedAt")
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT ("code") DO UPDATE SET
+        "category" = EXCLUDED."category",
+        "description" = EXCLUDED."description",
+        "isActive" = EXCLUDED."isActive",
+        "updatedAt" = NOW()
+    `, code, category || 'Other', description || '', isActive !== false);
+    const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    const record = updated[0];
+    res.json({ code: { ...record, id: Number(record.id) } });
+  } catch (error) {
+    console.error('❌ POST /api/cancellation-codes error:', error);
+    res.status(500).json({ error: 'Failed to save cancellation code', details: error.message });
+  }
+});
+
+// PATCH /api/cancellation-codes/:code/toggle - Toggle active status
+app.patch('/api/cancellation-codes/:code/toggle', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { code } = req.params;
+    await db.$executeRawUnsafe(`
+      UPDATE "CancellationCode" SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE "code" = $1
+    `, code);
+    const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    if (!updated.length) return res.status(404).json({ error: 'Code not found' });
+    const record = updated[0];
+    res.json({ code: { ...record, id: Number(record.id) } });
+  } catch (error) {
+    console.error('❌ PATCH /api/cancellation-codes toggle error:', error);
+    res.status(500).json({ error: 'Failed to toggle cancellation code', details: error.message });
+  }
+});
+
+// DELETE /api/cancellation-codes/:code
+app.delete('/api/cancellation-codes/:code', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { code } = req.params;
+    const existing = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    if (!existing.length) return res.status(404).json({ error: 'Code not found' });
+    await db.$executeRawUnsafe(`DELETE FROM "CancellationCode" WHERE "code" = $1`, code);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/cancellation-codes error:', error);
+    res.status(500).json({ error: 'Failed to delete cancellation code', details: error.message });
+  }
+});
 
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
