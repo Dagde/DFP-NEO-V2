@@ -1,4 +1,4 @@
-import { useSystemFreeze } from '/../hooks/useSystemFreeze';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { SyllabusItemDetail } from '../types';

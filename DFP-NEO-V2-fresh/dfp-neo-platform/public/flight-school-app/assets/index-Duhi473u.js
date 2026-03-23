@@ -1,5 +1,5 @@
-import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, d as reactExports$1, e as ReactDOM$1 } from "./vendor-react-BsOIFAm2.js";
-import { E } from "./vendor-pdf-CVABt-PO.js";
+import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, d as ReactDOM$1 } from "./vendor-react-DN2tVJ9m.js";
+import { E } from "./vendor-pdf-Cd7jhQNp.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) return;
@@ -152,7 +152,7 @@ const SystemFreezeProvider = ({ children }) => {
     columnNumber: 9
   }, void 0);
 };
-const useSystemFreeze$2 = () => reactExports.useContext(SystemFreezeContext);
+const useSystemFreeze$1 = () => reactExports.useContext(SystemFreezeContext);
 const AUTH_SERVER$2 = "";
 const API_LOGIN = "/api/auth/direct-login";
 const API_LOGOUT = "/api/auth/direct-logout";
@@ -3654,7 +3654,7 @@ const showDarkConfirm = (message, title = "Confirm Action", variant = "info") =>
   });
 };
 const SystemFreezeBanner = () => {
-  const { freezeState, unfreezeSystem } = useSystemFreeze$2();
+  const { freezeState, unfreezeSystem } = useSystemFreeze$1();
   if (!freezeState.isFrozen) return null;
   const formatDateTime = (isoString) => {
     const date = new Date(isoString);
@@ -10104,40 +10104,9 @@ const TraineeScheduleView = ({ date, onDateChange, events, trainees, onSelectEve
     columnNumber: 5
   }, void 0);
 };
-const useSystemFreeze$1 = () => {
+const useSystemFreeze = () => {
   const [isFrozen, setIsFrozen] = reactExports.useState(false);
   reactExports.useEffect(() => {
-    const checkFreeze = () => {
-      const freezeRaw = localStorage.getItem("systemFreezeState");
-      if (freezeRaw) {
-        const freeze = JSON.parse(freezeRaw);
-        setIsFrozen(freeze.isFrozen);
-      } else {
-        setIsFrozen(false);
-      }
-    };
-    checkFreeze();
-    const handleStorageChange = () => {
-      checkFreeze();
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-  const isActionAllowed = (action) => {
-    const freezeRaw = localStorage.getItem("systemFreezeState");
-    if (freezeRaw) {
-      const freeze = JSON.parse(freezeRaw);
-      return !freeze.isFrozen || freeze.allowedActions[action];
-    }
-    return true;
-  };
-  return { isFrozen, isActionAllowed };
-};
-const useSystemFreeze = () => {
-  const [isFrozen, setIsFrozen] = reactExports$1.useState(false);
-  reactExports$1.useEffect(() => {
     const checkFreeze = () => {
       const freezeRaw = localStorage.getItem("systemFreezeState");
       if (freezeRaw) {
@@ -13836,7 +13805,7 @@ const CourseEditFlyout = ({
   courseColors
 }) => {
   const [newCourseNumber, setNewCourseNumber] = reactExports.useState(courseName);
-  useSystemFreeze$1();
+  useSystemFreeze();
   const [newUnit, setNewUnit] = reactExports.useState(courseUnit);
   reactExports.useEffect(() => {
     console.log(`[CourseEditFlyout] 🚀 Mounted/Updated - courseName: "${courseName}", courseUnit: "${courseUnit}"`);
@@ -14448,7 +14417,7 @@ const CourseRosterView = ({
   onUpdateCourseUnit,
   onBackcourseTrainee
 }) => {
-  const { isFrozen } = useSystemFreeze$1();
+  const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const [isCreatingNew, setIsCreatingNew] = reactExports.useState(false);
@@ -29929,7 +29898,7 @@ const InstructorListView = ({
 };
 const StaffView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
-  useSystemFreeze$1();
+  useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
   const rankOrder = {
     "WGCDR": 1,
@@ -30077,7 +30046,7 @@ const StaffView = (props) => {
 };
 const TraineeView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("profile");
-  useSystemFreeze$1();
+  useSystemFreeze();
   const sortedTrainees = [...props.traineesData].sort((a, b) => {
     if (a.course !== b.course) {
       return a.course.localeCompare(b.course);
@@ -48769,7 +48738,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
 const ai = new GoogleGenAI({ apiKey: "" });
 const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
-  const { checkAndWarn } = useSystemFreeze$2();
+  const { checkAndWarn } = useSystemFreeze$1();
   const [isDirty, setIsDirty] = reactExports.useState(false);
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const isFirstRender = reactExports.useRef(true);
@@ -58686,7 +58655,7 @@ const EmergencyPage = ({
   currentUserRole,
   onShowSuccess
 }) => {
-  const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$2();
+  const { freezeState, freezeSystem, unfreezeSystem } = useSystemFreeze$1();
   const [showConfirmDialog, setShowConfirmDialog] = reactExports.useState(false);
   const [isProcessing, setIsProcessing] = reactExports.useState(false);
   const [pendingAllowedActions, setPendingAllowedActions] = reactExports.useState(defaultAllowedActions);
@@ -62857,7 +62826,7 @@ const UserListSection = ({
 };
 const StaffDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [staffData, setStaffData] = reactExports.useState([]);
-  useSystemFreeze$1();
+  useSystemFreeze();
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
   const [deletingId, setDeletingId] = reactExports.useState(null);
@@ -63889,7 +63858,7 @@ const StaffCombinedDataTable = ({ instructorsData }) => {
 };
 const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [traineeData, setTraineeData] = reactExports.useState([]);
-  useSystemFreeze$1();
+  useSystemFreeze();
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
   const [deletingId, setDeletingId] = reactExports.useState(null);
@@ -68994,7 +68963,7 @@ const LocalityChangeFlyout = ({ locality }) => {
   }, void 0);
 };
 const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData }) => {
-  const { freezeState, checkAndWarn } = useSystemFreeze$2();
+  const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
     return traineesData.find((t) => t.fullName === personName);
@@ -72865,7 +72834,7 @@ const CoursesManagementView = ({
   onUpdateCourseDates
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
-  useSystemFreeze$1();
+  useSystemFreeze();
   const [showEditFlyout, setShowEditFlyout] = reactExports.useState(false);
   const [courseToEdit, setCourseToEdit] = reactExports.useState(null);
   const [pinInput, setPinInput] = reactExports.useState("");
@@ -81257,7 +81226,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
 const App = () => {
   const zoomLevel = 1;
   const { theme } = useTheme();
-  const { checkAndWarn, freezeState } = useSystemFreeze$2();
+  const { checkAndWarn, freezeState } = useSystemFreeze$1();
   const freezeStateRef = React.useRef(freezeState);
   React.useEffect(() => {
     freezeStateRef.current = freezeState;
@@ -88405,4 +88374,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-BWuLSE4t.js.map
+//# sourceMappingURL=index-Duhi473u.js.map

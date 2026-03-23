@@ -1,4 +1,4 @@
-import { useSystemFreeze } from '/../hooks/useSystemFreeze';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
