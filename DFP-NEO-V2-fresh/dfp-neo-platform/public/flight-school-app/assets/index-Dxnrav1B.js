@@ -67420,8 +67420,8 @@ const sectionColors = {
   "staff-mockdata": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
   "trainee-mockdata": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
   "staff-combined-data": "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400",
-  // HISTORICAL & ANALYSIS - rose icons
-  "validation": "from-rose-500/20 to-rose-600/10 border-rose-500/30 text-rose-400",
+  // HISTORICAL & ANALYSIS - amber icons
+  "validation": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   // SYSTEM SETTINGS - cyan icons
   "timezone": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "location": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -87276,4 +87276,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-CC5uheMQ.js.map
+//# sourceMappingURL=index-Dxnrav1B.js.map
