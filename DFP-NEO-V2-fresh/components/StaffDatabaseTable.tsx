@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useEffect, useMemo } from 'react';
 import { logAudit } from '../utils/auditLogger';
 
@@ -35,6 +36,7 @@ type SortDirection = 'asc' | 'desc';
 
 const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
+  const { isFrozen } = useSystemFreeze();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);

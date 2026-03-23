@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState } from 'react';
 import CourseRosterView from './CourseRosterView';
 import TraineeScheduleView from './TraineeScheduleView';
@@ -50,6 +51,7 @@ interface TraineeViewProps {
 
 const TraineeView: React.FC<TraineeViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const { isFrozen } = useSystemFreeze();
 
   // Sort trainees for schedule view
   const sortedTrainees = [...props.traineesData]

@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
@@ -41,6 +42,7 @@ interface StaffViewProps {
 
 const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const { isFrozen } = useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
 
   // Define rank order for sorting

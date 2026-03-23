@@ -1,3 +1,4 @@
+import { useSystemFreeze } from '/../hooks/useSystemFreeze';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { SyllabusItemDetail } from '../types';
@@ -349,6 +350,7 @@ const DetailView: React.FC<{
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
 const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem }) => {
+    const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
   const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -483,7 +485,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="Master LMP" />
-                    <button onClick={handleEdit} disabled={!selectedItem} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
+                    <button onClick={handleEdit} disabled={!selectedItem || isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
         </div>
@@ -519,7 +521,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   }}
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  disabled={isEditing}
+                  disabled={isEditing || isFrozen}
                   className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-12 flex-shrink-0 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
@@ -534,7 +536,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   }}
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  disabled={isEditing}
+                  disabled={isEditing || isFrozen}
                   className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-[68px] flex-shrink-0 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
@@ -549,7 +551,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   }}
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  disabled={isEditing}
+                  disabled={isEditing || isFrozen}
                   className={`text-left p-2 transition-colors text-sm flex-1 whitespace-nowrap overflow-hidden text-ellipsis ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}

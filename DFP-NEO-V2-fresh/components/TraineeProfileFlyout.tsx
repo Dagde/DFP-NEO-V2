@@ -1,3 +1,4 @@
+import { useSystemFreeze } from '/../hooks/useSystemFreeze';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -247,6 +248,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onOpenInstructorProfile
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
+    const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
     // Shared 3D card style (matches Staff Profile)
@@ -1184,7 +1186,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>
-                          <button onClick={() => setIsEditing(true)} className={btnClass}>Edit</button>
+                          <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>
                       )}

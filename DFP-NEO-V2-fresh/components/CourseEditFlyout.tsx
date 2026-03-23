@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useEffect } from 'react';
 import { Trainee } from '../types';
 
@@ -29,6 +30,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
     courseColors
 }) => {
     const [newCourseNumber, setNewCourseNumber] = useState(courseName);
+    const { isFrozen } = useSystemFreeze();
     const [newUnit, setNewUnit] = useState(courseUnit);
 
     // Log on mount and when key props change

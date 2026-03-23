@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
 import { Course } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
@@ -26,6 +27,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onUpdateCourseDates
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
+    const { isFrozen } = useSystemFreeze();
     const [showEditFlyout, setShowEditFlyout] = useState(false);
     const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
     const [pinInput, setPinInput] = useState('');

@@ -1,3 +1,4 @@
+import { useSystemFreeze } from '/../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -120,6 +121,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   locations, units, traineesData, onViewLogbook, onRequestSct
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
+    const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
   const [idNumber, setIdNumber] = useState(instructor.idNumber);
@@ -723,7 +725,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
                 <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                 <button onClick={() => handleTabClick('sct')} className={tabBtnClass('sct')}>Request SCT</button>
-                <button onClick={() => { setActiveTab(null); handleEdit(); }} className={btnClass}>Edit</button>
+                <button onClick={() => { setActiveTab(null); handleEdit(); }} disabled={isFrozen} className={btnClass}>Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>

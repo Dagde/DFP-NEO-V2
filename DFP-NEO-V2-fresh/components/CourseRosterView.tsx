@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 
@@ -98,6 +99,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onUpdateCourseUnit,
     onBackcourseTrainee
 }) => {
+    const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -298,7 +300,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                             <div className="flex items-center gap-1">
                                                 {view === 'active' && (
                                                     <button 
-                                                        onClick={() => setCourseToEdit(courseName)}
+                                                        onClick={() => !isFrozen && setCourseToEdit(courseName)} disabled={isFrozen}
                                                         className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group" 
                                                         aria-label={`Edit course ${courseName}`}
                                                         title="Edit course"
