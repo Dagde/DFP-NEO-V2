@@ -257,7 +257,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     // Tab state — null means no tab open
     const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | null>(null);
-    const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
+    const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
     const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
@@ -854,7 +854,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           )) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
                         </div>
-                        <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
+                        <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} disabled={isFrozen} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed">+ Add Unavailability</button>
                       </div>
                     )}
 
@@ -902,7 +902,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           </div>
                         </div>
                         <div className="flex justify-end gap-2 pt-4">
-                          <button onClick={handleSave} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Save Logbook</button>
+                          <button onClick={handleSave} disabled={isFrozen} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed">Save Logbook</button>
                           <button onClick={() => setActiveTab(null)} className="px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded">Cancel</button>
                         </div>
                       </div>
