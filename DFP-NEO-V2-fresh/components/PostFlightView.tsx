@@ -613,7 +613,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto min-h-0 relative">
-              {freezeState.isFrozen && (
+              {freezeState.isFrozen && !freezeState.allowedActions.postFlightTimes && (
                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
               )}
               <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">

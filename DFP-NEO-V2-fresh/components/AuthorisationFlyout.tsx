@@ -34,7 +34,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   currentUserRank, 
   currentUserUnit 
 }) => {
-  const { isFrozen } = useSystemFreeze();
+  const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = useState(event.authNotes ?? '');
   const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
@@ -208,7 +208,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 </div>
 
                 <div className="p-4 space-y-4 relative">
-                    {isFrozen && (
+                    {isFrozen && !freezeAllowedActions.flightAuthorisation && (
                         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                     )}
                     {/* Approval Banner */}
@@ -315,7 +315,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 </div>
 
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto relative">
-                    {isFrozen && (
+                    {isFrozen && !freezeAllowedActions.flightAuthorisation && (
                         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                     )}
                     <fieldset className="p-4 border border-gray-600 rounded-lg">

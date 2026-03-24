@@ -50998,7 +50998,7 @@ const AuthorisationFlyout = ({
   currentUserRank,
   currentUserUnit
 }) => {
-  const { isFrozen } = useSystemFreeze();
+  const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = reactExports.useState(event.authNotes ?? "");
   const [showAuthConfirmation, setShowAuthConfirmation] = reactExports.useState(false);
   const [showPinEntry, setShowPinEntry] = reactExports.useState(false);
@@ -51157,7 +51157,7 @@ const AuthorisationFlyout = ({
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 space-y-4 relative", children: [
-          isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
+          isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
             lineNumber: 212,
             columnNumber: 25
@@ -51487,7 +51487,7 @@ const AuthorisationFlyout = ({
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 max-h-[70vh] overflow-y-auto relative", children: [
-        isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
+        isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
           lineNumber: 319,
           columnNumber: 25
@@ -69876,7 +69876,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto min-h-0 relative", children: [
-      freezeState.isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
+      freezeState.isFrozen && !freezeState.allowedActions.postFlightTimes && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
         lineNumber: 617,
         columnNumber: 17
@@ -88560,4 +88560,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-PxhcrlGn.js.map
+//# sourceMappingURL=index-BEI93HMb.js.map
