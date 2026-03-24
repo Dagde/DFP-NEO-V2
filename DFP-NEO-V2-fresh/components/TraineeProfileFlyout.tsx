@@ -819,7 +819,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* MAIN CONTENT — scrollable */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+                    {/* Transparent freeze overlay — blocks all interaction with content */}
+                    {isFrozen && (
+                      <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                    )}
 
                     {/* ── TAB PANELS (shown inline above profile when a tab is active) ── */}
                     {activeTab === 'currency' && (
@@ -854,7 +858,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                           )) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
                         </div>
-                        <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} disabled={isFrozen} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed">+ Add Unavailability</button>
+                        <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
                       </div>
                     )}
 
@@ -902,7 +906,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           </div>
                         </div>
                         <div className="flex justify-end gap-2 pt-4">
-                          <button onClick={handleSave} disabled={isFrozen} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed">Save Logbook</button>
+                          <button onClick={handleSave} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Save Logbook</button>
                           <button onClick={() => setActiveTab(null)} className="px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded">Cancel</button>
                         </div>
                       </div>
@@ -1181,9 +1185,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                          <button onClick={handleHateSheetClick} disabled={isFrozen} className={btnClass}>PT-051</button>
-                          <button onClick={handleIndividualLMPClick} disabled={isFrozen} className={btnClass}>View Individual LMP</button>
-                          <button onClick={() => onAddRemedialPackage(trainee)} disabled={isFrozen} className={btnClass}>Add Remedial Package</button>
+                          <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
+                          <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
+                          <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
@@ -1192,7 +1196,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
                       {isEditing && (
                         <>
-                          <button onClick={handleSave} disabled={isFrozen} className={btnClass}>Save</button>
+                          <button onClick={handleSave} className={btnClass}>Save</button>
                           <button onClick={handleCancel} className={btnClass}>Cancel</button>
                         </>
                       )}

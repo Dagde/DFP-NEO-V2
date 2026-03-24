@@ -314,7 +314,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
           <div className="flex flex-1 overflow-hidden">
             {/* MAIN CONTENT — always full, scrollable */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+              {/* Transparent freeze overlay — blocks all interaction with content */}
+              {isFrozen && (
+                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+              )}
 
               {/* ── TAB PANEL (shown inline above profile when a tab is active) ── */}
               {activeTab === 'currency' && (
@@ -379,7 +383,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-4">
-                    <button onClick={handleSave} disabled={isFrozen} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed">Save Logbook</button>
+                    <button onClick={handleSave} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">Save Logbook</button>
                     <button onClick={() => setActiveTab(null)} className="px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded">Cancel</button>
                   </div>
                 </div>
@@ -400,12 +404,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                           <span className="text-white font-medium">{p.reason}</span>
                           <span className="text-gray-300 font-mono">{startDisplay}{p.startDate !== p.endDate ? ` – ${endDisplay}` : ''} {timeStr}</span>
-                          <button onClick={() => handleRemoveUnavailability(p.id)} disabled={isFrozen} className="text-red-400 hover:text-red-300 text-xs ml-2 disabled:opacity-40 disabled:cursor-not-allowed">✕</button>
+                          <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
                         </div>
                       );
                     }) : <p className="text-gray-500 text-xs italic text-center py-2">No unavailability periods scheduled.</p>}
                   </div>
-                  <button onClick={() => setShowAddUnavailability(true)} disabled={isFrozen} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed">+ Add Unavailability</button>
+                  <button onClick={() => setShowAddUnavailability(true)} className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded">+ Add Unavailability</button>
                 </div>
               )}
 
@@ -423,8 +427,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       onRequestSct();
                       setActiveTab(null);
                     }}
-                    disabled={isFrozen}
-                    className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
                   >Submit SCT Request</button>
                 </div>
               )}
@@ -730,7 +733,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>
-                <button onClick={handleSave} disabled={isFrozen} className={btnClass}>Save</button>
+                <button onClick={handleSave} className={btnClass}>Save</button>
                 <button onClick={handleCancel} className={btnClass}>Cancel</button>
               </>)}
             </div>

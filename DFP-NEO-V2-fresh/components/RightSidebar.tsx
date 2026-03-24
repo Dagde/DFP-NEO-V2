@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 interface RightSidebarProps {
     activeView: string;
@@ -31,11 +32,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
 
+  const { isFrozen } = useSystemFreeze();
+
   // Extract surname from currentUserName (format: "Bloggs, Joe")
   const userSurname = currentUserName.split(',')[0];
 
   return (
-    <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700">
+    <aside className="w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative">
+      {/* Transparent freeze overlay — covers all buttons in right sidebar */}
+      {isFrozen && (
+        <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+      )}
+
       {/* Duty Pilot Button - Half Width */}
       <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
         <div className="flex justify-center w-full mt-2">
