@@ -1902,10 +1902,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         
                         {/* Right Button Panel */}
                         <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
-                            <div className="relative w-full flex flex-col items-center">
-                                {isFrozen && !isEditing && (
-                                    <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
-                                )}
                             {!isEditing && (
                                 <>
                                     <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50 mb-[1px]">
@@ -1916,33 +1912,37 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <p className="text-lg font-bold text-green-500">NO</p>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={() => onNeoClick(event)}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                    >
-                                        <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
-                                    </button>
-                                    {event.type === 'flight' && (
-                                        <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
-                                            <span className="text-center leading-tight">Auth</span>
-                                        </button>
-                                    )}
-                                    {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
                                         <button
-                                            onClick={handleCompleteClick}
+                                            onClick={() => onNeoClick(event)}
                                             className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                         >
-                                            <span className="text-center leading-tight">Complete</span>
+                                            <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                         </button>
-                                    )}
-                                    {event.type === 'flight' && (
-                                        <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
-                                            <span className="text-center leading-tight">Post<br/>Flight</span>
-                                        </button>
-                                    )}
+                                        {event.type === 'flight' && (
+                                            <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
+                                                <span className="text-center leading-tight">Auth</span>
+                                            </button>
+                                        )}
+                                        {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                            <button
+                                                onClick={handleCompleteClick}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">Complete</span>
+                                            </button>
+                                        )}
+                                        {event.type === 'flight' && (
+                                            <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
+                                                <span className="text-center leading-tight">Post<br/>Flight</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </>
                             )}
-                            </div>
                             <div className="flex-grow" /> {/* Spacer */}
                             {isEditing ? (
                                    <>
