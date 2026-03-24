@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import CancelEventFlyout from './CancelEventFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 interface EventDetailModalProps {
   event: ScheduleEvent;
@@ -97,6 +98,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         pilot: event.pilot,
         isSct: event.isSct
     });
+
+    const { isFrozen } = useSystemFreeze();
 
     const [isEditing, setIsEditing] = useState(isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
@@ -1873,23 +1876,38 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     >
                                         NEO
                                     </button>
-                                    <button
-                                        onClick={handleTraineeScoresClick}
-                                        disabled={!traineeObject}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Trainee Scores
-                                    </button>
-                                    <button
-                                        onClick={handleLmpClick}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
-                                    >
-                                        LMP
-                                    </button>
-                                    {event.type === 'flight' && (
-                                        <button onClick={handleAuthClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed">
-                                            Auth
+                                    <div className="relative">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button
+                                            onClick={handleTraineeScoresClick}
+                                            disabled={!traineeObject}
+                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Trainee Scores
                                         </button>
+                                    </div>
+                                    <div className="relative">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button
+                                            onClick={handleLmpClick}
+                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                        >
+                                            LMP
+                                        </button>
+                                    </div>
+                                    {event.type === 'flight' && (
+                                        <div className="relative">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button onClick={handleAuthClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed">
+                                                Auth
+                                            </button>
+                                        </div>
                                     )}
                                     {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
                                         <button
@@ -1900,12 +1918,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </button>
                                     )}
                                     {traineeObject && (
-                                        <button
-                                            onClick={handlePt051Click}
-                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
-                                        >
-                                            PT-051
-                                        </button>
+                                        <div className="relative">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handlePt051Click}
+                                                className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
+                                            >
+                                                PT-051
+                                            </button>
+                                        </div>
                                     )}
                                     {event.type === 'flight' && (
                                         <button onClick={handlePostFlightClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-shape-fill">
