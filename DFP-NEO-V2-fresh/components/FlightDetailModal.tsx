@@ -1532,9 +1532,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-sm font-semibold text-white">Add Deployment</span>
                                 </label>
                             )}
-                            <button onClick={() => setShowCancelConfirm(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
-                                Delete
-                            </button>
+                            <div className="relative">
+                                {isFrozen && (
+                                    <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                )}
+                                <button onClick={() => setShowCancelConfirm(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
 
