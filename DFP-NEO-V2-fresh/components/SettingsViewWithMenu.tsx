@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { SettingsView } from './SettingsView';
 import { UserListSection } from './UserListSection';
 import StaffDatabaseTable from "./StaffDatabaseTable";
@@ -435,6 +436,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [activeSection, setActiveSection] = useState<ActiveSection>('home');
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
+    const { isFrozen } = useSystemFreeze();
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>('Airmanship');
 
     // Initialize filtered mockdata with instructorsData
@@ -535,7 +537,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {/* ── SECTION CONTENT ──────────────────────────────────── */}
                     {activeSection !== 'home' && (
-                    <div>
+                    <div className="relative">
+                        {/* Transparent freeze overlay — covers all section content except Emergency */}
+                        {isFrozen && activeSection !== 'emergency' && (
+                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                        )}
                         {/* Section Header with back button */}
                         <div className="mb-6 flex flex-wrap items-center gap-3">
                             <button

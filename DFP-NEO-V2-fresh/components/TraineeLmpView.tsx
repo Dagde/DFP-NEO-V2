@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trainee, SyllabusItemDetail, Score } from '../types';
 import AuditButton from './AuditButton';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -133,6 +134,7 @@ const CheckIcon = () => (
 
 
 const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, scores, onBack }) => {
+  const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
 
   const completedEventIds = useMemo(() => new Set(scores.map(s => s.event)), [scores]);
@@ -152,16 +154,20 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, sc
            <div className="flex items-center gap-2">
         <button
           onClick={onBack}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
+          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
         >
-          &larr; Back - Trainee Profile
+          ← Back Trainee Profile
         </button>
              <AuditButton pageName="Individual LMP" />
            </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-row overflow-hidden">
+      <div className="flex-1 flex flex-row overflow-hidden relative">
+        {/* Transparent freeze overlay */}
+        {isFrozen && (
+          <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+        )}
         {/* Left Column: List */}
         <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
           <ul className="p-2 space-y-1">

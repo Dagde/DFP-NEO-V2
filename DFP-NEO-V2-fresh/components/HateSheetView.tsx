@@ -3,6 +3,7 @@ import { Trainee, Score, Pt051Assessment } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { showDarkConfirm } from './DarkMessageModal';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 // Define ALL_ELEMENTS to match PT051View
 const PT051_STRUCTURE = [
@@ -33,6 +34,7 @@ interface HateSheetViewProps {
 }
 
 const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
+    const { isFrozen } = useSystemFreeze();
     // Drag and drop state - simplified to just highlight target row
     const [isDragging, setIsDragging] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
@@ -304,16 +306,20 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                    <div className="flex items-center gap-2">
                 <button
                     onClick={onBackToRoster}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                 >
-                    &larr; Back - Trainee Profile
+                    ← Back Trainee Profile
                 </button>
                        <AuditButton pageName="Performance History" />
                    </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto relative">
+                {/* Transparent freeze overlay */}
+                {isFrozen && (
+                    <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                )}
                 <div className="p-4 md:p-6 max-w-7xl mx-auto">
                     {/* Draggable PT-051 Button */}
                     <div className="mb-4 flex justify-center">
