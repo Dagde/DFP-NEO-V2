@@ -100,7 +100,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         isSct: event.isSct
     });
 
-    const { isFrozen } = useSystemFreeze();
+    const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
     const [isEditing, setIsEditing] = useState(isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1572,9 +1572,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <span className="text-center leading-tight">LMP</span>
                                         </button>
                                     </div>
+                                    {/* PT-051 button - frozen unless pt051Entries is allowed */}
                                     {traineeObject && (
                                         <div className="relative w-[75px]">
-                                            {isFrozen && (
+                                            {isFrozen && !freezeAllowedActions.pt051Entries && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                             )}
                                             <button
@@ -1937,6 +1938,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <p className="text-lg font-bold text-green-500">NO</p>
                                         )}
                                     </div>
+                                    {/* NEO button - always frozen when system is frozen */}
                                     <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -1947,25 +1949,43 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         >
                                             <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                         </button>
-                                        {event.type === 'flight' && (
+                                    </div>
+                                    {/* Auth button - frozen unless flightAuthorisation is allowed */}
+                                    {event.type === 'flight' && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && !freezeAllowedActions.flightAuthorisation && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
                                             <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                                 <span className="text-center leading-tight">Auth</span>
                                             </button>
-                                        )}
-                                        {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                        </div>
+                                    )}
+                                    {/* Complete button - always frozen when system is frozen */}
+                                    {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
                                             <button
                                                 onClick={handleCompleteClick}
                                                 className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                             >
                                                 <span className="text-center leading-tight">Complete</span>
                                             </button>
-                                        )}
-                                        {event.type === 'flight' && (
+                                        </div>
+                                    )}
+                                    {/* Post Flight button - frozen unless postFlightTimes is allowed */}
+                                    {event.type === 'flight' && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && !freezeAllowedActions.postFlightTimes && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
                                             <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
                                                 <span className="text-center leading-tight">Post<br/>Flight</span>
                                             </button>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </>
                             )}
                             <div className="flex-grow" /> {/* Spacer */}
