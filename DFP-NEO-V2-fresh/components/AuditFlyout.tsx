@@ -132,21 +132,21 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={handleExport}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-400"
               title="Export to CSV"
             >
               Export CSV
             </button>
             <button
               onClick={handlePrint}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-400"
               title="Print Audit Log"
             >
               Print
             </button>
             <button
               onClick={onClose}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded transition-colors"
+              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
             >
               Close
             </button>

@@ -308,7 +308,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                     onClick={onBackToRoster}
                     className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                 >
-                    ← Back Trainee Profile
+                    ← Back
                 </button>
                        <AuditButton pageName="Performance History" />
                    </div>

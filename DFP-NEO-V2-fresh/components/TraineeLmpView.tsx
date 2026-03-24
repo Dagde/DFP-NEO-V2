@@ -156,7 +156,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, sc
           onClick={onBack}
           className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
         >
-          ← Back Trainee Profile
+          ← Back
         </button>
              <AuditButton pageName="Individual LMP" />
            </div>

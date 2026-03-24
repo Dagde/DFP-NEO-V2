@@ -299,15 +299,17 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         console.log('Event target:', e.target);
         console.log('Current target:', e.currentTarget);
         if (e.button !== 0) return;
-        // System freeze check - prevent dragging when frozen
+        // System freeze check - prevent dragging when frozen (but allow click to open flight details)
+        let frozenNoDrag = false;
         if (event) {
             const freezeRaw = localStorage.getItem('systemFreezeState');
             if (freezeRaw) {
-                const freeze = JSON.parse(freezeRaw);
-                if (freeze.isFrozen) {
-                    await showDarkAlert('System is currently frozen. Dragging events is not permitted during a system freeze.', 'System Frozen', 'error');
-                    return;
-                }
+                try {
+                    const freeze = JSON.parse(freezeRaw);
+                    if (freeze.isFrozen) {
+                        frozenNoDrag = true;
+                    }
+                } catch { /* ignore */ }
             }
         }
         didDragRef.current = false;
@@ -357,7 +359,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 processEvent(event);
             }
 
-            if (initialPositions.size > 0) {
+            if (initialPositions.size > 0 && !frozenNoDrag) {
                    console.log('Setting dragging state with', initialPositions.size, 'events for event:', event.id);                   console.log('initialPositions:', initialPositions);
                 setDraggingState({
                     mainEventId: event.id,
@@ -367,7 +369,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     originalResourceIds,
                 });
                    console.log('setDraggingState called with:', draggingState);
-            } else {
+            } else if (!frozenNoDrag) {
                 console.log('No initial positions - drag state not set');
             }
         } else {

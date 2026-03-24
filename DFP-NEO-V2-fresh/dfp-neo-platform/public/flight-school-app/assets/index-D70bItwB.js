@@ -2464,7 +2464,7 @@ const AuditFlyout = ({
                 "button",
                 {
                   onClick: handleExport,
-                  className: "px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors",
+                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-400",
                   title: "Export to CSV",
                   children: "Export CSV"
                 },
@@ -2481,7 +2481,7 @@ const AuditFlyout = ({
                 "button",
                 {
                   onClick: handlePrint,
-                  className: "px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors",
+                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-400",
                   title: "Print Audit Log",
                   children: "Print"
                 },
@@ -2498,7 +2498,7 @@ const AuditFlyout = ({
                 "button",
                 {
                   onClick: onClose,
-                  className: "px-3 py-1.5 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded transition-colors",
+                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
                   children: "Close"
                 },
                 void 0,
@@ -7563,13 +7563,16 @@ const ScheduleView = ({
     console.log("Event target:", e.target);
     console.log("Current target:", e.currentTarget);
     if (e.button !== 0) return;
+    let frozenNoDrag = false;
     if (event) {
       const freezeRaw = localStorage.getItem("systemFreezeState");
       if (freezeRaw) {
-        const freeze = JSON.parse(freezeRaw);
-        if (freeze.isFrozen) {
-          await showDarkAlert("System is currently frozen. Dragging events is not permitted during a system freeze.", "System Frozen", "error");
-          return;
+        try {
+          const freeze = JSON.parse(freezeRaw);
+          if (freeze.isFrozen) {
+            frozenNoDrag = true;
+          }
+        } catch {
         }
       }
     }
@@ -7612,7 +7615,7 @@ const ScheduleView = ({
       } else {
         processEvent(event);
       }
-      if (initialPositions.size > 0) {
+      if (initialPositions.size > 0 && !frozenNoDrag) {
         console.log("Setting dragging state with", initialPositions.size, "events for event:", event.id);
         console.log("initialPositions:", initialPositions);
         setDraggingState({
@@ -7623,7 +7626,7 @@ const ScheduleView = ({
           originalResourceIds
         });
         console.log("setDraggingState called with:", draggingState);
-      } else {
+      } else if (!frozenNoDrag) {
         console.log("No initial positions - drag state not set");
       }
     } else {
@@ -7821,11 +7824,11 @@ const ScheduleView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 611,
+          lineNumber: 613,
           columnNumber: 21
         }, void 0) }, i, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 610,
+          lineNumber: 612,
           columnNumber: 17
         }, void 0)
       );
@@ -7837,11 +7840,11 @@ const ScheduleView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 623,
+          lineNumber: 625,
           columnNumber: 21
         }, void 0) }, "fl-label", false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 622,
+          lineNumber: 624,
           columnNumber: 17
         }, void 0)
       );
@@ -7851,11 +7854,11 @@ const ScheduleView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 632,
+          lineNumber: 634,
           columnNumber: 21
         }, void 0) }, "ll-label", false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 631,
+          lineNumber: 633,
           columnNumber: 17
         }, void 0)
       );
@@ -7868,11 +7871,11 @@ const ScheduleView = ({
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-full bg-gray-700/50" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 645,
+          lineNumber: 647,
           columnNumber: 21
         }, void 0) }, `v-${i}`, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 644,
+          lineNumber: 646,
           columnNumber: 17
         }, void 0)
       );
@@ -7880,11 +7883,11 @@ const ScheduleView = ({
         lines.push(
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5 + 0.5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-full bg-gray-700/25" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 651,
+            lineNumber: 653,
             columnNumber: 25
           }, void 0) }, `v-${i}-30`, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 650,
+            lineNumber: 652,
             columnNumber: 21
           }, void 0)
         );
@@ -7894,7 +7897,7 @@ const ScheduleView = ({
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$5, height: "1px" } }, `h-${i}`, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 658,
+          lineNumber: 660,
           columnNumber: 17
         }, void 0)
       );
@@ -7918,7 +7921,7 @@ const ScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 671,
+              lineNumber: 673,
               columnNumber: 21
             },
             void 0
@@ -7943,7 +7946,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 690,
+          lineNumber: 692,
           columnNumber: 21
         },
         void 0
@@ -7958,14 +7961,14 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 696,
+          lineNumber: 698,
           columnNumber: 22
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 688,
+      lineNumber: 690,
       columnNumber: 13
     }, void 0);
   };
@@ -7986,7 +7989,7 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 712,
+            lineNumber: 714,
             columnNumber: 17
           },
           void 0
@@ -8007,7 +8010,7 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 723,
+            lineNumber: 725,
             columnNumber: 17
           },
           void 0
@@ -8016,7 +8019,7 @@ const ScheduleView = ({
     }
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: shades }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 730,
+      lineNumber: 732,
       columnNumber: 16
     }, void 0);
   };
@@ -8041,7 +8044,7 @@ const ScheduleView = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-0.5 h-full bg-white animate-pulse" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 761,
+            lineNumber: 763,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8058,7 +8061,7 @@ const ScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 762,
+              lineNumber: 764,
               columnNumber: 17
             },
             void 0
@@ -8069,7 +8072,7 @@ const ScheduleView = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-        lineNumber: 757,
+        lineNumber: 759,
         columnNumber: 13
       },
       void 0
@@ -8100,7 +8103,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 800,
+          lineNumber: 802,
           columnNumber: 17
         },
         void 0
@@ -8115,7 +8118,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 809,
+          lineNumber: 811,
           columnNumber: 17
         },
         void 0
@@ -8130,7 +8133,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 815,
+          lineNumber: 817,
           columnNumber: 17
         },
         void 0
@@ -8147,12 +8150,12 @@ const ScheduleView = ({
             "Flights starting in this hour: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: flightCount }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 829,
+              lineNumber: 831,
               columnNumber: 56
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 828,
+            lineNumber: 830,
             columnNumber: 21
           }, void 0)
         },
@@ -8160,14 +8163,14 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 821,
+          lineNumber: 823,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 798,
+      lineNumber: 800,
       columnNumber: 13
     }, void 0);
   };
@@ -8235,7 +8238,7 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 864,
+            lineNumber: 866,
             columnNumber: 21
           },
           void 0
@@ -8257,31 +8260,31 @@ const ScheduleView = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(-1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: "<" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 923,
+            lineNumber: 925,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex-grow min-w-0 text-center font-semibold text-white cursor-default truncate text-xs", children: formattedDisplayDate }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 926,
+            lineNumber: 928,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: ">" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 927,
+            lineNumber: 929,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 922,
+          lineNumber: 924,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 921,
+          lineNumber: 923,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 934,
+          lineNumber: 936,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8300,13 +8303,13 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 940,
+            lineNumber: 942,
             columnNumber: 21
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 939,
+          lineNumber: 941,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8344,7 +8347,7 @@ const ScheduleView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                  lineNumber: 970,
+                  lineNumber: 972,
                   columnNumber: 25
                 },
                 void 0
@@ -8363,7 +8366,7 @@ const ScheduleView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                  lineNumber: 989,
+                  lineNumber: 991,
                   columnNumber: 25
                 },
                 void 0
@@ -8396,7 +8399,7 @@ const ScheduleView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                    lineNumber: 1e3,
+                    lineNumber: 1002,
                     columnNumber: 29
                   },
                   void 0
@@ -8415,7 +8418,7 @@ const ScheduleView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                    lineNumber: 1017,
+                    lineNumber: 1019,
                     columnNumber: 29
                   },
                   void 0
@@ -8434,14 +8437,14 @@ const ScheduleView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                    lineNumber: 1025,
+                    lineNumber: 1027,
                     columnNumber: 30
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                lineNumber: 999,
+                lineNumber: 1001,
                 columnNumber: 25
               }, void 0),
               selectionRect && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8459,7 +8462,7 @@ const ScheduleView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                  lineNumber: 1038,
+                  lineNumber: 1040,
                   columnNumber: 25
                 },
                 void 0
@@ -8470,7 +8473,7 @@ const ScheduleView = ({
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 953,
+            lineNumber: 955,
             columnNumber: 17
           },
           void 0
@@ -8481,13 +8484,13 @@ const ScheduleView = ({
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 911,
+      lineNumber: 913,
       columnNumber: 13
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-    lineNumber: 910,
+    lineNumber: 912,
     columnNumber: 9
   }, void 0);
 };
@@ -15127,7 +15130,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
           {
             onClick: onBackToRoster,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
-            children: "← Back Trainee Profile"
+            children: "← Back"
           },
           void 0,
           false,
@@ -70796,7 +70799,7 @@ const TraineeLmpView = ({ trainee, traineeLmp, scores, onBack }) => {
           {
             onClick: onBack,
             className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
-            children: "← Back Trainee Profile"
+            children: "← Back"
           },
           void 0,
           false,
@@ -88438,4 +88441,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-MBzBXuk3.js.map
+//# sourceMappingURL=index-D70bItwB.js.map
