@@ -182,7 +182,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     // Handle drag move - smooth movement with raw Y position
     const handleDragMove = (e: MouseEvent) => {
-        if (!isDragging || !overlayRef.current) return;
+        if (!isDraggingRef.current || !overlayRef.current) return;
 
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
@@ -223,7 +223,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             
             console.log('✅ DRAG END:', {
                 timestamp: new Date().toISOString(),
-                dragY: dragY.toFixed(2),
+                dragY: finalDragY.toFixed(2),
                 rowsFromTop: rowsFromTop.toFixed(2),
                 exactCount: exactCount.toFixed(2),
                 snappedCount: snappedCount,
@@ -319,14 +319,21 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     };
 
     // Add global mouse event listeners for dragging
-    // Only depends on isDragging - handlers use refs to avoid stale closures
+    // Use refs for handlers to avoid stale closures
+    const handleDragMoveRef = useRef(handleDragMove);
+    const handleDragEndRef = useRef(handleDragEnd);
+    useEffect(() => { handleDragMoveRef.current = handleDragMove; });
+    useEffect(() => { handleDragEndRef.current = handleDragEnd; });
+
     useEffect(() => {
-        if (isDraggingRef.current) {
-            window.addEventListener('mousemove', handleDragMove);
-            window.addEventListener('mouseup', handleDragEnd);
+        if (isDragging) {
+            const moveHandler = (e: MouseEvent) => handleDragMoveRef.current(e);
+            const upHandler = () => handleDragEndRef.current();
+            window.addEventListener('mousemove', moveHandler);
+            window.addEventListener('mouseup', upHandler);
             return () => {
-                window.removeEventListener('mousemove', handleDragMove);
-                window.removeEventListener('mouseup', handleDragEnd);
+                window.removeEventListener('mousemove', moveHandler);
+                window.removeEventListener('mouseup', upHandler);
             };
         }
     }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
