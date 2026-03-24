@@ -1565,9 +1565,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <span className="text-center leading-tight">PT-051</span>
                                         </button>
                                     )}
-                                    <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
-                                        <span className="text-center leading-tight">Edit</span>
-                                    </button>
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                            <span className="text-center leading-tight">Edit</span>
+                                        </button>
+                                    </div>
                                 </>
                             )}
                         </div>
