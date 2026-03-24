@@ -1549,26 +1549,41 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             <div className="flex-grow" /> {/* Spacer */}
                             {!isEditing && (
                                 <>
-                                    <button
-                                        onClick={handleTraineeScoresClick}
-                                        disabled={!traineeObject}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <span className="text-center leading-tight">Trainee<br/>Scores</span>
-                                    </button>
-                                    <button
-                                        onClick={handleLmpClick}
-                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                    >
-                                        <span className="text-center leading-tight">LMP</span>
-                                    </button>
-                                    {traineeObject && (
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
                                         <button
-                                            onClick={handlePt051Click}
+                                            onClick={handleTraineeScoresClick}
+                                            disabled={!traineeObject}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <span className="text-center leading-tight">Trainee<br/>Scores</span>
+                                        </button>
+                                    </div>
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button
+                                            onClick={handleLmpClick}
                                             className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
                                         >
-                                            <span className="text-center leading-tight">PT-051</span>
+                                            <span className="text-center leading-tight">LMP</span>
                                         </button>
+                                    </div>
+                                    {traineeObject && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handlePt051Click}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">PT-051</span>
+                                            </button>
+                                        </div>
                                     )}
                                     <div className="relative w-[75px]">
                                         {isFrozen && (
