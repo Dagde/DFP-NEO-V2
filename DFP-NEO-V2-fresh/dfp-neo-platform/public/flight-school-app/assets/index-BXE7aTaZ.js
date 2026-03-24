@@ -6725,7 +6725,6 @@ const AircraftAvailabilityOverlay = ({
     }
   }, [plannedAvailability]);
   const handleLineMouseDown = async (e) => {
-    if (arguments.length === 0) return;
     const freezeRaw = localStorage.getItem("systemFreezeState");
     if (freezeRaw) {
       const freeze = JSON.parse(freezeRaw);
@@ -6931,7 +6930,7 @@ const AircraftAvailabilityOverlay = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-            lineNumber: 411,
+            lineNumber: 410,
             columnNumber: 17
           },
           void 0
@@ -6958,7 +6957,7 @@ const AircraftAvailabilityOverlay = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-                lineNumber: 433,
+                lineNumber: 432,
                 columnNumber: 25
               },
               void 0
@@ -7027,7 +7026,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 509,
+              lineNumber: 508,
               columnNumber: 35
             },
             void 0
@@ -7048,14 +7047,14 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 519,
+              lineNumber: 518,
               columnNumber: 35
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 507,
+          lineNumber: 506,
           columnNumber: 31
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: currentTimeX < lastChangeX ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -7074,7 +7073,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 536,
+              lineNumber: 535,
               columnNumber: 45
             },
             void 0
@@ -7094,7 +7093,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 547,
+              lineNumber: 546,
               columnNumber: 45
             },
             void 0
@@ -7115,14 +7114,14 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 557,
+              lineNumber: 556,
               columnNumber: 45
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 534,
+          lineNumber: 533,
           columnNumber: 41
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -7141,7 +7140,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 571,
+              lineNumber: 570,
               columnNumber: 45
             },
             void 0
@@ -7162,22 +7161,22 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 583,
+              lineNumber: 582,
               columnNumber: 49
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 569,
+          lineNumber: 568,
           columnNumber: 41
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 531,
+          lineNumber: 530,
           columnNumber: 33
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 505,
+          lineNumber: 504,
           columnNumber: 23
         }, void 0) : (
           // If no snapshot exists (shouldn't happen), render full draggable line from start of day
@@ -7197,7 +7196,7 @@ const AircraftAvailabilityOverlay = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-                lineNumber: 602,
+                lineNumber: 601,
                 columnNumber: 30
               },
               void 0
@@ -7218,14 +7217,14 @@ const AircraftAvailabilityOverlay = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-                lineNumber: 611,
+                lineNumber: 610,
                 columnNumber: 30
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-            lineNumber: 601,
+            lineNumber: 600,
             columnNumber: 26
           }, void 0)
         )
@@ -7235,13 +7234,13 @@ const AircraftAvailabilityOverlay = ({
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-      lineNumber: 495,
+      lineNumber: 494,
       columnNumber: 9
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-    lineNumber: 494,
+    lineNumber: 493,
     columnNumber: 13
   }, void 0);
 };
@@ -88619,4 +88618,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-0ELI9nSa.js.map
+//# sourceMappingURL=index-BXE7aTaZ.js.map

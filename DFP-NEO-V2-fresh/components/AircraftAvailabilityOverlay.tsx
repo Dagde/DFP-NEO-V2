@@ -156,7 +156,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     // Handle drag start on the solid line
     const handleLineMouseDown = async (e: React.MouseEvent) => {
-    if (arguments.length === 0) return;
         // Check if system is frozen and aircraft availability is not allowed
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
