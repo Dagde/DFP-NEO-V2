@@ -494,7 +494,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             {renderHistoricalLines()}
 
                {/* Solid line for current availability - from last change to end of day - DRAGGABLE */}
-{lastSnapshot && (
+{lastSnapshot ? (
                       <g>
                           {needsSplit ? (
                               <>
@@ -589,6 +589,29 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                                 </>
                             )}
                         </g>
+                     ) : (
+                         // If no snapshot exists (shouldn't happen), render full draggable line from start of day
+                         <g>
+                             <line
+                                 x1={0}
+                                 y1={displayY}
+                                 x2={endOfDayX}
+                                 y2={displayY}
+                                 stroke="rgba(236, 72, 153, 0.4)"
+                                 strokeWidth="2"
+                                 className="pointer-events-none"
+                             />
+                             <line
+                                 x1={0}
+                                 y1={displayY}
+                                 x2={endOfDayX}
+                                 y2={displayY}
+                                 stroke="transparent"
+                                 strokeWidth="20"
+                                 style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
+                                 onMouseDown={handleLineMouseDown}
+                             />
+                         </g>
                      )}
             </svg>
 
