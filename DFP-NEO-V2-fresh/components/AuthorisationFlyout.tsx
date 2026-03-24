@@ -4,6 +4,7 @@ import AuthorisationConfirmation from './AuthorisationConfirmation';
 import PinEntryFlyout from './PinEntryFlyout';
 import ClearAuthConfirmation from './ClearAuthConfirmation';
 import StaffSearchDropdown from './StaffSearchDropdown';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 interface AuthorisationFlyoutProps {
   event: ScheduleEvent;
@@ -33,6 +34,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   currentUserRank, 
   currentUserUnit 
 }) => {
+  const { isFrozen } = useSystemFreeze();
   const [notes, setNotes] = useState(event.authNotes ?? '');
   const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
@@ -205,7 +207,10 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     </button>
                 </div>
 
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-4 relative">
+                    {isFrozen && (
+                        <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                    )}
                     {/* Approval Banner */}
                     <div className="bg-gray-700/50 rounded-lg p-3 text-center border border-gray-600">
                         <div className="flex items-center justify-center mb-1">
@@ -309,7 +314,10 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     </button>
                 </div>
 
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto relative">
+                    {isFrozen && (
+                        <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                    )}
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Flight Summary</legend>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">

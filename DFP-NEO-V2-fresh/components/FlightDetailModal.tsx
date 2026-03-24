@@ -1,6 +1,7 @@
 import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import CancelEventFlyout from './CancelEventFlyout';
@@ -99,6 +100,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         isSct: event.isSct
     });
 
+    const { isFrozen } = useSystemFreeze();
     const [isEditing, setIsEditing] = useState(isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1900,6 +1902,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         
                         {/* Right Button Panel */}
                         <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
+                            <div className="relative w-full flex flex-col items-center">
+                                {isFrozen && !isEditing && (
+                                    <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                )}
                             {!isEditing && (
                                 <>
                                     <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50 mb-[1px]">
@@ -1936,6 +1942,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     )}
                                 </>
                             )}
+                            </div>
                             <div className="flex-grow" /> {/* Spacer */}
                             {isEditing ? (
                                    <>
