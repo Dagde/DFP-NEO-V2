@@ -1328,6 +1328,673 @@ app.delete('/api/cancellation-codes/:code', async (req, res) => {
   }
 });
 
+// ============================================================
+// HISTORICAL DATA PERSISTENCE ENDPOINTS
+// ============================================================
+
+// GET /api/historical-data - Load persisted publishedSchedules + pt051Assessments
+app.get('/api/historical-data', async (req, res) => {
+  try {
+    const db = await getPrisma();
+
+    // Load publishedSchedules backup
+    const schedulesBackup = await db.dataBackup.findFirst({
+      where: { type: 'historical_published_schedules' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Load pt051Assessments backup
+    const pt051Backup = await db.dataBackup.findFirst({
+      where: { type: 'historical_pt051_assessments' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Load seeding metadata
+    const seedingMeta = await db.dataBackup.findFirst({
+      where: { type: 'historical_seeding_metadata' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json({
+      publishedSchedules: schedulesBackup ? schedulesBackup.data : null,
+      pt051Assessments: pt051Backup ? pt051Backup.data : null,
+      seedingMetadata: seedingMeta ? seedingMeta.data : null,
+    });
+  } catch (error) {
+    console.error('❌ GET /api/historical-data error:', error);
+    res.status(500).json({ error: 'Failed to load historical data', details: error.message });
+  }
+});
+
+// POST /api/historical-data/save - Save publishedSchedules + pt051Assessments
+app.post('/api/historical-data/save', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { publishedSchedules, pt051Assessments, metadata } = req.body;
+
+    const savedItems = [];
+
+    if (publishedSchedules !== undefined) {
+      // Delete old and insert new (upsert pattern via delete+create)
+      await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
+      await db.dataBackup.create({
+        data: { type: 'historical_published_schedules', data: publishedSchedules }
+      });
+      savedItems.push('publishedSchedules');
+    }
+
+    if (pt051Assessments !== undefined) {
+      await db.dataBackup.deleteMany({ where: { type: 'historical_pt051_assessments' } });
+      await db.dataBackup.create({
+        data: { type: 'historical_pt051_assessments', data: pt051Assessments }
+      });
+      savedItems.push('pt051Assessments');
+    }
+
+    if (metadata !== undefined) {
+      await db.dataBackup.deleteMany({ where: { type: 'historical_seeding_metadata' } });
+      await db.dataBackup.create({
+        data: { type: 'historical_seeding_metadata', data: metadata }
+      });
+      savedItems.push('seedingMetadata');
+    }
+
+    console.log(`✅ POST /api/historical-data/save - Saved: ${savedItems.join(', ')}`);
+    res.json({ success: true, saved: savedItems });
+  } catch (error) {
+    console.error('❌ POST /api/historical-data/save error:', error);
+    res.status(500).json({ error: 'Failed to save historical data', details: error.message });
+  }
+});
+
+// POST /api/historical-data/seed - Generate and save historical training data
+// This is the one-time seeding endpoint. It generates all training records
+// from course start dates up to current progress point for each trainee.
+app.post('/api/historical-data/seed', async (req, res) => {
+  try {
+    const db = await getPrisma();
+
+    // Check if seeding has already been done
+    const existingMeta = await db.dataBackup.findFirst({
+      where: { type: 'historical_seeding_metadata' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (existingMeta && existingMeta.data && existingMeta.data.seededAt && !req.body.force) {
+      return res.json({
+        success: false,
+        alreadySeeded: true,
+        seededAt: existingMeta.data.seededAt,
+        message: 'Historical data has already been seeded. Pass force:true to reseed.'
+      });
+    }
+
+    // Fetch all trainees and instructors
+    const trainees = await db.trainee.findMany({
+      where: { isActive: true },
+      orderBy: { course: 'asc' }
+    });
+
+    const instructors = await db.personnel.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, rank: true, role: true, unit: true, isQFI: true }
+    });
+
+    const qfiInstructors = instructors.filter(i => i.isQFI || i.role === 'QFI');
+
+    if (trainees.length === 0) {
+      return res.status(400).json({ error: 'No active trainees found in database' });
+    }
+    if (qfiInstructors.length === 0) {
+      return res.status(400).json({ error: 'No QFI instructors found in database' });
+    }
+
+    console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${qfiInstructors.length} instructors`);
+
+    // Course configuration
+    const courseConfig = {
+      'ADF301': { startDate: '2023-04-01', centreEvent: 'BGF22', lmpType: 'BPC+IPC' },
+      'ADF302': { startDate: '2025-08-01', centreEvent: 'BNF FTD1', lmpType: 'BPC+IPC' },
+      'ADF303': { startDate: '2025-12-01', centreEvent: 'BGF14', lmpType: 'BPC+IPC' },
+      'FIC210': { startDate: '2025-10-01', centreEvent: 'AIT3', lmpType: 'FIC' },
+      'FIC211': { startDate: '2026-01-11', centreEvent: 'FIC4', lmpType: 'FIC' },
+      'FIC 210': { startDate: '2025-10-01', centreEvent: 'AIT3', lmpType: 'FIC' },
+    };
+
+    // BPC+IPC syllabus ordered sequence
+    const BPC_IPC_SYLLABUS = [
+      'BGF MB1','BGF MB2','BGF CPT1','BGF TUT1A','BGF TUT1B','BGF TUT2',
+      'BGF MB3','BGF MB4','BGF MB5','BGF MB6','BGF CPT2','BGF FTD1','BGF MB7',
+      'BGF1','BGF FTD2','BGF2','BGF MB8','BGF CPT3','BGF MB9','BGF TUT3',
+      'BGF FTD3','BGF3','BGF FTD4','BGF4','BGF5','BGF MB10','BGF MB11',
+      'BGF MB12','BGF CPT4','BGF6','BGF MB13','BGF CPT5','PRE-SOLO QUIZ',
+      'BGF7','BGF FTD5','BGF8','PERRT CPT1','BGF9','BGF MB14','BGF FTD6',
+      'BGF10','BGF11','BGF MB15','BGF MB16','BGF FTD7','BGF12','BGF13',
+      'BGF14','BGF FTD8','BGF15','AREA SOLO QUIZ','BGF16','BGF TUT4',
+      'BGF FTD9','BGF17','BGF18','BGF19','BGF20',
+      'BIF MB1','BIF MB2','BIF TUT1','BIF CPT1','BIF CPT2',
+      'BIF FTD1*','BIF FTD2','BIF FTD3*','BIF1','BIF2',
+      'BNF MB1','BNF FTD1','BNF1','BNF2','BNF3','BNF4',
+      'BIF MB3','BIF MB4','BIF MB5','BIF TUT2','BIF CPT3',
+      'BIF FTD4','BIF FTD5','BIF FTD6','BIF3','BIF4','BIF5',
+      'BGF MB17','BGF FTD10','BGF21','BGF22','BGF23','BGF24',
+      'BNAV MB1','BNAV TUT1','BNAV FTD1','BNAV1','BNAV2','BNAV3 NAVPT',
+      'SCT GF','SCT IF','SCT NAV','SCT FORM','Night SCT',
+    ];
+
+    // FIC syllabus ordered sequence (FIC courses use AIT prefix first, then FIC)
+    const FIC_SYLLABUS = [
+      'FIC MB1','FIC MB2','FIC FTD1','FIC FTD2',
+      'FIC1','FIC2','FIC3','FIC FTD3','FIC4','FIC5','FIC6',
+      'FIC FTD4','FIC FTD5',
+      'FIC IF1','FIC IF2','FIC IF3','FIC IF4','FIC FTD6',
+      'AIT1','AIT2','AIT3','AIT4','AIT5','AIT6','AIT7','AIT8',
+    ];
+
+    // Event type classification for generating ScheduleEvent records
+    const getEventType = (code) => {
+      if (code.includes('FTD') || code.includes('CPT') || code.includes('TUT')) return 'ftd';
+      if (code.includes('MB') || code.includes('QUIZ') || code.includes('NAVPT') || code.includes('PERRT')) return 'ground';
+      return 'flight';
+    };
+
+    const getEventDuration = (code, lmpType) => {
+      if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) return 2.0;
+      if (code.includes('CPT')) return 1.5;
+      if (code.includes('FTD')) return 1.0;
+      if (lmpType === 'FIC') return 1.2;
+      return 1.3;
+    };
+
+    // Deterministic seeded random (no global Math.random side effects on each call)
+    const seededRand = (seed) => {
+      let s = seed;
+      return () => {
+        s = (s * 1664525 + 1013904223) & 0xffffffff;
+        return Math.abs(s) / 0xffffffff;
+      };
+    };
+
+    // Generate consistent UUID-like id from components
+    const makeEventId = (traineeId, eventCode, date) =>
+      `hist-${traineeId.slice(-8)}-${eventCode.replace(/[^a-z0-9]/gi, '')}-${date}`.toLowerCase();
+
+    const makePt051Id = (eventId, traineeName) =>
+      `pt051-${eventId}-${traineeName}`.replace(/\s/g, '_');
+
+    const today = new Date();
+    const publishedSchedules = {}; // { date: ScheduleEvent[] }
+    const pt051Assessments = {};   // { key: Pt051Assessment }
+    const scoreRecords = [];       // { traineeId, event, score, date, instructor, notes }
+
+    // PT-051 ALL_ELEMENTS - exact 22 elements matching PT051_STRUCTURE in PT051View.tsx
+    // This must match exactly: PT051_STRUCTURE.flatMap(cat => cat.elements)
+    const ALL_ELEMENTS = [
+      // Core Dimensions
+      'Airmanship', 'Preparation', 'Technique',
+      // Procedural Framework
+      'Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks',
+      // Takeoff
+      'Stationary',
+      // Departure
+      'Visual',
+      // Core Handling Skills
+      'Effects of Control', 'Trimming', 'Straight and Level',
+      // Turns
+      'Level medium Turn', 'Level Steep turn',
+      // Recovery
+      'Visual - Initial & Pitch',
+      // Landing
+      'Landing', 'Crosswind',
+      // Domestics
+      'Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge',
+    ];
+
+    // PT-051 grading: 1-5 scale (no 0 for historical data - all events completed satisfactorily)
+    // Weighted: 3 = standard, 4 = above standard, occasional 5, rare 2 (marginal)
+    const gradePool = [3, 3, 3, 4, 4, 3, 3, 4, 3, 3, 4, 3, 5, 3, 4]; // weighted 3-4, some 5
+
+    // Track marginal events per course per date (at most one per course per day)
+    // Key: `${course}-${dateStr}`, value: true if marginal already assigned for that course+day
+    const marginalUsed = {};
+
+    // Process each trainee
+    for (const trainee of trainees) {
+      const course = trainee.course;
+      const config = courseConfig[course];
+      if (!config) continue; // Skip courses not in config (ADF304, ADF305, IFF6 etc)
+
+      const syllabus = config.lmpType === 'FIC' ? FIC_SYLLABUS : BPC_IPC_SYLLABUS;
+      const centreIdx = syllabus.indexOf(config.centreEvent);
+      if (centreIdx === -1) {
+        console.warn(`⚠️ Centre event '${config.centreEvent}' not found in ${config.lmpType} syllabus for course ${course}`);
+        continue;
+      }
+
+      // Each trainee gets a unique seed based on their id/idNumber
+      const seedVal = trainee.idNumber ? parseInt(String(trainee.idNumber).replace(/\D/g, '') || '0') : parseInt(trainee.id.slice(-8), 16);
+      const rand = seededRand(isNaN(seedVal) ? 42 : seedVal);
+
+      // Assign this trainee's progress point: centreIdx ± 3
+      const progressOffset = Math.floor(rand() * 7) - 3; // -3 to +3
+      const traineeLastIdx = Math.max(0, Math.min(syllabus.length - 1, centreIdx + progressOffset));
+      const eventsToGenerate = syllabus.slice(0, traineeLastIdx + 1);
+
+      if (eventsToGenerate.length === 0) continue;
+
+      // Date spread: from course start to today
+      const startDate = new Date(config.startDate);
+      const endDate = new Date(today);
+      // Each trainee's last event is 0-14 days ago (± 2 weeks spread)
+      const trailingDays = Math.floor(rand() * 15); // 0-14 days ago
+      endDate.setDate(endDate.getDate() - trailingDays);
+      const totalDays = Math.max(1, (endDate - startDate) / (1000 * 60 * 60 * 24));
+      const eventCount = eventsToGenerate.length;
+
+      // ±14 day overall schedule offset per trainee
+      const dateOffsetDays = Math.floor(rand() * 29) - 14;
+
+      // Pick 3-4 instructors to use for this trainee (realistic - not all instructors every time)
+      const shuffledInstructors = [...qfiInstructors].sort(() => rand() - 0.5);
+      const traineeInstructors = shuffledInstructors.slice(0, 3 + Math.floor(rand() * 2));
+
+      for (let i = 0; i < eventsToGenerate.length; i++) {
+        const code = eventsToGenerate[i];
+        const eventType = getEventType(code);
+        const duration = getEventDuration(code, config.lmpType);
+
+        // Calculate date for this event (evenly distributed across the course date range)
+        const progressFraction = eventCount > 1 ? i / (eventCount - 1) : 0;
+        const dayOffset = Math.floor(progressFraction * totalDays);
+        const eventDate = new Date(startDate);
+        eventDate.setDate(eventDate.getDate() + dayOffset + dateOffsetDays);
+
+        // Clamp to valid range
+        if (eventDate > today) eventDate.setTime(today.getTime() - 24 * 60 * 60 * 1000);
+        if (eventDate < startDate) eventDate.setTime(startDate.getTime());
+
+        // Skip weekends
+        while (eventDate.getDay() === 0 || eventDate.getDay() === 6) {
+          eventDate.setDate(eventDate.getDate() + 1);
+        }
+
+        const dateStr = eventDate.toISOString().split('T')[0];
+        const instructor = traineeInstructors[i % traineeInstructors.length];
+
+        // Start time: 8am-14pm range, in 0.5hr increments
+        const startHour = 8 + Math.floor(rand() * 6);
+        const startTime = startHour + (rand() > 0.5 ? 0.5 : 0);
+
+        const eventId = makeEventId(trainee.id, code, dateStr);
+
+        // Build ScheduleEvent (training record)
+        const scheduleEvent = {
+          id: eventId,
+          date: dateStr,
+          type: eventType,
+          instructor: instructor.name,
+          student: trainee.fullName,
+          flightNumber: code,
+          eventCode: code,
+          duration: duration,
+          startTime: startTime,
+          resourceId: eventType === 'flight' ? 'aircraft-hist' : (eventType === 'ftd' ? 'ftd-1' : 'ground-1'),
+          color: '#4CAF50',
+          flightType: 'Dual',
+          locationType: 'Local',
+          origin: 'YMES',
+          destination: 'YMES',
+          traineeId: trainee.idNumber,
+          isHistoricalSeed: true,
+        };
+
+        // Add to publishedSchedules
+        if (!publishedSchedules[dateStr]) publishedSchedules[dateStr] = [];
+        publishedSchedules[dateStr].push(scheduleEvent);
+
+        // Generate logbook entry for ALL flying events (flight type only)
+        if (eventType === 'flight') {
+          const logbookId = `logbook-${eventId}`;
+          const logbookEntry = {
+            id: logbookId,
+            date: dateStr,
+            type: 'logbook',
+            instructor: instructor.name,
+            student: trainee.fullName,
+            flightNumber: code,
+            eventCode: code,
+            duration: duration,
+            startTime: startTime,
+            resourceId: 'aircraft-hist',
+            color: '#2196F3',
+            flightType: 'Dual',
+            locationType: 'Local',
+            origin: 'YMES',
+            destination: 'YMES',
+            traineeId: trainee.idNumber,
+            isHistoricalSeed: true,
+            isLogbook: true,
+            parentEventId: eventId,
+          };
+          // Logbook entries stored under same date key with logbook flag
+          publishedSchedules[dateStr].push(logbookEntry);
+        }
+
+        // Generate PT-051 for flight and FTD events only
+        if (eventType === 'flight' || eventType === 'ftd') {
+          const pt051Key = `pt051-${eventId}-${trainee.fullName}`;
+          const marginalKey = `${course}-${dateStr}`;
+
+          // One marginal (grade 2) event allowed per course per day
+          // ~15% probability - only if not already used for this course+day
+          const canBeMarginal = !marginalUsed[marginalKey] && rand() < 0.15;
+          const isMarginalEvent = canBeMarginal;
+          if (isMarginalEvent) marginalUsed[marginalKey] = true;
+
+          // Overall grade: 3-5 normally, 2 if marginal
+          let overallGrade;
+          if (isMarginalEvent) {
+            overallGrade = 2;
+          } else {
+            // Weighted: mostly 3-4, occasionally 5
+            const overallPool = [3, 3, 3, 4, 4, 4, 3, 4, 3, 5, 3, 4, 3, 3, 4];
+            overallGrade = overallPool[Math.floor(rand() * overallPool.length)];
+          }
+
+          // Generate scores for all 22 elements (ALL_ELEMENTS)
+          // Each element gets a grade consistent with the overall grade direction
+          // Grade scale: 1=Unsatisfactory, 2=Marginal, 3=Satisfactory, 4=Above Standard, 5=Exceptional
+          const scores = ALL_ELEMENTS.map(element => {
+            let grade;
+            if (isMarginalEvent) {
+              // Marginal event: mix of 2s and 3s, no 1s (clean progression)
+              const marginalPool = [2, 2, 3, 2, 3, 3, 2, 3, 2, 3];
+              grade = marginalPool[Math.floor(rand() * marginalPool.length)];
+            } else if (overallGrade >= 4) {
+              // Above-standard event: 3s, 4s, and 5s
+              const highPool = [3, 4, 4, 4, 5, 4, 3, 4, 4, 5, 4, 3, 4, 4, 5];
+              grade = highPool[Math.floor(rand() * highPool.length)];
+            } else {
+              // Standard event: 3s and 4s
+              grade = gradePool[Math.floor(rand() * gradePool.length)];
+            }
+            const comment = grade >= 5 ? 'Exceptional - well above standard.' :
+                            grade === 4 ? 'Standard met and exceeded.' :
+                            grade === 3 ? 'Standard met.' :
+                            'Requires further consolidation.';
+            return { element, grade, comment };
+          });
+
+          pt051Assessments[pt051Key] = {
+            id: pt051Key,
+            traineeFullName: trainee.fullName,
+            eventId: eventId,
+            flightNumber: code,
+            date: dateStr,
+            instructorName: instructor.name,
+            overallGrade,
+            overallResult: 'P',
+            dcoResult: '',
+            overallComments: overallGrade >= 5 ? 'Exceptional performance throughout. All elements met or exceeded.' :
+                             overallGrade === 4 ? 'Strong performance. Standards consistently met and exceeded.' :
+                             overallGrade === 3 ? 'Satisfactory performance. All required standards achieved.' :
+                             'Performance met minimum standard. Consolidation required on some elements.',
+            startTime,
+            duration,
+            endTime: startTime + duration,
+            scores,
+            isCompleted: true,
+            isHistoricalSeed: true,
+          };
+        }
+
+        // Add score record for DB persistence
+        // Flight/FTD: use the overallGrade value (1-5); ground: percentage (70-100)
+        const scoreVal = eventType === 'ground'
+          ? 70 + Math.floor(rand() * 31)  // 70-100%
+          : 3 + Math.floor(rand() * 3);   // 3-5 (no fails in clean progression)
+        scoreRecords.push({
+          traineeId: trainee.id,
+          event: code,
+          score: scoreVal,
+          date: eventDate,
+          instructor: instructor.name,
+          notes: `Historical seed: ${course} - ${code}`,
+        });
+      }
+    }
+
+    // Save scores to DB (with duplicate protection)
+    let scoresInserted = 0;
+    let scoresSkipped = 0;
+
+    for (const rec of scoreRecords) {
+      try {
+        // Check for existing score
+        const existing = await db.score.findFirst({
+          where: {
+            traineeId: rec.traineeId,
+            event: rec.event,
+          }
+        });
+        if (!existing) {
+          await db.score.create({ data: rec });
+          scoresInserted++;
+        } else {
+          scoresSkipped++;
+        }
+      } catch (err) {
+        console.warn(`⚠️ Could not insert score for trainee ${rec.traineeId} event ${rec.event}:`, err.message);
+      }
+    }
+
+    // Save publishedSchedules and pt051Assessments to DataBackup
+    await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
+    await db.dataBackup.create({
+      data: { type: 'historical_published_schedules', data: publishedSchedules }
+    });
+
+    await db.dataBackup.deleteMany({ where: { type: 'historical_pt051_assessments' } });
+    await db.dataBackup.create({
+      data: { type: 'historical_pt051_assessments', data: pt051Assessments }
+    });
+
+    const metadata = {
+      seededAt: new Date().toISOString(),
+      traineeCount: trainees.filter(t => courseConfig[t.course]).length,
+      eventCount: Object.values(publishedSchedules).flat().length,
+      pt051Count: Object.keys(pt051Assessments).length,
+      scoresInserted,
+      scoresSkipped,
+      coursesSeeded: [...new Set(trainees.filter(t => courseConfig[t.course]).map(t => t.course))],
+    };
+
+    await db.dataBackup.deleteMany({ where: { type: 'historical_seeding_metadata' } });
+    await db.dataBackup.create({
+      data: { type: 'historical_seeding_metadata', data: metadata }
+    });
+
+    console.log(`✅ Historical seeding complete:`, metadata);
+    res.json({ success: true, ...metadata });
+
+  } catch (error) {
+    console.error('❌ POST /api/historical-data/seed error:', error);
+    res.status(500).json({ error: 'Failed to seed historical data', details: error.message });
+  }
+});
+
+// POST /api/historical-data/refresh-dates - Shift all historical dates forward relative to today
+// This is the ongoing refresh feature to keep historical data current-looking
+app.post('/api/historical-data/refresh-dates', async (req, res) => {
+  try {
+    const db = await getPrisma();
+
+    // Load current historical data
+    const schedulesBackup = await db.dataBackup.findFirst({
+      where: { type: 'historical_published_schedules' },
+      orderBy: { createdAt: 'desc' }
+    });
+    const pt051Backup = await db.dataBackup.findFirst({
+      where: { type: 'historical_pt051_assessments' },
+      orderBy: { createdAt: 'desc' }
+    });
+    const metaBackup = await db.dataBackup.findFirst({
+      where: { type: 'historical_seeding_metadata' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!schedulesBackup || !metaBackup) {
+      return res.status(400).json({ error: 'No historical data found. Run seeding first.' });
+    }
+
+    const publishedSchedules = schedulesBackup.data;
+    const pt051Assessments = pt051Backup ? pt051Backup.data : {};
+    const metadata = metaBackup.data;
+
+    const seededAt = new Date(metadata.seededAt);
+    const today = new Date();
+    const daysDrift = Math.floor((today - seededAt) / (1000 * 60 * 60 * 24));
+
+    if (daysDrift <= 0) {
+      return res.json({ success: true, message: 'No date refresh needed - data is already current', daysDrift });
+    }
+
+    // Shift all event dates forward by daysDrift, preserving sequence and spacing
+    const newPublishedSchedules = {};
+    const dateMap = {}; // old date -> new date
+
+    for (const [dateStr, events] of Object.entries(publishedSchedules)) {
+      const oldDate = new Date(dateStr);
+      const newDate = new Date(oldDate);
+      newDate.setDate(newDate.getDate() + daysDrift);
+
+      // Clamp to today max
+      if (newDate > today) newDate.setTime(today.getTime() - 24 * 60 * 60 * 1000);
+
+      const newDateStr = newDate.toISOString().split('T')[0];
+      dateMap[dateStr] = newDateStr;
+
+      if (!newPublishedSchedules[newDateStr]) newPublishedSchedules[newDateStr] = [];
+      const updatedEvents = events.map(e => ({ ...e, date: newDateStr }));
+      newPublishedSchedules[newDateStr].push(...updatedEvents);
+    }
+
+    // Update PT-051 dates
+    const newPt051Assessments = {};
+    for (const [key, assessment] of Object.entries(pt051Assessments)) {
+      const newDate = dateMap[assessment.date] || assessment.date;
+      newPt051Assessments[key] = { ...assessment, date: newDate };
+    }
+
+    // Update score dates in DB
+    const scores = await db.score.findMany({
+      where: { notes: { contains: 'Historical seed:' } }
+    });
+
+    let scoresUpdated = 0;
+    for (const score of scores) {
+      const oldDateStr = score.date.toISOString().split('T')[0];
+      const newDateStr = dateMap[oldDateStr];
+      if (newDateStr && newDateStr !== oldDateStr) {
+        await db.score.update({
+          where: { id: score.id },
+          data: { date: new Date(newDateStr) }
+        });
+        scoresUpdated++;
+      }
+    }
+
+    // Save refreshed data
+    await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
+    await db.dataBackup.create({
+      data: { type: 'historical_published_schedules', data: newPublishedSchedules }
+    });
+
+    await db.dataBackup.deleteMany({ where: { type: 'historical_pt051_assessments' } });
+    await db.dataBackup.create({
+      data: { type: 'historical_pt051_assessments', data: newPt051Assessments }
+    });
+
+    // Update metadata
+    const newMetadata = {
+      ...metadata,
+      seededAt: new Date().toISOString(),
+      lastRefreshed: new Date().toISOString(),
+      daysDriftApplied: daysDrift,
+    };
+
+    await db.dataBackup.deleteMany({ where: { type: 'historical_seeding_metadata' } });
+    await db.dataBackup.create({
+      data: { type: 'historical_seeding_metadata', data: newMetadata }
+    });
+
+    const result = {
+      success: true,
+      daysDriftApplied: daysDrift,
+      datesUpdated: Object.keys(dateMap).length,
+      scoresUpdated,
+      newEventCount: Object.values(newPublishedSchedules).flat().length,
+      newPt051Count: Object.keys(newPt051Assessments).length,
+    };
+
+    console.log(`✅ Date refresh complete:`, result);
+    res.json(result);
+
+  } catch (error) {
+    console.error('❌ POST /api/historical-data/refresh-dates error:', error);
+    res.status(500).json({ error: 'Failed to refresh dates', details: error.message });
+  }
+});
+
+// DELETE /api/historical-data - Clear all seeded historical data
+app.delete('/api/historical-data', async (req, res) => {
+  try {
+    const db = await getPrisma();
+
+    await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
+    await db.dataBackup.deleteMany({ where: { type: 'historical_pt051_assessments' } });
+    await db.dataBackup.deleteMany({ where: { type: 'historical_seeding_metadata' } });
+
+    // Delete seeded scores
+    const deleted = await db.score.deleteMany({
+      where: { notes: { contains: 'Historical seed:' } }
+    });
+
+    console.log(`✅ DELETE /api/historical-data - Cleared historical data, deleted ${deleted.count} scores`);
+    res.json({ success: true, scoresDeleted: deleted.count });
+  } catch (error) {
+    console.error('❌ DELETE /api/historical-data error:', error);
+    res.status(500).json({ error: 'Failed to clear historical data', details: error.message });
+  }
+});
+
+// POST /api/scores/bulk - Bulk insert scores (for seeding)
+app.post('/api/scores/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { scores } = req.body;
+    if (!scores || !Array.isArray(scores)) {
+      return res.status(400).json({ error: 'scores array required' });
+    }
+    let inserted = 0, skipped = 0;
+    for (const s of scores) {
+      const existing = await db.score.findFirst({
+        where: { traineeId: s.traineeId, event: s.event }
+      });
+      if (!existing) {
+        await db.score.create({ data: { ...s, date: new Date(s.date) } });
+        inserted++;
+      } else {
+        skipped++;
+      }
+    }
+    res.json({ success: true, inserted, skipped });
+  } catch (error) {
+    console.error('❌ POST /api/scores/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk insert scores', details: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');

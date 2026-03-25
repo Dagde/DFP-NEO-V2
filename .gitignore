@@ -22,3 +22,6 @@ dist-ssr
 *.sln
 *.sw?
 outputs/
+summarized_conversations/
+_superninja_startup.conf
+GITHUB_PAT.txt

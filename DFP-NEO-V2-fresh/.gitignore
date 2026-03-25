@@ -29,3 +29,4 @@ Screenshot*.png
 *.sln
 *.sw?
 outputs/
+summarized_conversations/

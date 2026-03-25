@@ -3721,6 +3721,59 @@ useEffect(() => {
         };
         loadInitialData();
     }, []);
+
+    // Load persisted historical training data (publishedSchedules + pt051Assessments) from DB
+    useEffect(() => {
+        const loadHistoricalData = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/historical-data`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+                    const schedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
+                    const eventCount = Object.values(schedules).flat().length;
+                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates`);
+                    setPublishedSchedules(prev => {
+                        // Merge with existing (don't overwrite future/today's scheduled events)
+                        const merged = { ...schedules };
+                        Object.entries(prev).forEach(([date, events]) => {
+                            if (events.some(e => !(e as any).isHistoricalSeed)) {
+                                // Keep existing non-seed events for this date alongside historical
+                                const existing = merged[date] || [];
+                                const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
+                                merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
+                            }
+                        });
+                        return merged;
+                    });
+                }
+
+                if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
+                    const assessments = data.pt051Assessments as Record<string, Pt051Assessment>;
+                    console.log(`[Historical] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments`);
+                    setPt051Assessments(prev => {
+                        const merged = new Map(prev);
+                        Object.entries(assessments).forEach(([key, assessment]) => {
+                            if (!merged.has(key)) {
+                                merged.set(key, assessment);
+                            }
+                        });
+                        return merged;
+                    });
+                }
+
+                if (data.seedingMetadata) {
+                    console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(', ')}`);
+                }
+            } catch (error) {
+                console.warn('[Historical] Could not load historical data:', error);
+            }
+        };
+        loadHistoricalData();
+    }, []);
+
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
        //     const showCommitAlert = async () => {

@@ -1,13 +1,10 @@
-# System Freeze Implementation
+# Historical Data Seeding System
 
 ## Tasks
-- [x] Update EmergencyPage.tsx to use SystemFreezeContext instead of local state
-- [x] Restructure to allow selecting options BEFORE freezing
-- [x] Create SystemFreezeBanner component to show freeze status at top of app
-- [x] Integrate freeze checks into key modification points
-  - [x] Flight event modifications (handleSaveEvents)
-  - [x] Post Flight Times entries
-  - [x] PT-051 entries
-  - [x] Flight Authorisation entries (read-only view)
-  - [x] Aircraft Availability entries (read-only view)
-- [x] Build and push changes
+- [ ] Design data persistence strategy (DataBackup model for publishedSchedules + pt051Assessments)
+- [ ] Add API endpoints to server.js for seeding and persisting historical data
+- [ ] Add loading logic to App.tsx to restore persisted historical data on startup
+- [ ] Create the seed generation script as a Node.js utility
+- [ ] Add admin seeding UI component (confirmation prompt, progress, one-off guard)
+- [ ] Add date refresh feature (global admin function to shift dates forward)
+- [ ] Build and push all changes

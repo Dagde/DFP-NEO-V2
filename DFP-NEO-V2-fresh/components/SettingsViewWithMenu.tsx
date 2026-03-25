@@ -11,6 +11,7 @@ import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
 import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
+import { HistoricalDataSeeder } from './HistoricalDataSeeder';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
 interface SettingsViewWithMenuProps {
@@ -110,6 +111,7 @@ type SettingsSection =
     | 'trainee-mockdata'
     | 'staff-combined-data'
     | 'validation'
+    | 'historical-data'
     | 'timezone'
     | 'location'
     | 'units'
@@ -134,6 +136,7 @@ const sectionLabels: Record<SettingsSection, string> = {
     'trainee-mockdata': 'Trainee MockData',
     'staff-combined-data': 'Staff Combined Data',
     'validation': 'AC History',
+    'historical-data': 'Historical Data',
     'timezone': 'Timezone',
     'location': 'Location',
     'units': 'Units',
@@ -160,6 +163,7 @@ const allSections: SettingsSection[] = [
     'trainee-mockdata',
     'staff-combined-data',
     'validation',
+    'historical-data',
     'timezone',
     'location',
     'units',
@@ -284,6 +288,13 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
       <path d="M9 17l3-8 3 8M10.5 14.5h3"/>
     </svg>
   ),
+  'historical-data': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+      <path d="M3.05 11a9 9 0 011.4-3.7"/>
+    </svg>
+  ),
   'timezone': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <circle cx="12" cy="12" r="10"/>
@@ -348,6 +359,7 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'trainee-mockdata': 'Trainee test data view',
   'staff-combined-data': 'Combined staff data overview',
   'validation': 'Aircraft availability history',
+  'historical-data': 'Seed & refresh historical training records',
   'timezone': 'Configure timezone settings',
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
@@ -385,6 +397,7 @@ const sectionColors: Record<SettingsSection, string> = {
   'staff-combined-data':'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-400',
   // HISTORICAL & ANALYSIS - amber icons
   'validation':        'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+  'historical-data':   'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // SYSTEM SETTINGS - cyan icons
   'timezone':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -415,7 +428,7 @@ const sectionGroups: { label: string; sections: SettingsSection[] }[] = [
   },
   {
     label: 'HISTORICAL & ANALYSIS',
-    sections: ['validation'],
+    sections: ['validation', 'historical-data'],
   },
   {
     label: 'SYSTEM SETTINGS',
@@ -688,6 +701,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
                             <AppearanceSettings />
                         </div>
+                    )}
+                    {activeSection === 'historical-data' && (
+                        <HistoricalDataSeeder
+                            onClose={() => setActiveSection('home')}
+                            onDataSeeded={() => { /* page will reload */ }}
+                        />
                     )}
                     {/* End section content */}
                     </div>
