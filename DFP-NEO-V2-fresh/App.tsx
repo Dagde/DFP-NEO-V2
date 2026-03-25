@@ -3630,6 +3630,65 @@ useEffect(() => {
                 setTraineesData(data.trainees);
                 setEvents(data.events);
 
+                // Initialize Individual LMPs for all DB trainees on load
+                // This ensures FIC210/FIC211 trainees get the FIC syllabus, not BPC+IPC
+                const dbTrainees = data.trainees.filter((t: any) => t._dataSource === 'database');
+                if (dbTrainees.length > 0) {
+                    setTraineeLMPs(prev => {
+                        const newLMPs = new Map(prev);
+                        dbTrainees.forEach((trainee: any) => {
+                            // Derive lmpType from course name if it's still the default 'BPC+IPC'
+                            // FIC210/FIC211 trainees should get the FIC syllabus
+                            let lmpType = trainee.lmpType || 'BPC+IPC';
+                            if (lmpType === 'BPC+IPC' && trainee.course) {
+                                const courseUpper = (trainee.course as string).toUpperCase();
+                                if (courseUpper.startsWith('FIC')) {
+                                    lmpType = 'FIC';
+                                    console.log(`[LMP Init] Detected FIC course for ${trainee.fullName} (${trainee.course}) — overriding lmpType to 'FIC'`);
+                                }
+                            }
+
+                            // For FIC trainees: always assign correct FIC LMP (overwrite any incorrect BPC+IPC LMP)
+                            // For non-FIC trainees: only initialize if not already set
+                            const isFicTrainee = lmpType === 'FIC';
+                            const alreadySet = newLMPs.has(trainee.fullName);
+
+                            if (!alreadySet || isFicTrainee) {
+                                const masterLMP = INITIAL_SYLLABUS_DETAILS.filter(item => {
+                                    if (lmpType === 'BPC+IPC') {
+                                        return !item.lmpType || item.lmpType === 'Master LMP';
+                                    }
+                                    return item.courses && item.courses.includes(lmpType);
+                                });
+                                if (masterLMP.length > 0) {
+                                    newLMPs.set(trainee.fullName, [...masterLMP]);
+                                    console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? ' [CORRECTED]' : ''}`);
+                                }
+                            }
+                        });
+                        return newLMPs;
+                    });
+                }
+
+                // Fix lmpType in DB for FIC trainees that still have the default 'BPC+IPC'
+                // This is a one-time correction that runs on every load (idempotent - no-ops if already correct)
+                const ficDbTrainees = data.trainees.filter((t: any) =>
+                    t._dataSource === 'database' &&
+                    t.course && (t.course as string).toUpperCase().startsWith('FIC') &&
+                    (!t.lmpType || t.lmpType === 'BPC+IPC')
+                );
+                if (ficDbTrainees.length > 0) {
+                    console.log(`[LMP Fix] Fixing lmpType for ${ficDbTrainees.length} FIC trainees in DB...`);
+                    fetch('/api/trainees/fix-lmp-type', { method: 'PATCH' })
+                        .then(r => r.json())
+                        .then(result => {
+                            if (result.success) {
+                                console.log(`[LMP Fix] ✅ Updated ${result.count} FIC trainees' lmpType to 'FIC' in DB`);
+                            }
+                        })
+                        .catch(err => console.warn('[LMP Fix] Could not fix lmpType:', err));
+                }
+
                 // Register any DB trainee courses that aren't in courseColors yet
                 // Without this, DB-only mode shows zero trainees because CourseRosterView
                 // only renders courses that exist in courseColors

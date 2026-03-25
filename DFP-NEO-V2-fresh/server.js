@@ -371,6 +371,47 @@ app.patch('/api/trainees/bulk-unit', async (req, res) => {
   }
 });
 
+// PATCH /api/trainees/fix-lmp-type - Fix lmpType for FIC course trainees
+// NOTE: Must be defined BEFORE /api/trainees/:id to avoid route conflict
+app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
+  try {
+    const db = await getPrisma();
+
+    // Find all trainees whose course starts with 'FIC' but lmpType is not 'FIC'
+    const ficTrainees = await db.trainee.findMany({
+      where: {
+        AND: [
+          { course: { startsWith: 'FIC' } },
+          { NOT: { lmpType: 'FIC' } }
+        ]
+      },
+      select: { id: true, name: true, course: true, lmpType: true }
+    });
+
+    if (ficTrainees.length === 0) {
+      console.log('✅ PATCH /api/trainees/fix-lmp-type - No FIC trainees need updating');
+      return res.json({ success: true, count: 0, message: 'All FIC trainees already have correct lmpType' });
+    }
+
+    // Update all FIC trainees to have lmpType: 'FIC'
+    const result = await db.trainee.updateMany({
+      where: {
+        AND: [
+          { course: { startsWith: 'FIC' } },
+          { NOT: { lmpType: 'FIC' } }
+        ]
+      },
+      data: { lmpType: 'FIC' }
+    });
+
+    console.log(`✅ PATCH /api/trainees/fix-lmp-type - Updated ${result.count} FIC trainees: ${ficTrainees.map(t => t.name).join(', ')}`);
+    res.json({ success: true, count: result.count, updated: ficTrainees.map(t => ({ name: t.name, course: t.course })) });
+  } catch (error) {
+    console.error('❌ PATCH /api/trainees/fix-lmp-type error:', error);
+    res.status(500).json({ error: 'Failed to fix lmpType for FIC trainees', details: error.message });
+  }
+});
+
 // PATCH /api/trainees/:id - Update a trainee record
 app.patch('/api/trainees/:id', async (req, res) => {
   try {
