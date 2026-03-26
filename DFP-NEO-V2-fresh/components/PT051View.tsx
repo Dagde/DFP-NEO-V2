@@ -767,7 +767,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <span className="text-xs text-gray-300 font-mono uppercase">{saveStatus === 'Saved' ? 'All changes saved' : saveStatus}</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-[1px]">
                     {/* Show Edit button if this is a saved assessment */}
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
@@ -788,7 +788,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             Delete
                         </button>
                     )}
-                    <button onClick={onBack} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed mr-[1px]">
+                    <button onClick={onBack} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
                         Back
                     </button>
                     <AuditButton pageName="PT-051 Assessment" />

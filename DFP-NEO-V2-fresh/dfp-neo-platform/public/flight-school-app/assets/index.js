@@ -49512,7 +49512,7 @@ This action cannot be undone.`;
         lineNumber: 721,
         columnNumber: 17
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-[1px]", children: [
         initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => {
           console.log("Editing mode enabled for PT-051:", initialAssessment.id);
         }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }, void 0, false, {
@@ -49541,7 +49541,7 @@ This action cannot be undone.`;
           },
           void 0
         ),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed mr-[1px]", children: "Back" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Back" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
           lineNumber: 791,
           columnNumber: 21
