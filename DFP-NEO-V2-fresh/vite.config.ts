@@ -53,6 +53,13 @@ export default defineConfig({
     minify: false,
     rollupOptions: {
       output: {
+        // Fixed filenames prevent hash mismatch between local build and Railway build.
+        // Railway rebuilds from source so the commit hash baked in differs, changing
+        // the content hash and therefore the filename. Using fixed names ensures
+        // index.html always references the correct bundle regardless of build environment.
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
         manualChunks(id) {
           // React and React-DOM in their own isolated chunk
           if (id.includes('node_modules/react/') || 

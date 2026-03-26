@@ -21660,4 +21660,4 @@ export {
   jsxDevRuntimeExports as j,
   reactExports as r
 };
-//# sourceMappingURL=vendor-react-DN2tVJ9m.js.map
+//# sourceMappingURL=vendor-react.js.map

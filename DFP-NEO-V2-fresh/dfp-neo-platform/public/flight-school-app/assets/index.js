@@ -1,5 +1,5 @@
-import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, d as ReactDOM$1 } from "./vendor-react-DN2tVJ9m.js";
-import { E } from "./vendor-pdf-Cd7jhQNp.js";
+import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, d as ReactDOM$1 } from "./vendor-react.js";
+import { E } from "./vendor-pdf.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) return;
@@ -90230,4 +90230,4 @@ root.render(
     columnNumber: 3
   }, void 0)
 );
-//# sourceMappingURL=index-DY6kxaAA.js.map
+//# sourceMappingURL=index.js.map
