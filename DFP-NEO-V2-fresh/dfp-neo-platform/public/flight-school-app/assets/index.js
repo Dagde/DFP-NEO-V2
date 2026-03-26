@@ -49515,12 +49515,12 @@ This action cannot be undone.`;
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [
         initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => {
           console.log("Editing mode enabled for PT-051:", initialAssessment.id);
-        }, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold shadow-md", children: "✏️ Edit Assessment" }, void 0, false, {
+        }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
           lineNumber: 773,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleManualSaveAndExit, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md", children: "Save & Exit" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleManualSaveAndExit, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Save" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
           lineNumber: 780,
           columnNumber: 21
@@ -49529,8 +49529,8 @@ This action cannot be undone.`;
           "button",
           {
             onClick: handleDeleteAssessment,
-            className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold shadow-md",
-            children: "🗑️ Delete Assessment"
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
+            children: "Delete"
           },
           void 0,
           false,
@@ -49541,16 +49541,14 @@ This action cannot be undone.`;
           },
           void 0
         ),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onBack, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md", children: [
-          "← Back to Summary",
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "PT-051 Assessment" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
-            lineNumber: 793,
-            columnNumber: 24
-          }, void 0)
-        ] }, void 0, true, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed mr-[1px]", children: "Back" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
           lineNumber: 791,
+          columnNumber: 21
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "PT-051 Assessment" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
+          lineNumber: 794,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
