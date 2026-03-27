@@ -3707,7 +3707,7 @@ useEffect(() => {
 }, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [allTraineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
+    const [allTraineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees.map(t => ({ ...t, _dataSource: 'mockdata' as const })));
     const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
@@ -3736,50 +3736,46 @@ useEffect(() => {
 
     const traineesData = (() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
-        const dbCount = allTraineesData.filter(t => (t as any)._dataSource === 'database').length;
-        const mockCount = allTraineesData.filter(t => (t as any)._dataSource !== 'database').length;
-        console.log(`[traineesData] mockOn=${mockOn}, dbOn=${dbOn}, total=${allTraineesData.length}, db=${dbCount}, mock=${mockCount}`);
 
         // Filter by location (ESL = East Sale, PEA = Pearce)
-        // Check both location field AND unit field for location inference
         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredTrainees = allTraineesData.filter(t => {
-            // If location field is set, use it directly
             if (t.location) {
                 return t.location === locationFullName;
             }
-            // If no location but has unit, infer location from unit
-            // 1FTS and CFS are at East Sale, 2FTS is at Pearce
-            // Unit may have flight appended (e.g. "CFS/D", "1FTS/A", "2FTS/B") so use startsWith
             if (t.unit) {
                 if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                 if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
             }
-            // If no location or unit info, include (for backward compatibility)
             return true;
         });
-        console.log(`[traineesData] Location filter: ${school} -> ${locationFullName}, filtered from ${allTraineesData.length} to ${locationFilteredTrainees.length} trainees`);
 
-        if (!mockOn && !dbOn) return [];                                                          // Both OFF → empty
-        if (mockOn && !dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource !== 'database'); // Mock only
-        if (!mockOn && dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database'); // DB only
-        // Both ON → DB records take precedence: exclude mock trainees for courses that have DB records
-        const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
-        const dbCourses = new Set(dbTrainees.map(t => t.course));
-        console.log(`[traineesData] DB courses:`, [...dbCourses]);
+        let result: Trainee[];
 
-        // Debug: Show FIC211 specifically
-        const fic211DbTrainees = dbTrainees.filter(t => t.course && t.course.includes('FIC') && t.course.includes('211'));
-        const fic211MockTrainees = locationFilteredTrainees.filter(t =>
-            (t as any)._dataSource !== 'database' &&
-            t.course && t.course.includes('FIC') && t.course.includes('211')
-        );
-        console.log(`[traineesData] FIC211 Debug: ${fic211DbTrainees.length} DB trainees, ${fic211MockTrainees.length} mock trainees`);
-        console.log(`[traineesData] FIC211 DB trainee units:`, fic211DbTrainees.map(t => `${t.name}: unit=${t.unit}, loc=${t.location}`));
+        if (!mockOn && !dbOn) {
+            // Both OFF → empty
+            result = [];
+        } else if (mockOn && !dbOn) {
+            // Mock ONLY — explicit _dataSource === 'mockdata' check
+            result = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
+        } else if (!mockOn && dbOn) {
+            // DB ONLY — explicit _dataSource === 'database' check, no unknowns slip through
+            result = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+        } else {
+            // Both ON → DB records take precedence: exclude mock trainees for courses that have DB records
+            const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+            const dbCourses = new Set(dbTrainees.map(t => t.course));
+            const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
+            result = [...mockTrainees, ...dbTrainees];
+        }
 
-        const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource !== 'database' && !dbCourses.has(t.course));
-        console.log(`[traineesData] Returning ${mockTrainees.length} mock + ${dbTrainees.length} DB = ${mockTrainees.length + dbTrainees.length} total`);
-        return [...mockTrainees, ...dbTrainees];
+        // Required output log
+        const dbCount = result.filter(t => (t as any)._dataSource === 'database').length;
+        const mockCount = result.filter(t => (t as any)._dataSource === 'mockdata').length;
+        const unknownCount = result.filter(t => !['database', 'mockdata'].includes((t as any)._dataSource)).length;
+        console.log(`[traineesData] total=${result.length}, db=${dbCount}, mock=${mockCount}, unknown=${unknownCount} | mockOn=${mockOn}, dbOn=${dbOn}`);
+
+        return result;
     })();
     
     // ============================================================
@@ -8145,10 +8141,10 @@ updates.forEach(update => {
                     _dataSource: 'database' as const,
                 }));
                 
-                // Update trainees - remove old database entries and add fresh ones
+                // Update trainees - replace old database entries with fresh ones, preserve mock
                 setTraineesData(prev => {
-                    const nonDbTrainees = prev.filter(t => (t as any)._dataSource !== 'database');
-                    return [...nonDbTrainees, ...dbTrainees];
+                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
+                    return [...mockTrainees, ...dbTrainees];
                 });
 
                 // Register any DB trainee courses that aren't in courseColors yet
