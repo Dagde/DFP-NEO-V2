@@ -189,6 +189,7 @@ model Trainee {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   scores              Score[]   @relation("TraineeScores")
+  individualLMP       IndividualLMP?  @relation("TraineeLMP")
   user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -266,6 +267,23 @@ model Score {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+}
+
+// Individual Learning Management Plan - one record per trainee
+// Stores their full syllabus with completion status persisted in DB
+model IndividualLMP {
+  id             String   @id @default(cuid())
+  traineeId      String   @unique  // one LMP per trainee
+  traineeFullName String           // denormalised for fast lookup by name
+  lmpType        String            // "BPC+IPC" | "FIC" etc
+  events         Json              // LMPEvent[] - full syllabus items + completedAt field
+  completedEventIds String[]       // fast lookup set of completed event ids (e.g. ["BGF1","BGF2"])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  trainee        Trainee  @relation("TraineeLMP", fields: [traineeId], references: [id], onDelete: Cascade)
+
+  @@index([traineeFullName])
+  @@index([traineeId])
 }
 
 // Raw event log - every meaningful state change

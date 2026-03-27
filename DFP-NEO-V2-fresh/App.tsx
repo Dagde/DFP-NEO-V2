@@ -4245,27 +4245,99 @@ useEffect(() => {
                 setTraineesData(data.trainees);
                 setEvents(data.events);
 
-                // Apply DB scores to state so computeNextEventsForTrainee
-                // correctly identifies completed PT-051 events per trainee.
-                // Without this, scores state only contains mock data and every
-                // DB trainee appears to be at syllabus event #1 (Ground School),
-                // resulting in nextEventLists.flight being empty (zero flights scheduled).
+                // --- Individual LMP Sync ---
+                // For each trainee, read their completed PT-051 Score records from DB,
+                // mark those events as complete in their Individual LMP (persisted in DB),
+                // then load the completedEventIds back into scores state so
+                // computeNextEventsForTrainee advances them to their correct next event.
+                //
+                // This runs on every app load to keep LMPs in sync with PT-051 records.
                 if (data.scores && Object.keys(data.scores).length > 0) {
-                    console.log(`[LMP Sync] Applying ${Object.keys(data.scores).length} trainee score sets from DB to state...`);
-                    setScores(prev => {
-                        const merged = new Map(prev);
-                        let syncCount = 0;
-                        Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
-                            const scoresArr = traineeScores as Score[];
-                            merged.set(traineeName, scoresArr);
-                            syncCount++;
-                            console.log(`[LMP Sync] ${traineeName}: ${scoresArr.length} PT-051 events marked complete in Individual LMP`);
+                    console.log(`[LMP Sync] Starting Individual LMP sync for ${Object.keys(data.scores).length} trainees with PT-051 records...`);
+                    try {
+                        // Build syllabusData payload — master syllabus split by lmpType
+                        // The backend has no knowledge of syllabus structure, so we send it from the frontend.
+                        const bpcIpcSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                            (item: any) => !item.lmpType || item.lmpType === 'Master LMP'
+                        );
+                        const ficSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                            (item: any) => item.courses && item.courses.includes('FIC')
+                        );
+                        const syllabusData: Record<string, any[]> = {
+                            'BPC+IPC': bpcIpcSyllabus,
+                            'FIC': ficSyllabus,
+                        };
+
+                        const apiBase = window.location.origin.includes('railway.app')
+                            ? '/api'
+                            : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                        const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ syllabusData }),
                         });
-                        console.log(`[LMP Sync] ✅ Synced PT-051 completions for ${syncCount} trainees → Individual LMP computation updated`);
-                        return merged;
-                    });
+
+                        if (syncRes.ok) {
+                            const syncData = await syncRes.json();
+                            console.log(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
+
+                            // Now load back completed event IDs from DB LMPs into scores state
+                            // so computeNextEventsForTrainee knows which events are done
+                            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync`);
+                            if (lmpRes.ok) {
+                                const lmpData = await lmpRes.json();
+                                const lmps = lmpData.lmps as Array<{
+                                    traineeFullName: string;
+                                    completedEventIds: string[];
+                                }>;
+
+                                if (lmps && lmps.length > 0) {
+                                    setScores(prev => {
+                                        const merged = new Map(prev);
+                                        lmps.forEach(lmp => {
+                                            // Convert completedEventIds (string[]) back to Score[] shape
+                                            // so computeNextEventsForTrainee can do: scores.get(fullName).map(s => s.event)
+                                            const scoreRecords: Score[] = lmp.completedEventIds.map(eventId => ({
+                                                event: eventId,
+                                                score: 3 as 0 | 1 | 2 | 3 | 4 | 5,
+                                                date: '',
+                                                instructor: '',
+                                                notes: '',
+                                                details: [],
+                                            }));
+                                            merged.set(lmp.traineeFullName, scoreRecords);
+                                            console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
+                                        });
+                                        console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
+                                        return merged;
+                                    });
+                                }
+                            }
+                        } else {
+                            console.warn('[LMP Sync] Backend sync failed, falling back to direct DB scores...');
+                            // Fallback: directly apply DB PT-051 scores to state
+                            setScores(prev => {
+                                const merged = new Map(prev);
+                                Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+                                    merged.set(traineeName, traineeScores as Score[]);
+                                });
+                                return merged;
+                            });
+                        }
+                    } catch (syncErr) {
+                        console.warn('[LMP Sync] Sync error, falling back to direct DB scores:', syncErr);
+                        // Fallback: directly apply DB PT-051 scores to state
+                        setScores(prev => {
+                            const merged = new Map(prev);
+                            Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+                                merged.set(traineeName, traineeScores as Score[]);
+                            });
+                            return merged;
+                        });
+                    }
                 } else {
-                    console.log('[LMP Sync] No DB scores found — Individual LMPs will use mock data only');
+                    console.log('[LMP Sync] No DB scores found — Individual LMPs will start fresh');
                 }
 
                 // Initialize Individual LMPs for all DB trainees on load
@@ -11481,6 +11553,59 @@ updates.forEach(update => {
                         console.log('Updated scores map:', updatedScores);
                         setScores(updatedScores);
                         console.log('Scores state updated successfully');
+
+                        // Persist new PT-051 completions to DB Individual LMP
+                        // Group new scores by trainee name and update their LMP
+                        const traineeNamesWithNewScores = [...new Set(newScores.map((s: any) => s.traineeName as string))];
+                        traineeNamesWithNewScores.forEach(async (traineeName) => {
+                            try {
+                                const trainee = allTraineesData.find(t => t.fullName === traineeName);
+                                if (!trainee || !(trainee as any).id) return; // Only DB trainees have an id
+
+                                const allScoresForTrainee = updatedScores.get(traineeName) || [];
+                                const completedEventIds = allScoresForTrainee.map(s => s.event);
+
+                                let lmpType = (trainee as any).lmpType || 'BPC+IPC';
+                                if (lmpType === 'BPC+IPC' && trainee.course?.toUpperCase().startsWith('FIC')) {
+                                    lmpType = 'FIC';
+                                }
+
+                                const masterSyllabus = INITIAL_SYLLABUS_DETAILS.filter((item: any) => {
+                                    if (lmpType === 'BPC+IPC') return !item.lmpType || item.lmpType === 'Master LMP';
+                                    return item.courses && item.courses.includes(lmpType);
+                                });
+
+                                const completedSet = new Set(completedEventIds);
+                                const lmpEvents = masterSyllabus.map((item: any) => ({
+                                    ...item,
+                                    completedAt: completedSet.has(item.id || item.code)
+                                        ? (allScoresForTrainee.find(s => s.event === (item.id || item.code)) as any)?.date || new Date().toISOString()
+                                        : null,
+                                }));
+
+                                const apiBase = window.location.origin.includes('railway.app')
+                                    ? '/api'
+                                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                                const res = await fetch(`${apiBase}/trainees/${(trainee as any).id}/lmp`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        traineeFullName: traineeName,
+                                        lmpType,
+                                        events: lmpEvents,
+                                        completedEventIds,
+                                    }),
+                                });
+                                if (res.ok) {
+                                    console.log(`[LMP] ✅ Updated DB Individual LMP for ${traineeName}: ${completedEventIds.length} events complete`);
+                                } else {
+                                    console.warn(`[LMP] Failed to update DB LMP for ${traineeName}`);
+                                }
+                            } catch (err) {
+                                console.warn(`[LMP] Error updating DB LMP for ${traineeName}:`, err);
+                            }
+                        });
                     }}
                     isConflict={unavailabilityConflicts.has(selectedEvent.id) || (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id)}
                     onNeoClick={handleNeoClick}
