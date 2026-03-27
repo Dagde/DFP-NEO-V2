@@ -1960,9 +1960,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         slot.attempts++;
         if (!slot.reasons.includes(reason)) slot.reasons.push(reason);
         _fbTimeSlotsAttempted.set(slotKey, slot);
-        // Only print first 10 failures after first 2 successes
-        if (_fbSuccessCount < 2) return;
-        if (_fbFailCount >= _FB_MAX_FAIL) return;
+        // Print first 15 failures regardless of success count
+        if (_fbFailCount >= 15) return;
         _fbFailCount++;
         console.log(`\n\u274c [FLIGHT-DIAG] FAIL #${_fbFailCount}`);
         console.log(`   Trainee:  ${trainee.fullName}`);
@@ -2882,8 +2881,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Highest Priority Flight Events are already added at the start
     
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
+    const _flightListForScheduling = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. List size: ${_flightListForScheduling.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
     scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight)), 
+        _flightListForScheduling,
         'flight', 
         false, 
         flyingStartTime, 
