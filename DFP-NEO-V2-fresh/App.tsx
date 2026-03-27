@@ -1106,6 +1106,35 @@ function generateDfpInternal(
     setProgress: (progress: { message: string, percentage: number }) => void,
     publishedSchedules: Record<string, ScheduleEvent[]>
 ): Omit<ScheduleEvent, 'date'>[] {
+    // ── OVERLAP REJECTION DIAGNOSTIC ─────────────────────────────────────────
+    // Tracks the first 10 instructor rejections caused by booking-window overlap.
+    // Logs: instructor, candidate event, conflicting event, and cross-type flag.
+    let _overlapRejCount = 0;
+    const _MAX_OVERLAP_LOG = 10;
+    const _logOverlapRejection = (
+        instructorName: string,
+        candidateFlightNumber: string,
+        candidateType: string,
+        candidateStart: number,
+        candidateEnd: number,
+        conflictingFlightNumber: string,
+        conflictingType: string,
+        conflictingStart: number,
+        conflictingEnd: number
+    ) => {
+        if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
+        _overlapRejCount++;
+        const isCrossType = (candidateType === 'ground') !== (conflictingType === 'ground');
+        const crossTypeLabel = isCrossType ? '⚠️ CROSS-TYPE (should not block)' : '✅ SAME-TYPE (correct block)';
+        console.log(
+            `[OVERLAP-REJ #${_overlapRejCount}] ${crossTypeLabel}\n` +
+            `  Instructor  : ${instructorName}\n` +
+            `  Candidate   : ${candidateFlightNumber} (type=${candidateType}, ${candidateStart.toFixed(2)}-${candidateEnd.toFixed(2)}h)\n` +
+            `  Conflicts w : ${conflictingFlightNumber} (type=${conflictingType}, ${conflictingStart.toFixed(2)}-${conflictingEnd.toFixed(2)}h)`
+        );
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Starting with config.instructors:', config.instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Total instructors in config:', config.instructors.length);
     
@@ -1929,14 +1958,36 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                      if (instructor.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
                 }
                 
+                // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
+                // Ground↔flight cross-type pairs are NOT blocking: instructor can ground-brief
+                // AND fly on the same day. Only same-category overlaps are true conflicts.
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(instructor.name)) return false;
+                         // Skip ground↔flight/ftd cross-type: not a real double-booking
+                         const existingIsGround = e.type === 'ground';
+                         const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === 'ground';
+                         if (existingIsGround !== proposedIsGround) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         if (overlaps) {
+                             _logOverlapRejection(
+                                 instructor.name,
+                                 syllabusItemForCheck.id,
+                                 syllabusItemForCheck.type || 'unknown',
+                                 proposedBookingWindow.start,
+                                 proposedBookingWindow.end,
+                                 e.flightNumber,
+                                 e.type || 'unknown',
+                                 e.startTime,
+                                 e.startTime + e.duration
+                             );
+                         }
+                         return overlaps;
                      });
                 if (hasOverlap) return null;
+                // ─────────────────────────────────────────────────────────────────────
 
                 // Special check for second night flight turnaround for the same crew
                 if (isNightPass && isPlusOneCheck) {
@@ -2108,14 +2159,40 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) { _dRej.eventLimit++; continue; }
                 }
 
+                // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
+                // Ground↔flight/ftd cross-type pairs are NOT blocking: instructor can brief
+                // AND fly on the same day. Only same-category overlaps are true conflicts.
+                let _crossTypeSkipped = false;
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(ip.name)) return false;
+                         // Skip ground↔flight/ftd cross-type: not a real double-booking
+                         const existingIsGround = e.type === 'ground';
+                         const proposedIsGround = type === 'ground';
+                         if (existingIsGround !== proposedIsGround) {
+                             _crossTypeSkipped = true;
+                             return false;
+                         }
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         if (overlaps) {
+                             _logOverlapRejection(
+                                 ip.name,
+                                 syllabusItem.id,
+                                 type,
+                                 proposedBookingWindow.start,
+                                 proposedBookingWindow.end,
+                                 e.flightNumber,
+                                 e.type || 'unknown',
+                                 e.startTime,
+                                 e.startTime + e.duration
+                             );
+                         }
+                         return overlaps;
                      });
                 if (hasOverlap) { _dRej.timeOverlap++; continue; }
+                // ─────────────────────────────────────────────────────────────────────
 
                 const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.id, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
                 const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));

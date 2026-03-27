@@ -81689,6 +81689,20 @@ window.__downloadBuildDiagnostic = () => {
   console.log("[INSTR-DIAG] Download triggered:", `instructor-diag-${ts}.json`);
 };
 function generateDfpInternal(config, setProgress, publishedSchedules) {
+  let _overlapRejCount = 0;
+  const _MAX_OVERLAP_LOG = 10;
+  const _logOverlapRejection = (instructorName, candidateFlightNumber, candidateType, candidateStart, candidateEnd, conflictingFlightNumber, conflictingType, conflictingStart, conflictingEnd) => {
+    if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
+    _overlapRejCount++;
+    const isCrossType = candidateType === "ground" !== (conflictingType === "ground");
+    const crossTypeLabel = isCrossType ? "⚠️ CROSS-TYPE (should not block)" : "✅ SAME-TYPE (correct block)";
+    console.log(
+      `[OVERLAP-REJ #${_overlapRejCount}] ${crossTypeLabel}
+  Instructor  : ${instructorName}
+  Candidate   : ${candidateFlightNumber} (type=${candidateType}, ${candidateStart.toFixed(2)}-${candidateEnd.toFixed(2)}h)
+  Conflicts w : ${conflictingFlightNumber} (type=${conflictingType}, ${conflictingStart.toFixed(2)}-${conflictingEnd.toFixed(2)}h)`
+    );
+  };
   console.log("🚨🚨🚨 [GENERATE DFP INTERNAL] Starting with config.instructors:", config.instructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role })));
   console.log("🚨🚨🚨 [GENERATE DFP INTERNAL] Total instructors in config:", config.instructors.length);
   config.instructors.forEach((instructor, index) => {
@@ -82273,8 +82287,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
           if (!getPersonnel(e).includes(instructor2.name)) return false;
+          const existingIsGround = e.type === "ground";
+          const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === "ground";
+          if (existingIsGround !== proposedIsGround) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-          return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+          if (overlaps) {
+            _logOverlapRejection(
+              instructor2.name,
+              syllabusItemForCheck.id,
+              syllabusItemForCheck.type || "unknown",
+              proposedBookingWindow.start,
+              proposedBookingWindow.end,
+              e.flightNumber,
+              e.type || "unknown",
+              e.startTime,
+              e.startTime + e.duration
+            );
+          }
+          return overlaps;
         });
         if (hasOverlap) return null;
         if (isNightPass && isPlusOneCheck) {
@@ -82419,8 +82450,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
           if (!getPersonnel(e).includes(ip.name)) return false;
+          const existingIsGround = e.type === "ground";
+          const proposedIsGround = type === "ground";
+          if (existingIsGround !== proposedIsGround) {
+            return false;
+          }
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-          return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+          if (overlaps) {
+            _logOverlapRejection(
+              ip.name,
+              syllabusItem.id,
+              type,
+              proposedBookingWindow.start,
+              proposedBookingWindow.end,
+              e.flightNumber,
+              e.type || "unknown",
+              e.startTime,
+              e.startTime + e.duration
+            );
+          }
+          return overlaps;
         });
         if (hasOverlap) {
           _dRej.timeOverlap++;
@@ -87788,7 +87838,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9151,
+            lineNumber: 9228,
             columnNumber: 24
           },
           void 0
@@ -87824,7 +87874,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9305,
+            lineNumber: 9382,
             columnNumber: 24
           },
           void 0
@@ -87882,7 +87932,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 9372,
+              lineNumber: 9449,
               columnNumber: 28
             },
             void 0
@@ -87937,7 +87987,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9423,
+            lineNumber: 9500,
             columnNumber: 24
           },
           void 0
@@ -87967,7 +88017,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9441,
+            lineNumber: 9518,
             columnNumber: 24
           },
           void 0
@@ -88096,7 +88146,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9460,
+            lineNumber: 9537,
             columnNumber: 24
           },
           void 0
@@ -88211,7 +88261,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9590,
+            lineNumber: 9667,
             columnNumber: 24
           },
           void 0
@@ -88329,7 +88379,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 9719,
+              lineNumber: 9796,
               columnNumber: 28
             },
             void 0
@@ -88349,7 +88399,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 9847,
+              lineNumber: 9924,
               columnNumber: 28
             },
             void 0
@@ -88415,7 +88465,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9855,
+            lineNumber: 9932,
             columnNumber: 24
           },
           void 0
@@ -88607,7 +88657,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 9911,
+            lineNumber: 9988,
             columnNumber: 24
           },
           void 0
@@ -88628,7 +88678,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10100,
+            lineNumber: 10177,
             columnNumber: 24
           },
           void 0
@@ -88659,7 +88709,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10110,
+            lineNumber: 10187,
             columnNumber: 24
           },
           void 0
@@ -88677,7 +88727,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10130,
+            lineNumber: 10207,
             columnNumber: 24
           },
           void 0
@@ -88709,7 +88759,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10137,
+            lineNumber: 10214,
             columnNumber: 25
           },
           void 0
@@ -88840,7 +88890,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10164,
+            lineNumber: 10241,
             columnNumber: 24
           },
           void 0
@@ -88864,7 +88914,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10305,
+            lineNumber: 10382,
             columnNumber: 24
           },
           void 0
@@ -88967,7 +89017,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10320,
+            lineNumber: 10397,
             columnNumber: 24
           },
           void 0
@@ -89056,7 +89106,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10419,
+            lineNumber: 10496,
             columnNumber: 24
           },
           void 0
@@ -89094,7 +89144,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10505,
+            lineNumber: 10582,
             columnNumber: 28
           },
           void 0
@@ -89115,7 +89165,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10532,
+            lineNumber: 10609,
             columnNumber: 24
           },
           void 0
@@ -89157,7 +89207,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 10572,
+                lineNumber: 10649,
                 columnNumber: 32
               },
               void 0
@@ -89166,7 +89216,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Error: Could not load trainee LMP." }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10583,
+          lineNumber: 10660,
           columnNumber: 24
         }, void 0);
       case "Currency":
@@ -89194,7 +89244,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10586,
+              lineNumber: 10663,
               columnNumber: 28
             },
             void 0
@@ -89268,7 +89318,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10606,
+            lineNumber: 10683,
             columnNumber: 24
           },
           void 0
@@ -89287,7 +89337,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10670,
+            lineNumber: 10747,
             columnNumber: 24
           },
           void 0
@@ -89376,7 +89426,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10698,
+              lineNumber: 10775,
               columnNumber: 28
             },
             void 0
@@ -89390,7 +89440,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10781,
+            lineNumber: 10858,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -89398,7 +89448,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10782,
+            lineNumber: 10859,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -89406,7 +89456,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             eventForPt051 ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10783,
+            lineNumber: 10860,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -89420,14 +89470,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10784,
+              lineNumber: 10861,
               columnNumber: 21
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10780,
+          lineNumber: 10857,
           columnNumber: 24
         }, void 0);
       case "PostFlight":
@@ -89454,7 +89504,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10793,
+              lineNumber: 10870,
               columnNumber: 28
             },
             void 0
@@ -89482,7 +89532,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10813,
+              lineNumber: 10890,
               columnNumber: 28
             },
             void 0
@@ -89492,13 +89542,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       case "AUTH":
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10830,
+          lineNumber: 10907,
           columnNumber: 24
         }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10832,
+          lineNumber: 10909,
           columnNumber: 24
         }, void 0);
     }
@@ -89540,7 +89590,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SystemFreezeBanner, {}, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 10886,
+      lineNumber: 10963,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
@@ -89582,7 +89632,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10888,
+          lineNumber: 10965,
           columnNumber: 13
         },
         void 0
@@ -89620,19 +89670,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10921,
+            lineNumber: 10998,
             columnNumber: 49
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10949,
+          lineNumber: 11026,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 10920,
+        lineNumber: 10997,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -89653,14 +89703,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10953,
+          lineNumber: 11030,
           columnNumber: 13
         },
         void 0
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Magnifier, { isEnabled: isMagnifierEnabled }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 10965,
+        lineNumber: 11042,
         columnNumber: 36
       }, void 0),
       selectedEvent && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -89747,7 +89797,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 10968,
+          lineNumber: 11045,
           columnNumber: 17
         },
         void 0
@@ -89755,7 +89805,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       conflict && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11054,
+        lineNumber: 11131,
         columnNumber: 26
       }, void 0),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -89770,7 +89820,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11056,
+          lineNumber: 11133,
           columnNumber: 17
         },
         void 0
@@ -89778,11 +89828,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowNeoChoiceModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Resolution Options" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11067,
+          lineNumber: 11144,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11066,
+          lineNumber: 11143,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 text-center", children: [
@@ -89790,13 +89840,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             "NEO has found multiple ways to resolve the conflict for ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: neoProblemTileForFlyout?.event.flightNumber }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11070,
+              lineNumber: 11147,
               columnNumber: 114
             }, void 0),
             ". Please choose an option:"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11070,
+            lineNumber: 11147,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-4 pt-4", children: [
@@ -89808,12 +89858,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Time Shift" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 11076,
+                    lineNumber: 11153,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 11077,
+                    lineNumber: 11154,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -89822,7 +89872,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11072,
+                lineNumber: 11149,
                 columnNumber: 33
               },
               void 0
@@ -89835,12 +89885,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 11083,
+                    lineNumber: 11160,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 11084,
+                    lineNumber: 11161,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -89849,38 +89899,38 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11079,
+                lineNumber: 11156,
                 columnNumber: 33
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11071,
+            lineNumber: 11148,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11069,
+          lineNumber: 11146,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11065,
+        lineNumber: 11142,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11064,
+        lineNumber: 11141,
         columnNumber: 17
       }, void 0),
       showTimeOnlyRemedyConfirm && timeOnlyRemedyForConfirmation && neoProblemTileForFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: handleCancelTimeOnlyRemedy, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Time Change" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11095,
+          lineNumber: 11172,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11094,
+          lineNumber: 11171,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: [
@@ -89888,89 +89938,89 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Current Start Time:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11100,
+                lineNumber: 11177,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-mono font-bold", children: formatDecimalHourToString(neoProblemTileForFlyout.event.startTime) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11101,
+                lineNumber: 11178,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11099,
+              lineNumber: 11176,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11104,
+                lineNumber: 11181,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11105,
+                lineNumber: 11182,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11103,
+              lineNumber: 11180,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11098,
+            lineNumber: 11175,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center pt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-2 text-sm", children: "Proposed New Start Time" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11116,
+              lineNumber: 11193,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl font-bold text-green-400 font-mono tracking-wider", children: formatDecimalHourToString(timeOnlyRemedyForConfirmation.newStartTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11117,
+              lineNumber: 11194,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11115,
+            lineNumber: 11192,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11097,
+          lineNumber: 11174,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelTimeOnlyRemedy, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11123,
+            lineNumber: 11200,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSwitchToCrewChange, className: "px-4 py-2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors text-sm font-semibold", children: "Change Crew Instead" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11124,
+            lineNumber: 11201,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleConfirmTimeOnlyRemedy, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Accept Time Change" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11125,
+            lineNumber: 11202,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11122,
+          lineNumber: 11199,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11093,
+        lineNumber: 11170,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11092,
+        lineNumber: 11169,
         columnNumber: 18
       }, void 0),
       showDutyWarning && dutyWarningRemedy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -89985,49 +90035,49 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11131,
+          lineNumber: 11208,
           columnNumber: 17
         },
         void 0
       ),
       showInfoNotification && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11140,
+        lineNumber: 11217,
         columnNumber: 38
       }, void 0),
       showNightFlyingInfo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11141,
+        lineNumber: 11218,
         columnNumber: 37
       }, void 0),
       isBuildingDfp && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11142,
+        lineNumber: 11219,
         columnNumber: 31
       }, void 0),
       showDateWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11143,
+        lineNumber: 11220,
         columnNumber: 33
       }, void 0),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11144,
+        lineNumber: 11221,
         columnNumber: 56
       }, void 0),
       showPublishConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11145,
+        lineNumber: 11222,
         columnNumber: 36
       }, void 0),
       isLocalityChangeVisible && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LocalityChangeFlyout, { locality: school }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11146,
+        lineNumber: 11223,
         columnNumber: 41
       }, void 0),
       successMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SuccessNotification, { message: successMessage, onClose: () => setSuccessMessage(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11147,
+        lineNumber: 11224,
         columnNumber: 32
       }, void 0),
       showCurrencySetup && selectedPersonForCurrency && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90048,7 +90098,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11149,
+          lineNumber: 11226,
           columnNumber: 17
         },
         void 0
@@ -90064,7 +90114,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11165,
+          lineNumber: 11242,
           columnNumber: 17
         },
         void 0
@@ -90084,7 +90134,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11172,
+          lineNumber: 11249,
           columnNumber: 17
         },
         void 0
@@ -90127,7 +90177,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11183,
+          lineNumber: 11260,
           columnNumber: 17
         },
         void 0
@@ -90146,7 +90196,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11217,
+          lineNumber: 11294,
           columnNumber: 17
         },
         void 0
@@ -90165,7 +90215,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11227,
+          lineNumber: 11304,
           columnNumber: 17
         },
         void 0
@@ -90221,7 +90271,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11237,
+          lineNumber: 11314,
           columnNumber: 17
         },
         void 0
@@ -90243,7 +90293,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11290,
+          lineNumber: 11367,
           columnNumber: 17
         },
         void 0
@@ -90266,7 +90316,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11305,
+          lineNumber: 11382,
           columnNumber: 17
         },
         void 0
@@ -90282,44 +90332,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11321,
+          lineNumber: 11398,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 10887,
+      lineNumber: 10964,
       columnNumber: 9
     }, void 0),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoginModal, { onLoginSuccess: handleLoginSuccess }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 11331,
+      lineNumber: 11408,
       columnNumber: 13
     }, void 0),
     authLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11338,
+        lineNumber: 11415,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 11339,
+        lineNumber: 11416,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 11337,
+      lineNumber: 11414,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 11336,
+      lineNumber: 11413,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-    lineNumber: 10885,
+    lineNumber: 10962,
     columnNumber: 5
   }, void 0);
 };
