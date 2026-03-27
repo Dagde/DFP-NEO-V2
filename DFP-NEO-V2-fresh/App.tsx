@@ -1158,10 +1158,10 @@ function generateDfpInternal(
         conflSource: string,
         requiredTurnaroundHours: number
     ) => {
-        // Only log same-trainee
-        if (candTraineeName !== conflTraineeName) return;
+        // Log first 5 regardless of same-trainee to verify what names are flowing through
         if (_stSeqCount >= _MAX_ST_SEQ_LOG) return;
         _stSeqCount++;
+        const _isSameTrainee = candTraineeName === conflTraineeName;
 
         const isNextVsNextPlusOne = (candIsNext === true && conflIsNext === false)
                                  || (candIsNext === false && conflIsNext === true);
@@ -1171,11 +1171,13 @@ function generateDfpInternal(
         const hasClockOverlap = gapMinutes < 0;
         const turnaroundMinutes = Math.round(requiredTurnaroundHours * 60);
 
-        const shouldBeAllowed = isNextVsNextPlusOne && !hasClockOverlap
+        const shouldBeAllowed = _isSameTrainee && isNextVsNextPlusOne && !hasClockOverlap
                              && gapMinutes >= turnaroundMinutes;
 
         let verdict: string;
-        if (shouldBeAllowed) {
+        if (!_isSameTrainee) {
+            verdict = `SHOULD BE ALLOWED: N/A  →  different trainees (cand="${candTraineeName}" vs confl="${conflTraineeName}")`;
+        } else if (shouldBeAllowed) {
             verdict = `SHOULD BE ALLOWED: YES  →  🐛 BUG: valid NEXT+1 rejected`;
         } else if (hasClockOverlap) {
             verdict = `SHOULD BE ALLOWED: NO   →  true clock overlap (${gapMinutes}m gap)`;
@@ -1201,7 +1203,7 @@ function generateDfpInternal(
             `   Source  : ${conflSource}\n` +
             `\n` +
             `3. SEQUENCING CHECK\n` +
-            `   Same trainee           : YES\n` +
+            `   Same trainee           : ${_isSameTrainee ? 'YES' : 'NO'}\n` +
             `   NEXT vs NEXT+1 pairing : ${isNextVsNextPlusOne ? 'YES' : 'NO'}\n` +
             `   Actual clock overlap   : ${hasClockOverlap ? 'YES' : 'NO'}\n` +
             `   Time gap               : ${gapMinutes} minutes\n` +
