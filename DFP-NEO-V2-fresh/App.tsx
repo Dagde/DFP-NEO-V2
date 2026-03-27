@@ -1919,6 +1919,87 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
 
+    // ── FLIGHT BOTTLENECK DIAGNOSTIC ────────────────────────────────────────
+    // Tracks first 2 successes and next 10 failures for flight events only.
+    // Read-only: does not change scheduling behaviour or business rules.
+    let _fbSuccessCount = 0;
+    let _fbFailCount = 0;
+    const _FB_MAX_FAIL = 10;
+    const _fbBuckets: Record<string, number> = {
+        NO_INSTRUCTORS_LOADED: 0, NO_QUALIFIED: 0, NO_UNIT_MATCH: 0,
+        INSTRUCTOR_STATICALLY_UNAVAILABLE: 0, INSTRUCTOR_SOFT_DUTY_LIMIT: 0,
+        INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED: 0, INSTRUCTOR_TOTAL_LIMIT_EXCEEDED: 0,
+        INSTRUCTOR_TIME_OVERLAP: 0, INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED: 0,
+        NO_AIRCRAFT_AVAILABLE: 0, TIME_BOUNDARY_VIOLATION: 0,
+        NO_AREA_AVAILABLE: 0, HOURLY_DISPATCH_LIMIT: 0,
+        TAKEOFF_SEPARATION_VIOLATION: 0, TRAINEE_EVENT_LIMIT_EXCEEDED: 0,
+        TRAINEE_TOTAL_LIMIT_EXCEEDED: 0, TRAINEE_STATICALLY_UNAVAILABLE: 0, OTHER: 0,
+    };
+    const _fbTimeSlotsAttempted: Map<number, { attempts: number; reasons: string[] }> = new Map();
+    const _fmtT = (h: number) => { const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+
+    const _fbLogSuccess = (trainee: Trainee, syllabusItem: SyllabusItemDetail, isNext: boolean, startTime: number, endTime: number, instructorName: string, aircraft: string, area: string | undefined) => {
+        if (_fbSuccessCount >= 2) return;
+        _fbSuccessCount++;
+        console.log(`\n\u2705 [FLIGHT-DIAG] SUCCESS #${_fbSuccessCount}`);
+        console.log(`   Trainee:   ${trainee.fullName}`);
+        console.log(`   Event:     ${syllabusItem.id} (${syllabusItem.code})`);
+        console.log(`   Type:      ${isNext ? 'NEXT' : 'NEXT+1'}`);
+        console.log(`   Time:      ${_fmtT(startTime)} - ${_fmtT(endTime)}`);
+        console.log(`   Instructor:${instructorName || 'SOLO'}`);
+        console.log(`   Aircraft:  ${aircraft}`);
+        console.log(`   Area:      ${area || 'N/A'}`);
+        console.log(`   Slot:      ${_fmtT(startTime)}`);
+    };
+
+    const _fbLogFailure = (trainee: Trainee, syllabusItem: SyllabusItemDetail, isNext: boolean, startTime: number, endTime: number, reason: string) => {
+        // Always count in buckets regardless of cap
+        if (_fbBuckets[reason] !== undefined) _fbBuckets[reason]++; else _fbBuckets['OTHER']++;
+        const slotKey = Math.round(startTime * 12) / 12; // round to 5-min
+        const slot = _fbTimeSlotsAttempted.get(slotKey) || { attempts: 0, reasons: [] };
+        slot.attempts++;
+        if (!slot.reasons.includes(reason)) slot.reasons.push(reason);
+        _fbTimeSlotsAttempted.set(slotKey, slot);
+        // Only print first 10 failures after first 2 successes
+        if (_fbSuccessCount < 2) return;
+        if (_fbFailCount >= _FB_MAX_FAIL) return;
+        _fbFailCount++;
+        console.log(`\n\u274c [FLIGHT-DIAG] FAIL #${_fbFailCount}`);
+        console.log(`   Trainee:  ${trainee.fullName}`);
+        console.log(`   Event:    ${syllabusItem.id} (${syllabusItem.code})`);
+        console.log(`   Type:     ${isNext ? 'NEXT' : 'NEXT+1'}`);
+        console.log(`   Proposed: ${_fmtT(startTime)} - ${_fmtT(endTime)}`);
+        console.log(`   Reason:   ${reason}`);
+    };
+
+    const _fbPrintSummary = () => {
+        console.log('\n\ud83d\udd34\ud83d\udd34\ud83d\udd34 [FLIGHT-DIAG] BOTTLENECK SUMMARY \ud83d\udd34\ud83d\udd34\ud83d\udd34');
+        console.log('C. REJECTION BUCKET TOTALS (entire flight scheduling pass):');
+        Object.entries(_fbBuckets).filter(([,v]) => v > 0).forEach(([k,v]) => console.log(`   ${k}: ${v}`));
+        console.log('\nD. TIME SLOTS TRIED AFTER 0805:');
+        const postFirstTwo = [8 + 10/60, 8 + 15/60, 8 + 20/60, 8 + 25/60, 8 + 30/60];
+        postFirstTwo.forEach(t => {
+            const key = Math.round(t * 12) / 12;
+            const data = _fbTimeSlotsAttempted.get(key);
+            if (data) console.log(`   ${_fmtT(t)}: ${data.attempts} attempt(s) | reasons: ${data.reasons.join(', ')}`);
+            else console.log(`   ${_fmtT(t)}: 0 attempts (never reached)`);
+        });
+        const topReason = Object.entries(_fbBuckets).sort((a,b) => b[1]-a[1])[0];
+        console.log('\nE. 3-LINE CONCLUSION:');
+        console.log(`   A. First bottleneck preventing 3rd flight: ${topReason ? topReason[0] : 'UNKNOWN'} (${topReason ? topReason[1] : 0} rejections)`);
+        const laterSlotData = postFirstTwo.map(t => _fbTimeSlotsAttempted.get(Math.round(t * 12) / 12));
+        const laterSlotsTriedCount = laterSlotData.filter(Boolean).length;
+        console.log(`   B. Later time slots actually being tried: ${laterSlotsTriedCount > 0 ? 'YES - ' + laterSlotsTriedCount + ' slots had attempts' : 'NO - no attempts beyond 0805'}`);
+        const instrTotal = (_fbBuckets.NO_INSTRUCTORS_LOADED||0)+(_fbBuckets.NO_QUALIFIED||0)+(_fbBuckets.NO_UNIT_MATCH||0)+(_fbBuckets.INSTRUCTOR_STATICALLY_UNAVAILABLE||0)+(_fbBuckets.INSTRUCTOR_SOFT_DUTY_LIMIT||0)+(_fbBuckets.INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED||0)+(_fbBuckets.INSTRUCTOR_TOTAL_LIMIT_EXCEEDED||0)+(_fbBuckets.INSTRUCTOR_TIME_OVERLAP||0)+(_fbBuckets.INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED||0);
+        const acTotal = _fbBuckets.NO_AIRCRAFT_AVAILABLE||0;
+        const areaTotal = _fbBuckets.NO_AREA_AVAILABLE||0;
+        const sepTotal = (_fbBuckets.HOURLY_DISPATCH_LIMIT||0)+(_fbBuckets.TAKEOFF_SEPARATION_VIOLATION||0);
+        const blockerType = instrTotal >= acTotal && instrTotal >= areaTotal && instrTotal >= sepTotal ? 'INSTRUCTOR' : acTotal >= areaTotal && acTotal >= sepTotal ? 'AIRCRAFT' : areaTotal >= sepTotal ? 'AREA' : 'SEPARATION';
+        console.log(`   C. Primary blocker: ${blockerType} (instr=${instrTotal}, aircraft=${acTotal}, area=${areaTotal}, sep=${sepTotal})`);
+        console.log('\ud83d\udd34\ud83d\udd34\ud83d\udd34 [FLIGHT-DIAG] END \ud83d\udd34\ud83d\udd34\ud83d\udd34\n');
+    };
+    // ── END FLIGHT BOTTLENECK DIAGNOSTIC SETUP ──────────────────────────────
+
     const scheduleList = (
         list: Trainee[],
         type: 'flight' | 'ftd' | 'cpt' | 'ground',
@@ -2026,7 +2107,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         isNightPass: boolean,
         isPlusOne: boolean
     ): ScheduleEventResult => {
-        
+        const _isFlight = type === 'flight' && !isNightPass;
+        const _isNext = !isPlusOne;
+        const _fbEnd = startTime + syllabusItem.duration;
+
         const traineeCounts = eventCounts.get(trainee.fullName)!;
         
         // CRITICAL FIX: For night flying BNF events, allow 2 flights per night
@@ -2034,7 +2118,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
         
         if (type === 'flight' || type === 'ftd') {
-             if (traineeCounts.flightFtd >= bnfFlightLimit) return null;
+             if (traineeCounts.flightFtd >= bnfFlightLimit) {
+                 if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_EVENT_LIMIT_EXCEEDED');
+                 return null;
+             }
         } else {
              if (traineeCounts.ground >= 2) return null;
         }
@@ -2042,10 +2129,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
         // For BNF events, allow higher total limit to accommodate 2 night flights
         const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
-        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) return null;
+        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TOTAL_LIMIT_EXCEEDED');
+            return null;
+        }
         
         const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.id, duration: syllabusItem.duration }, syllabusDetails);
-        if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) return null;
+        if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_STATICALLY_UNAVAILABLE');
+            return null;
+        }
 
         const findAvailableInstructor = (
             traineeForCheck: Trainee, 
@@ -2429,7 +2522,29 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         let instructor: Instructor | null = null;
         if (!isSoloFlight) {
             instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne);
-            if (!instructor) return null;
+            if (!instructor) {
+                if (_isFlight) {
+                    // Map _zeroReason from findAvailableInstructor diagnostic to bucket
+                    const diagEntry = _instructorDiag?.entries[_instructorDiag.entries.length - 1];
+                    let noInstrReason = 'OTHER';
+                    if (diagEntry && !diagEntry.instructorFound) {
+                        if (diagEntry.zeroReason === 'NO_INSTRUCTORS_LOADED') noInstrReason = 'NO_INSTRUCTORS_LOADED';
+                        else if (diagEntry.zeroReason === 'NO_QUALIFIED') noInstrReason = 'NO_QUALIFIED';
+                        else if (diagEntry.zeroReason === 'NO_UNIT_MATCH') noInstrReason = 'NO_UNIT_MATCH';
+                        else if (diagEntry.rejections.staticUnavailable > 0 && diagEntry.rejections.staticUnavailable === diagEntry.candidatesEnteringLoop) noInstrReason = 'INSTRUCTOR_STATICALLY_UNAVAILABLE';
+                        else if (diagEntry.rejections.softDutyLimit > 0 && diagEntry.rejections.softDutyLimit >= (diagEntry.candidatesEnteringLoop - diagEntry.rejections.staticUnavailable)) noInstrReason = 'INSTRUCTOR_SOFT_DUTY_LIMIT';
+                        else if (diagEntry.rejections.eventLimit > 0) {
+                            // check if it's flight limit or total limit
+                            noInstrReason = 'INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED';
+                        }
+                        else if (diagEntry.rejections.timeOverlap > 0) noInstrReason = 'INSTRUCTOR_TIME_OVERLAP';
+                        else if (diagEntry.rejections.crewDutyPeriod > 0) noInstrReason = 'INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED';
+                        else noInstrReason = 'OTHER';
+                    }
+                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
+                }
+                return null;
+            }
         }
         
         let resourceId: string | null = null;
@@ -2474,16 +2589,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
         
         // If no resource available, return null (STBY will be handled in separate pass)
-        if (!resourceId) return null;
+        if (!resourceId) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AIRCRAFT_AVAILABLE');
+            return null;
+        }
         
         let area: string | undefined = undefined;
         if (type === 'flight') {
             const isBnf = syllabusItem.code.startsWith('BNF');
             const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
-            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) return null;
+            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
+                return null;
+            }
             
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
-            if (!area) return null;
+            if (!area) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
+                return null;
+            }
 
             const nonStbyFlights = generatedEvents.filter(e => 
                 !e.resourceId.startsWith('STBY') && 
@@ -2491,7 +2615,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             );
             
             const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
-            if (takeoffsInLastHour >= 8) return null;
+            if (takeoffsInLastHour >= 8) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
+                return null;
+            }
             
             const takeoffConflict = nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
@@ -2503,7 +2630,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 
                 return diffMinutes < minSeparation;
             });
-            if(takeoffConflict) return null;
+            if(takeoffConflict) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TAKEOFF_SEPARATION_VIOLATION');
+                return null;
+            }
         }
         
            // Debug: Log syllabusItem for BGF11 and BGF18
@@ -2518,13 +2648,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
            if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
                console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
            }
-        return {
+        const result = {
             id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
         };
+        // Log successful flight events (first 2 only)
+        if (_isFlight) {
+            _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || '', result.area);
+        }
+        return result;
     };
 
     // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
@@ -2756,7 +2891,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         null, 
         false
     );
-    
+    _fbPrintSummary();
+
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
     // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
     setProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
