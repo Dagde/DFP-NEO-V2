@@ -1389,6 +1389,7 @@ function generateDfpInternal(
     // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
 
     setProgress({ message: 'Initializing DFP build...', percentage: 0 });
+    console.log('🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active');
 
     // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
     const activeDfpEvents = publishedSchedules[buildDate] || [];
@@ -1595,6 +1596,11 @@ function generateDfpInternal(
 
     Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
     Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
+    console.log(
+        `🟢🟢🟢 [SEQ-DIAG] Category lists built:\n` +
+        `  Next  → flight:${nextEventLists.flight.length} ftd:${nextEventLists.ftd.length} cpt:${nextEventLists.cpt.length} ground:${nextEventLists.ground.length} bnf:${nextEventLists.bnf.length}\n` +
+        `  Next+1→ flight:${nextPlusOneLists.flight.length} ftd:${nextPlusOneLists.ftd.length} cpt:${nextPlusOneLists.cpt.length} ground:${nextPlusOneLists.ground.length}`
+    );
 // REORDER SOLO FLIGHTS WITH TWR DI REQUIREMENT
     // After sorting, reorder Day Next Event List to group Solo-with-TWR-DI events
     const reorderSoloWithTwrDi = (list: Trainee[]) => {
@@ -5737,11 +5743,7 @@ useEffect(() => {
             const otherEvents = eventsForDate.filter(e => e.id !== event.id);
             const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
             if (result.hasConflict) {
-                console.log(`🔴 ❌ CONFLICT FOUND: ${event.flightNumber} (${event.id}) - ${result.reason || result.conflictType}`);
-                console.log(`🔴 Event instructor:`, event.instructor);
-                console.log(`🔴 Event student:`, event.student);
-                console.log(`🔴 Event pilot:`, event.pilot);
-                console.log(`🔴 Event personnel:`, getPersonnel(event));
+                // UI conflict logger silenced - focused build-algorithm diagnostic active
                 conflictingEventIds.add(event.id);
             }
         }
