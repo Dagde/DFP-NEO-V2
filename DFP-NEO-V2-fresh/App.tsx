@@ -1097,6 +1097,21 @@ function _diagFinalizeInstructors() {
     console.log('[INSTR-DIAG] Download triggered:', `instructor-diag-${ts}.json`);
 };
 
+// Flight bottleneck diagnostic download helper
+(window as any).__downloadFlightDiag = () => {
+    const raw = localStorage.getItem("flight_diag_report");
+    if (!raw) { console.error("No flight diag report. Run a build first."); return; }
+    const report = JSON.parse(raw);
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "flight-diag-" + report.timestamp.replace(/[:.]/g, "-").slice(0, 19) + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON");
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // END INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1972,31 +1987,60 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
 
     const _fbPrintSummary = () => {
-        console.log('\n\ud83d\udd34\ud83d\udd34\ud83d\udd34 [FLIGHT-DIAG] BOTTLENECK SUMMARY \ud83d\udd34\ud83d\udd34\ud83d\udd34');
-        console.log('C. REJECTION BUCKET TOTALS (entire flight scheduling pass):');
-        Object.entries(_fbBuckets).filter(([,v]) => v > 0).forEach(([k,v]) => console.log(`   ${k}: ${v}`));
-        console.log('\nD. TIME SLOTS TRIED AFTER 0805:');
         const postFirstTwo = [8 + 10/60, 8 + 15/60, 8 + 20/60, 8 + 25/60, 8 + 30/60];
-        postFirstTwo.forEach(t => {
-            const key = Math.round(t * 12) / 12;
-            const data = _fbTimeSlotsAttempted.get(key);
-            if (data) console.log(`   ${_fmtT(t)}: ${data.attempts} attempt(s) | reasons: ${data.reasons.join(', ')}`);
-            else console.log(`   ${_fmtT(t)}: 0 attempts (never reached)`);
-        });
         const topReason = Object.entries(_fbBuckets).sort((a,b) => b[1]-a[1])[0];
-        console.log('\nE. 3-LINE CONCLUSION:');
-        console.log(`   A. First bottleneck preventing 3rd flight: ${topReason ? topReason[0] : 'UNKNOWN'} (${topReason ? topReason[1] : 0} rejections)`);
         const laterSlotData = postFirstTwo.map(t => _fbTimeSlotsAttempted.get(Math.round(t * 12) / 12));
         const laterSlotsTriedCount = laterSlotData.filter(Boolean).length;
-        console.log(`   B. Later time slots actually being tried: ${laterSlotsTriedCount > 0 ? 'YES - ' + laterSlotsTriedCount + ' slots had attempts' : 'NO - no attempts beyond 0805'}`);
         const instrTotal = (_fbBuckets.NO_INSTRUCTORS_LOADED||0)+(_fbBuckets.NO_QUALIFIED||0)+(_fbBuckets.NO_UNIT_MATCH||0)+(_fbBuckets.INSTRUCTOR_STATICALLY_UNAVAILABLE||0)+(_fbBuckets.INSTRUCTOR_SOFT_DUTY_LIMIT||0)+(_fbBuckets.INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED||0)+(_fbBuckets.INSTRUCTOR_TOTAL_LIMIT_EXCEEDED||0)+(_fbBuckets.INSTRUCTOR_TIME_OVERLAP||0)+(_fbBuckets.INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED||0);
         const acTotal = _fbBuckets.NO_AIRCRAFT_AVAILABLE||0;
         const areaTotal = _fbBuckets.NO_AREA_AVAILABLE||0;
         const sepTotal = (_fbBuckets.HOURLY_DISPATCH_LIMIT||0)+(_fbBuckets.TAKEOFF_SEPARATION_VIOLATION||0);
         const blockerType = instrTotal >= acTotal && instrTotal >= areaTotal && instrTotal >= sepTotal ? 'INSTRUCTOR' : acTotal >= areaTotal && acTotal >= sepTotal ? 'AIRCRAFT' : areaTotal >= sepTotal ? 'AREA' : 'SEPARATION';
-        console.log(`   C. Primary blocker: ${blockerType} (instr=${instrTotal}, aircraft=${acTotal}, area=${areaTotal}, sep=${sepTotal})`);
-        console.log('\ud83d\udd34\ud83d\udd34\ud83d\udd34 [FLIGHT-DIAG] END \ud83d\udd34\ud83d\udd34\ud83d\udd34\n');
+
+        // Save to localStorage so it survives console scroll
+        const _fbSummaryData = {
+            timestamp: new Date().toISOString(),
+            flightListSize: (window as any).__fbFlightListSize || 0,
+            successCount: _fbSuccessCount,
+            failCount: _fbFailCount,
+            buckets: { ..._fbBuckets },
+            timeSlots: Object.fromEntries(
+                postFirstTwo.map(t => {
+                    const key = Math.round(t * 12) / 12;
+                    const data = _fbTimeSlotsAttempted.get(key);
+                    return [_fmtT(t), data ? { attempts: data.attempts, reasons: data.reasons } : { attempts: 0, reasons: [] }];
+                })
+            ),
+            conclusion: {
+                topReason: topReason ? topReason[0] : 'NONE',
+                topReasonCount: topReason ? topReason[1] : 0,
+                laterSlotsTried: laterSlotsTriedCount,
+                primaryBlocker: blockerType,
+                instrTotal, acTotal, areaTotal, sepTotal
+            }
+        };
+        try { localStorage.setItem('flight_diag_report', JSON.stringify(_fbSummaryData)); } catch(e) { /* ignore */ }
+
+        console.log('\n[FLIGHT-DIAG] BOTTLENECK SUMMARY');
+        console.log('   Flight list size: ' + ((window as any).__fbFlightListSize || 0) + ' | Successes: ' + _fbSuccessCount + ' | Failures logged: ' + _fbFailCount);
+        console.log('C. REJECTION BUCKET TOTALS:');
+        const bucketsWithValues = Object.entries(_fbBuckets).filter(([,v]) => v > 0);
+        if (bucketsWithValues.length === 0) console.log('   (ZERO rejections - flight list is likely empty)');
+        else bucketsWithValues.forEach(([k,v]) => console.log('   ' + k + ': ' + v));
+        console.log('D. TIME SLOTS AFTER 0805:');
+        postFirstTwo.forEach(t => {
+            const key = Math.round(t * 12) / 12;
+            const data = _fbTimeSlotsAttempted.get(key);
+            if (data) console.log('   ' + _fmtT(t) + ': ' + data.attempts + ' attempts | ' + data.reasons.join(', '));
+            else console.log('   ' + _fmtT(t) + ': 0 attempts');
+        });
+        console.log('E. CONCLUSION:');
+        console.log('   A. Top rejection: ' + (topReason ? topReason[0] : 'NONE') + ' (' + (topReason ? topReason[1] : 0) + ')');
+        console.log('   B. Later slots tried: ' + (laterSlotsTriedCount > 0 ? 'YES - ' + laterSlotsTriedCount : 'NO'));
+        console.log('   C. Primary blocker: ' + blockerType + ' (instr=' + instrTotal + ', ac=' + acTotal + ', area=' + areaTotal + ', sep=' + sepTotal + ')');
+        console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
     };
+
     // ── END FLIGHT BOTTLENECK DIAGNOSTIC SETUP ──────────────────────────────
 
     const scheduleList = (
@@ -2883,6 +2927,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
     const _flightListForScheduling = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
     console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. List size: ${_flightListForScheduling.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    (window as any).__fbFlightListSize = _flightListForScheduling.length;
     scheduleList(
         _flightListForScheduling,
         'flight', 
