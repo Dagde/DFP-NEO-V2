@@ -5298,6 +5298,15 @@ useEffect(() => {
         }
 
         for (const event of validEvents) {
+            // Ground events (mass briefs) do not create personnel conflicts with flight/ftd/cpt events.
+            // Trainees can attend a ground brief AND fly on the same day — these are not double-bookings.
+            const targetIsGround = targetEvent.type === 'ground';
+            const eventIsGround = event.type === 'ground';
+            if (targetIsGround !== eventIsGround) {
+                // One is ground, other is flight/ftd/cpt — skip personnel conflict for this pair
+                continue;
+            }
+
             const eventPersonnel = getPersonnel(event);
             const commonPersonnel = targetPersonnel.filter(p => eventPersonnel.includes(p));
 
