@@ -7442,12 +7442,16 @@ useEffect(() => {
         
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
         
-        console.log('🔍 [NEO BUILD CONFIG DEBUG] Creating config with instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
-        console.log('🔍 [NEO BUILD CONFIG DEBUG] Total instructors in config:', instructorsData.length);
+        const instructorsInBuild = instructorsData;
+        const traineesInBuild = traineesData;
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] Data source settings:', dataSourceSettings);
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] instructorsData (filtered):', instructorsInBuild.length, '| mockData count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource !== 'database').length, '| DB count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource === 'database').length);
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):', traineesInBuild.length, '| mockData count:', traineesInBuild.filter((t: any) => (t as any)._dataSource !== 'database').length, '| DB count:', traineesInBuild.filter((t: any) => (t as any)._dataSource === 'database').length);
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:', instructorsInBuild.slice(0, 5).map((i: any) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: (i as any)._dataSource })));
         
         const config: DfpConfig = {
-            instructors: instructorsData,
-            trainees: allTraineesData,
+            instructors: instructorsInBuild,
+            trainees: traineesInBuild,
             syllabus: syllabusDetails,
             scores,
             coursePriorities,
