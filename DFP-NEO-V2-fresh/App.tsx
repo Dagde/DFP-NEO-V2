@@ -1108,8 +1108,56 @@ function generateDfpInternal(
 ): Omit<ScheduleEvent, 'date'>[] {
     // ── OVERLAP REJECTION DIAGNOSTIC ─────────────────────────────────────────
     // Tracks the first 10 instructor rejections caused by booking-window overlap.
-    // Logs: instructor, candidate event, conflicting event, and cross-type flag.
     let _overlapRejCount = 0;
+    // ----------------------------------------------------------
+    // TRAINEE SOURCE FORENSIC DIAGNOSTIC - Build Entry Point
+    // ----------------------------------------------------------
+    const _traineeTotal = config.trainees.length;
+    const _traineeDb = config.trainees.filter((t: any) => (t as any)._dataSource === 'database').length;
+    const _traineeMock = config.trainees.filter((t: any) => (t as any)._dataSource !== 'database').length;
+    const _traineeUnknown = config.trainees.filter((t: any) => !(t as any)._dataSource).length;
+    
+    console.log('\n🔴🔴🔴 [TRAINEE-SOURCE-FORENSIC] BUILD ENTRY POINT ANALYSIS 🔴🔴🔴');
+    console.log('A. Exact build input counts:');
+    console.log(`   Total trainees: ${_traineeTotal}`);
+    console.log(`   DB-tagged trainees: ${_traineeDb}`);
+    console.log(`   Mock-tagged trainees: ${_traineeMock}`);
+    console.log(`   Unknown source trainees: ${_traineeUnknown}`);
+    
+    let _buildDataType = 'UNKNOWN';
+    if (_traineeDb > 0 && _traineeMock === 0 && _traineeUnknown === 0) _buildDataType = 'DB ONLY';
+    else if (_traineeMock > 0 && _traineeDb === 0 && _traineeUnknown === 0) _buildDataType = 'MOCK ONLY';
+    else if (_traineeDb > 0 && _traineeMock > 0) _buildDataType = 'MIXED (DB + MOCK)';
+    else if (_traineeUnknown > 0) _buildDataType = 'MIXED (CONTAINS UNKNOWN)';
+    else if (_traineeTotal === 0) _buildDataType = 'EMPTY';
+    
+    console.log('B. Build input type:', _buildDataType);
+    console.log('C. 10 sample trainee records from actual build input:');
+    const _sampleTrainees = config.trainees.slice(0, 10).map((t: any) => ({
+      id: t.idNumber || t.id,
+      fullName: t.fullName || t.name,
+      course: t.course || 'N/A',
+      _dataSource: (t as any)._dataSource || 'undefined'
+    }));
+    _sampleTrainees.forEach((sample, i) => {
+      console.log(`   [${i+1}] ID:${sample.id} | Name:${sample.fullName} | Course:${sample.course} | Source:${sample._dataSource}`);
+    });
+    
+    if (_buildDataType === 'MIXED (DB + MOCK)') {
+        console.log('\n🚨 CONTAMINATION DETECTED 🚨');
+        console.log('D. Conclusion: Build algorithm is receiving mixed DB+mock trainee dataset.');
+        console.log('E. This is the FIRST proven contamination point - scheduling has not even started yet.');
+        console.log('F. In DB-only mode, mock trainees should be present in traineesData? NO - they should be filtered out.');
+        console.log('G. Are they actually present in final build input? YES - counts above prove contamination.');
+    } else if (_buildDataType === 'DB ONLY') {
+        console.log('\n✅ NO CONTAMINATION');
+        console.log('D. Conclusion: Build algorithm is receiving DB-only trainee dataset as expected.');
+    } else {
+        console.log('\n⚠️ UNEXPECTED STATE');
+        console.log('D. Build input is:', _buildDataType);
+    }
+    console.log('🔴🔴🔴 [TRAINEE-SOURCE-FORENSIC] ANALYSIS COMPLETE 🔴🔴🔴\n');
+
     const _MAX_OVERLAP_LOG = 10;
     const _logOverlapRejection = (
         instructorName: string,
