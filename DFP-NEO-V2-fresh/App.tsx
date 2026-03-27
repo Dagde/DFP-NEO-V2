@@ -4252,8 +4252,9 @@ useEffect(() => {
                 // computeNextEventsForTrainee advances them to their correct next event.
                 //
                 // This runs on every app load to keep LMPs in sync with PT-051 records.
-                if (data.scores && Object.keys(data.scores).length > 0) {
-                    console.log(`[LMP Sync] Starting Individual LMP sync for ${Object.keys(data.scores).length} trainees with PT-051 records...`);
+                // Always run sync unconditionally — server reads PT-051 scores directly from DB.
+                {
+                    console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
@@ -4336,8 +4337,6 @@ useEffect(() => {
                             return merged;
                         });
                     }
-                } else {
-                    console.log('[LMP Sync] No DB scores found — Individual LMPs will start fresh');
                 }
 
                 // Initialize Individual LMPs for all DB trainees on load
