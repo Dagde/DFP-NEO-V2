@@ -1133,6 +1133,86 @@ function generateDfpInternal(
             `  Conflicts w : ${conflictingFlightNumber} (type=${conflictingType}, ${conflictingStart.toFixed(2)}-${conflictingEnd.toFixed(2)}h)`
         );
     };
+
+    // ── SAME-TRAINEE SEQUENCING DIAGNOSTIC ──────────────────────────────────
+    // Logs the first 10 same-trainee conflict rejections ONLY.
+    // Goal: prove whether valid NEXT→NEXT+1 sequential events are incorrectly rejected.
+    let _stSeqCount = 0;
+    const _MAX_ST_SEQ_LOG = 10;
+    const _fmtH = (h: number) => {
+        const hh = Math.floor(h);
+        const mm = Math.round((h - hh) * 60);
+        return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    };
+    const _logSameTraineeConflict = (
+        candTraineeName: string,
+        candEventName: string,
+        candIsNext: boolean,
+        candStart: number,
+        candEnd: number,
+        conflTraineeName: string,
+        conflEventName: string,
+        conflIsNext: boolean | undefined,
+        conflStart: number,
+        conflEnd: number,
+        conflSource: string,
+        requiredTurnaroundHours: number
+    ) => {
+        // Only log same-trainee
+        if (candTraineeName !== conflTraineeName) return;
+        if (_stSeqCount >= _MAX_ST_SEQ_LOG) return;
+        _stSeqCount++;
+
+        const isNextVsNextPlusOne = (candIsNext === true && conflIsNext === false)
+                                 || (candIsNext === false && conflIsNext === true);
+
+        // Use booking-window edges for clock overlap check
+        const gapMinutes = Math.round((candStart - conflEnd) * 60);
+        const hasClockOverlap = gapMinutes < 0;
+        const turnaroundMinutes = Math.round(requiredTurnaroundHours * 60);
+
+        const shouldBeAllowed = isNextVsNextPlusOne && !hasClockOverlap
+                             && gapMinutes >= turnaroundMinutes;
+
+        let verdict: string;
+        if (shouldBeAllowed) {
+            verdict = `SHOULD BE ALLOWED: YES  →  🐛 BUG: valid NEXT+1 rejected`;
+        } else if (hasClockOverlap) {
+            verdict = `SHOULD BE ALLOWED: NO   →  true clock overlap (${gapMinutes}m gap)`;
+        } else {
+            verdict = `SHOULD BE ALLOWED: NO   →  insufficient turnaround (have ${gapMinutes}m, need ${turnaroundMinutes}m)`;
+        }
+
+        console.log(
+            `\n═══════════════════════════════════════════════════\n` +
+            `🔴 SAME-TRAINEE SEQ-CONFLICT #${_stSeqCount}\n` +
+            `═══════════════════════════════════════════════════\n` +
+            `1. CANDIDATE (rejected)\n` +
+            `   Trainee : ${candTraineeName}\n` +
+            `   Event   : ${candEventName}\n` +
+            `   Type    : ${candIsNext ? 'NEXT' : 'NEXT+1'}\n` +
+            `   Time    : ${_fmtH(candStart)} – ${_fmtH(candEnd)}\n` +
+            `\n` +
+            `2. CONFLICTING EVENT\n` +
+            `   Trainee : ${conflTraineeName}\n` +
+            `   Event   : ${conflEventName}\n` +
+            `   Type    : ${conflIsNext === undefined ? 'unknown' : conflIsNext ? 'NEXT' : 'NEXT+1'}\n` +
+            `   Time    : ${_fmtH(conflStart)} – ${_fmtH(conflEnd)}\n` +
+            `   Source  : ${conflSource}\n` +
+            `\n` +
+            `3. SEQUENCING CHECK\n` +
+            `   Same trainee           : YES\n` +
+            `   NEXT vs NEXT+1 pairing : ${isNextVsNextPlusOne ? 'YES' : 'NO'}\n` +
+            `   Actual clock overlap   : ${hasClockOverlap ? 'YES' : 'NO'}\n` +
+            `   Time gap               : ${gapMinutes} minutes\n` +
+            `   Required turnaround    : ${turnaroundMinutes} minutes\n` +
+            `\n` +
+            `4. FINAL VERDICT\n` +
+            `   ${verdict}\n` +
+            `═══════════════════════════════════════════════════`
+        );
+    };
+    // ────────────────────────────────────────────────────────────────────────
     // ─────────────────────────────────────────────────────────────────────────
 
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Starting with config.instructors:', config.instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
@@ -1318,7 +1398,12 @@ function generateDfpInternal(
         return eventWithoutDate;
     });
 
-    let generatedEvents: Omit<ScheduleEvent, 'date'>[] = [...activeDfpEventsWithoutDate];
+    let generatedEvents: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] = activeDfpEventsWithoutDate.map(e => ({
+        ...e,
+        _source: 'active-dfp',
+        _isNext: undefined,
+        _traineeName: e.student || e.pilot || ''
+    }));
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
     trainees.forEach(t => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
@@ -1359,7 +1444,7 @@ function generateDfpInternal(
                if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
                    eventWithoutDate.pilot = eventWithoutDate.instructor;
                }
-            generatedEvents.push(eventWithoutDate);
+            generatedEvents.push({ ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' });
             includedCount++;
             console.log(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
             console.log(`  - pilot: ${eventWithoutDate.pilot}, instructor: ${eventWithoutDate.instructor}, student: ${eventWithoutDate.student}`);
@@ -1840,7 +1925,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
                         const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne);
                         if (result && typeof result === 'object' && 'id' in result) {
-                            generatedEvents.push(result);
+                            generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
                             // Only get instructor counts if not a solo flight
                                const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
                             const tCounts = eventCounts.get(trainee.fullName)!;
@@ -1982,6 +2067,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                  e.type || 'unknown',
                                  e.startTime,
                                  e.startTime + e.duration
+                             );
+                             // Same-trainee sequencing diagnostic
+                             const conflictingTraineeName = (e as any)._traineeName || e.student || e.pilot || '';
+                             _logSameTraineeConflict(
+                                 traineeForCheck.fullName,
+                                 syllabusItemForCheck.id,
+                                 !isPlusOneCheck,
+                                 proposedBookingWindow.start + (syllabusItemForCheck.preFlightTime || 0),
+                                 proposedBookingWindow.end - (syllabusItemForCheck.postFlightTime || 0),
+                                 conflictingTraineeName,
+                                 e.flightNumber,
+                                 (e as any)._isNext,
+                                 e.startTime,
+                                 e.startTime + e.duration,
+                                 (e as any)._source || 'unknown',
+                                 flightTurnaround
                              );
                          }
                          return overlaps;
@@ -2187,6 +2288,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                  e.type || 'unknown',
                                  e.startTime,
                                  e.startTime + e.duration
+                             );
+                             // Same-trainee sequencing diagnostic
+                             const conflictingTraineeName = (e as any)._traineeName || e.student || e.pilot || '';
+                             const reqTurnaround = type === 'flight' ? flightTurnaround
+                                                 : type === 'ftd'    ? ftdTurnaround
+                                                 : cptTurnaround;
+                             _logSameTraineeConflict(
+                                 trainee.fullName,
+                                 syllabusItem.id,
+                                 !isPlusOne,
+                                 proposedBookingWindow.start + (syllabusItem.preFlightTime || 0),
+                                 proposedBookingWindow.end   - (syllabusItem.postFlightTime || 0),
+                                 conflictingTraineeName,
+                                 e.flightNumber,
+                                 (e as any)._isNext,
+                                 e.startTime,
+                                 e.startTime + e.duration,
+                                 (e as any)._source || 'unknown',
+                                 reqTurnaround
                              );
                          }
                          return overlaps;
