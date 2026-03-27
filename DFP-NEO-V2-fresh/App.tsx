@@ -972,6 +972,135 @@ function analyzeBuildResults(
     };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
+// Pure localStorage-based. No React state. No UI props.
+// Run a build → open DevTools console → type: __downloadBuildDiagnostic()
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface InstructorDiagTraineeEntry {
+    traineeName: string;
+    traineeUnit: string;
+    eventType: string;
+    syllabusCode: string;
+    totalInstructorsInConfig: number;
+    afterQualificationFilter: number;
+    afterUnitFilter: number;
+    candidatesEnteringLoop: number;
+    rejections: {
+        staticUnavailable: number;
+        softDutyLimit: number;
+        groundLimit: number;
+        eventLimit: number;
+        timeOverlap: number;
+        crewDutyPeriod: number;
+    };
+    finalAvailable: number;
+    instructorFound: boolean;
+    zeroReason: string | null;
+}
+
+interface InstructorDiagReport {
+    timestamp: string;
+    buildDate: string;
+    totalInstructorsInConfig: number;
+    sampleInstructors: Array<{ id: string; name: string; role: string; unit: string; location: string }>;
+    totalTraineesProcessed: number;
+    entries: InstructorDiagTraineeEntry[];
+    summary: {
+        totalSchedulingAttempts: number;
+        instructorFound: number;
+        instructorNotFound: number;
+        zeroInstructorCases: {
+            noInstructorsLoaded: number;
+            noQualified: number;
+            noUnitMatch: number;
+            allFilteredOut: number;
+        };
+    };
+}
+
+let _instructorDiag: InstructorDiagReport | null = null;
+
+function _diagInitInstructors(buildDate: string, instructors: any[]) {
+    _instructorDiag = {
+        timestamp: new Date().toISOString(),
+        buildDate,
+        totalInstructorsInConfig: instructors.length,
+        sampleInstructors: instructors.slice(0, 10).map(i => ({
+            id: i.idNumber || 'unknown',
+            name: i.name || 'unknown',
+            role: i.role || 'unknown',
+            unit: i.unit || 'unknown',
+            location: i.location || 'unknown',
+        })),
+        totalTraineesProcessed: 0,
+        entries: [],
+        summary: {
+            totalSchedulingAttempts: 0,
+            instructorFound: 0,
+            instructorNotFound: 0,
+            zeroInstructorCases: {
+                noInstructorsLoaded: 0,
+                noQualified: 0,
+                noUnitMatch: 0,
+                allFilteredOut: 0,
+            },
+        },
+    };
+    console.log('[INSTR-DIAG] Initialized. Instructors in config:', instructors.length);
+}
+
+function _diagRecordEntry(entry: InstructorDiagTraineeEntry) {
+    if (!_instructorDiag) return;
+    _instructorDiag.entries.push(entry);
+    _instructorDiag.summary.totalSchedulingAttempts++;
+    if (entry.instructorFound) {
+        _instructorDiag.summary.instructorFound++;
+    } else {
+        _instructorDiag.summary.instructorNotFound++;
+        if (entry.zeroReason === 'NO_INSTRUCTORS_LOADED') _instructorDiag.summary.zeroInstructorCases.noInstructorsLoaded++;
+        else if (entry.zeroReason === 'NO_QUALIFIED') _instructorDiag.summary.zeroInstructorCases.noQualified++;
+        else if (entry.zeroReason === 'NO_UNIT_MATCH') _instructorDiag.summary.zeroInstructorCases.noUnitMatch++;
+        else if (entry.zeroReason === 'ALL_FILTERED_OUT') _instructorDiag.summary.zeroInstructorCases.allFilteredOut++;
+    }
+}
+
+function _diagFinalizeInstructors() {
+    if (!_instructorDiag) return;
+    _instructorDiag.totalTraineesProcessed = _instructorDiag.entries.length;
+    try {
+        localStorage.setItem('instructor_diag_report', JSON.stringify(_instructorDiag));
+        console.log('[INSTR-DIAG] ✅ Report saved to localStorage. Attempts:', _instructorDiag.summary.totalSchedulingAttempts,
+            'Found:', _instructorDiag.summary.instructorFound,
+            'NOT found:', _instructorDiag.summary.instructorNotFound);
+        console.log('[INSTR-DIAG] Zero instructor breakdown:', JSON.stringify(_instructorDiag.summary.zeroInstructorCases));
+        console.log('[INSTR-DIAG] To download: open console and type __downloadBuildDiagnostic()');
+    } catch (e) {
+        console.warn('[INSTR-DIAG] Failed to save to localStorage:', e);
+    }
+}
+
+// Global download helper — callable from browser DevTools console
+(window as any).__downloadBuildDiagnostic = () => {
+    const raw = localStorage.getItem('instructor_diag_report');
+    if (!raw) { console.error('No diagnostic report found. Run a build first.'); return; }
+    const report = JSON.parse(raw);
+    const ts = report.timestamp.replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `instructor-diag-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('[INSTR-DIAG] Download triggered:', `instructor-diag-${ts}.json`);
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// END INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
 function generateDfpInternal(
     config: DfpConfig, 
     setProgress: (progress: { message: string, percentage: number }) => void,
@@ -1559,6 +1688,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const nightPairings = new Map<string, string>();
     let instructors = [...originalInstructors.map(i => ({...i, unavailability: [...(i.unavailability || [])]}))]; 
 
+    // ── DIAGNOSTIC: Capture instructor config at build start ──
+    _diagInitInstructors(buildDate, instructors);
+
     // NEW LOGIC: If there are 2+ trainees waiting for night flying, then night flying is programmed
     if (nextEventLists.bnf.length >= 2) {
         const bnfTraineeCount = nextEventLists.bnf.length;
@@ -1839,6 +1971,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             let candidates: Instructor[] = [];
 
+            // ── DIAGNOSTIC: per-trainee tracking ──
+            const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
+
             // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
             if (type === 'ftd') {
                 // FTD: SIM IPs first, then QFIs
@@ -1860,8 +1995,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 });
             }
 
+            // ── DIAGNOSTIC: after qualification filter ──
+            const _afterQualFilter = candidates.length;
+
             // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
             candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+
+            // ── DIAGNOSTIC: after unit filter ──
+            const _afterUnitFilter = candidates.length;
 
             // ── STEP 3: Order candidates by staff-sharing priority ──
             // Priority order:
@@ -1918,9 +2059,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 candidates = [...sameUnit, ...otherUnit];
             }
 
+            // ── DIAGNOSTIC: track candidates entering the loop ──
+            const _candidatesEnteringLoop = candidates.length;
+
             for (const ip of candidates) {
                 const eventTypeForCheck = type === 'cpt' ? 'ground' : type;
-                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) continue;
+                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) { _dRej.staticUnavailable++; continue; }
                 
                 const ipCounts = eventCounts.get(ip.name)!;
                 
@@ -1935,7 +2079,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 
                 if (currentDutyHours > preferredDutyPeriod) {
                     console.log(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
-                    continue;
+                    _dRej.softDutyLimit++; continue;
                 }
                 
                 // NEW RULE: Ground event limits based on Flight/FTD activity
@@ -1943,25 +2087,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // If instructor has no Flight or FTD events: max 4 ground events
                 if (eventTypeForCheck === 'ground') {
                     const maxGroundEvents = ipCounts.flightFtd > 0 ? 1 : 4;
-                    if (ipCounts.ground >= maxGroundEvents) continue;
+                    if (ipCounts.ground >= maxGroundEvents) { _dRej.groundLimit++; continue; }
                 }
                 
                 if (ip.isExecutive) {
                     if (isNightPass && (eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd')) {
-                        if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.exec.maxTotal) continue;
+                        if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
                     } else {
-                        if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) continue;
+                        if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) { _dRej.eventLimit++; continue; }
                     }
-                    if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) continue;
-                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) continue;
+                    if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) { _dRej.eventLimit++; continue; }
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
                 } else if (ip.role === 'SIM IP') {
-                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) continue;
-                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) continue;
+                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) { _dRej.eventLimit++; continue; }
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) { _dRej.eventLimit++; continue; }
                 } else {
-                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) continue;
-                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) continue;
+                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) { _dRej.eventLimit++; continue; }
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) { _dRej.eventLimit++; continue; }
                     // Check duty supervisor limit for Flying Supervisors (included in total events)
-                    if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) continue;
+                    if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) { _dRej.eventLimit++; continue; }
                 }
 
                 const hasOverlap = generatedEvents
@@ -1971,7 +2115,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
                      });
-                if (hasOverlap) continue;
+                if (hasOverlap) { _dRej.timeOverlap++; continue; }
 
                 const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.id, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
                 const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
@@ -1983,11 +2127,46 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     const lastEventSyllabus = syllabusDetails.find(s => s.id === lastEvent.flightNumber);
                     const dutyStartTime = firstEvent.startTime - (firstEventSyllabus?.preFlightTime || 0);
                     const dutyEndTime = lastEvent.startTime + lastEvent.duration + (lastEventSyllabus?.postFlightTime || 0);
-                    if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) continue;
+                    if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) { _dRej.crewDutyPeriod++; continue; }
                 }
 
+                // ── DIAGNOSTIC: instructor found ──
+                _diagRecordEntry({
+                    traineeName: traineeForCheck.fullName,
+                    traineeUnit: traineeForCheck.unit || '',
+                    eventType: type,
+                    syllabusCode: syllabusItemForCheck.code || syllabusItemForCheck.id,
+                    totalInstructorsInConfig: instructors.length,
+                    afterQualificationFilter: _afterQualFilter,
+                    afterUnitFilter: _afterUnitFilter,
+                    candidatesEnteringLoop: _candidatesEnteringLoop,
+                    rejections: { ..._dRej },
+                    finalAvailable: 1,
+                    instructorFound: true,
+                    zeroReason: null,
+                });
                 return ip;
             }
+            // ── DIAGNOSTIC: no instructor found ──
+            let _zeroReason = 'ALL_FILTERED_OUT';
+            if (instructors.length === 0) _zeroReason = 'NO_INSTRUCTORS_LOADED';
+            else if (_afterQualFilter === 0) _zeroReason = 'NO_QUALIFIED';
+            else if (_afterUnitFilter === 0) _zeroReason = 'NO_UNIT_MATCH';
+
+            _diagRecordEntry({
+                traineeName: traineeForCheck.fullName,
+                traineeUnit: traineeForCheck.unit || '',
+                eventType: type,
+                syllabusCode: syllabusItemForCheck.code || syllabusItemForCheck.id,
+                totalInstructorsInConfig: instructors.length,
+                afterQualificationFilter: _afterQualFilter,
+                afterUnitFilter: _afterUnitFilter,
+                candidatesEnteringLoop: _candidatesEnteringLoop,
+                rejections: { ..._dRej },
+                finalAvailable: 0,
+                instructorFound: false,
+                zeroReason: _zeroReason,
+            });
             return null;
         };
         
@@ -2996,6 +3175,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     console.log('DEBUG ===== END FINAL BUILD RESULTS =====');
     
     setProgress({ message: 'Build complete!', percentage: 100 });
+
+    // ── DIAGNOSTIC: Finalize and save instructor allocation report ──
+    _diagFinalizeInstructors();
+
     return sortedEvents;
 }
 

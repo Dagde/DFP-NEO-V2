@@ -1,10 +1,11 @@
-# Historical Data Seeding System
+# Instructor Allocation Diagnostic Tracing
 
 ## Tasks
-- [ ] Design data persistence strategy (DataBackup model for publishedSchedules + pt051Assessments)
-- [ ] Add API endpoints to server.js for seeding and persisting historical data
-- [ ] Add loading logic to App.tsx to restore persisted historical data on startup
-- [ ] Create the seed generation script as a Node.js utility
-- [ ] Add admin seeding UI component (confirmation prompt, progress, one-off guard)
-- [ ] Add date refresh feature (global admin function to shift dates forward)
-- [ ] Build and push all changes
+- [x] Read and understand current code structure at 976d8fc4
+- [ ] Add diagnostic collector inside generateDfpInternal (no new files, no React state)
+- [ ] Instrument findAvailableInstructor with per-trainee filtering step tracking
+- [ ] Instrument findBestInstructorForStby with filtering step tracking
+- [ ] Save report to localStorage at end of generateDfpInternal
+- [ ] Add window.__downloadBuildDiagnostic() global helper
+- [ ] Build, verify zero errors
+- [ ] Commit and push
