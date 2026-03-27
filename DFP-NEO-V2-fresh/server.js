@@ -39,6 +39,8 @@ async function getPrisma() {
     // Ensure CancellationCode table exists and seed defaults
     await ensureCancellationCodesTable(prisma);
     await seedCancellationCodesIfEmpty(prisma);
+    // Ensure IndividualLMP table exists (create if missing)
+    await ensureIndividualLMPTable(prisma);
   }
   return prisma;
 }
@@ -409,6 +411,216 @@ app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
   } catch (error) {
     console.error('❌ PATCH /api/trainees/fix-lmp-type error:', error);
     res.status(500).json({ error: 'Failed to fix lmpType for FIC trainees', details: error.message });
+  }
+});
+
+// ============================================================
+// INDIVIDUAL LMP ROUTES
+// MUST be defined BEFORE /api/trainees/:id to avoid route conflicts
+// ============================================================
+
+// GET /api/trainees/lmp-sync - Return all IndividualLMPs (traineeFullName + completedEventIds)
+app.get('/api/trainees/lmp-sync', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const lmps = await db.individualLMP.findMany({
+      select: {
+        traineeId: true,
+        traineeFullName: true,
+        lmpType: true,
+        completedEventIds: true,
+        updatedAt: true,
+      },
+      orderBy: { traineeFullName: 'asc' },
+    });
+    res.json({ lmps, count: lmps.length });
+  } catch (error) {
+    console.error('❌ GET /api/trainees/lmp-sync error:', error);
+    res.status(500).json({ error: 'Failed to fetch LMP completions', details: error.message });
+  }
+});
+
+// POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
+// Body: { syllabusData: Record<lmpType, SyllabusItemDetail[]> }
+app.post('/api/trainees/lmp-sync', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { syllabusData } = req.body;
+
+    if (!syllabusData || Object.keys(syllabusData).length === 0) {
+      return res.status(400).json({ error: 'Missing syllabusData in request body' });
+    }
+
+    // Fetch all active trainees with their scores and existing LMP
+    const trainees = await db.trainee.findMany({
+      where: { isActive: true },
+      include: {
+        scores: {
+          select: { event: true, date: true, score: true },
+          orderBy: { date: 'asc' },
+        },
+        individualLMP: true,
+      },
+    });
+
+    console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
+
+    const results = [];
+
+    for (const trainee of trainees) {
+      // Determine LMP type
+      let lmpType = trainee.lmpType || 'BPC+IPC';
+      if (lmpType === 'BPC+IPC' && trainee.course) {
+        if (trainee.course.toUpperCase().startsWith('FIC')) {
+          lmpType = 'FIC';
+        }
+      }
+
+      // Get master syllabus for this LMP type
+      let masterSyllabus = syllabusData[lmpType];
+      if (!masterSyllabus || masterSyllabus.length === 0) {
+        masterSyllabus = syllabusData['BPC+IPC'] || [];
+      }
+      if (!masterSyllabus || masterSyllabus.length === 0) {
+        results.push({
+          traineeFullName: trainee.fullName,
+          lmpType,
+          totalEvents: 0,
+          completedCount: 0,
+          newlyMarked: [],
+          status: 'no_syllabus',
+        });
+        continue;
+      }
+
+      // Build set of completed event IDs from PT-051 Score records
+      const scoreMap = {};
+      trainee.scores.forEach(s => {
+        scoreMap[s.event] = s.date ? s.date.toISOString() : null;
+      });
+      const completedEventIds = Object.keys(scoreMap);
+
+      // Build the full LMP events array with completion status
+      const lmpEvents = masterSyllabus.map(item => ({
+        ...item,
+        completedAt: scoreMap[item.id || item.code] || null,
+      }));
+
+      // Check what was previously marked
+      const existing = trainee.individualLMP;
+      const existingCompleted = existing ? (existing.completedEventIds || []) : [];
+      const newlyMarked = completedEventIds.filter(id => !existingCompleted.includes(id));
+
+      // Upsert the IndividualLMP
+      await db.individualLMP.upsert({
+        where: { traineeId: trainee.id },
+        update: {
+          traineeFullName: trainee.fullName,
+          lmpType,
+          events: lmpEvents,
+          completedEventIds,
+          updatedAt: new Date(),
+        },
+        create: {
+          traineeId: trainee.id,
+          traineeFullName: trainee.fullName,
+          lmpType,
+          events: lmpEvents,
+          completedEventIds,
+        },
+      });
+
+      const status = !existing ? 'created' : newlyMarked.length > 0 ? 'updated' : 'unchanged';
+      results.push({
+        traineeFullName: trainee.fullName,
+        lmpType,
+        totalEvents: masterSyllabus.length,
+        completedCount: completedEventIds.length,
+        newlyMarked,
+        status,
+      });
+
+      console.log(
+        `[LMP Sync] ${trainee.fullName} (${lmpType}): ${completedEventIds.length}/${masterSyllabus.length} events complete` +
+        (newlyMarked.length > 0 ? ` — newly marked: ${newlyMarked.join(', ')}` : '')
+      );
+    }
+
+    const created = results.filter(r => r.status === 'created').length;
+    const updated = results.filter(r => r.status === 'updated').length;
+    const unchanged = results.filter(r => r.status === 'unchanged').length;
+    const noSyllabus = results.filter(r => r.status === 'no_syllabus').length;
+
+    console.log(`[LMP Sync] ✅ Done — ${created} created, ${updated} updated, ${unchanged} unchanged, ${noSyllabus} skipped`);
+
+    res.json({
+      success: true,
+      summary: { created, updated, unchanged, noSyllabus, total: trainees.length },
+      results,
+    });
+  } catch (error) {
+    console.error('❌ POST /api/trainees/lmp-sync error:', error);
+    res.status(500).json({ error: 'Failed to sync LMPs', details: error.message });
+  }
+});
+
+// GET /api/trainees/:id/lmp - Get IndividualLMP for a specific trainee
+app.get('/api/trainees/:id/lmp', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+
+    // Try by traineeId first, then by traineeFullName
+    const lmp = await db.individualLMP.findFirst({
+      where: {
+        OR: [
+          { traineeId: id },
+          { traineeFullName: decodeURIComponent(id) },
+        ],
+      },
+    });
+
+    res.json({ lmp: lmp || null });
+  } catch (error) {
+    console.error('❌ GET /api/trainees/:id/lmp error:', error);
+    res.status(500).json({ error: 'Failed to fetch LMP', details: error.message });
+  }
+});
+
+// PUT /api/trainees/:id/lmp - Upsert IndividualLMP for a specific trainee
+app.put('/api/trainees/:id/lmp', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const { traineeFullName, lmpType, events, completedEventIds } = req.body;
+
+    if (!traineeFullName || !lmpType || !events) {
+      return res.status(400).json({ error: 'Missing required fields: traineeFullName, lmpType, events' });
+    }
+
+    const lmp = await db.individualLMP.upsert({
+      where: { traineeId: id },
+      update: {
+        traineeFullName,
+        lmpType,
+        events,
+        completedEventIds: completedEventIds || [],
+        updatedAt: new Date(),
+      },
+      create: {
+        traineeId: id,
+        traineeFullName,
+        lmpType,
+        events,
+        completedEventIds: completedEventIds || [],
+      },
+    });
+
+    console.log(`✅ PUT /api/trainees/${id}/lmp - ${traineeFullName}: ${(completedEventIds || []).length} events complete`);
+    res.json({ success: true, lmp });
+  } catch (error) {
+    console.error('❌ PUT /api/trainees/:id/lmp error:', error);
+    res.status(500).json({ error: 'Failed to save LMP', details: error.message });
   }
 });
 
@@ -1195,6 +1407,43 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
     res.status(500).json({ error: 'Failed to get current availability', details: error.message });
   }
 });
+
+// ============================================================
+// INDIVIDUAL LMP TABLE SETUP
+// ============================================================
+
+async function ensureIndividualLMPTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "IndividualLMP" (
+        "id" TEXT NOT NULL,
+        "traineeId" TEXT NOT NULL,
+        "traineeFullName" TEXT NOT NULL,
+        "lmpType" TEXT NOT NULL,
+        "events" JSONB NOT NULL DEFAULT '[]',
+        "completedEventIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "IndividualLMP_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "IndividualLMP_traineeId_key"
+      ON "IndividualLMP"("traineeId");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "IndividualLMP_traineeFullName_idx"
+      ON "IndividualLMP"("traineeFullName");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "IndividualLMP_traineeId_idx"
+      ON "IndividualLMP"("traineeId");
+    `);
+    console.log('✅ IndividualLMP table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure IndividualLMP table:', err.message);
+  }
+}
 
 // ============================================================
 // CANCELLATION CODES ENDPOINTS
