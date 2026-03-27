@@ -4245,6 +4245,29 @@ useEffect(() => {
                 setTraineesData(data.trainees);
                 setEvents(data.events);
 
+                // Apply DB scores to state so computeNextEventsForTrainee
+                // correctly identifies completed PT-051 events per trainee.
+                // Without this, scores state only contains mock data and every
+                // DB trainee appears to be at syllabus event #1 (Ground School),
+                // resulting in nextEventLists.flight being empty (zero flights scheduled).
+                if (data.scores && Object.keys(data.scores).length > 0) {
+                    console.log(`[LMP Sync] Applying ${Object.keys(data.scores).length} trainee score sets from DB to state...`);
+                    setScores(prev => {
+                        const merged = new Map(prev);
+                        let syncCount = 0;
+                        Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+                            const scoresArr = traineeScores as Score[];
+                            merged.set(traineeName, scoresArr);
+                            syncCount++;
+                            console.log(`[LMP Sync] ${traineeName}: ${scoresArr.length} PT-051 events marked complete in Individual LMP`);
+                        });
+                        console.log(`[LMP Sync] ✅ Synced PT-051 completions for ${syncCount} trainees → Individual LMP computation updated`);
+                        return merged;
+                    });
+                } else {
+                    console.log('[LMP Sync] No DB scores found — Individual LMPs will use mock data only');
+                }
+
                 // Initialize Individual LMPs for all DB trainees on load
                 // This ensures FIC210/FIC211 trainees get the FIC syllabus, not BPC+IPC
                 const dbTrainees = data.trainees.filter((t: any) => t._dataSource === 'database');
