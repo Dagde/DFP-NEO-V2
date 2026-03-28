@@ -74,10 +74,22 @@ export async function fetchScores(): Promise<Record<string, any[]>> {
     // match syllabus item codes in TraineeLmpView and computeNextEventsForTrainee.
     const scoresObj: Record<string, any[]> = {};
     result.data.scores.forEach(([fullName, scores]) => {
-      scoresObj[fullName] = scores.map((s: any) => ({
+      const normalized = scores.map((s: any) => ({
         ...s,
         event: typeof s.event === 'string' ? s.event.replace('*', '') : s.event,
       }));
+      // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 always show as
+      // complete when their trigger events are done, even without lmp-sync:
+      // Rule 1: BIF FTD2 complete -> BIF FTD1 complete
+      // Rule 2: BIF1 complete    -> BIF FTD3 complete
+      const eventIds = normalized.map((s: any) => s.event as string);
+      if (eventIds.includes('BIF FTD2') && !eventIds.includes('BIF FTD1')) {
+        normalized.push({ event: 'BIF FTD1', score: 3, date: '', instructor: '', notes: '', details: [] });
+      }
+      if (eventIds.includes('BIF1') && !eventIds.includes('BIF FTD3')) {
+        normalized.push({ event: 'BIF FTD3', score: 3, date: '', instructor: '', notes: '', details: [] });
+      }
+      scoresObj[fullName] = normalized;
     });
     return scoresObj;
   }

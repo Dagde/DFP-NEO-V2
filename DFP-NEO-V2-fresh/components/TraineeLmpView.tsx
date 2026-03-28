@@ -137,9 +137,31 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, sc
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
 
-  // Normalize asterisk codes (e.g. 'BIF FTD1*' -> 'BIF FTD1') so they match
-  // syllabus item.code values which never contain asterisks.
-  const completedEventIds = useMemo(() => new Set(scores.map(s => (s.event || '').replace('*', ''))), [scores]);
+  // Dual-source completion check:
+  // 1. Normalize asterisk codes from scores (e.g. 'BIF FTD1*' -> 'BIF FTD1')
+  // 2. Also check traineeLmp items that have completedAt set (set by lmp-sync callback in App.tsx)
+  // This ensures BIF FTD1/BIF FTD3 always show as complete even if scores state is stale
+  // or the lmp-sync fallback path runs without dependency rules applied.
+  const completedEventIds = useMemo(() => {
+    // Source 1: from scores prop (PT-051 records, normalized)
+    const ids = new Set(scores.map(s => (s.event || '').replace('*', '')));
+    // Source 2: from traineeLmp items with completedAt set (populated by App.tsx lmp-sync callback)
+    traineeLmp.forEach((item: any) => {
+      if (item.completedAt) {
+        ids.add((item.id || item.code || '').replace('*', ''));
+      }
+    });
+    // Source 3: BIF FTD dependency rules — apply directly in UI as final safety net
+    // Rule 1: BIF FTD2 complete → BIF FTD1 complete
+    if (ids.has('BIF FTD2') && !ids.has('BIF FTD1')) {
+      ids.add('BIF FTD1');
+    }
+    // Rule 2: BIF1 complete → BIF FTD3 complete
+    if (ids.has('BIF1') && !ids.has('BIF FTD3')) {
+      ids.add('BIF FTD3');
+    }
+    return ids;
+  }, [scores, traineeLmp]);
 
   useEffect(() => {
     setSelectedItem(null);

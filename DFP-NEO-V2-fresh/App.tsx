@@ -4355,10 +4355,22 @@ useEffect(() => {
                         } else {
                             console.warn('[LMP Sync] Backend sync failed, falling back to direct DB scores...');
                             // Fallback: directly apply DB PT-051 scores to state
+                            // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
                             setScores(prev => {
                                 const merged = new Map(prev);
                                 Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
-                                    merged.set(traineeName, traineeScores as Score[]);
+                                    const ts = traineeScores as Score[];
+                                    const eventIds = ts.map(s => (s.event || '').replace('*', ''));
+                                    const extra: Score[] = [];
+                                    // BIF FTD dependency: BIF FTD2 done → add BIF FTD1
+                                    if (eventIds.includes('BIF FTD2') && !eventIds.includes('BIF FTD1')) {
+                                        extra.push({ event: 'BIF FTD1', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                    }
+                                    // BIF FTD dependency: BIF1 done → add BIF FTD3
+                                    if (eventIds.includes('BIF1') && !eventIds.includes('BIF FTD3')) {
+                                        extra.push({ event: 'BIF FTD3', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                    }
+                                    merged.set(traineeName, [...ts, ...extra]);
                                 });
                                 return merged;
                             });
@@ -4366,10 +4378,22 @@ useEffect(() => {
                     } catch (syncErr) {
                         console.warn('[LMP Sync] Sync error, falling back to direct DB scores:', syncErr);
                         // Fallback: directly apply DB PT-051 scores to state
+                        // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
                         setScores(prev => {
                             const merged = new Map(prev);
                             Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
-                                merged.set(traineeName, traineeScores as Score[]);
+                                const ts = traineeScores as Score[];
+                                const eventIds = ts.map(s => (s.event || '').replace('*', ''));
+                                const extra: Score[] = [];
+                                // BIF FTD dependency: BIF FTD2 done → add BIF FTD1
+                                if (eventIds.includes('BIF FTD2') && !eventIds.includes('BIF FTD1')) {
+                                    extra.push({ event: 'BIF FTD1', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                }
+                                // BIF FTD dependency: BIF1 done → add BIF FTD3
+                                if (eventIds.includes('BIF1') && !eventIds.includes('BIF FTD3')) {
+                                    extra.push({ event: 'BIF FTD3', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                }
+                                merged.set(traineeName, [...ts, ...extra]);
                             });
                             return merged;
                         });
