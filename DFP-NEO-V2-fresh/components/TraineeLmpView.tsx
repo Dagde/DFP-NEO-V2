@@ -137,7 +137,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, sc
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
 
-  const completedEventIds = useMemo(() => new Set(scores.map(s => s.event)), [scores]);
+  // Normalize asterisk codes (e.g. 'BIF FTD1*' -> 'BIF FTD1') so they match
+  // syllabus item.code values which never contain asterisks.
+  const completedEventIds = useMemo(() => new Set(scores.map(s => (s.event || '').replace('*', ''))), [scores]);
 
   useEffect(() => {
     setSelectedItem(null);

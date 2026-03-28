@@ -69,10 +69,15 @@ export async function fetchAircraft(): Promise<any[]> {
 export async function fetchScores(): Promise<Record<string, any[]>> {
   const result = await fetchAPI<{ scores: [string, any[]][] }>('/scores');
   if (result.success && result.data?.scores) {
-    // Convert array of entries to plain object
+    // Convert array of entries to plain object.
+    // Normalize asterisk event codes (e.g. 'BIF FTD1*' -> 'BIF FTD1') so they
+    // match syllabus item codes in TraineeLmpView and computeNextEventsForTrainee.
     const scoresObj: Record<string, any[]> = {};
     result.data.scores.forEach(([fullName, scores]) => {
-      scoresObj[fullName] = scores;
+      scoresObj[fullName] = scores.map((s: any) => ({
+        ...s,
+        event: typeof s.event === 'string' ? s.event.replace('*', '') : s.event,
+      }));
     });
     return scoresObj;
   }
