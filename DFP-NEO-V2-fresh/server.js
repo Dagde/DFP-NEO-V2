@@ -419,6 +419,83 @@ app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
 // MUST be defined BEFORE /api/trainees/:id to avoid route conflicts
 // ============================================================
 
+// POST /api/fix-bif-ftd-dependencies - Fix BIF FTD dependencies
+// Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
+// Rule 2: If BIF1 is complete, mark BIF FTD3 complete
+app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    console.log('[BIF FTD Fix] Starting BIF FTD dependency fix...');
+
+    // Get all trainees on ADF courses (BPC+IPC)
+    const trainees = await db.trainee.findMany({
+      where: {
+        isActive: true,
+        course: {
+          startsWith: 'ADF'
+        }
+      },
+      include: {
+        individualLMP: true
+      }
+    });
+
+    console.log(`[BIF FTD Fix] Found ${trainees.length} active trainees on ADF courses (BPC+IPC)`);
+
+    let ftd1Fixed = 0;
+    let ftd3Fixed = 0;
+    const details = [];
+
+    for (const trainee of trainees) {
+      if (!trainee.individualLMP) continue;
+
+      const completedEventIds = trainee.individualLMP.completedEventIds || [];
+      const newCompletedIds = [...completedEventIds];
+      let changed = false;
+
+      // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
+      if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
+        newCompletedIds.push('BIF FTD1');
+        changed = true;
+        ftd1Fixed++;
+        details.push(`${trainee.fullName}: Marking BIF FTD1 complete (BIF FTD2 is complete)`);
+      }
+
+      // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
+      if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
+        newCompletedIds.push('BIF FTD3');
+        changed = true;
+        ftd3Fixed++;
+        details.push(`${trainee.fullName}: Marking BIF FTD3 complete (BIF1 is complete)`);
+      }
+
+      if (changed) {
+        await db.individualLMP.update({
+          where: { traineeId: trainee.id },
+          data: {
+            completedEventIds: newCompletedIds,
+            updatedAt: new Date()
+          }
+        });
+      }
+    }
+
+    console.log(`[BIF FTD Fix] Complete: BIF FTD1=${ftd1Fixed}, BIF FTD3=${ftd3Fixed}`);
+    res.json({
+      success: true,
+      ftd1Fixed,
+      ftd3Fixed,
+      totalTrainees: trainees.length,
+      details
+    });
+  } catch (error) {
+    console.error('[BIF FTD Fix] Error:', error);
+    res.status(500).json({ error: 'Failed to fix BIF FTD dependencies', details: error.message });
+  }
+});
+
+// ============================================================
+
 // GET /api/trainees/lmp-sync - Return all IndividualLMPs (traineeFullName + completedEventIds)
 app.get('/api/trainees/lmp-sync', async (req, res) => {
   try {
