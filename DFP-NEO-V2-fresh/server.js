@@ -2001,6 +2001,171 @@ app.post('/api/historical-data/seed', async (req, res) => {
     // Weighted: 3 = standard, 4 = above standard, occasional 5, rare 2 (marginal)
     const gradePool = [3, 3, 3, 4, 4, 3, 3, 4, 3, 3, 4, 3, 5, 3, 4]; // weighted 3-4, some 5
 
+    // Element-specific comment pools keyed by element name, then grade (1-5)
+    const ELEMENT_COMMENTS = {
+      'Airmanship': {
+        1: ['Struggled to demonstrate basic airmanship throughout the sortie.', 'Displayed limited awareness of sound airmanship principles.', 'Airmanship was below the expected standard for this stage.', 'Required frequent correction to maintain acceptable airmanship.'],
+        2: ['Demonstrated basic airmanship, though inconsistently.', 'Some sound airmanship was evident, but standards varied.', 'Showed developing airmanship with several lapses.', 'Airmanship was adequate at times but lacked consistency.'],
+        3: ['Demonstrated satisfactory airmanship for this phase.', 'Airmanship met the expected standard overall.', 'Maintained sound airmanship through most sequences.', 'Showed an acceptable level of airmanship throughout.'],
+        4: ['Demonstrated strong airmanship across the sortie.', 'Airmanship was consistently above the expected standard.', 'Displayed a confident and well-rounded approach to airmanship.', 'Maintained a high standard of airmanship throughout.'],
+        5: ['Demonstrated excellent airmanship at all times.', 'Airmanship was of an exceptionally high standard.', 'Displayed mature and highly polished airmanship throughout.', 'Set the benchmark for airmanship during the sortie.'],
+      },
+      'Preparation': {
+        1: ['Preparation was incomplete and impacted performance.', 'Displayed poor preparation for the task requirements.', 'Insufficient preparation was evident prior to flight.', 'Preparation fell below the expected standard.'],
+        2: ['Basic preparation was completed but lacked depth.', 'Preparation covered some key points but missed important details.', 'Showed partial preparation for the sortie.', 'Preparation was adequate in parts but not thorough.'],
+        3: ['Preparation was satisfactory for the planned activity.', 'Demonstrated an acceptable level of preparation.', 'Preparation met the expected standard overall.', 'Showed sound preparation for the sortie requirements.'],
+        4: ['Preparation was thorough and well considered.', 'Demonstrated strong preparation for all task elements.', 'Arrived well prepared and ready for the sortie.', 'Preparation supported effective task completion.'],
+        5: ['Preparation was outstanding in all respects.', 'Demonstrated exceptional preparation and foresight.', 'Arrived comprehensively prepared for the sortie.', 'Set an excellent standard through superior preparation.'],
+      },
+      'Technique': {
+        1: ['Technique was poor and frequently ineffective.', 'Struggled to apply correct handling technique.', 'Technique was below the required standard.', 'Required repeated correction of basic technique.'],
+        2: ['Basic technique was evident but inconsistent.', 'Applied some correct techniques, though with errors.', 'Technique is developing but lacked refinement.', 'Demonstrated uneven application of required technique.'],
+        3: ['Technique was satisfactory for this stage of training.', 'Applied the required techniques to an acceptable standard.', 'Demonstrated generally sound technique throughout.', 'Technique met the expected standard overall.'],
+        4: ['Technique was strong and consistently effective.', 'Applied correct technique with good precision.', 'Demonstrated well-developed handling technique.', 'Technique was above the expected standard.'],
+        5: ['Technique was excellent throughout the sortie.', 'Demonstrated highly polished and precise technique.', 'Applied all required techniques to an exceptional standard.', 'Set the benchmark for technical execution.'],
+      },
+      'Pre-Post Flight': {
+        1: ['Struggled to complete pre- and post-flight actions correctly.', 'Pre- and post-flight procedures were poorly executed.', 'Several key pre- and post-flight steps were missed.', 'Required significant prompting during pre- and post-flight actions.'],
+        2: ['Completed pre- and post-flight actions with some errors.', 'Demonstrated basic understanding of pre- and post-flight procedures.', 'Some pre- and post-flight steps were completed correctly.', 'Pre- and post-flight actions lacked consistency.'],
+        3: ['Completed pre- and post-flight procedures satisfactorily.', 'Pre- and post-flight actions met the expected standard.', 'Demonstrated sound handling of pre- and post-flight requirements.', 'Managed pre- and post-flight procedures adequately.'],
+        4: ['Completed pre- and post-flight actions confidently and accurately.', 'Pre- and post-flight procedures were well managed.', 'Demonstrated strong procedural discipline before and after flight.', 'Pre- and post-flight actions were above standard.'],
+        5: ['Executed pre- and post-flight procedures flawlessly.', 'Demonstrated exemplary discipline in all pre- and post-flight actions.', 'Pre- and post-flight actions were completed to an exceptional standard.', 'Set the benchmark for pre- and post-flight procedure execution.'],
+      },
+      'Walk Around': {
+        1: ['Walk around was incomplete and lacked attention to detail.', 'Missed several important items during the walk around.', 'Demonstrated poor discipline during the walk around.', 'Required significant prompting to complete the walk around correctly.'],
+        2: ['Walk around was completed with some omissions.', 'Demonstrated basic understanding of walk around requirements.', 'Attention to detail during the walk around was inconsistent.', 'Walk around was adequate but lacked thoroughness.'],
+        3: ['Walk around was completed satisfactorily.', 'Demonstrated acceptable attention to detail during the walk around.', 'Completed the walk around to the expected standard.', 'Walk around was methodical and generally accurate.'],
+        4: ['Walk around was thorough and well conducted.', 'Demonstrated strong attention to detail during inspection.', 'Completed the walk around confidently and accurately.', 'Walk around standard was above expectations.'],
+        5: ['Walk around was exceptionally thorough and disciplined.', 'Demonstrated excellent attention to detail throughout the inspection.', 'Completed the walk around to a benchmark standard.', 'Walk around was conducted with outstanding professionalism.'],
+      },
+      'Strap-in': {
+        1: ['Strap-in procedure was poorly executed.', 'Required repeated prompting during strap-in.', 'Missed key steps during strap-in procedure.', 'Strap-in actions were below the expected standard.'],
+        2: ['Strap-in procedure was completed with some errors.', 'Demonstrated basic understanding of strap-in actions.', 'Strap-in was adequate but lacked fluency.', 'Some prompting was required during strap-in.'],
+        3: ['Strap-in procedure was completed satisfactorily.', 'Demonstrated acceptable strap-in discipline.', 'Strap-in actions met the expected standard.', 'Completed strap-in with only minor errors.'],
+        4: ['Strap-in procedure was completed confidently and accurately.', 'Demonstrated strong discipline during strap-in.', 'Strap-in actions were smooth and above standard.', 'Completed strap-in with good accuracy and flow.'],
+        5: ['Strap-in procedure was completed flawlessly.', 'Demonstrated excellent strap-in discipline and accuracy.', 'Strap-in actions were completed to an exceptional standard.', 'Set the benchmark for strap-in procedure execution.'],
+      },
+      'Ground Checks': {
+        1: ['Ground checks were poorly conducted and incomplete.', 'Missed several required items during ground checks.', 'Ground check discipline was below standard.', 'Required frequent prompting during ground checks.'],
+        2: ['Ground checks were completed with some omissions.', 'Demonstrated basic understanding of ground check requirements.', 'Ground checks were adequate but inconsistent.', 'Some errors were evident during ground checks.'],
+        3: ['Ground checks were completed satisfactorily.', 'Demonstrated acceptable discipline during ground checks.', 'Ground checks met the expected standard.', 'Completed ground checks with minor errors only.'],
+        4: ['Ground checks were completed accurately and confidently.', 'Demonstrated strong procedural discipline during ground checks.', 'Ground checks were well conducted and above standard.', 'Completed ground checks with good accuracy and flow.'],
+        5: ['Ground checks were completed flawlessly.', 'Demonstrated excellent discipline and accuracy during ground checks.', 'Ground checks were conducted to an exceptional standard.', 'Set the benchmark for ground check execution.'],
+      },
+      'Airborne Checks': {
+        1: ['Airborne checks were poorly managed and incomplete.', 'Missed key items during airborne checks.', 'Required significant prompting to complete airborne checks.', 'Airborne check discipline was below standard.'],
+        2: ['Airborne checks were completed with some errors.', 'Demonstrated basic understanding of airborne check requirements.', 'Airborne checks were adequate but lacked consistency.', 'Some omissions were evident during airborne checks.'],
+        3: ['Airborne checks were completed satisfactorily.', 'Demonstrated acceptable airborne check discipline.', 'Airborne checks met the expected standard.', 'Completed airborne checks with only minor errors.'],
+        4: ['Airborne checks were completed confidently and accurately.', 'Demonstrated strong airborne check discipline.', 'Airborne checks were well managed throughout.', 'Completed airborne checks to a high standard.'],
+        5: ['Airborne checks were completed flawlessly.', 'Demonstrated excellent discipline during airborne checks.', 'Airborne checks were executed to an exceptional standard.', 'Set the benchmark for airborne check performance.'],
+      },
+      'Stationary': {
+        1: ['Stationary handling before takeoff was poorly managed.', 'Struggled to maintain correct control while stationary.', 'Demonstrated weak procedure discipline in the stationary phase.', 'Required repeated prompting during stationary takeoff actions.'],
+        2: ['Stationary handling was completed with some errors.', 'Demonstrated basic control during the stationary phase.', 'Stationary actions were adequate but inconsistent.', 'Some prompting was required during the stationary phase.'],
+        3: ['Stationary takeoff actions were completed satisfactorily.', 'Demonstrated acceptable control and discipline while stationary.', 'Stationary handling met the expected standard.', 'Managed the stationary phase with minor errors only.'],
+        4: ['Stationary handling was confident and well controlled.', 'Demonstrated strong discipline in the stationary phase.', 'Completed stationary takeoff actions to a high standard.', 'Stationary control was above the expected standard.'],
+        5: ['Stationary handling was excellent throughout.', 'Demonstrated exceptional control and discipline while stationary.', 'Completed stationary takeoff actions flawlessly.', 'Set the benchmark in the stationary takeoff phase.'],
+      },
+      'Visual': {
+        1: ['Visual departure was poorly flown and below standard.', 'Struggled to maintain the correct departure profile.', 'Required frequent correction during the visual departure.', 'Demonstrated limited confidence in the visual departure phase.'],
+        2: ['Visual departure was completed with some inconsistencies.', 'Demonstrated basic understanding of the departure profile.', 'Visual departure control was adequate but variable.', 'Some corrections were required during departure.'],
+        3: ['Visual departure was flown satisfactorily.', 'Maintained an acceptable visual departure profile.', 'Demonstrated sound handling during the visual departure.', 'Visual departure met the expected standard.'],
+        4: ['Visual departure was flown confidently and accurately.', 'Maintained a strong and consistent departure profile.', 'Demonstrated above-standard handling on departure.', 'Visual departure was well managed throughout.'],
+        5: ['Visual departure was flown exceptionally well.', 'Demonstrated excellent control and precision on departure.', 'Maintained an outstanding departure profile throughout.', 'Set the benchmark for visual departure execution.'],
+      },
+      'Effects of Control': {
+        1: ['Demonstrated poor understanding of the effects of control.', 'Struggled to recognise and apply control inputs correctly.', 'Effects of control were not understood to the required standard.', 'Required repeated correction when demonstrating control effects.'],
+        2: ['Demonstrated basic understanding of the effects of control.', 'Some correct responses were evident, though inconsistent.', 'Effects of control knowledge is developing but incomplete.', 'Applied control inputs with mixed accuracy.'],
+        3: ['Demonstrated satisfactory understanding of the effects of control.', 'Recognised and applied control inputs to an acceptable standard.', 'Effects of control were understood at the expected level.', 'Managed control inputs with minor errors only.'],
+        4: ['Demonstrated strong understanding of the effects of control.', 'Applied control inputs accurately and with confidence.', 'Showed above-standard awareness of aircraft response.', 'Effects of control were well demonstrated throughout.'],
+        5: ['Demonstrated excellent understanding of the effects of control.', 'Applied control inputs with exceptional precision and awareness.', 'Showed an outstanding grasp of aircraft response.', 'Set the benchmark in demonstrating the effects of control.'],
+      },
+      'Trimming': {
+        1: ['Struggled to trim the aircraft correctly.', 'Trimming technique was poor and inconsistent.', 'Required repeated prompting to maintain correct trim.', 'Demonstrated limited understanding of trimming requirements.'],
+        2: ['Basic trimming was evident but inconsistent.', 'Demonstrated some understanding of trimming technique.', 'Trimming was adequate at times but lacked accuracy.', 'Required occasional correction when trimming.'],
+        3: ['Trimming was completed to a satisfactory standard.', 'Demonstrated acceptable trim technique throughout.', 'Managed aircraft trim with only minor errors.', 'Trimming met the expected standard for this stage.'],
+        4: ['Demonstrated strong and accurate trimming technique.', 'Maintained aircraft trim confidently throughout.', 'Trimming was smooth and above standard.', 'Showed good anticipation in trim management.'],
+        5: ['Demonstrated excellent trimming technique throughout.', 'Managed trim with exceptional accuracy and finesse.', 'Aircraft was consistently well trimmed in all phases.', 'Set the benchmark for trimming performance.'],
+      },
+      'Straight and Level': {
+        1: ['Struggled to maintain straight and level flight.', 'Control in straight and level was below standard.', 'Frequent deviations occurred in attitude and altitude.', 'Required continuous correction in straight and level.'],
+        2: ['Straight and level flight was maintained inconsistently.', 'Demonstrated basic ability in straight and level.', 'Some acceptable control was evident, though variable.', 'Minor to moderate deviations were common.'],
+        3: ['Maintained straight and level flight satisfactorily.', 'Demonstrated acceptable control in straight and level.', 'Straight and level performance met the expected standard.', 'Only minor deviations were evident.'],
+        4: ['Maintained straight and level flight accurately and confidently.', 'Demonstrated strong control in straight and level.', 'Straight and level performance was above standard.', 'Held attitude and altitude with good precision.'],
+        5: ['Maintained excellent straight and level flight throughout.', 'Demonstrated exceptional precision and control.', 'Straight and level performance was of benchmark standard.', 'Held the aircraft steadily and accurately at all times.'],
+      },
+      'Level medium Turn': {
+        1: ['Struggled to maintain control in level medium turns.', 'Level medium turns were poorly executed.', 'Significant deviations occurred during the turn.', 'Required repeated correction throughout level medium turns.'],
+        2: ['Level medium turns were completed with some errors.', 'Demonstrated basic understanding of the manoeuvre.', 'Control during level medium turns was inconsistent.', 'Some deviations were evident in altitude and balance.'],
+        3: ['Level medium turns were flown satisfactorily.', 'Demonstrated acceptable control throughout the manoeuvre.', 'Level medium turns met the expected standard.', 'Minor deviations only during execution.'],
+        4: ['Level medium turns were flown confidently and accurately.', 'Demonstrated strong control and coordination in the turn.', 'Level medium turns were above the expected standard.', 'Maintained good precision throughout the manoeuvre.'],
+        5: ['Level medium turns were flown exceptionally well.', 'Demonstrated excellent coordination and precision.', 'Executed level medium turns to a benchmark standard.', 'Maintained outstanding control throughout the manoeuvre.'],
+      },
+      'Level Steep turn': {
+        1: ['Struggled significantly during level steep turns.', 'Level steep turns were below the required standard.', 'Control and accuracy in steep turns were poor.', 'Required substantial correction during steep turns.'],
+        2: ['Demonstrated basic ability in level steep turns.', 'Steep turns were completed with several inconsistencies.', 'Control during steep turns was variable.', 'Some understanding was evident, but accuracy was limited.'],
+        3: ['Level steep turns were completed satisfactorily.', 'Demonstrated acceptable control during steep turns.', 'Steep turn performance met the expected standard.', 'Only minor deviations were evident.'],
+        4: ['Level steep turns were flown confidently and accurately.', 'Demonstrated strong control and coordination in steep turns.', 'Steep turns were above the expected standard.', 'Maintained good precision throughout the manoeuvre.'],
+        5: ['Level steep turns were flown exceptionally well.', 'Demonstrated excellent precision, balance and control.', 'Executed steep turns to a benchmark standard.', 'Maintained outstanding accuracy throughout the manoeuvre.'],
+      },
+      'Visual - Initial & Pitch': {
+        1: ['Recovery actions were poorly executed.', 'Struggled to apply correct initial and pitch recovery actions.', 'Recovery technique was below standard.', 'Required repeated prompting during the recovery sequence.'],
+        2: ['Demonstrated basic recovery technique with errors.', 'Initial and pitch recovery actions were inconsistent.', 'Some correct actions were evident, though not reliable.', 'Recovery performance requires further development.'],
+        3: ['Recovery actions were completed satisfactorily.', 'Demonstrated acceptable initial and pitch recovery technique.', 'Recovery performance met the expected standard.', 'Minor errors only during the recovery sequence.'],
+        4: ['Recovery actions were completed confidently and accurately.', 'Demonstrated strong technique in initial and pitch recovery.', 'Recovery performance was above the expected standard.', 'Managed the recovery sequence with good precision.'],
+        5: ['Recovery actions were executed exceptionally well.', 'Demonstrated excellent technique throughout the recovery sequence.', 'Initial and pitch recovery were completed to a benchmark standard.', 'Recovery performance was precise, confident and highly effective.'],
+      },
+      'Landing': {
+        1: ['Landing performance was below the required standard.', 'Struggled to manage the landing sequence safely and accurately.', 'Landing technique was poor and inconsistent.', 'Required significant assistance during landing.'],
+        2: ['Landing was completed with some errors.', 'Demonstrated basic landing technique, though inconsistently.', 'Control during landing was adequate at times.', 'Landing performance requires further refinement.'],
+        3: ['Landing was completed to a satisfactory standard.', 'Demonstrated acceptable landing technique overall.', 'Landing performance met the expected standard.', 'Minor errors only during the landing sequence.'],
+        4: ['Landing was completed confidently and accurately.', 'Demonstrated strong landing technique and control.', 'Landing performance was above the expected standard.', 'Managed the landing sequence smoothly and effectively.'],
+        5: ['Landing was executed exceptionally well.', 'Demonstrated excellent judgment, control and technique.', 'Landing performance was of benchmark standard.', 'Completed the landing sequence with outstanding precision.'],
+      },
+      'Crosswind': {
+        1: ['Struggled significantly with crosswind landing technique.', 'Crosswind control was below the required standard.', 'Demonstrated poor correction for crosswind conditions.', 'Required significant assistance during crosswind landing.'],
+        2: ['Demonstrated basic crosswind technique with inconsistencies.', 'Some correct crosswind inputs were evident.', 'Crosswind landing performance was adequate but variable.', 'Requires further development in crosswind control.'],
+        3: ['Managed crosswind conditions to a satisfactory standard.', 'Demonstrated acceptable crosswind landing technique.', 'Crosswind performance met the expected standard.', 'Applied appropriate corrections with minor errors only.'],
+        4: ['Managed crosswind conditions confidently and accurately.', 'Demonstrated strong crosswind correction and control.', 'Crosswind landing performance was above standard.', 'Applied appropriate inputs smoothly and effectively.'],
+        5: ['Demonstrated excellent crosswind landing technique throughout.', 'Managed crosswind conditions with exceptional control.', 'Crosswind performance was of benchmark standard.', 'Applied precise and confident corrections at all times.'],
+      },
+      'Radio Comms': {
+        1: ['Radio calls were unclear and below standard.', 'Struggled to make correct and timely radio calls.', 'Radio communication required frequent correction.', 'Demonstrated poor radio discipline.'],
+        2: ['Basic radio calls were made, though inconsistently.', 'Demonstrated partial understanding of required phraseology.', 'Radio communications were adequate at times.', 'Some calls lacked clarity or timeliness.'],
+        3: ['Radio communications were satisfactory overall.', 'Demonstrated acceptable phraseology and timing.', 'Radio calls met the expected standard.', 'Communicated effectively with only minor errors.'],
+        4: ['Radio communications were clear and well timed.', 'Demonstrated strong radio discipline and phraseology.', 'Radio calls were above the expected standard.', 'Communicated confidently and effectively throughout.'],
+        5: ['Radio communications were excellent throughout.', 'Demonstrated exceptional clarity, timing and discipline.', 'Radio calls were of benchmark standard.', 'Communicated professionally and precisely at all times.'],
+      },
+      'Situational Awareness': {
+        1: ['Situational awareness was poor throughout the sortie.', 'Struggled to maintain awareness of the overall situation.', 'Frequently lost awareness of aircraft state and environment.', 'Required repeated prompting to regain situational awareness.'],
+        2: ['Demonstrated basic situational awareness, though inconsistently.', 'Awareness of aircraft state and environment was variable.', 'Some important cues were missed during the sortie.', 'Situational awareness requires further development.'],
+        3: ['Maintained satisfactory situational awareness overall.', 'Demonstrated acceptable awareness of aircraft state and environment.', 'Situational awareness met the expected standard.', 'Minor lapses only, with timely recovery.'],
+        4: ['Maintained strong situational awareness throughout.', 'Demonstrated good awareness of aircraft state, position and threats.', 'Situational awareness was above the expected standard.', 'Anticipated developments well during the sortie.'],
+        5: ['Situational awareness was excellent at all times.', 'Demonstrated exceptional awareness of the full operating picture.', 'Anticipated changes and threats with maturity and confidence.', 'Set the benchmark for situational awareness.'],
+      },
+      'Lookout': {
+        1: ['Lookout was ineffective and below standard.', 'Failed to maintain an adequate visual scan.', 'Demonstrated poor lookout discipline throughout.', 'Required repeated prompting to maintain lookout.'],
+        2: ['Demonstrated basic lookout, though inconsistently.', 'Visual scan was present but not sustained.', 'Lookout discipline requires further development.', 'Some threats or cues were not detected promptly.'],
+        3: ['Maintained satisfactory lookout throughout most phases.', 'Demonstrated acceptable visual scan discipline.', 'Lookout met the expected standard overall.', 'Minor lapses only in scan effectiveness.'],
+        4: ['Maintained a strong and consistent lookout.', 'Demonstrated good visual scan discipline throughout.', 'Lookout was above the expected standard.', 'Detected and responded to cues effectively.'],
+        5: ['Lookout was excellent throughout the sortie.', 'Demonstrated exceptional visual scan discipline and awareness.', 'Maintained continuous and highly effective lookout.', 'Set the benchmark for lookout performance.'],
+      },
+      'Knowledge': {
+        1: ['Knowledge level was below the required standard.', 'Demonstrated significant gaps in required knowledge.', 'Struggled to answer basic knowledge questions.', 'Knowledge deficiencies affected task performance.'],
+        2: ['Demonstrated basic knowledge, though with some gaps.', 'Some understanding was evident, but application was inconsistent.', 'Knowledge was adequate in parts only.', 'Requires further consolidation of key knowledge areas.'],
+        3: ['Demonstrated satisfactory knowledge for this stage.', 'Knowledge met the expected standard overall.', 'Showed sound understanding of key concepts.', 'Applied knowledge adequately during the sortie.'],
+        4: ['Demonstrated strong knowledge throughout.', 'Showed good understanding and application of key concepts.', 'Knowledge was above the expected standard.', 'Applied knowledge confidently and effectively.'],
+        5: ['Demonstrated excellent knowledge in all assessed areas.', 'Showed exceptional understanding and application throughout.', 'Knowledge was of benchmark standard.', 'Applied knowledge with confidence, accuracy and depth.'],
+      },
+    };
+
+    // Helper: pick a random comment for a given element and grade
+    const getElementComment = (element, grade, randFn) => {
+      const pool = (ELEMENT_COMMENTS[element] && ELEMENT_COMMENTS[element][grade]) || [];
+      if (pool.length === 0) return 'Standard met.';
+      return pool[Math.floor(randFn() * pool.length)];
+    };
+
     // Track marginal events per course per date (at most one per course per day)
     // Key: `${course}-${dateStr}`, value: true if marginal already assigned for that course+day
     const marginalUsed = {};
@@ -2161,7 +2326,9 @@ app.post('/api/historical-data/seed', async (req, res) => {
           publishedSchedules[dateStr].push(logbookEntry);
         }
 
-        // Generate PT-051 for flight and FTD events only
+        // Generate PT-051 for ALL event types
+        // Flight/FTD: full assessment with graded elements and element-specific comments
+        // Ground/other: DCO-only record (no element scores required)
         if (eventType === 'flight' || eventType === 'ftd') {
           const pt051Key = `pt051-${eventId}-${trainee.fullName}`;
           const marginalKey = `${course}-${dateStr}`;
@@ -2182,8 +2349,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
             overallGrade = overallPool[Math.floor(rand() * overallPool.length)];
           }
 
-          // Generate scores for all 22 elements (ALL_ELEMENTS)
-          // Each element gets a grade consistent with the overall grade direction
+          // Generate scores for all 22 elements with element-specific comments
           // Grade scale: 1=Unsatisfactory, 2=Marginal, 3=Satisfactory, 4=Above Standard, 5=Exceptional
           const scores = ALL_ELEMENTS.map(element => {
             let grade;
@@ -2199,12 +2365,13 @@ app.post('/api/historical-data/seed', async (req, res) => {
               // Standard event: 3s and 4s
               grade = gradePool[Math.floor(rand() * gradePool.length)];
             }
-            const comment = grade >= 5 ? 'Exceptional - well above standard.' :
-                            grade === 4 ? 'Standard met and exceeded.' :
-                            grade === 3 ? 'Standard met.' :
-                            'Requires further consolidation.';
+            // Use element-specific comment matching the assigned grade
+            const comment = getElementComment(element, grade, rand);
             return { element, grade, comment };
           });
+
+          // Overall result: P/F reflects trainee performance; DCO reflects duty carried out
+          const overallResult = overallGrade >= 2 ? 'P' : 'F';
 
           pt051Assessments[pt051Key] = {
             id: pt051Key,
@@ -2214,8 +2381,8 @@ app.post('/api/historical-data/seed', async (req, res) => {
             date: dateStr,
             instructorName: instructor.name,
             overallGrade,
-            overallResult: 'P',
-            dcoResult: '',
+            overallResult,
+            dcoResult: 'DCO',
             overallComments: overallGrade >= 5 ? 'Exceptional performance throughout. All elements met or exceeded.' :
                              overallGrade === 4 ? 'Strong performance. Standards consistently met and exceeded.' :
                              overallGrade === 3 ? 'Satisfactory performance. All required standards achieved.' :
@@ -2230,6 +2397,32 @@ app.post('/api/historical-data/seed', async (req, res) => {
 
           // Mark this event as completed in IndividualLMP (PT-051 exists = completed)
           // Strip asterisks for LMP matching (e.g. 'BIF FTD1*' → 'BIF FTD1')
+          const normalizedCode = code.replace('*', '');
+          traineeCompletedEvents[trainee.id].completedIds.add(normalizedCode);
+
+        } else {
+          // Ground/non-flight events: generate a DCO-only PT-051 record (no element scores)
+          const pt051Key = `pt051-${eventId}-${trainee.fullName}`;
+          pt051Assessments[pt051Key] = {
+            id: pt051Key,
+            traineeFullName: trainee.fullName,
+            eventId: eventId,
+            flightNumber: code,
+            date: dateStr,
+            instructorName: instructor.name,
+            overallGrade: null,
+            overallResult: null,
+            dcoResult: 'DCO',
+            overallComments: '',
+            startTime,
+            duration,
+            endTime: startTime + duration,
+            scores: [],
+            isCompleted: true,
+            isHistoricalSeed: true,
+          };
+
+          // Mark ground events as completed in IndividualLMP as well
           const normalizedCode = code.replace('*', '');
           traineeCompletedEvents[trainee.id].completedIds.add(normalizedCode);
         }
