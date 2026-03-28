@@ -1912,8 +1912,13 @@ app.post('/api/historical-data/seed', async (req, res) => {
     const getEventDuration = (code, lmpType) => {
       if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) return 2.0;
       if (code.includes('CPT')) return 1.5;
-      if (code.includes('FTD')) return 1.0;
-      if (lmpType === 'FIC') return 1.2;
+      // FTD events: 2.0hrs for BPC+IPC and FIC courses
+      if (code.includes('FTD')) {
+        if (lmpType === 'BPC+IPC' || lmpType === 'FIC') return 2.0;
+        return 1.0;
+      }
+      // Flight events: 1.2hrs for BPC+IPC and FIC courses
+      if (lmpType === 'FIC' || lmpType === 'BPC+IPC') return 1.2;
       return 1.3;
     };
 
