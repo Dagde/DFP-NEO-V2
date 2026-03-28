@@ -2072,6 +2072,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
       // Initialise completed events tracker for this trainee
       if (!traineeCompletedEvents[trainee.id]) {
         traineeCompletedEvents[trainee.id] = {
+          traineeId: trainee.id,
           traineeFullName: trainee.fullName,
           lmpType: config.lmpType,
           completedIds: new Set(),
@@ -2273,20 +2274,30 @@ app.post('/api/historical-data/seed', async (req, res) => {
       try {
         const completedEventIds = Array.from(data.completedIds);
 
-        // Apply BIF FTD dependency rules (mirror the lmp-sync endpoint logic)
+        // Apply BIF FTD dependency rules (mirror the lmp-sync + fix-bif-ftd-dependencies logic)
+        // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
         if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
           completedEventIds.push('BIF FTD1');
+          console.log(`📍 ${data.traineeFullName}: Auto-marking BIF FTD1 complete (BIF FTD2 is complete)`);
         }
+        // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
         if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
           completedEventIds.push('BIF FTD3');
+          console.log(`📍 ${data.traineeFullName}: Auto-marking BIF FTD3 complete (BIF1 is complete)`);
         }
+        // Rule 3: Remove asterisk variants if clean versions already present
+        const deduplicated = completedEventIds.filter(id => {
+          if (id === 'BIF FTD1*' && completedEventIds.includes('BIF FTD1')) return false;
+          if (id === 'BIF FTD3*' && completedEventIds.includes('BIF FTD3')) return false;
+          return true;
+        });
 
         await db.individualLMP.upsert({
           where: { traineeId },
           update: {
             traineeFullName: data.traineeFullName,
             lmpType: data.lmpType,
-            completedEventIds,
+            completedEventIds: deduplicated,
             updatedAt: new Date(),
           },
           create: {
@@ -2294,16 +2305,76 @@ app.post('/api/historical-data/seed', async (req, res) => {
             traineeFullName: data.traineeFullName,
             lmpType: data.lmpType,
             events: [],
-            completedEventIds,
+            completedEventIds: deduplicated,
           },
         });
 
-        console.log(`✅ IndividualLMP updated for ${data.traineeFullName}: ${completedEventIds.length} events completed`);
+        console.log(`✅ IndividualLMP updated for ${data.traineeFullName}: ${deduplicated.length} events completed`);
         lmpUpdated++;
       } catch (err) {
         console.warn(`⚠️ Could not update IndividualLMP for traineeId ${traineeId}:`, err.message);
         lmpSkipped++;
       }
+    }
+
+    // ----------------------------------------------------------------
+    // POST-SEED: Run BIF FTD dependency fix across ALL active ADF trainees
+    // This catches any trainees whose IndividualLMP was not touched by this
+    // seed run (e.g. trainees on courses not in courseConfig) but who may
+    // already have BIF FTD2 or BIF1 in their completedEventIds from a
+    // previous sync or manual entry.
+    // ----------------------------------------------------------------
+    console.log('🔧 Running BIF FTD dependency fix across all active ADF trainees...');
+    try {
+      const adfTrainees = await db.trainee.findMany({
+        where: { isActive: true, course: { startsWith: 'ADF' } },
+        include: { individualLMP: true },
+      });
+
+      let ftd1Fixed = 0, ftd3Fixed = 0, asterisksRemoved = 0;
+
+      for (const t of adfTrainees) {
+        if (!t.individualLMP) continue;
+        const ids = t.individualLMP.completedEventIds || [];
+        const updated = [...ids];
+        let changed = false;
+
+        if (updated.includes('BIF FTD2') && !updated.includes('BIF FTD1')) {
+          updated.push('BIF FTD1');
+          changed = true;
+          ftd1Fixed++;
+          console.log(`🔧 ${t.fullName}: BIF FTD1 marked complete (BIF FTD2 done)`);
+        }
+        if (updated.includes('BIF1') && !updated.includes('BIF FTD3')) {
+          updated.push('BIF FTD3');
+          changed = true;
+          ftd3Fixed++;
+          console.log(`🔧 ${t.fullName}: BIF FTD3 marked complete (BIF1 done)`);
+        }
+
+        // Remove asterisk variants
+        const filtered = updated.filter(id => {
+          if (id === 'BIF FTD1*' && updated.includes('BIF FTD1')) return false;
+          if (id === 'BIF FTD3*' && updated.includes('BIF FTD3')) return false;
+          return true;
+        });
+        if (filtered.length !== updated.length) {
+          updated.splice(0, updated.length, ...filtered);
+          changed = true;
+          asterisksRemoved++;
+        }
+
+        if (changed) {
+          await db.individualLMP.update({
+            where: { traineeId: t.id },
+            data: { completedEventIds: updated, updatedAt: new Date() },
+          });
+        }
+      }
+
+      console.log(`✅ BIF FTD fix complete: FTD1 fixed=${ftd1Fixed}, FTD3 fixed=${ftd3Fixed}, asterisks removed=${asterisksRemoved}`);
+    } catch (bifErr) {
+      console.warn('⚠️ BIF FTD post-seed fix encountered an error:', bifErr.message);
     }
 
     // Save publishedSchedules and pt051Assessments to DataBackup
@@ -2324,6 +2395,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
       scoresSkipped,
       lmpUpdated,
       lmpSkipped,
+      bifFtdDependenciesApplied: true,
       coursesSeeded: [...new Set(trainees.filter(t => courseConfig[t.course]).map(t => t.course))],
     };
 
