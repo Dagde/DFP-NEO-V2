@@ -4290,10 +4290,12 @@ useEffect(() => {
                                 const lmpData = await lmpRes.json();
                                 const lmps = lmpData.lmps as Array<{
                                     traineeFullName: string;
+                                    lmpType: string;
                                     completedEventIds: string[];
                                 }>;
 
                                 if (lmps && lmps.length > 0) {
+                                    // Update both scores state and traineeLMPs state with completion status
                                     setScores(prev => {
                                         const merged = new Map(prev);
                                         lmps.forEach(lmp => {
@@ -4321,6 +4323,32 @@ useEffect(() => {
                                         });
                                         console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
                                         return merged;
+                                    });
+
+                                    // Update traineeLMPs state with completion status from database
+                                    setTraineeLMPs(prev => {
+                                        const newLMPs = new Map(prev);
+                                        lmps.forEach(lmp => {
+                                            const existingLMP = newLMPs.get(lmp.traineeFullName);
+                                            if (!existingLMP) return;
+
+                                            // Normalize event IDs - strip asterisks
+                                            const normalizedCompletedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
+
+                                            // Update completedAt field for each event in the Individual LMP
+                                            const updatedLMP = existingLMP.map(item => {
+                                                const isCompleted = normalizedCompletedIds.includes(item.id || item.code);
+                                                return {
+                                                    ...item,
+                                                    completedAt: isCompleted ? (item.completedAt || new Date().toISOString()) : null,
+                                                };
+                                            });
+
+                                            newLMPs.set(lmp.traineeFullName, updatedLMP);
+                                            console.log(`[LMP Sync] Updated Individual LMP for ${lmp.traineeFullName} with ${lmp.completedEventIds.length} completed events`);
+                                        });
+                                        console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs updated with completion status`);
+                                        return newLMPs;
                                     });
                                 }
                             }
