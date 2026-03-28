@@ -496,7 +496,9 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       // Build set of completed event IDs from PT-051 Score records
       const scoreMap = {};
       trainee.scores.forEach(s => {
-        scoreMap[s.event] = s.date ? s.date.toISOString() : null;
+        // Strip asterisks from event codes for matching (e.g., 'BIF FTD1*' -> 'BIF FTD1')
+        const normalizedEvent = (s.event || '').replace('*', '');
+        scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
       });
       const completedEventIds = Object.keys(scoreMap);
 
