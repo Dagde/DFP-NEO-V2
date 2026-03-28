@@ -1840,6 +1840,31 @@ app.post('/api/historical-data/seed', async (req, res) => {
       });
     }
 
+    // ----------------------------------------------------------------
+    // RESET: Clear all existing historical data before reseeding
+    // This ensures a clean slate for IndividualLMP, PT-051s, and scores
+    // ----------------------------------------------------------------
+    console.log('🧹 Resetting historical data before reseeding...');
+
+    // Delete all historical seed scores from DB
+    await db.score.deleteMany({
+      where: { notes: { contains: 'Historical seed:' } }
+    });
+
+    // Clear all IndividualLMP completedEventIds for active trainees
+    // (reset to empty so the new seed data is authoritative)
+    await db.$executeRawUnsafe(`
+      UPDATE "IndividualLMP"
+      SET "completedEventIds" = ARRAY[]::TEXT[], "updatedAt" = NOW()
+    `);
+
+    // Clear DataBackup historical records
+    await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
+    await db.dataBackup.deleteMany({ where: { type: 'historical_pt051_assessments' } });
+    await db.dataBackup.deleteMany({ where: { type: 'historical_seeding_metadata' } });
+
+    console.log('✅ Reset complete. Starting fresh seed...');
+
     // Fetch all trainees and instructors
     const trainees = await db.trainee.findMany({
       where: { isActive: true },
@@ -1863,13 +1888,15 @@ app.post('/api/historical-data/seed', async (req, res) => {
     console.log(`🌱 Seeding historical data for ${trainees.length} trainees with ${qfiInstructors.length} instructors`);
 
     // Course configuration
+    // progressRange: [startEvent, endEvent] - trainee is randomly placed anywhere in this range
+    // For FIC courses, centreEvent is still used (original ±3 logic retained)
     const courseConfig = {
-      'ADF301': { startDate: '2023-04-01', centreEvent: 'BGF22', lmpType: 'BPC+IPC' },
-      'ADF302': { startDate: '2025-08-01', centreEvent: 'BNF FTD1', lmpType: 'BPC+IPC' },
-      'ADF303': { startDate: '2025-12-01', centreEvent: 'BGF14', lmpType: 'BPC+IPC' },
-      'FIC210': { startDate: '2025-10-01', centreEvent: 'AIT3', lmpType: 'FIC' },
-      'FIC211': { startDate: '2026-01-11', centreEvent: 'FIC4', lmpType: 'FIC' },
-      'FIC 210': { startDate: '2025-10-01', centreEvent: 'AIT3', lmpType: 'FIC' },
+      'ADF301': { startDate: '2023-04-01', lmpType: 'BPC+IPC', progressRange: ['BIF TUT2', 'BGF23'] },
+      'ADF302': { startDate: '2025-08-01', lmpType: 'BPC+IPC', progressRange: ['BGF10', 'BGF19'] },
+      'ADF303': { startDate: '2025-12-01', lmpType: 'BPC+IPC', progressRange: ['BGF1', 'BGF5'] },
+      'FIC210': { startDate: '2025-10-01', lmpType: 'FIC', centreEvent: 'AIT3' },
+      'FIC211': { startDate: '2026-01-11', lmpType: 'FIC', centreEvent: 'FIC4' },
+      'FIC 210': { startDate: '2025-10-01', lmpType: 'FIC', centreEvent: 'AIT3' },
     };
 
     // BPC+IPC syllabus ordered sequence
@@ -1943,6 +1970,10 @@ app.post('/api/historical-data/seed', async (req, res) => {
     const pt051Assessments = {};   // { key: Pt051Assessment }
     const scoreRecords = [];       // { traineeId, event, score, date, instructor, notes }
 
+    // Track completed event IDs per trainee for IndividualLMP upsert
+    // Key: trainee.id, Value: { traineeFullName, lmpType, completedEventIds: string[] }
+    const traineeCompletedEvents = {}; // { traineeId: Set<string> }
+
     // PT-051 ALL_ELEMENTS - exact 22 elements matching PT051_STRUCTURE in PT051View.tsx
     // This must match exactly: PT051_STRUCTURE.flatMap(cat => cat.elements)
     const ALL_ELEMENTS = [
@@ -1981,19 +2012,43 @@ app.post('/api/historical-data/seed', async (req, res) => {
       if (!config) continue; // Skip courses not in config (ADF304, ADF305, IFF6 etc)
 
       const syllabus = config.lmpType === 'FIC' ? FIC_SYLLABUS : BPC_IPC_SYLLABUS;
-      const centreIdx = syllabus.indexOf(config.centreEvent);
-      if (centreIdx === -1) {
-        console.warn(`⚠️ Centre event '${config.centreEvent}' not found in ${config.lmpType} syllabus for course ${course}`);
-        continue;
-      }
 
       // Each trainee gets a unique seed based on their id/idNumber
       const seedVal = trainee.idNumber ? parseInt(String(trainee.idNumber).replace(/\D/g, '') || '0') : parseInt(trainee.id.slice(-8), 16);
       const rand = seededRand(isNaN(seedVal) ? 42 : seedVal);
 
-      // Assign this trainee's progress point: centreIdx ± 3
-      const progressOffset = Math.floor(rand() * 7) - 3; // -3 to +3
-      const traineeLastIdx = Math.max(0, Math.min(syllabus.length - 1, centreIdx + progressOffset));
+      // Determine the last syllabus index for this trainee
+      let traineeLastIdx;
+
+      if (config.progressRange) {
+        // Range-based progress: randomly pick an index within [rangeStartIdx, rangeEndIdx]
+        const [rangeStartEvent, rangeEndEvent] = config.progressRange;
+        const rangeStartIdx = syllabus.indexOf(rangeStartEvent);
+        const rangeEndIdx = syllabus.indexOf(rangeEndEvent);
+
+        if (rangeStartIdx === -1) {
+          console.warn(`⚠️ Range start event '${rangeStartEvent}' not found in ${config.lmpType} syllabus for course ${course}`);
+          continue;
+        }
+        if (rangeEndIdx === -1) {
+          console.warn(`⚠️ Range end event '${rangeEndEvent}' not found in ${config.lmpType} syllabus for course ${course}`);
+          continue;
+        }
+
+        const rangeSize = rangeEndIdx - rangeStartIdx + 1;
+        traineeLastIdx = rangeStartIdx + Math.floor(rand() * rangeSize);
+        console.log(`📍 ${trainee.fullName} (${course}): progress at index ${traineeLastIdx} → '${syllabus[traineeLastIdx]}' (range: '${rangeStartEvent}' to '${rangeEndEvent}')`);
+      } else {
+        // FIC courses: use centreEvent ± 3 logic (unchanged)
+        const centreIdx = syllabus.indexOf(config.centreEvent);
+        if (centreIdx === -1) {
+          console.warn(`⚠️ Centre event '${config.centreEvent}' not found in ${config.lmpType} syllabus for course ${course}`);
+          continue;
+        }
+        const progressOffset = Math.floor(rand() * 7) - 3; // -3 to +3
+        traineeLastIdx = Math.max(0, Math.min(syllabus.length - 1, centreIdx + progressOffset));
+      }
+
       const eventsToGenerate = syllabus.slice(0, traineeLastIdx + 1);
 
       if (eventsToGenerate.length === 0) continue;
@@ -2013,6 +2068,15 @@ app.post('/api/historical-data/seed', async (req, res) => {
       // Pick 3-4 instructors to use for this trainee (realistic - not all instructors every time)
       const shuffledInstructors = [...qfiInstructors].sort(() => rand() - 0.5);
       const traineeInstructors = shuffledInstructors.slice(0, 3 + Math.floor(rand() * 2));
+
+      // Initialise completed events tracker for this trainee
+      if (!traineeCompletedEvents[trainee.id]) {
+        traineeCompletedEvents[trainee.id] = {
+          traineeFullName: trainee.fullName,
+          lmpType: config.lmpType,
+          completedIds: new Set(),
+        };
+      }
 
       for (let i = 0; i < eventsToGenerate.length; i++) {
         const code = eventsToGenerate[i];
@@ -2162,6 +2226,11 @@ app.post('/api/historical-data/seed', async (req, res) => {
             isCompleted: true,
             isHistoricalSeed: true,
           };
+
+          // Mark this event as completed in IndividualLMP (PT-051 exists = completed)
+          // Strip asterisks for LMP matching (e.g. 'BIF FTD1*' → 'BIF FTD1')
+          const normalizedCode = code.replace('*', '');
+          traineeCompletedEvents[trainee.id].completedIds.add(normalizedCode);
         }
 
         // Add score record for DB persistence
@@ -2180,37 +2249,68 @@ app.post('/api/historical-data/seed', async (req, res) => {
       }
     }
 
-    // Save scores to DB (with duplicate protection)
+    // Save scores to DB (scores were cleared above, so no duplicates expected)
     let scoresInserted = 0;
     let scoresSkipped = 0;
 
     for (const rec of scoreRecords) {
       try {
-        // Check for existing score
-        const existing = await db.score.findFirst({
-          where: {
-            traineeId: rec.traineeId,
-            event: rec.event,
-          }
-        });
-        if (!existing) {
-          await db.score.create({ data: rec });
-          scoresInserted++;
-        } else {
-          scoresSkipped++;
-        }
+        await db.score.create({ data: rec });
+        scoresInserted++;
       } catch (err) {
+        // Fallback: skip if a duplicate somehow exists
         console.warn(`⚠️ Could not insert score for trainee ${rec.traineeId} event ${rec.event}:`, err.message);
+        scoresSkipped++;
+      }
+    }
+
+    // Update IndividualLMP for each processed trainee
+    // Set completedEventIds to the set of events that have a PT-051 assessment
+    let lmpUpdated = 0;
+    let lmpSkipped = 0;
+
+    for (const [traineeId, data] of Object.entries(traineeCompletedEvents)) {
+      try {
+        const completedEventIds = Array.from(data.completedIds);
+
+        // Apply BIF FTD dependency rules (mirror the lmp-sync endpoint logic)
+        if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
+          completedEventIds.push('BIF FTD1');
+        }
+        if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
+          completedEventIds.push('BIF FTD3');
+        }
+
+        await db.individualLMP.upsert({
+          where: { traineeId },
+          update: {
+            traineeFullName: data.traineeFullName,
+            lmpType: data.lmpType,
+            completedEventIds,
+            updatedAt: new Date(),
+          },
+          create: {
+            traineeId,
+            traineeFullName: data.traineeFullName,
+            lmpType: data.lmpType,
+            events: [],
+            completedEventIds,
+          },
+        });
+
+        console.log(`✅ IndividualLMP updated for ${data.traineeFullName}: ${completedEventIds.length} events completed`);
+        lmpUpdated++;
+      } catch (err) {
+        console.warn(`⚠️ Could not update IndividualLMP for traineeId ${traineeId}:`, err.message);
+        lmpSkipped++;
       }
     }
 
     // Save publishedSchedules and pt051Assessments to DataBackup
-    await db.dataBackup.deleteMany({ where: { type: 'historical_published_schedules' } });
     await db.dataBackup.create({
       data: { type: 'historical_published_schedules', data: publishedSchedules }
     });
 
-    await db.dataBackup.deleteMany({ where: { type: 'historical_pt051_assessments' } });
     await db.dataBackup.create({
       data: { type: 'historical_pt051_assessments', data: pt051Assessments }
     });
@@ -2222,10 +2322,11 @@ app.post('/api/historical-data/seed', async (req, res) => {
       pt051Count: Object.keys(pt051Assessments).length,
       scoresInserted,
       scoresSkipped,
+      lmpUpdated,
+      lmpSkipped,
       coursesSeeded: [...new Set(trainees.filter(t => courseConfig[t.course]).map(t => t.course))],
     };
 
-    await db.dataBackup.deleteMany({ where: { type: 'historical_seeding_metadata' } });
     await db.dataBackup.create({
       data: { type: 'historical_seeding_metadata', data: metadata }
     });
