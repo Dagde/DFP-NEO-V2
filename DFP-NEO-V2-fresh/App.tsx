@@ -4297,9 +4297,18 @@ useEffect(() => {
                                     setScores(prev => {
                                         const merged = new Map(prev);
                                         lmps.forEach(lmp => {
+                                            // Only update scores for trainees that have at least 1 completed event.
+                                            // Skip trainees with 0 completedEventIds to preserve mock/simulated scores
+                                            // for trainees who don't yet have DB-persisted completion data.
+                                            if (!lmp.completedEventIds || lmp.completedEventIds.length === 0) return;
+
+                                            // Normalize event IDs — strip asterisks so 'BIF FTD1*' matches 'BIF FTD1'
+                                            // in the syllabus (createSyllabusItem already strips asterisks from item.id)
+                                            const normalizedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
+
                                             // Convert completedEventIds (string[]) back to Score[] shape
                                             // so computeNextEventsForTrainee can do: scores.get(fullName).map(s => s.event)
-                                            const scoreRecords: Score[] = lmp.completedEventIds.map(eventId => ({
+                                            const scoreRecords: Score[] = normalizedIds.map((eventId: string) => ({
                                                 event: eventId,
                                                 score: 3 as 0 | 1 | 2 | 3 | 4 | 5,
                                                 date: '',
