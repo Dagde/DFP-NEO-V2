@@ -513,6 +513,53 @@ app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
   }
 });
 
+// POST /api/fix-pt051-scores - Remove asterisks from PT-051 Score records
+// This fixes the display in the Performance History table
+app.post('/api/fix-pt051-scores', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    console.log('[PT-051 Fix] Starting PT-051 Score fix...');
+
+    // Get all Score records with BIF FTD1* or BIF FTD3*
+    const scoresToFix = await db.score.findMany({
+      where: {
+        event: {
+          in: ['BIF FTD1*', 'BIF FTD3*']
+        }
+      }
+    });
+
+    console.log(`[PT-051 Fix] Found ${scoresToFix.length} PT-051 Score records with asterisks`);
+
+    let updatedCount = 0;
+    const details = [];
+
+    for (const score of scoresToFix) {
+      const oldEvent = score.event;
+      const newEvent = oldEvent.replace('*', '');
+      
+      await db.score.update({
+        where: { id: score.id },
+        data: { event: newEvent }
+      });
+      
+      updatedCount++;
+      details.push(`Updated score for ${score.traineeFullName}: ${oldEvent} → ${newEvent}`);
+    }
+
+    console.log(`[PT-051 Fix] Complete: Updated ${updatedCount} PT-051 Score records`);
+    res.json({
+      success: true,
+      updatedCount,
+      totalScores: scoresToFix.length,
+      details
+    });
+  } catch (error) {
+    console.error('[PT-051 Fix] Error:', error);
+    res.status(500).json({ error: 'Failed to fix PT-051 Score records', details: error.message });
+  }
+});
+
 // ============================================================
 
 // GET /api/trainees/lmp-sync - Return all IndividualLMPs (traineeFullName + completedEventIds)
