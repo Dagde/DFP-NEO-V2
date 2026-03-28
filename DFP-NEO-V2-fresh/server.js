@@ -643,7 +643,21 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         const normalizedEvent = (s.event || '').replace('*', '');
         scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
       });
-      const completedEventIds = Object.keys(scoreMap);
+      let completedEventIds = Object.keys(scoreMap);
+
+      // Apply BIF FTD dependency rules:
+      // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
+      if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
+        completedEventIds.push('BIF FTD1');
+        scoreMap['BIF FTD1'] = scoreMap['BIF FTD2']; // use BIF FTD2's date
+        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD1 complete (BIF FTD2 done)`);
+      }
+      // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
+      if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
+        completedEventIds.push('BIF FTD3');
+        scoreMap['BIF FTD3'] = scoreMap['BIF1']; // use BIF1's date
+        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD3 complete (BIF1 done)`);
+      }
 
       // Build the full LMP events array with completion status
       const lmpEvents = masterSyllabus.map(item => ({
