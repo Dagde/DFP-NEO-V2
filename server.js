@@ -367,6 +367,98 @@ if (fs.existsSync(staticPath)) {
   console.log(`✅ Serving static files from: ${staticPath}`);
 }
 
+// ========================================================================
+// UPDATE EVENT DURATIONS ENDPOINT
+// ========================================================================
+
+app.put('/api/update-event-durations', async (req, res) => {
+  try {
+    const { courses } = req.body; // Array of course names, e.g., ['BPC+IPC', 'FIC']
+    
+    if (!courses || !Array.isArray(courses)) {
+      return res.status(400).json({ error: 'courses array is required' });
+    }
+
+    console.log('[Update Durations] Starting duration updates for courses:', courses);
+    
+    const db = await getPrisma();
+    
+    // Get all trainees in specified courses
+    const trainees = await db.trainee.findMany({
+      where: {
+        course: {
+          in: courses
+        }
+      },
+      select: {
+        idNumber: true,
+        name: true,
+        course: true
+      }
+    });
+    
+    console.log(`[Update Durations] Found ${trainees.length} trainees in specified courses`);
+    
+    let totalFlightUpdates = 0;
+    let totalFtdUpdates = 0;
+    const details = [];
+    
+    // Update events for each course
+    for (const trainee of trainees) {
+      const traineeId = trainee.idNumber;
+      
+      // Update flight events (type: 'flight') to 1.2hrs
+      const flightUpdate = await db.scheduleEvent.updateMany({
+        where: {
+          traineeId: traineeId,
+          type: 'flight'
+        },
+        data: {
+          duration: 1.2
+        }
+      });
+      
+      // Update FTD events (type: 'ftd') to 2.0hrs
+      const ftdUpdate = await db.scheduleEvent.updateMany({
+        where: {
+          traineeId: traineeId,
+          type: 'ftd'
+        },
+        data: {
+          duration: 2.0
+        }
+      });
+      
+      totalFlightUpdates += flightUpdate.count;
+      totalFtdUpdates += ftdUpdate.count;
+      
+      if (flightUpdate.count > 0 || ftdUpdate.count > 0) {
+        details.push({
+          traineeName: trainee.name,
+          course: trainee.course,
+          flightUpdates: flightUpdate.count,
+          ftdUpdates: ftdUpdate.count
+        });
+        console.log(`[Update Durations] [Trainee ${trainee.name} (${trainee.course})]: Updated ${flightUpdate.count} flight events to 1.2hrs and ${ftdUpdate.count} FTD events to 2.0hrs`);
+      }
+    }
+    
+    console.log(`[Update Durations] ✅ Completed: ${totalFlightUpdates} flight events updated to 1.2hrs, ${totalFtdUpdates} FTD events updated to 2.0hrs`);
+    
+    res.json({
+      success: true,
+      message: `Updated ${totalFlightUpdates} flight events to 1.2hrs and ${totalFtdUpdates} FTD events to 2.0hrs`,
+      totalFlightUpdates,
+      totalFtdUpdates,
+      details
+    });
+    
+  } catch (error) {
+    console.error('[Update Durations] Error:', error);
+    res.status(500).json({ error: 'Failed to update event durations', details: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
