@@ -422,6 +422,7 @@ app.patch('/api/trainees/fix-lmp-type', async (req, res) => {
 // POST /api/fix-bif-ftd-dependencies - Fix BIF FTD dependencies
 // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
 // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
+// Rule 3: Remove asterisk versions (BIF FTD1*, BIF FTD3*) from completedEventIds
 app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -444,6 +445,7 @@ app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
 
     let ftd1Fixed = 0;
     let ftd3Fixed = 0;
+    let asterisksRemoved = 0;
     const details = [];
 
     for (const trainee of trainees) {
@@ -469,6 +471,22 @@ app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
         details.push(`${trainee.fullName}: Marking BIF FTD3 complete (BIF1 is complete)`);
       }
 
+      // Rule 3: Remove asterisk versions if non-asterisk versions exist
+      const originalLength = newCompletedIds.length;
+      const filtered = newCompletedIds.filter(id => {
+        // Remove BIF FTD1* if BIF FTD1 exists, remove BIF FTD3* if BIF FTD3 exists
+        if (id === 'BIF FTD1*' && newCompletedIds.includes('BIF FTD1')) return false;
+        if (id === 'BIF FTD3*' && newCompletedIds.includes('BIF FTD3')) return false;
+        return true;
+      });
+      
+      if (filtered.length !== originalLength) {
+        newCompletedIds.splice(0, newCompletedIds.length, ...filtered);
+        changed = true;
+        asterisksRemoved++;
+        details.push(`${trainee.fullName}: Removed asterisk versions from completedEventIds`);
+      }
+
       if (changed) {
         await db.individualLMP.update({
           where: { traineeId: trainee.id },
@@ -480,11 +498,12 @@ app.post('/api/fix-bif-ftd-dependencies', async (req, res) => {
       }
     }
 
-    console.log(`[BIF FTD Fix] Complete: BIF FTD1=${ftd1Fixed}, BIF FTD3=${ftd3Fixed}`);
+    console.log(`[BIF FTD Fix] Complete: BIF FTD1=${ftd1Fixed}, BIF FTD3=${ftd3Fixed}, Asterisks removed=${asterisksRemoved}`);
     res.json({
       success: true,
       ftd1Fixed,
       ftd3Fixed,
+      asterisksRemoved,
       totalTrainees: trainees.length,
       details
     });
