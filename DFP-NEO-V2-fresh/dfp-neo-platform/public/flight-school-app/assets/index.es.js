@@ -405,10 +405,10 @@ function requireSharedStore() {
   var SHARED = "__core-js_shared__";
   var store = sharedStore.exports = globalThis2[SHARED] || defineGlobalProperty2(SHARED, {});
   (store.versions || (store.versions = [])).push({
-    version: "3.47.0",
+    version: "3.49.0",
     mode: IS_PURE ? "pure" : "global",
-    copyright: "© 2014-2025 Denis Pushkarev (zloirock.ru), 2025 CoreJS Company (core-js.io)",
-    license: "https://github.com/zloirock/core-js/blob/v3.47.0/LICENSE",
+    copyright: "© 2013–2025 Denis Pushkarev (zloirock.ru), 2025–2026 CoreJS Company (core-js.io). All rights reserved.",
+    license: "https://github.com/zloirock/core-js/blob/v3.49.0/LICENSE",
     source: "https://github.com/zloirock/core-js"
   });
   return sharedStore.exports;
@@ -1542,7 +1542,7 @@ function requireEnvironmentIsIos() {
   if (hasRequiredEnvironmentIsIos) return environmentIsIos;
   hasRequiredEnvironmentIsIos = 1;
   var userAgent = requireEnvironmentUserAgent();
-  environmentIsIos = /(?:ipad|iphone|ipod).*applewebkit/i.test(userAgent);
+  environmentIsIos = /ipad|iphone|ipod/i.test(userAgent) && /applewebkit/i.test(userAgent);
   return environmentIsIos;
 }
 var task;
@@ -2251,15 +2251,17 @@ function requireIterate() {
     var fn = bind(unboundFunction, that);
     var iterator, iterFn, index2, length, result, next, step;
     var stop = function(condition) {
-      if (iterator) iteratorClose2(iterator, "normal");
+      var $iterator = iterator;
+      iterator = void 0;
+      if ($iterator) iteratorClose2($iterator, "normal");
       return new Result(true, condition);
     };
-    var callFn = function(value) {
+    var callFn = function(value2) {
       if (AS_ENTRIES) {
-        anObject2(value);
-        return INTERRUPTED ? fn(value[0], value[1], stop) : fn(value[0], value[1]);
+        anObject2(value2);
+        return INTERRUPTED ? fn(value2[0], value2[1], stop) : fn(value2[0], value2[1]);
       }
-      return INTERRUPTED ? fn(value, stop) : fn(value);
+      return INTERRUPTED ? fn(value2, stop) : fn(value2);
     };
     if (IS_RECORD) {
       iterator = iterable.iterator;
@@ -2279,10 +2281,12 @@ function requireIterate() {
     }
     next = IS_RECORD ? iterable.next : iterator.next;
     while (!(step = call(next, iterator)).done) {
+      var value = step.value;
       try {
-        result = callFn(step.value);
+        result = callFn(value);
       } catch (error) {
-        iteratorClose2(iterator, "throw", error);
+        if (iterator) iteratorClose2(iterator, "throw", error);
+        else throw error;
       }
       if (typeof result == "object" && result && isPrototypeOf(ResultPrototype, result)) return result;
     }
@@ -2766,17 +2770,25 @@ function requireRegexpExec() {
   var UNSUPPORTED_Y = stickyHelpers.BROKEN_CARET;
   var NPCG_INCLUDED = /()??/.exec("")[1] !== void 0;
   var PATCH = UPDATES_LAST_INDEX_WRONG || NPCG_INCLUDED || UNSUPPORTED_Y || UNSUPPORTED_DOT_ALL || UNSUPPORTED_NCG;
+  var setGroups = function(re, groups) {
+    var object = re.groups = create(null);
+    for (var i2 = 0; i2 < groups.length; i2++) {
+      var group = groups[i2];
+      object[group[0]] = re[group[1]];
+    }
+  };
   if (PATCH) {
     patchedExec = function exec(string) {
       var re = this;
       var state = getInternalState(re);
       var str = toString2(string);
       var raw = state.raw;
-      var result, reCopy, lastIndex, match, i2, object, group;
+      var result, reCopy, lastIndex;
       if (raw) {
         raw.lastIndex = re.lastIndex;
         result = call(patchedExec, raw, str);
         re.lastIndex = raw.lastIndex;
+        if (result && state.groups) setGroups(result, state.groups);
         return result;
       }
       var groups = state.groups;
@@ -2791,8 +2803,9 @@ function requireRegexpExec() {
           flags += "g";
         }
         strCopy = stringSlice(str, re.lastIndex);
-        if (re.lastIndex > 0 && (!re.multiline || re.multiline && charAt(str, re.lastIndex - 1) !== "\n")) {
-          source = "(?: " + source + ")";
+        var prevChar = re.lastIndex > 0 && charAt(str, re.lastIndex - 1);
+        if (re.lastIndex > 0 && (!re.multiline || re.multiline && prevChar !== "\n" && prevChar !== "\r" && prevChar !== "\u2028" && prevChar !== "\u2029")) {
+          source = "(?: (?:" + source + "))";
           strCopy = " " + strCopy;
           charsAdded++;
         }
@@ -2802,10 +2815,10 @@ function requireRegexpExec() {
         reCopy = new RegExp("^" + source + "$(?!\\s)", flags);
       }
       if (UPDATES_LAST_INDEX_WRONG) lastIndex = re.lastIndex;
-      match = call(nativeExec, sticky ? reCopy : re, strCopy);
+      var match = call(nativeExec, sticky ? reCopy : re, strCopy);
       if (sticky) {
         if (match) {
-          match.input = stringSlice(match.input, charsAdded);
+          match.input = str;
           match[0] = stringSlice(match[0], charsAdded);
           match.index = re.lastIndex;
           re.lastIndex += match[0].length;
@@ -2815,18 +2828,12 @@ function requireRegexpExec() {
       }
       if (NPCG_INCLUDED && match && match.length > 1) {
         call(nativeReplace, match[0], reCopy, function() {
-          for (i2 = 1; i2 < arguments.length - 2; i2++) {
+          for (var i2 = 1; i2 < arguments.length - 2; i2++) {
             if (arguments[i2] === void 0) match[i2] = void 0;
           }
         });
       }
-      if (match && groups) {
-        match.groups = object = create(null);
-        for (i2 = 0; i2 < groups.length; i2++) {
-          group = groups[i2];
-          object[group[0]] = match[group[1]];
-        }
-      }
+      if (match && groups) setGroups(match, groups);
       return match;
     };
   }
@@ -2944,7 +2951,7 @@ function requireAdvanceStringIndex() {
   hasRequiredAdvanceStringIndex = 1;
   var charAt = requireStringMultibyte().charAt;
   advanceStringIndex = function(S, index2, unicode) {
-    return index2 + (unicode ? charAt(S, index2).length : 1);
+    return index2 + (unicode ? charAt(S, index2).length || 1 : 1);
   };
   return advanceStringIndex;
 }
@@ -3062,8 +3069,8 @@ function requireEs_string_match() {
         var res = maybeCallNative(nativeMatch, rx, S);
         if (res.done) return res.value;
         var flags = toString2(getRegExpFlags(rx));
-        if (stringIndexOf(flags, "g") === -1) return regExpExec(rx, S);
-        var fullUnicode = stringIndexOf(flags, "u") !== -1;
+        if (!~stringIndexOf(flags, "g")) return regExpExec(rx, S);
+        var fullUnicode = !!~stringIndexOf(flags, "u") || !!~stringIndexOf(flags, "v");
         rx.lastIndex = 0;
         var A = [];
         var n2 = 0;
@@ -3198,17 +3205,17 @@ function requireEs_string_replace() {
       function(string, replaceValue) {
         var rx = anObject2(this);
         var S = toString2(string);
-        if (typeof replaceValue == "string" && stringIndexOf(replaceValue, UNSAFE_SUBSTITUTE) === -1 && stringIndexOf(replaceValue, "$<") === -1) {
-          var res = maybeCallNative(nativeReplace, rx, S, replaceValue);
-          if (res.done) return res.value;
-        }
         var functionalReplace = isCallable2(replaceValue);
         if (!functionalReplace) replaceValue = toString2(replaceValue);
         var flags = toString2(getRegExpFlags(rx));
-        var global = stringIndexOf(flags, "g") !== -1;
+        if (typeof replaceValue == "string" && !~stringIndexOf(replaceValue, UNSAFE_SUBSTITUTE) && !~stringIndexOf(replaceValue, "$<") && !~stringIndexOf(flags, "y")) {
+          var res = maybeCallNative(nativeReplace, rx, S, replaceValue);
+          if (res.done) return res.value;
+        }
+        var global = !!~stringIndexOf(flags, "g");
         var fullUnicode;
         if (global) {
-          fullUnicode = stringIndexOf(flags, "u") !== -1;
+          fullUnicode = !!~stringIndexOf(flags, "u") || !!~stringIndexOf(flags, "v");
           rx.lastIndex = 0;
         }
         var results = [];
@@ -3327,8 +3334,8 @@ function requireEs_string_startsWith() {
     startsWith: function startsWith(searchString) {
       var that = toString2(requireObjectCoercible2(this));
       notARegExp(searchString);
-      var index2 = toLength2(min(arguments.length > 1 ? arguments[1] : void 0, that.length));
       var search = toString2(searchString);
+      var index2 = toLength2(min(arguments.length > 1 ? arguments[1] : void 0, that.length));
       return stringSlice(that, index2, index2 + search.length) === search;
     }
   });
@@ -3846,10 +3853,10 @@ function requireEs_string_endsWith() {
     endsWith: function endsWith(searchString) {
       var that = toString2(requireObjectCoercible2(this));
       notARegExp(searchString);
+      var search = toString2(searchString);
       var endPosition = arguments.length > 1 ? arguments[1] : void 0;
       var len = that.length;
       var end = endPosition === void 0 ? len : min(toLength2(endPosition), len);
-      var search = toString2(searchString);
       return slice(that, end - search.length, end) === search;
     }
   });
@@ -3872,6 +3879,7 @@ function requireEs_string_split() {
   var toLength2 = requireToLength();
   var toString2 = requireToString();
   var getMethod2 = requireGetMethod();
+  var getRegExpFlags = requireRegexpGetFlags();
   var regExpExec = requireRegexpExecAbstract();
   var stickyHelpers = requireRegexpStickyHelpers();
   var fails2 = requireFails();
@@ -3880,6 +3888,7 @@ function requireEs_string_split() {
   var min = Math.min;
   var push = uncurryThis([].push);
   var stringSlice = uncurryThis("".slice);
+  var stringIndexOf = uncurryThis("".indexOf);
   var SPLIT_WORKS_WITH_OVERWRITTEN_EXEC = !fails2(function() {
     var re = /(?:)/;
     var originalExec = re.exec;
@@ -3917,8 +3926,11 @@ function requireEs_string_split() {
           if (res.done) return res.value;
         }
         var C = speciesConstructor2(rx, RegExp);
-        var unicodeMatching = rx.unicode;
-        var flags = (rx.ignoreCase ? "i" : "") + (rx.multiline ? "m" : "") + (rx.unicode ? "u" : "") + (UNSUPPORTED_Y ? "g" : "y");
+        var flags = toString2(getRegExpFlags(rx));
+        var unicodeMatching = !!~stringIndexOf(flags, "u") || !!~stringIndexOf(flags, "v");
+        if (UNSUPPORTED_Y) {
+          if (!~stringIndexOf(flags, "g")) flags += "g";
+        } else if (!~stringIndexOf(flags, "y")) flags += "y";
         var splitter = new C(UNSUPPORTED_Y ? "^(?:" + rx.source + ")" : rx, flags);
         var lim = limit === void 0 ? MAX_UINT32 : limit >>> 0;
         if (lim === 0) return [];
