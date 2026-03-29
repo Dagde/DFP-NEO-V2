@@ -82,7 +82,14 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
 
   // Instructor and Trainee statistics
   const stats = useMemo(() => {
-    const flightOrFtdEvents = events.filter(e => e.type === 'flight' || e.type === 'ftd');
+    // Exclude STBY events: STBY events may have instructor='TBA' (no real instructor found)
+    // which causes trainees to incorrectly appear in 'Other Instructors' stats
+    const flightOrFtdEvents = events.filter(e =>
+      (e.type === 'flight' || e.type === 'ftd') &&
+      !e.resourceId?.startsWith('STBY') &&
+      !e.resourceId?.startsWith('FTD-STBY') &&
+      !e.resourceId?.startsWith('BNF-STBY')
+    );
     
     const instructorEventCounts = new Map<string, number>();
     events.forEach(e => {

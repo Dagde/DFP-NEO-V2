@@ -154,7 +154,14 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
     const flightTiles = events.filter(e => e.type === 'flight').length;
     const ftdTiles = events.filter(e => e.type === 'ftd').length;
     
-    const flightOrFtdEvents = events.filter(e => e.type === 'flight' || e.type === 'ftd');
+    // Exclude STBY events: STBY events may have instructor='TBA' (no real instructor found)
+    // which causes trainees to incorrectly appear in 'Other Instructors' stats
+    const flightOrFtdEvents = events.filter(e =>
+      (e.type === 'flight' || e.type === 'ftd') &&
+      !e.resourceId?.startsWith('STBY') &&
+      !e.resourceId?.startsWith('FTD-STBY') &&
+      !e.resourceId?.startsWith('BNF-STBY')
+    );
     
     const instructorEventCounts = new Map<string, number>();
     events.forEach(e => {
