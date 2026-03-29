@@ -41,6 +41,8 @@ async function getPrisma() {
     await seedCancellationCodesIfEmpty(prisma);
     // Ensure IndividualLMP table exists (create if missing)
     await ensureIndividualLMPTable(prisma);
+    // Ensure DailySnapshot table exists (create if missing)
+    await ensureDailySnapshotTable(prisma);
   }
   return prisma;
 }
@@ -2751,6 +2753,232 @@ app.delete('/api/historical-data', async (req, res) => {
 });
 
 // POST /api/scores/bulk - Bulk insert scores (for seeding)
+// ============================================================
+// DAILY SNAPSHOT TABLE SETUP & ENDPOINTS
+// ============================================================
+
+async function ensureDailySnapshotTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "DailySnapshot" (
+        "id" TEXT NOT NULL,
+        "date" TEXT NOT NULL,
+        "scheduleEvents" JSONB NOT NULL DEFAULT '[]',
+        "staffEvents" JSONB NOT NULL DEFAULT '[]',
+        "traineeEvents" JSONB NOT NULL DEFAULT '[]',
+        "pt051Assessments" JSONB NOT NULL DEFAULT '{}',
+        "traineeProfiles" JSONB NOT NULL DEFAULT '[]',
+        "lmpCompletedIds" JSONB NOT NULL DEFAULT '{}',
+        "staffCurrency" JSONB NOT NULL DEFAULT '{}',
+        "staffLogbook" JSONB NOT NULL DEFAULT '{}',
+        "savedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "savedBy" TEXT,
+        CONSTRAINT "DailySnapshot_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "DailySnapshot_date_key"
+      ON "DailySnapshot"("date");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "DailySnapshot_date_idx"
+      ON "DailySnapshot"("date");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "DailySnapshot_savedAt_idx"
+      ON "DailySnapshot"("savedAt");
+    `);
+    console.log('✅ DailySnapshot table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure DailySnapshot table:', err.message);
+  }
+}
+
+// POST /api/daily-snapshot/save - Save a full daily snapshot when schedule is published
+app.post('/api/daily-snapshot/save', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      date,
+      scheduleEvents,
+      staffEvents,
+      traineeEvents,
+      pt051Assessments,
+      traineeProfiles,
+      lmpCompletedIds,
+      staffCurrency,
+      staffLogbook,
+      savedBy
+    } = req.body;
+
+    if (!date) {
+      return res.status(400).json({ error: 'date is required' });
+    }
+
+    // Guard: reject if any event has isHistoricalSeed = true (never save seed data)
+    const allEvents = [...(scheduleEvents || []), ...(staffEvents || []), ...(traineeEvents || [])];
+    const hasSeedData = allEvents.some(e => e.isHistoricalSeed === true);
+    if (hasSeedData) {
+      console.log(`⚠️ POST /api/daily-snapshot/save - Rejected seed data for date ${date}`);
+      return res.status(400).json({ error: 'Seed data cannot be saved as a real snapshot' });
+    }
+
+    // Upsert: update if date exists, create if not
+    const existing = await db.$queryRawUnsafe(
+      `SELECT id FROM "DailySnapshot" WHERE date = $1 LIMIT 1`,
+      date
+    );
+
+    const { cuid } = await import('@paralleldrive/cuid2').catch(() => ({ cuid: () => Math.random().toString(36).slice(2) }));
+    const id = (existing && existing.length > 0) ? existing[0].id : (typeof cuid === 'function' ? cuid() : `snap_${Date.now()}`);
+
+    if (existing && existing.length > 0) {
+      await db.$executeRawUnsafe(`
+        UPDATE "DailySnapshot"
+        SET
+          "scheduleEvents" = $1::jsonb,
+          "staffEvents" = $2::jsonb,
+          "traineeEvents" = $3::jsonb,
+          "pt051Assessments" = $4::jsonb,
+          "traineeProfiles" = $5::jsonb,
+          "lmpCompletedIds" = $6::jsonb,
+          "staffCurrency" = $7::jsonb,
+          "staffLogbook" = $8::jsonb,
+          "savedAt" = NOW(),
+          "savedBy" = $9
+        WHERE date = $10
+      `,
+        JSON.stringify(scheduleEvents || []),
+        JSON.stringify(staffEvents || []),
+        JSON.stringify(traineeEvents || []),
+        JSON.stringify(pt051Assessments || {}),
+        JSON.stringify(traineeProfiles || []),
+        JSON.stringify(lmpCompletedIds || {}),
+        JSON.stringify(staffCurrency || {}),
+        JSON.stringify(staffLogbook || {}),
+        savedBy || null,
+        date
+      );
+      console.log(`✅ POST /api/daily-snapshot/save - Updated snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
+    } else {
+      await db.$executeRawUnsafe(`
+        INSERT INTO "DailySnapshot"
+          ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
+           "pt051Assessments", "traineeProfiles", "lmpCompletedIds",
+           "staffCurrency", "staffLogbook", "savedAt", "savedBy")
+        VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, NOW(), $11)
+      `,
+        id, date,
+        JSON.stringify(scheduleEvents || []),
+        JSON.stringify(staffEvents || []),
+        JSON.stringify(traineeEvents || []),
+        JSON.stringify(pt051Assessments || {}),
+        JSON.stringify(traineeProfiles || []),
+        JSON.stringify(lmpCompletedIds || {}),
+        JSON.stringify(staffCurrency || {}),
+        JSON.stringify(staffLogbook || {}),
+        savedBy || null
+      );
+      console.log(`✅ POST /api/daily-snapshot/save - Created snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
+    }
+
+    res.json({ success: true, date, eventCount: (scheduleEvents||[]).length });
+  } catch (error) {
+    console.error('❌ POST /api/daily-snapshot/save error:', error);
+    res.status(500).json({ error: 'Failed to save daily snapshot', details: error.message });
+  }
+});
+
+// GET /api/daily-snapshot/dates - Return all dates that have snapshots (for calendar dropdown)
+app.get('/api/daily-snapshot/dates', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(
+      `SELECT date, "savedAt", "savedBy" FROM "DailySnapshot" ORDER BY date DESC`
+    );
+    const dates = (rows || []).map(r => ({
+      date: r.date,
+      savedAt: r.savedAt,
+      savedBy: r.savedBy
+    }));
+    console.log(`✅ GET /api/daily-snapshot/dates - ${dates.length} snapshot dates`);
+    res.json({ dates });
+  } catch (error) {
+    console.error('❌ GET /api/daily-snapshot/dates error:', error);
+    res.status(500).json({ error: 'Failed to load snapshot dates', details: error.message });
+  }
+});
+
+// GET /api/daily-snapshot - Load last 5 days of snapshots
+app.get('/api/daily-snapshot', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "DailySnapshot" ORDER BY date DESC LIMIT 5`
+    );
+    console.log(`✅ GET /api/daily-snapshot - Loaded ${(rows||[]).length} recent snapshots`);
+    res.json({ snapshots: rows || [] });
+  } catch (error) {
+    console.error('❌ GET /api/daily-snapshot error:', error);
+    res.status(500).json({ error: 'Failed to load daily snapshots', details: error.message });
+  }
+});
+
+// GET /api/daily-snapshot/:date - Load a single date snapshot on demand
+app.get('/api/daily-snapshot/:date', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { date } = req.params;
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    }
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "DailySnapshot" WHERE date = $1 LIMIT 1`,
+      date
+    );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: `No snapshot found for date ${date}` });
+    }
+    console.log(`✅ GET /api/daily-snapshot/${date} - Loaded snapshot`);
+    res.json({ snapshot: rows[0] });
+  } catch (error) {
+    console.error('❌ GET /api/daily-snapshot/:date error:', error);
+    res.status(500).json({ error: 'Failed to load snapshot', details: error.message });
+  }
+});
+
+// DELETE /api/daily-snapshot/seed-cleanup - Delete all seed DataBackup records
+app.delete('/api/daily-snapshot/seed-cleanup', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    // Delete all historical seed DataBackup records
+    const deletedSchedules = await db.dataBackup.deleteMany({
+      where: { type: 'historical_published_schedules' }
+    });
+    const deletedPt051 = await db.dataBackup.deleteMany({
+      where: { type: 'historical_pt051_assessments' }
+    });
+    const deletedMeta = await db.dataBackup.deleteMany({
+      where: { type: 'historical_seeding_metadata' }
+    });
+    const total = deletedSchedules.count + deletedPt051.count + deletedMeta.count;
+    console.log(`✅ DELETE /api/daily-snapshot/seed-cleanup - Deleted ${total} seed DataBackup records`);
+    res.json({
+      success: true,
+      deleted: {
+        schedules: deletedSchedules.count,
+        pt051: deletedPt051.count,
+        metadata: deletedMeta.count,
+        total
+      }
+    });
+  } catch (error) {
+    console.error('❌ DELETE /api/daily-snapshot/seed-cleanup error:', error);
+    res.status(500).json({ error: 'Failed to clean up seed data', details: error.message });
+  }
+});
+
 app.post('/api/scores/bulk', async (req, res) => {
   try {
     const db = await getPrisma();

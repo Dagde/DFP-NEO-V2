@@ -309,6 +309,26 @@ model SctRequest {
   @@index([requestType])
 }
 
+// DailySnapshot: One record per date, saved when a schedule is published.
+// Contains a full snapshot of all training data as-of end-of-day for that date.
+model DailySnapshot {
+  id               String   @id @default(cuid())
+  date             String   @unique  // YYYY-MM-DD
+  scheduleEvents   Json     // All published schedule events for that date
+  staffEvents      Json     // Staff/instructor events filtered from schedule
+  traineeEvents    Json     // Trainee events filtered from schedule
+  pt051Assessments Json     // Full PT-051 assessment records as of that date
+  traineeProfiles  Json     // Trainee profiles with performance history
+  lmpCompletedIds  Json     // { traineeFullName: string[] } - completedEventIds per trainee
+  staffCurrency    Json     // { personnelName: currencyStatus[] } per staff member
+  staffLogbook     Json     // Logbook entries (flight times) from publishedSchedules for staff
+  savedAt          DateTime @default(now())
+  savedBy          String?  // userId who published
+
+  @@index([date])
+  @@index([savedAt])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

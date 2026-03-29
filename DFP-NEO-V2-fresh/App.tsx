@@ -4492,11 +4492,56 @@ useEffect(() => {
         loadInitialData();
     }, []);
 
-    // Load persisted historical training data (publishedSchedules + pt051Assessments) from DB
+    // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
     useEffect(() => {
         const loadHistoricalData = async () => {
             try {
                 const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
+                try {
+                    const snapRes = await fetch(`${apiBase}/daily-snapshot`);
+                    if (snapRes.ok) {
+                        const snapData = await snapRes.json();
+                        const snapshots: any[] = snapData.snapshots || [];
+                        if (snapshots.length > 0) {
+                            console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
+                            setPublishedSchedules(prev => {
+                                const merged = { ...prev };
+                                snapshots.forEach(snap => {
+                                    const dateKey = snap.date;
+                                    const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
+                                    // Only use snapshot events if there are no existing non-seed events for this date
+                                    const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
+                                    if (existingNonSeed.length === 0 && events.length > 0) {
+                                        merged[dateKey] = events;
+                                    }
+                                });
+                                return merged;
+                            });
+
+                            // Load PT-051 assessments from the most recent snapshot
+                            const mostRecent = snapshots[0];
+                            if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
+                                const assessments = mostRecent.pt051Assessments as Record<string, Pt051Assessment>;
+                                console.log(`[Snapshot] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments from latest snapshot`);
+                                setPt051Assessments(prev => {
+                                    const merged = new Map(prev);
+                                    Object.entries(assessments).forEach(([key, assessment]) => {
+                                        if (!merged.has(key)) {
+                                            merged.set(key, assessment as Pt051Assessment);
+                                        }
+                                    });
+                                    return merged;
+                                });
+                            }
+                        }
+                    }
+                } catch (snapErr) {
+                    console.warn('[Snapshot] Could not load daily snapshots:', snapErr);
+                }
+
+                // ── SECONDARY: Legacy DataBackup historical-data (seed data, fallback) ──
                 const res = await fetch(`${apiBase}/historical-data`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -4504,13 +4549,13 @@ useEffect(() => {
                 if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
                     const schedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
                     const eventCount = Object.values(schedules).flat().length;
-                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates`);
+                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates (legacy/seed)`);
                     setPublishedSchedules(prev => {
-                        // Merge with existing (don't overwrite future/today's scheduled events)
+                        // Merge historical/seed data — real snapshot data takes priority
                         const merged = { ...schedules };
                         Object.entries(prev).forEach(([date, events]) => {
                             if (events.some(e => !(e as any).isHistoricalSeed)) {
-                                // Keep existing non-seed events for this date alongside historical
+                                // Keep existing non-seed events for this date (snapshot data wins)
                                 const existing = merged[date] || [];
                                 const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
                                 merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
@@ -4522,7 +4567,7 @@ useEffect(() => {
 
                 if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
                     const assessments = data.pt051Assessments as Record<string, Pt051Assessment>;
-                    console.log(`[Historical] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments`);
+                    console.log(`[Historical] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments (legacy)`);
                     setPt051Assessments(prev => {
                         const merged = new Map(prev);
                         Object.entries(assessments).forEach(([key, assessment]) => {
@@ -4542,6 +4587,62 @@ useEffect(() => {
             }
         };
         loadHistoricalData();
+    }, []);
+
+    // Load snapshot dates for calendar dropdown
+    useEffect(() => {
+        const loadSnapshotDates = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/daily-snapshot/dates`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const dates: string[] = (data.dates || []).map((d: any) => d.date);
+                console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
+                setSnapshotDates(dates);
+                // Mark the last 5 (already loaded on startup) as loaded
+                dates.slice(0, 5).forEach(d => loadedSnapshotDates.current.add(d));
+            } catch (err) {
+                console.warn('[Snapshot] Could not load snapshot dates:', err);
+            }
+        };
+        loadSnapshotDates();
+    }, []);
+
+    // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
+    const loadSnapshotForDate = React.useCallback(async (targetDate: string) => {
+        if (loadedSnapshotDates.current.has(targetDate)) return; // already loaded
+        loadedSnapshotDates.current.add(targetDate); // mark as attempted
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
+            if (!res.ok) return; // 404 = no snapshot for that date, that's fine
+            const data = await res.json();
+            const snap = data.snapshot;
+            if (!snap) return;
+            const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
+            if (events.length > 0) {
+                setPublishedSchedules(prev => {
+                    // Only load if no existing non-seed events for this date
+                    const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
+                    if (existingNonSeed.length > 0) return prev;
+                    return { ...prev, [targetDate]: events };
+                });
+                console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
+            }
+            // Also merge PT-051 assessments from this snapshot
+            if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
+                setPt051Assessments(prev => {
+                    const merged = new Map(prev);
+                    Object.entries(snap.pt051Assessments as Record<string, Pt051Assessment>).forEach(([key, assessment]) => {
+                        if (!merged.has(key)) merged.set(key, assessment);
+                    });
+                    return merged;
+                });
+            }
+        } catch (err) {
+            console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
+        }
     }, []);
 
        // Show commit alert on app mount - DISABLED
@@ -4621,6 +4722,10 @@ useEffect(() => {
 
     // Published Schedules State (must be declared before buildResources)
     const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    // Snapshot dates available in DB (for calendar dropdown on date selector)
+    const [snapshotDates, setSnapshotDates] = useState<string[]>([]);
+    // Track which snapshot dates have already been loaded to avoid redundant fetches
+    const loadedSnapshotDates = React.useRef<Set<string>>(new Set());
     
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
@@ -6659,6 +6764,19 @@ useEffect(() => {
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
+        // On-demand load: if this date has a snapshot not yet loaded, fetch it
+        if (snapshotDates.includes(newDateStr)) {
+            loadSnapshotForDate(newDateStr);
+        }
+    };
+
+    // Navigate directly to a specific date (used by calendar dropdown on date selector)
+    const handleDateSelect = (selectedDate: string) => {
+        setDate(selectedDate);
+        // On-demand load: fetch snapshot for this date if available and not yet loaded
+        if (snapshotDates.includes(selectedDate)) {
+            loadSnapshotForDate(selectedDate);
+        }
     };
 
     const onSavePT051Assessment = (assessment: Pt051Assessment) => {
@@ -8192,9 +8310,9 @@ useEffect(() => {
         }));
         
         // NEW APPROACH: Sync PT-051s with Active DFP after publish
-        console.log('📋 Triggering PT-051 sync after publish...');
+        console.log('\u{1F4CB} Triggering PT-051 sync after publish...');
         setTimeout(() => {
-            console.log('⏰ Executing delayed PT-051 sync after publish...');
+            console.log('\u{23F0} Executing delayed PT-051 sync after publish...');
             setPublishedSchedules(currentSchedules => {
                 setPt051Assessments(currentAssessments => {
                     syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -8218,6 +8336,122 @@ useEffect(() => {
                `Published schedule for ${buildDfpDate}`,
                `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, FTD: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
            );
+
+        // ── SAVE DAILY SNAPSHOT TO DATABASE ──────────────────────────────────
+        // Guard: skip if any event is seed data
+        const hasSeedData = newEventsForDate.some(e => (e as any).isHistoricalSeed === true);
+        if (!hasSeedData && newEventsForDate.length > 0) {
+            // Build snapshot data from current state
+            const staffEventsForDate = newEventsForDate.filter(e =>
+                e.instructor && !e.student && e.type !== 'logbook'
+            );
+            const traineeEventsForDate = newEventsForDate.filter(e =>
+                !!(e.student || (e as any).traineeId)
+            );
+
+            // Build per-instructor logbook map from all published schedules + new date
+            const staffLogbookMap: Record<string, any[]> = {};
+            const allPublishedForLogbook = {
+                ...publishedSchedules,
+                [buildDfpDate]: newEventsForDate
+            };
+            Object.entries(allPublishedForLogbook).forEach(([dateKey, events]) => {
+                (events as ScheduleEvent[]).forEach(e => {
+                    if ((e as any).isLogbook === true || e.type === 'logbook') {
+                        const instName = e.instructor || '';
+                        if (!staffLogbookMap[instName]) staffLogbookMap[instName] = [];
+                        staffLogbookMap[instName].push({
+                            date: dateKey,
+                            eventCode: (e as any).eventCode || e.id,
+                            flightNumber: (e as any).flightNumber,
+                            duration: e.duration,
+                            student: e.student,
+                            flightType: (e as any).flightType || 'Dual',
+                            locationType: (e as any).locationType || 'Local',
+                            origin: (e as any).origin || '',
+                            destination: (e as any).destination || '',
+                        });
+                    }
+                });
+            });
+
+            // Build per-staff currency map
+            const staffCurrencyMap: Record<string, any> = {};
+            instructorsData.forEach((inst: any) => {
+                if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+                    staffCurrencyMap[inst.name] = inst.currencyStatus;
+                }
+            });
+
+            // Build trainee profiles snapshot
+            const traineeProfilesSnapshot = traineesData.map((t: any) => ({
+                idNumber: t.idNumber,
+                fullName: t.fullName,
+                name: t.name,
+                rank: t.rank,
+                course: t.course,
+                lmpType: t.lmpType,
+                service: t.service,
+                unit: t.unit,
+                primaryInstructor: t.primaryInstructor,
+                currencyStatus: t.currencyStatus || [],
+                isPaused: t.isPaused || false,
+            }));
+
+            // Build per-trainee LMP completedEventIds map
+            const lmpCompletedIdsMap: Record<string, string[]> = {};
+            traineesData.forEach((t: any) => {
+                const individualLMP = traineeLMPs.get(t.fullName);
+                if (individualLMP) {
+                    const completedIds = (individualLMP as any[])
+                        .filter((item: any) => item.completedAt || item.isComplete)
+                        .map((item: any) => (item.id || item.code || '').replace('*', ''));
+                    if (completedIds.length > 0) {
+                        lmpCompletedIdsMap[t.fullName] = completedIds;
+                    }
+                }
+            });
+
+            // Convert pt051Assessments Map to plain object for serialization
+            const pt051AssessmentsObj: Record<string, any> = {};
+            pt051Assessments.forEach((assessment: any, key: string) => {
+                pt051AssessmentsObj[key] = assessment;
+            });
+
+            const snapshotPayload = {
+                date: buildDfpDate,
+                scheduleEvents: newEventsForDate,
+                staffEvents: staffEventsForDate,
+                traineeEvents: traineeEventsForDate,
+                pt051Assessments: pt051AssessmentsObj,
+                traineeProfiles: traineeProfilesSnapshot,
+                lmpCompletedIds: lmpCompletedIdsMap,
+                staffCurrency: staffCurrencyMap,
+                staffLogbook: staffLogbookMap,
+                savedBy: authUser?.userId || (authUser as any)?.username || null,
+            };
+
+            const apiBase = getApiBaseUrl();
+            fetch(`${apiBase}/daily-snapshot/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(snapshotPayload),
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                } else {
+                    console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
+                }
+            })
+            .catch(err => {
+                console.warn(`\u26A0\uFE0F [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
+            });
+        } else if (hasSeedData) {
+            console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         setDate(buildDfpDate);
         setNextDayBuildEvents([]);
@@ -9734,6 +9968,8 @@ updates.forEach(update => {
                 return <ScheduleView 
                            date={date}
                            onDateChange={handleDateChange}
+                           onDateSelect={handleDateSelect}
+                           snapshotDates={snapshotDates}
                            events={eventSegmentsForDate}
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
@@ -9888,6 +10124,8 @@ updates.forEach(update => {
                 return <TraineeScheduleView
                             date={date}
                             onDateChange={handleDateChange}
+                            onDateSelect={handleDateSelect}
+                            snapshotDates={snapshotDates}
                             events={eventsForStaffTraineeSchedule}
                             trainees={[...allTraineesData]
                                 .sort((a, b) => {
@@ -9955,6 +10193,8 @@ updates.forEach(update => {
                     return <InstructorScheduleView
                       date={date}
                       onDateChange={handleDateChange}
+                      onDateSelect={handleDateSelect}
+                      snapshotDates={snapshotDates}
                       events={eventSegmentsForDate}
                       instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
                       instructorsData={locationFilteredInstructorsForSchedule}

@@ -13,6 +13,8 @@ import { VisualAdjustGuide } from './VisualAdjustGuide';
 interface ScheduleViewProps {
   date: string;
   onDateChange: (increment: number) => void;
+  onDateSelect?: (date: string) => void;
+  snapshotDates?: string[];
   events: ScheduleEvent[];
   resources: string[];
   instructors: string[];
@@ -132,9 +134,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
     showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUpdatePlannedAvailability,
-    timezoneOffset = 11 // Default to UTC+11
+    timezoneOffset = 11, // Default to UTC+11
+    onDateSelect,
+    snapshotDates = [],
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [showCalendarDropdown, setShowCalendarDropdown] = useState(false);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
@@ -921,14 +926,72 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             >
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-                    <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2">
+                    <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative">
                         <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                             &lt;
                         </button>
-                        <span className="flex-grow min-w-0 text-center font-semibold text-white cursor-default truncate text-xs">{formattedDisplayDate}</span>
+                        <button
+                            onClick={() => setShowCalendarDropdown(v => !v)}
+                            className="flex-grow min-w-0 text-center font-semibold text-white hover:bg-gray-600 rounded px-1 truncate text-xs"
+                            title="Click to select date"
+                        >{formattedDisplayDate}</button>
                         <button onClick={() => onDateChange(1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                             &gt;
                         </button>
+                        {/* Calendar dropdown */}
+                        {showCalendarDropdown && (
+                            <div className="absolute top-full left-0 z-50 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 w-64" style={{minWidth:'220px'}}>
+                                <div className="text-xs text-gray-400 mb-2 font-semibold">Select Date</div>
+                                <input
+                                    type="date"
+                                    defaultValue={date}
+                                    className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-500 mb-2"
+                                    onChange={e => {
+                                        if (e.target.value) {
+                                            if (onDateSelect) {
+                                                onDateSelect(e.target.value);
+                                            } else {
+                                                const target = new Date(`${e.target.value}T00:00:00Z`);
+                                                const current = new Date(`${date}T00:00:00Z`);
+                                                const diff = Math.round((target.getTime() - current.getTime()) / (86400000));
+                                                if (diff !== 0) onDateChange(diff);
+                                            }
+                                            setShowCalendarDropdown(false);
+                                        }
+                                    }}
+                                />
+                                {snapshotDates && snapshotDates.length > 0 && (
+                                    <>
+                                        <div className="text-xs text-gray-400 mb-1 font-semibold">Saved Schedules</div>
+                                        <div className="max-h-40 overflow-y-auto space-y-1">
+                                            {snapshotDates.slice(0, 30).map(d => (
+                                                <button
+                                                    key={d}
+                                                    onClick={() => {
+                                                        if (onDateSelect) {
+                                                            onDateSelect(d);
+                                                        } else {
+                                                            const target = new Date(`${d}T00:00:00Z`);
+                                                            const current = new Date(`${date}T00:00:00Z`);
+                                                            const diff = Math.round((target.getTime() - current.getTime()) / (86400000));
+                                                            if (diff !== 0) onDateChange(diff);
+                                                        }
+                                                        setShowCalendarDropdown(false);
+                                                    }}
+                                                    className={`w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? 'bg-blue-700 text-white' : 'text-gray-300'}`}
+                                                >
+                                                    {new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                                <button
+                                    onClick={() => setShowCalendarDropdown(false)}
+                                    className="mt-2 w-full text-xs text-gray-400 hover:text-white text-center"
+                                >Close</button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
