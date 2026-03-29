@@ -4292,9 +4292,9 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     };
     const targetLocation = locationMap[school] || school;
     const coursesAtLocation = /* @__PURE__ */ new Set();
-    allTraineesData.forEach((trainee) => {
-      if (trainee.location === targetLocation && trainee.course) {
-        coursesAtLocation.add(trainee.course);
+    allTraineesData.forEach((trainee2) => {
+      if (trainee2.location === targetLocation && trainee2.course) {
+        coursesAtLocation.add(trainee2.course);
       }
     });
     return Object.entries(courseColors).filter(
@@ -5744,8 +5744,8 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       return event.attendees[0].split(" – ")[0];
     }
     if (event.groupTraineeIds && event.groupTraineeIds.length === 1) {
-      const trainee = traineesData.find((t) => t.idNumber === event.groupTraineeIds[0]);
-      return trainee ? trainee.name.split(",")[0] : "Group";
+      const trainee2 = traineesData.find((t) => t.idNumber === event.groupTraineeIds[0]);
+      return trainee2 ? trainee2.name.split(",")[0] : "Group";
     }
     return "";
   };
@@ -5775,9 +5775,9 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const isSoloFlight = event.flightType === "Solo";
   let callsign = storedCallsign || pilotCallsign;
   if (isSoloFlight && event.pilot) {
-    const trainee = traineesData.find((t) => t.fullName === event.pilot);
-    if (trainee?.traineeCallsign) {
-      callsign = trainee.traineeCallsign;
+    const trainee2 = traineesData.find((t) => t.fullName === event.pilot);
+    if (trainee2?.traineeCallsign) {
+      callsign = trainee2.traineeCallsign;
     }
   }
   const renderContent = () => {
@@ -10377,7 +10377,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
               renderNightShade(),
               renderDaylightLines(),
               renderCurrentTimeIndicator(),
-              trainees.flatMap((trainee, rowIndex) => {
+              trainees.flatMap((trainee2, rowIndex) => {
                 const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                   "div",
                   {
@@ -10399,7 +10399,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee).sort((a, b) => a.startTime - b.startTime);
+                  const traineeEventsForBars = events.filter((e) => e.student === trainee2 || e.flightType === "Solo" && e.pilot === trainee2).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < traineeEventsForBars.length; i++) {
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
@@ -10453,7 +10453,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                   }
                 }
                 const traineeEvents = eventsWithUnavailability.filter(
-                  (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee
+                  (event) => event.student === trainee2 || event.flightType === "Solo" && event.pilot === trainee2
                 ).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = traineeEvents.map((event) => {
                   const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
@@ -10494,7 +10494,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                       isDraggable: true,
                       currentTime
                     },
-                    `${event.id}-${trainee}`,
+                    `${event.id}-${trainee2}`,
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeScheduleView.tsx",
@@ -11551,7 +11551,7 @@ const initialExperience$1 = {
   simulator: { p1: 0, p2: 0, dual: 0, total: 0 }
 };
 const TraineeProfileFlyout = ({
-  trainee,
+  trainee: trainee2,
   onClose,
   onUpdateTrainee,
   events,
@@ -11584,36 +11584,36 @@ const TraineeProfileFlyout = ({
   const handleTabClick = (tab) => setActiveTab((prev) => prev === tab ? null : tab);
   const [showPauseConfirm, setShowPauseConfirm] = reactExports.useState(false);
   const [showScheduleWarning, setShowScheduleWarning] = reactExports.useState(false);
-  const [name, setName] = reactExports.useState(trainee.name);
-  const [idNumber, setIdNumber] = reactExports.useState(trainee.idNumber);
-  const [rank, setRank] = reactExports.useState(trainee.rank);
-  const [service, setService] = reactExports.useState(trainee.service || "");
-  const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
-  const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "BPC+IPC");
-  const [seatConfig, setSeatConfig] = reactExports.useState(trainee.seatConfig);
-  const [isPaused, setIsPaused] = reactExports.useState(trainee.isPaused);
-  const [unavailability, setUnavailability] = reactExports.useState(trainee.unavailability || []);
-  const [location, setLocation] = reactExports.useState(trainee.location || locations[0] || "");
-  const [unit, setUnit] = reactExports.useState(trainee.unit || units[0] || "");
-  const [flight, setFlight] = reactExports.useState(trainee.flight || "");
-  const [phoneNumber, setPhoneNumber] = reactExports.useState(trainee.phoneNumber || "");
-  const [email, setEmail] = reactExports.useState(trainee.email || "");
-  const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee.traineeCallsign || "");
-  const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
-  const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
-  const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
-  const [priorExperience, setPriorExperience] = reactExports.useState(trainee.priorExperience || initialExperience$1);
+  const [name, setName] = reactExports.useState(trainee2.name);
+  const [idNumber, setIdNumber] = reactExports.useState(trainee2.idNumber);
+  const [rank, setRank] = reactExports.useState(trainee2.rank);
+  const [service, setService] = reactExports.useState(trainee2.service || "");
+  const [course, setCourse] = reactExports.useState(trainee2.course || activeCourses[0] || "");
+  const [lmpType, setLmpType] = reactExports.useState(trainee2.lmpType || "BPC+IPC");
+  const [seatConfig, setSeatConfig] = reactExports.useState(trainee2.seatConfig);
+  const [isPaused, setIsPaused] = reactExports.useState(trainee2.isPaused);
+  const [unavailability, setUnavailability] = reactExports.useState(trainee2.unavailability || []);
+  const [location, setLocation] = reactExports.useState(trainee2.location || locations[0] || "");
+  const [unit, setUnit] = reactExports.useState(trainee2.unit || units[0] || "");
+  const [flight, setFlight] = reactExports.useState(trainee2.flight || "");
+  const [phoneNumber, setPhoneNumber] = reactExports.useState(trainee2.phoneNumber || "");
+  const [email, setEmail] = reactExports.useState(trainee2.email || "");
+  const [traineeCallsign, setTraineeCallsign] = reactExports.useState(trainee2.traineeCallsign || "");
+  const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee2.secondaryCallsign || "");
+  const [crew, setCrew] = reactExports.useState(trainee2.crew || "N/A");
+  const [permissions, setPermissions] = reactExports.useState(trainee2.permissions || []);
+  const [priorExperience, setPriorExperience] = reactExports.useState(trainee2.priorExperience || initialExperience$1);
   const exp = priorExperience;
   const allPermissions = reactExports.useMemo(() => ["Trainee", "Staff", "Ops", "Course Supervisor", "Admin", "Super Admin"], []);
   const allRoles = reactExports.useMemo(() => ["Course Leader", "Section Leader", "Squadron Leader", "Flight Leader"], []);
-  const callsignData = reactExports.useMemo(() => personnelData.get(trainee.fullName), [personnelData, trainee.fullName]);
+  const callsignData = reactExports.useMemo(() => personnelData.get(trainee2.fullName), [personnelData, trainee2.fullName]);
   const {
     lastFlight,
     lastEvent,
     daysSinceLastFlight,
     daysSinceLastEvent
   } = reactExports.useMemo(() => {
-    const traineeScores = scores.get(trainee.fullName) || [];
+    const traineeScores = scores.get(trainee2.fullName) || [];
     const today = /* @__PURE__ */ new Date();
     today.setUTCHours(0, 0, 0, 0);
     const calculateDays = (dateStr) => {
@@ -11641,10 +11641,10 @@ const TraineeProfileFlyout = ({
       daysSinceLastFlight: calculateDays(lastFlt?.date),
       daysSinceLastEvent: calculateDays(lastEvt?.date)
     };
-  }, [trainee.fullName, scores, syllabusDetails]);
+  }, [trainee2.fullName, scores, syllabusDetails]);
   const { nextEvent, subsequentEvent, nextEventReason } = reactExports.useMemo(() => {
     if (isCreating) return { nextEvent: null, subsequentEvent: null, nextEventReason: "New Trainee" };
-    const traineeScores = scores.get(trainee.fullName) || [];
+    const traineeScores = scores.get(trainee2.fullName) || [];
     const completedEventIds = new Set(traineeScores.map((s) => s.event));
     let nextEvt = null;
     let subsequentEvt = null;
@@ -11680,48 +11680,48 @@ const TraineeProfileFlyout = ({
       }
     }
     return { nextEvent: nextEvt, subsequentEvent: subsequentEvt, nextEventReason: reason };
-  }, [trainee.fullName, scores, individualLmp, isCreating]);
+  }, [trainee2.fullName, scores, individualLmp, isCreating]);
   const resetState = () => {
-    setName(trainee.name);
-    setIdNumber(trainee.idNumber);
-    setRank(trainee.rank);
-    setService(trainee.service || "");
-    setCourse(trainee.course || activeCourses[0] || "");
-    setLmpType(trainee.lmpType || "BPC+IPC");
-    setSeatConfig(trainee.seatConfig);
-    setIsPaused(trainee.isPaused);
-    setUnavailability(trainee.unavailability || []);
-    setLocation(trainee.location || locations[0] || "");
-    setUnit(trainee.unit || units[0] || "");
-    setFlight(trainee.flight || "");
-    setPhoneNumber(trainee.phoneNumber || "");
-    setEmail(trainee.email || "");
-    setPermissions(trainee.permissions || []);
-    setPriorExperience(trainee.priorExperience || initialExperience$1);
+    setName(trainee2.name);
+    setIdNumber(trainee2.idNumber);
+    setRank(trainee2.rank);
+    setService(trainee2.service || "");
+    setCourse(trainee2.course || activeCourses[0] || "");
+    setLmpType(trainee2.lmpType || "BPC+IPC");
+    setSeatConfig(trainee2.seatConfig);
+    setIsPaused(trainee2.isPaused);
+    setUnavailability(trainee2.unavailability || []);
+    setLocation(trainee2.location || locations[0] || "");
+    setUnit(trainee2.unit || units[0] || "");
+    setFlight(trainee2.flight || "");
+    setPhoneNumber(trainee2.phoneNumber || "");
+    setEmail(trainee2.email || "");
+    setPermissions(trainee2.permissions || []);
+    setPriorExperience(trainee2.priorExperience || initialExperience$1);
   };
   reactExports.useEffect(() => {
     resetState();
     setIsEditing(isCreating);
-  }, [trainee, isCreating]);
+  }, [trainee2, isCreating]);
   const hasLoggedViewRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (!isCreating && !hasLoggedViewRef.current) {
       hasLoggedViewRef.current = true;
       logAudit({
         action: "View",
-        description: `Viewed trainee profile for ${trainee.rank} ${trainee.name}`,
-        changes: `Course: ${trainee.course}, Unit: ${trainee.unit}`,
+        description: `Viewed trainee profile for ${trainee2.rank} ${trainee2.name}`,
+        changes: `Course: ${trainee2.course}, Unit: ${trainee2.unit}`,
         page: "Trainee Roster"
       });
     }
   }, []);
   reactExports.useMemo(() => {
-    return events.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
-  }, [events, trainee.fullName]);
+    return events.some((e) => e.student === trainee2.fullName || e.pilot === trainee2.fullName);
+  }, [events, trainee2.fullName]);
   const confirmPause = () => {
     const updatedTrainee = {
-      ...trainee,
-      isPaused: !trainee.isPaused
+      ...trainee2,
+      isPaused: !trainee2.isPaused
     };
     onUpdateTrainee(updatedTrainee);
     setShowPauseConfirm(false);
@@ -11731,7 +11731,7 @@ const TraineeProfileFlyout = ({
     setName(newName);
     if (oldName && newName !== oldName) {
       debouncedAuditLog(
-        `trainee-${trainee.idNumber}-name`,
+        `trainee-${trainee2.idNumber}-name`,
         "Edit",
         `Updated trainee name`
       );
@@ -11742,7 +11742,7 @@ const TraineeProfileFlyout = ({
     setCourse(newCourse);
     if (oldCourse !== newCourse) {
       debouncedAuditLog(
-        `trainee-${trainee.idNumber}-course`,
+        `trainee-${trainee2.idNumber}-course`,
         "Edit",
         `Updated trainee course`
       );
@@ -11753,7 +11753,7 @@ const TraineeProfileFlyout = ({
     setLmpType(newLmpType);
     if (oldLmpType !== newLmpType) {
       debouncedAuditLog(
-        `trainee-${trainee.idNumber}-lmptype`,
+        `trainee-${trainee2.idNumber}-lmptype`,
         "Edit",
         `Updated trainee LMP type`
       );
@@ -11766,7 +11766,7 @@ const TraineeProfileFlyout = ({
     }
     const fullName = `${name} – ${course}`;
     const updatedTrainee = {
-      ...trainee,
+      ...trainee2,
       idNumber,
       name,
       fullName,
@@ -11798,14 +11798,14 @@ const TraineeProfileFlyout = ({
       });
     } else {
       const changes = [];
-      if (trainee.name !== name) changes.push(`Name: ${trainee.name} → ${name}`);
-      if (trainee.rank !== rank) changes.push(`Rank: ${trainee.rank} → ${rank}`);
-      if (trainee.course !== course) changes.push(`Course: ${trainee.course} → ${course}`);
-      if (trainee.lmpType !== lmpType) changes.push(`LMP: ${trainee.lmpType || "BPC+IPC"} → ${lmpType}`);
-      if (trainee.unit !== unit) changes.push(`Unit: ${trainee.unit} → ${unit}`);
-      if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
-      if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
-      if (trainee.isPaused !== isPaused) changes.push(`Paused: ${trainee.isPaused} → ${isPaused}`);
+      if (trainee2.name !== name) changes.push(`Name: ${trainee2.name} → ${name}`);
+      if (trainee2.rank !== rank) changes.push(`Rank: ${trainee2.rank} → ${rank}`);
+      if (trainee2.course !== course) changes.push(`Course: ${trainee2.course} → ${course}`);
+      if (trainee2.lmpType !== lmpType) changes.push(`LMP: ${trainee2.lmpType || "BPC+IPC"} → ${lmpType}`);
+      if (trainee2.unit !== unit) changes.push(`Unit: ${trainee2.unit} → ${unit}`);
+      if (trainee2.location !== location) changes.push(`Location: ${trainee2.location} → ${location}`);
+      if (trainee2.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee2.seatConfig} → ${seatConfig}`);
+      if (trainee2.isPaused !== isPaused) changes.push(`Paused: ${trainee2.isPaused} → ${isPaused}`);
       if (changes.length > 0) {
         logAudit({
           action: "Edit",
@@ -11844,11 +11844,11 @@ const TraineeProfileFlyout = ({
     );
   };
   const handleHateSheetClick = () => {
-    onNavigateToHateSheet(trainee);
+    onNavigateToHateSheet(trainee2);
     onClose();
   };
   const handleIndividualLMPClick = () => {
-    onViewIndividualLMP(trainee);
+    onViewIndividualLMP(trainee2);
     onClose();
   };
   const handleExperienceChange = (section, field, value) => {
@@ -11889,17 +11889,17 @@ const TraineeProfileFlyout = ({
     } else {
       logAudit({
         action: "Add",
-        description: `Added unavailability for ${trainee.rank} ${trainee.name}`,
+        description: `Added unavailability for ${trainee2.rank} ${trainee2.name}`,
         changes: `Today Only - ${todayStr}`,
         page: "Trainee Roster"
       });
-      const updatedUnavailability = [...trainee.unavailability || [], newPeriod];
-      onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
+      const updatedUnavailability = [...trainee2.unavailability || [], newPeriod];
+      onUpdateTrainee({ ...trainee2, unavailability: updatedUnavailability });
       setShowAddUnavailability(false);
     }
   };
   const handleSaveCustomUnavailability = (periodData) => {
-    console.log("handleSaveCustomUnavailability called", { periodData, isCreating, traineeName: trainee.name });
+    console.log("handleSaveCustomUnavailability called", { periodData, isCreating, traineeName: trainee2.name });
     const newPeriod = {
       ...periodData,
       id: v4(),
@@ -11916,31 +11916,31 @@ const TraineeProfileFlyout = ({
       const timeRange = periodData.allDay ? "All Day" : `${periodData.startTime} to ${periodData.endTime}`;
       logAudit({
         action: "Add",
-        description: `Added unavailability for ${trainee.rank} ${trainee.name}`,
+        description: `Added unavailability for ${trainee2.rank} ${trainee2.name}`,
         changes: `${dateRange} @ ${timeRange} - ${periodData.reason}`,
         page: "Trainee Roster"
       });
-      const updatedUnavailability = [...trainee.unavailability || [], newPeriod];
+      const updatedUnavailability = [...trainee2.unavailability || [], newPeriod];
       console.log("Calling onUpdateTrainee with updated unavailability", updatedUnavailability);
-      onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
+      onUpdateTrainee({ ...trainee2, unavailability: updatedUnavailability });
     }
   };
   const handleRemoveUnavailabilityFromFlyout = (idToRemove) => {
     if (isCreating) {
       setUnavailability((prev) => prev.filter((p) => p.id !== idToRemove));
     } else {
-      const periodToRemove = trainee.unavailability?.find((p) => p.id === idToRemove);
+      const periodToRemove = trainee2.unavailability?.find((p) => p.id === idToRemove);
       if (periodToRemove) {
         const dateRange = periodToRemove.startDate === periodToRemove.endDate ? periodToRemove.startDate : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
         logAudit({
           action: "Delete",
-          description: `Removed unavailability for ${trainee.rank} ${trainee.name}`,
+          description: `Removed unavailability for ${trainee2.rank} ${trainee2.name}`,
           changes: `${dateRange} - ${periodToRemove.reason}`,
           page: "Trainee Roster"
         });
       }
-      const updatedUnavailability = (trainee.unavailability || []).filter((p) => p.id !== idToRemove);
-      onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
+      const updatedUnavailability = (trainee2.unavailability || []).filter((p) => p.id !== idToRemove);
+      onUpdateTrainee({ ...trainee2, unavailability: updatedUnavailability });
     }
   };
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-3", children: [
@@ -11981,7 +11981,7 @@ const TraineeProfileFlyout = ({
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
         lineNumber: 759,
         columnNumber: 25
-      }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2 text-white list-disc list-inside", children: trainee.permissions && trainee.permissions.length > 0 ? trainee.permissions.map((perm) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { children: perm }, perm, false, {
+      }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2 text-white list-disc list-inside", children: trainee2.permissions && trainee2.permissions.length > 0 ? trainee2.permissions.map((perm) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { children: perm }, perm, false, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
         lineNumber: 775,
         columnNumber: 65
@@ -12091,7 +12091,7 @@ const TraineeProfileFlyout = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between mb-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-bold text-white", children: [
                 "Currency — ",
-                trainee.name
+                trainee2.name
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                 lineNumber: 832,
@@ -12112,7 +12112,7 @@ const TraineeProfileFlyout = ({
               lineNumber: 835,
               columnNumber: 25
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: (trainee.currencyStatus || []).length > 0 ? (trainee.currencyStatus || []).map((cs) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: (trainee2.currencyStatus || []).length > 0 ? (trainee2.currencyStatus || []).map((cs) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: cs.currencyId }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                 lineNumber: 839,
@@ -12145,7 +12145,7 @@ const TraineeProfileFlyout = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between mb-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-bold text-white", children: [
                 "Unavailability — ",
-                trainee.name
+                trainee2.name
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                 lineNumber: 850,
@@ -12161,7 +12161,7 @@ const TraineeProfileFlyout = ({
               lineNumber: 849,
               columnNumber: 25
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: (trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map((p) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: (trainee2.unavailability || []).length > 0 ? (trainee2.unavailability || []).map((p) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: [
                 p.startDate,
                 p.endDate !== p.startDate ? ` → ${p.endDate}` : ""
@@ -12205,7 +12205,7 @@ const TraineeProfileFlyout = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between mb-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-bold text-white", children: [
                 "Logbook — ",
-                trainee.name
+                trainee2.name
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                 lineNumber: 868,
@@ -12630,12 +12630,12 @@ const TraineeProfileFlyout = ({
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 mb-2 flex-wrap", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-bold text-white", children: trainee.name }, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-bold text-white", children: trainee2.name }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 985,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-0.5 rounded text-xs font-bold ${trainee.isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: trainee.isPaused ? "Paused" : "Active" }, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-0.5 rounded text-xs font-bold ${trainee2.isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: trainee2.isPaused ? "Paused" : "Active" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 986,
                     columnNumber: 31
@@ -12652,7 +12652,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 992,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.idNumber }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.idNumber }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 992,
                       columnNumber: 102
@@ -12668,7 +12668,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 993,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || "bg-gray-500"}`, children: trainee.course }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee2.course] || "bg-gray-500"}`, children: trainee2.course }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 993,
                       columnNumber: 99
@@ -12684,7 +12684,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 994,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-300 font-medium", children: trainee.lmpType || "BPC+IPC" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-300 font-medium", children: trainee2.lmpType || "BPC+IPC" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 994,
                       columnNumber: 96
@@ -12700,7 +12700,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 995,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 995,
                       columnNumber: 101
@@ -12716,7 +12716,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 996,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.secondaryCallsign || "-" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.secondaryCallsign || "-" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 996,
                       columnNumber: 111
@@ -12732,7 +12732,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 997,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.seatConfig }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.seatConfig }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 997,
                       columnNumber: 104
@@ -12748,7 +12748,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 999,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.rank }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.rank }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 999,
                       columnNumber: 97
@@ -12764,7 +12764,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1e3,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.service || "RAAF" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.service || "RAAF" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1e3,
                       columnNumber: 100
@@ -12780,7 +12780,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1001,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.unit }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.unit }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1001,
                       columnNumber: 97
@@ -12796,7 +12796,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1002,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.crew || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.crew || "N/A" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1002,
                       columnNumber: 97
@@ -12812,7 +12812,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1003,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.location }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.location }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1003,
                       columnNumber: 101
@@ -12828,7 +12828,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1004,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.flight || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.flight || "N/A" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1004,
                       columnNumber: 99
@@ -12844,7 +12844,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1006,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.phoneNumber || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.phoneNumber || "N/A" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1006,
                       columnNumber: 105
@@ -12860,7 +12860,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1007,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.email || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee2.email || "N/A" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1007,
                       columnNumber: 98
@@ -12907,7 +12907,7 @@ const TraineeProfileFlyout = ({
                     lineNumber: 1019,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: (trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white text-[10px]", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: (trainee2.permissions || []).length > 0 ? (trainee2.permissions || []).map((p) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white text-[10px]", children: [
                     "• ",
                     p
                   ] }, p, true, {
@@ -12976,8 +12976,8 @@ const TraineeProfileFlyout = ({
                   lineNumber: 1049,
                   columnNumber: 31
                 }, void 0),
-                trainee.primaryInstructor ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: trainee.primaryInstructor.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: trainee.primaryInstructor, className: "w-full h-full object-cover object-top" }, void 0, false, {
+                trainee2.primaryInstructor ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: trainee2.primaryInstructor.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: trainee2.primaryInstructor, className: "w-full h-full object-cover object-top" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1054,
                     columnNumber: 39
@@ -12998,11 +12998,11 @@ const TraineeProfileFlyout = ({
                     "button",
                     {
                       onClick: () => {
-                        onOpenInstructorProfile(trainee.primaryInstructor);
+                        onOpenInstructorProfile(trainee2.primaryInstructor);
                         onClose();
                       },
                       className: "text-sky-300 hover:text-sky-100 hover:underline text-[10px] font-medium leading-tight text-left",
-                      children: trainee.primaryInstructor
+                      children: trainee2.primaryInstructor
                     },
                     void 0,
                     false,
@@ -13012,7 +13012,7 @@ const TraineeProfileFlyout = ({
                       columnNumber: 37
                     },
                     void 0
-                  ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: trainee.primaryInstructor }, void 0, false, {
+                  ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: trainee2.primaryInstructor }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1065,
                     columnNumber: 37
@@ -13056,8 +13056,8 @@ const TraineeProfileFlyout = ({
                   lineNumber: 1079,
                   columnNumber: 31
                 }, void 0),
-                trainee.secondaryInstructor ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: trainee.secondaryInstructor.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: trainee.secondaryInstructor, className: "w-full h-full object-cover object-top" }, void 0, false, {
+                trainee2.secondaryInstructor ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: trainee2.secondaryInstructor.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: trainee2.secondaryInstructor, className: "w-full h-full object-cover object-top" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1084,
                     columnNumber: 39
@@ -13078,11 +13078,11 @@ const TraineeProfileFlyout = ({
                     "button",
                     {
                       onClick: () => {
-                        onOpenInstructorProfile(trainee.secondaryInstructor);
+                        onOpenInstructorProfile(trainee2.secondaryInstructor);
                         onClose();
                       },
                       className: "text-amber-300 hover:text-amber-100 hover:underline text-[10px] font-medium leading-tight text-left",
-                      children: trainee.secondaryInstructor
+                      children: trainee2.secondaryInstructor
                     },
                     void 0,
                     false,
@@ -13092,7 +13092,7 @@ const TraineeProfileFlyout = ({
                       columnNumber: 37
                     },
                     void 0
-                  ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: trainee.secondaryInstructor }, void 0, false, {
+                  ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: trainee2.secondaryInstructor }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1095,
                     columnNumber: 37
@@ -13543,7 +13543,7 @@ const TraineeProfileFlyout = ({
               lineNumber: 1189,
               columnNumber: 27
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onAddRemedialPackage(trainee2), className: btnClass, children: "Add Remedial Package" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
               lineNumber: 1190,
               columnNumber: 27
@@ -13608,12 +13608,12 @@ const TraineeProfileFlyout = ({
       lineNumber: 811,
       columnNumber: 13
     }, void 0),
-    showAddUnavailability && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: trainee.unavailability || [], onRemove: handleRemoveUnavailabilityFromFlyout }, void 0, false, {
+    showAddUnavailability && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: trainee2.unavailability || [], onRemove: handleRemoveUnavailabilityFromFlyout }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
       lineNumber: 1207,
       columnNumber: 40
     }, void 0),
-    showScheduleWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ScheduleWarningFlyout, { traineeName: trainee.name, onAcknowledge: () => {
+    showScheduleWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ScheduleWarningFlyout, { traineeName: trainee2.name, onAcknowledge: () => {
       setShowScheduleWarning(false);
       setShowPauseConfirm(true);
     } }, void 0, false, {
@@ -13811,8 +13811,8 @@ const DeleteTraineeConfirmation = ({
     setError("");
   };
   const handleTraineeChange = (traineeFullName) => {
-    const trainee = traineesData.find((t) => t.fullName === traineeFullName);
-    setSelectedTrainee(trainee || null);
+    const trainee2 = traineesData.find((t) => t.fullName === traineeFullName);
+    setSelectedTrainee(trainee2 || null);
     setError("");
   };
   const handleConfirm = () => {
@@ -13936,11 +13936,11 @@ const DeleteTraineeConfirmation = ({
                 lineNumber: 129,
                 columnNumber: 33
               }, void 0),
-              traineesInCourse.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee.fullName, children: [
-                trainee.rank,
+              traineesInCourse.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee2.fullName, children: [
+                trainee2.rank,
                 " ",
-                trainee.name
-              ] }, trainee.fullName, true, {
+                trainee2.name
+              ] }, trainee2.fullName, true, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/DeleteTraineeConfirmation.tsx",
                 lineNumber: 131,
                 columnNumber: 37
@@ -14243,13 +14243,13 @@ const CourseEditFlyout = ({
     }
     setHasChanges(false);
   };
-  const handleBackcourseClick = (trainee) => {
-    setSelectedTrainee(trainee);
+  const handleBackcourseClick = (trainee2) => {
+    setSelectedTrainee(trainee2);
     setTargetCourse("");
     setShowBackcourseConfirm(true);
   };
-  const handleDeleteClick = (trainee) => {
-    setSelectedTrainee(trainee);
+  const handleDeleteClick = (trainee2) => {
+    setSelectedTrainee(trainee2);
     setShowDeleteConfirm(true);
   };
   const confirmBackcourse = () => {
@@ -14423,18 +14423,18 @@ const CourseEditFlyout = ({
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
                 lineNumber: 172,
                 columnNumber: 29
-              }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: trainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: trainees.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "div",
                 {
                   className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-lg border border-gray-600",
                   children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 text-sm", children: trainee.rank }, void 0, false, {
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 text-sm", children: trainee2.rank }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
                         lineNumber: 181,
                         columnNumber: 45
                       }, void 0),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: trainee.name }, void 0, false, {
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: trainee2.name }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
                         lineNumber: 182,
                         columnNumber: 45
@@ -14448,7 +14448,7 @@ const CourseEditFlyout = ({
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                         "button",
                         {
-                          onClick: () => handleBackcourseClick(trainee),
+                          onClick: () => handleBackcourseClick(trainee2),
                           className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-amber-500 leading-tight",
                           title: "Move to different course",
                           children: [
@@ -14473,7 +14473,7 @@ const CourseEditFlyout = ({
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                         "button",
                         {
-                          onClick: () => handleDeleteClick(trainee),
+                          onClick: () => handleDeleteClick(trainee2),
                           className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500",
                           title: "Delete trainee",
                           children: "Delete"
@@ -14494,7 +14494,7 @@ const CourseEditFlyout = ({
                     }, void 0)
                   ]
                 },
-                trainee.fullName,
+                trainee2.fullName,
                 true,
                 {
                   fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
@@ -14843,11 +14843,11 @@ const CourseRosterView = ({
   }, [selectedPersonForProfile, onProfileOpened]);
   const groupedTrainees = reactExports.useMemo(() => {
     const groups = {};
-    traineesData.forEach((trainee) => {
-      if (!groups[trainee.course]) {
-        groups[trainee.course] = [];
+    traineesData.forEach((trainee2) => {
+      if (!groups[trainee2.course]) {
+        groups[trainee2.course] = [];
       }
-      groups[trainee.course].push(trainee);
+      groups[trainee2.course].push(trainee2);
     });
     for (const course in groups) {
       groups[course].sort((a, b) => a.name.localeCompare(b.name));
@@ -14875,8 +14875,8 @@ const CourseRosterView = ({
     setIsCreatingNew(true);
     setSelectedTrainee(null);
   };
-  const handleDeleteTrainee = (trainee) => {
-    onDeleteTrainee(trainee);
+  const handleDeleteTrainee = (trainee2) => {
+    onDeleteTrainee(trainee2);
     setShowDeleteConfirmation(false);
   };
   const handleMouseEnter = (e, traineeFullName) => {
@@ -14891,11 +14891,11 @@ const CourseRosterView = ({
     setHoveredTrainee(null);
     setFlyoutPosition(null);
   };
-  const getTraineeNameColorClass = (trainee) => {
-    if (trainee.isPaused) {
+  const getTraineeNameColorClass = (trainee2) => {
+    if (trainee2.isPaused) {
       return "text-red-400 hover:text-red-300";
     }
-    const traineeScores = scores.get(trainee.fullName) || [];
+    const traineeScores = scores.get(trainee2.fullName) || [];
     const nonRemedialFlightFtdScores = traineeScores.filter((score) => {
       const syllabusItem = syllabusDetails.find((item) => item.id === score.event);
       return syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial;
@@ -15101,16 +15101,16 @@ const CourseRosterView = ({
             lineNumber: 326,
             columnNumber: 41
           }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
-            const nameColorClass = getTraineeNameColorClass(trainee);
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: courseTrainees.map((trainee2) => {
+            const nameColorClass = getTraineeNameColorClass(trainee2);
             return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               "li",
               {
                 className: "flex items-center text-sm",
-                onMouseEnter: (e) => handleMouseEnter(e, trainee.fullName),
+                onMouseEnter: (e) => handleMouseEnter(e, trainee2.fullName),
                 onMouseLeave: handleMouseLeave,
                 children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee.rank }, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee2.rank }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
                     lineNumber: 342,
                     columnNumber: 65
@@ -15118,9 +15118,9 @@ const CourseRosterView = ({
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                     "button",
                     {
-                      onClick: () => setSelectedTrainee(trainee),
+                      onClick: () => setSelectedTrainee(trainee2),
                       className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1`,
-                      children: trainee.name
+                      children: trainee2.name
                     },
                     void 0,
                     false,
@@ -15133,7 +15133,7 @@ const CourseRosterView = ({
                   )
                 ]
               },
-              trainee.fullName,
+              trainee2.fullName,
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
@@ -15289,12 +15289,12 @@ const CourseRosterView = ({
           }
           setCourseToEdit(null);
         },
-        onDeleteTrainee: (trainee) => {
-          onDeleteTrainee(trainee);
+        onDeleteTrainee: (trainee2) => {
+          onDeleteTrainee(trainee2);
         },
-        onBackcourseTrainee: (trainee, newCourse) => {
+        onBackcourseTrainee: (trainee2, newCourse) => {
           if (onBackcourseTrainee) {
-            onBackcourseTrainee(trainee, newCourse);
+            onBackcourseTrainee(trainee2, newCourse);
           }
           setCourseToEdit(null);
         },
@@ -15327,7 +15327,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
+const HateSheetView = ({ trainee: trainee2, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
   const { isFrozen } = useSystemFreeze();
   const [isDragging, setIsDragging] = reactExports.useState(false);
   const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
@@ -15402,7 +15402,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
     if (item.type === "LMP Score") {
       const mockAssessment = {
         id: `mock-${item.event}`,
-        traineeFullName: trainee.fullName,
+        traineeFullName: trainee2.fullName,
         eventId: `mock-event-${item.event}`,
         // Use a mock event ID
         flightNumber: item.event,
@@ -15476,11 +15476,11 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: [
-          trainee.rank,
+          trainee2.rank,
           " ",
-          trainee.name || trainee.fullName,
+          trainee2.name || trainee2.fullName,
           " - ",
-          trainee.course
+          trainee2.course
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/HateSheetView.tsx",
           lineNumber: 303,
@@ -15717,7 +15717,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
     columnNumber: 9
   }, void 0);
 };
-const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
+const ScoreDetailView = ({ trainee: trainee2, scoreData, onBack }) => {
   const getScoreColor2 = (score, type) => {
     const colors = {
       "2-5": { text: "text-green-300", bg: "bg-green-500/20" },
@@ -15739,9 +15739,9 @@ const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: [
-          trainee.rank,
+          trainee2.rank,
           " ",
-          trainee.name
+          trainee2.name
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/ScoreDetailView.tsx",
           lineNumber: 28,
@@ -16318,12 +16318,12 @@ const MassBriefCompleteFlyout = ({
     console.log("🔍 MassBriefCompleteFlyout - trainees.length:", trainees.length);
     if (isOpen && trainees.length > 0) {
       console.log("🔍 MassBriefCompleteFlyout - Trainee details:");
-      trainees.forEach((trainee, index) => {
-        console.log(`  ${index}:`, trainee);
-        console.log(`    Name: ${trainee.name}`);
-        console.log(`    FullName: ${trainee.fullName}`);
-        console.log(`    ID: ${trainee.idNumber}`);
-        console.log(`    Rank: ${trainee.rank}`);
+      trainees.forEach((trainee2, index) => {
+        console.log(`  ${index}:`, trainee2);
+        console.log(`    Name: ${trainee2.name}`);
+        console.log(`    FullName: ${trainee2.fullName}`);
+        console.log(`    ID: ${trainee2.idNumber}`);
+        console.log(`    Rank: ${trainee2.rank}`);
       });
       const traineeFullNames = trainees.map((t) => t.fullName);
       console.log("🔍 MassBriefCompleteFlyout - traineeFullNames:", traineeFullNames);
@@ -16390,23 +16390,23 @@ const MassBriefCompleteFlyout = ({
       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/MassBriefCompleteFlyout.tsx",
       lineNumber: 97,
       columnNumber: 13
-    }, void 0) : trainees.map((trainee) => {
-      console.log("🔍 Rendering trainee:", trainee);
+    }, void 0) : trainees.map((trainee2) => {
+      console.log("🔍 Rendering trainee:", trainee2);
       console.log("🔍 Trainee details:", {
-        fullName: trainee.fullName,
-        name: trainee.name,
-        rank: trainee.rank,
-        idNumber: trainee.idNumber
+        fullName: trainee2.fullName,
+        name: trainee2.name,
+        rank: trainee2.rank,
+        idNumber: trainee2.idNumber
       });
-      const displayName = trainee.fullName || (trainee.rank && trainee.name ? `${trainee.rank} ${trainee.name}` : trainee.name) || "Unknown Trainee";
+      const displayName = trainee2.fullName || (trainee2.rank && trainee2.name ? `${trainee2.rank} ${trainee2.name}` : trainee2.name) || "Unknown Trainee";
       return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "input",
           {
             type: "checkbox",
-            id: `trainee-${trainee.fullName || trainee.idNumber || trainee.id}`,
-            checked: selectedTrainees.has(trainee.fullName),
-            onChange: () => handleTraineeToggle(trainee.fullName),
+            id: `trainee-${trainee2.fullName || trainee2.idNumber || trainee2.id}`,
+            checked: selectedTrainees.has(trainee2.fullName),
+            onChange: () => handleTraineeToggle(trainee2.fullName),
             className: "w-4 h-4 text-sky-600 bg-gray-700 border-gray-600 rounded focus:ring-sky-500"
           },
           void 0,
@@ -16421,7 +16421,7 @@ const MassBriefCompleteFlyout = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "label",
           {
-            htmlFor: `trainee-${trainee.fullName || trainee.idNumber || trainee.id}`,
+            htmlFor: `trainee-${trainee2.fullName || trainee2.idNumber || trainee2.id}`,
             className: "text-white flex-1 cursor-pointer",
             children: displayName
           },
@@ -16434,7 +16434,7 @@ const MassBriefCompleteFlyout = ({
           },
           void 0
         )
-      ] }, trainee.fullName || trainee.idNumber || trainee.id, true, {
+      ] }, trainee2.fullName || trainee2.idNumber || trainee2.id, true, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/MassBriefCompleteFlyout.tsx",
         lineNumber: 111,
         columnNumber: 17
@@ -16523,7 +16523,7 @@ const MassBriefConfirmationFlyout = ({
         lineNumber: 167,
         columnNumber: 11
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2 mb-4", children: confirmedTrainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3 bg-gray-700/50 p-3 rounded-lg", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2 mb-4", children: confirmedTrainees.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3 bg-gray-700/50 p-3 rounded-lg", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-4 h-4 bg-green-500 rounded-full flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-3 h-3 text-white", fill: "currentColor", viewBox: "0 0 20 20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/MassBriefCompleteFlyout.tsx",
           lineNumber: 176,
@@ -16539,9 +16539,9 @@ const MassBriefConfirmationFlyout = ({
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white font-medium", children: [
-            trainee.rank,
+            trainee2.rank,
             " ",
-            trainee.name
+            trainee2.name
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/MassBriefCompleteFlyout.tsx",
             lineNumber: 180,
@@ -16557,7 +16557,7 @@ const MassBriefConfirmationFlyout = ({
           lineNumber: 179,
           columnNumber: 17
         }, void 0)
-      ] }, trainee.fullName, true, {
+      ] }, trainee2.fullName, true, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/MassBriefCompleteFlyout.tsx",
         lineNumber: 173,
         columnNumber: 15
@@ -16885,17 +16885,17 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   }, [instructorList, traineesData, instructorsData]);
   const traineesByCourse = reactExports.useMemo(() => {
     const traineesWithCourse = traineeList.map((name) => {
-      const trainee = traineesData.find((t) => t.name === name || t.fullName === name);
+      const trainee2 = traineesData.find((t) => t.name === name || t.fullName === name);
       return {
         name,
-        course: trainee?.course || "Unknown"
+        course: trainee2?.course || "Unknown"
       };
     });
-    const grouped = traineesWithCourse.reduce((acc, trainee) => {
-      if (!acc[trainee.course]) {
-        acc[trainee.course] = [];
+    const grouped = traineesWithCourse.reduce((acc, trainee2) => {
+      if (!acc[trainee2.course]) {
+        acc[trainee2.course] = [];
       }
-      acc[trainee.course].push(trainee);
+      acc[trainee2.course].push(trainee2);
       return acc;
     }, {});
     const sortedCourses = Object.keys(grouped).sort();
@@ -16905,10 +16905,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const stats = {};
     [...instructorList, ...traineeList].forEach((name) => {
       const instructor = instructorsData.find((i) => i.name === name);
-      const trainee = traineesData.find((t) => t.name === name || t.fullName === name);
+      const trainee2 = traineesData.find((t) => t.name === name || t.fullName === name);
       stats[name] = {
         name,
-        rank: instructor?.rank || trainee?.rank || "",
+        rank: instructor?.rank || trainee2?.rank || "",
         flightCount: 0,
         ftdCount: 0,
         cptCount: 0,
@@ -16925,8 +16925,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       if (evt.student) people.add(evt.student);
       if (evt.groupTraineeIds && evt.groupTraineeIds.length > 0) {
         evt.groupTraineeIds.forEach((id) => {
-          const trainee = traineesData.find((t) => t.idNumber === id);
-          if (trainee) people.add(trainee.name);
+          const trainee2 = traineesData.find((t) => t.idNumber === id);
+          if (trainee2) people.add(trainee2.name);
         });
       }
       people.forEach((person) => {
@@ -17030,11 +17030,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               lineNumber: 457,
               columnNumber: 21
             }, void 0),
-            traineesByCourse.sortedCourses.map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("optgroup", { label: `─── ${course} ───`, children: traineesByCourse.grouped[course].map((trainee) => {
-              const traineeData = traineesData.find((t) => t.name === trainee.name || t.fullName === trainee.name);
-              const stats = personStats[trainee.name] || { rank: "" };
-              const displayText = `${stats.rank} ${traineeData?.name || trainee.name}`;
-              return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee.name, children: displayText }, trainee.name, false, {
+            traineesByCourse.sortedCourses.map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("optgroup", { label: `─── ${course} ───`, children: traineesByCourse.grouped[course].map((trainee2) => {
+              const traineeData = traineesData.find((t) => t.name === trainee2.name || t.fullName === trainee2.name);
+              const stats = personStats[trainee2.name] || { rank: "" };
+              const displayText = `${stats.rank} ${traineeData?.name || trainee2.name}`;
+              return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee2.name, children: displayText }, trainee2.name, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                 lineNumber: 466,
                 columnNumber: 37
@@ -17644,11 +17644,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     const currentDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const instructor = event.instructor || "System";
     if (onSavePT051Assessment) {
-      confirmedTrainees.forEach((trainee) => {
+      confirmedTrainees.forEach((trainee2) => {
         const assessment = {
-          id: `${trainee.idNumber}_${event.id}_${currentDate}`,
-          traineeName: trainee.name,
-          traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
+          id: `${trainee2.idNumber}_${event.id}_${currentDate}`,
+          traineeName: trainee2.name,
+          traineeFullName: trainee2.fullName || `${trainee2.rank} ${trainee2.name}`,
           eventId: event.id,
           flightNumber: event.flightNumber,
           date: currentDate,
@@ -17669,7 +17669,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             result: 0
           }
         };
-        console.log("Saving PT051 assessment for:", trainee.fullName, assessment);
+        console.log("Saving PT051 assessment for:", trainee2.fullName, assessment);
         onSavePT051Assessment(assessment);
       });
       console.log("PT051 assessments saved successfully");
@@ -17830,13 +17830,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   lineNumber: 1386,
                   columnNumber: 53
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800", children: course.trainees.map((trainee) => {
-                  const isSelected = currentIds.has(trainee.idNumber);
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800", children: course.trainees.map((trainee2) => {
+                  const isSelected = currentIds.has(trainee2.idNumber);
                   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                     "div",
                     {
                       className: "flex items-center px-3 py-2 pl-8 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700/50 last:border-0",
-                      onClick: () => handleToggleTrainee(index, trainee.idNumber),
+                      onClick: () => handleToggleTrainee(index, trainee2.idNumber),
                       children: [
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                           "input",
@@ -17855,14 +17855,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                           },
                           void 0
                         ),
-                        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: trainee.name }, void 0, false, {
+                        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: trainee2.name }, void 0, false, {
                           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                           lineNumber: 1410,
                           columnNumber: 69
                         }, void 0)
                       ]
                     },
-                    trainee.idNumber,
+                    trainee2.idNumber,
                     true,
                     {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
@@ -19331,14 +19331,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             console.log("🔍 Processing attendees array");
             const processedAttendees = event.attendees.map((attendeeName, index) => {
               console.log(`🔍 Processing attendee ${index}: "${attendeeName}"`);
-              const trainee = traineesData.find((t) => {
+              const trainee2 = traineesData.find((t) => {
                 const fullName = `${t.rank} ${t.name}`;
                 console.log(`🔍 Comparing "${fullName}" with "${attendeeName.split(" – ")[0]}"`);
                 return fullName === attendeeName.split(" – ")[0];
               });
-              if (trainee) {
-                console.log("🔍 Found matching trainee:", trainee);
-                return trainee;
+              if (trainee2) {
+                console.log("🔍 Found matching trainee:", trainee2);
+                return trainee2;
               } else {
                 console.log("🔍 Creating fallback trainee object");
                 const nameParts = attendeeName.split(" – ");
@@ -19647,13 +19647,13 @@ const CourseTraineeSelectionFlyout = ({
         lineNumber: 48,
         columnNumber: 21
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: activeTraineesInCourse.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: activeTraineesInCourse.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700 cursor-pointer", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "input",
           {
             type: "checkbox",
-            checked: selectedTrainees.includes(trainee.fullName),
-            onChange: () => handleToggle(trainee.fullName),
+            checked: selectedTrainees.includes(trainee2.fullName),
+            onChange: () => handleToggle(trainee2.fullName),
             className: "h-4 w-4 accent-sky-500 bg-gray-600"
           },
           void 0,
@@ -19666,9 +19666,9 @@ const CourseTraineeSelectionFlyout = ({
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
-          trainee.name,
+          trainee2.name,
           " (",
-          trainee.rank,
+          trainee2.rank,
           ")"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseTraineeSelectionFlyout.tsx",
@@ -19679,7 +19679,7 @@ const CourseTraineeSelectionFlyout = ({
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseTraineeSelectionFlyout.tsx",
         lineNumber: 52,
         columnNumber: 33
-      }, void 0) }, trainee.fullName, false, {
+      }, void 0) }, trainee2.fullName, false, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseTraineeSelectionFlyout.tsx",
         lineNumber: 51,
         columnNumber: 29
@@ -21055,14 +21055,14 @@ const UnavailabilitiesWindow = ({ instructorsData, traineesData, date, title }) 
     });
     const trainees = [];
     const paused = [];
-    traineesData.forEach((trainee) => {
-      if (trainee.isPaused) {
-        paused.push({ name: trainee.name, rank: trainee.rank });
+    traineesData.forEach((trainee2) => {
+      if (trainee2.isPaused) {
+        paused.push({ name: trainee2.name, rank: trainee2.rank });
       } else {
-        (trainee.unavailability || []).forEach((period) => {
+        (trainee2.unavailability || []).forEach((period) => {
           const isInDateRange = period.allDay ? date >= period.startDate && date < period.endDate : date >= period.startDate && date <= period.endDate;
           if (isInDateRange) {
-            trainees.push({ name: trainee.fullName, rank: trainee.rank, period });
+            trainees.push({ name: trainee2.fullName, rank: trainee2.rank, period });
           }
         });
       }
@@ -24109,17 +24109,17 @@ const PrioritiesView = ({
           lineNumber: 814,
           columnNumber: 19
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee, item }) => {
-          const existingRequest = remedialRequests.find((r) => r.traineeId === trainee.idNumber && r.eventCode === item.code);
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee: trainee2, item }) => {
+          const existingRequest = remedialRequests.find((r) => r.traineeId === trainee2.idNumber && r.eventCode === item.code);
           const forceSchedule = existingRequest?.forceSchedule || false;
           const allocatedStaff = item.resourcesHuman && item.resourcesHuman.length > 0 ? item.resourcesHuman[0] : "Not Assigned";
           return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-sky-900/50", children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 font-semibold text-white", children: trainee.name }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 font-semibold text-white", children: trainee2.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
               lineNumber: 833,
               columnNumber: 31
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: trainee.course }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: trainee2.course }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
               lineNumber: 834,
               columnNumber: 31
@@ -24139,7 +24139,7 @@ const PrioritiesView = ({
               {
                 type: "checkbox",
                 checked: forceSchedule,
-                onChange: () => onToggleRemedialRequest(trainee.idNumber, item.code),
+                onChange: () => onToggleRemedialRequest(trainee2.idNumber, item.code),
                 className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
               },
               void 0,
@@ -24155,7 +24155,7 @@ const PrioritiesView = ({
               lineNumber: 839,
               columnNumber: 31
             }, void 0)
-          ] }, `${trainee.idNumber}-${item.code}`, true, {
+          ] }, `${trainee2.idNumber}-${item.code}`, true, {
             fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
             lineNumber: 832,
             columnNumber: 27
@@ -24496,7 +24496,7 @@ const AvailabilityCard = ({
       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/shared/AvailabilityCard.tsx",
       lineNumber: 35,
       columnNumber: 11
-    }, void 0) : trainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+    }, void 0) : trainees.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
         className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md hover:bg-gray-600/60 transition-all duration-200 ease-in-out group cursor-pointer",
@@ -24505,8 +24505,8 @@ const AvailabilityCard = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               "div",
               {
-                className: `w-4 h-4 rounded-full transition-all duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
-                style: courseColors[trainee.course] ? { backgroundColor: courseColors[trainee.course] } : {}
+                className: `w-4 h-4 rounded-full transition-all duration-200 group-hover:scale-125 ${courseColors[trainee2.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
+                style: courseColors[trainee2.course] ? { backgroundColor: courseColors[trainee2.course] } : {}
               },
               void 0,
               false,
@@ -24518,15 +24518,15 @@ const AvailabilityCard = ({
               void 0
             ),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white text-sm font-medium group-hover:text-gray-100 transition-colors", children: trainee.name }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white text-sm font-medium group-hover:text-gray-100 transition-colors", children: trainee2.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/shared/AvailabilityCard.tsx",
                 lineNumber: 57,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs group-hover:text-gray-300 transition-colors", children: [
-                trainee.course,
+                trainee2.course,
                 " • ",
-                trainee.rank
+                trainee2.rank
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/shared/AvailabilityCard.tsx",
                 lineNumber: 60,
@@ -24557,7 +24557,7 @@ const AvailabilityCard = ({
           }, void 0)
         ]
       },
-      trainee.id,
+      trainee2.id,
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/shared/AvailabilityCard.tsx",
@@ -24630,7 +24630,7 @@ const ListCard = ({ title, trainees }) => {
       lineNumber: 26,
       columnNumber: 7
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "p-3 space-y-2 overflow-y-auto max-h-60", children: filteredTrainees.length > 0 ? filteredTrainees.map((trainee, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-baseline text-sm text-gray-300", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "p-3 space-y-2 overflow-y-auto max-h-60", children: filteredTrainees.length > 0 ? filteredTrainees.map((trainee2, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-baseline text-sm text-gray-300", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-8 text-right mr-2 flex-shrink-0", children: [
         index + 1,
         "."
@@ -24639,12 +24639,12 @@ const ListCard = ({ title, trainees }) => {
         lineNumber: 48,
         columnNumber: 13
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-gray-200 truncate", children: trainee.name }, void 0, false, {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-gray-200 truncate", children: trainee2.name }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/shared/ListCard.tsx",
         lineNumber: 49,
         columnNumber: 13
       }, void 0)
-    ] }, trainee.idNumber, true, {
+    ] }, trainee2.idNumber, true, {
       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/shared/ListCard.tsx",
       lineNumber: 47,
       columnNumber: 11
@@ -24699,16 +24699,16 @@ const PeopleTab = ({
   const traineesWaitingForNightFlying = reactExports.useMemo(() => {
     const waitingList = [];
     const activeTrainees = traineesData.filter((t) => !t.isPaused);
-    activeTrainees.forEach((trainee) => {
-      const individualLMP = traineeLMPs.get(trainee.fullName) || [];
-      const traineeScores = scores.get(trainee.fullName) || [];
+    activeTrainees.forEach((trainee2) => {
+      const individualLMP = traineeLMPs.get(trainee2.fullName) || [];
+      const traineeScores = scores.get(trainee2.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
       for (const item of individualLMP) {
         if (completedEventIds.has(item.id) || item.code.includes(" MB")) continue;
         const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p));
         if (prereqsMet) {
           if (item.code.startsWith("BNF") && item.type === "Flight") {
-            waitingList.push({ trainee, event: item });
+            waitingList.push({ trainee: trainee2, event: item });
           }
           break;
         }
@@ -24751,10 +24751,10 @@ const PeopleTab = ({
     });
     const activeTrainees = traineesData.filter((t) => !t.isPaused);
     const unavailableTrainees2 = /* @__PURE__ */ new Set();
-    activeTrainees.forEach((trainee) => {
-      trainee.unavailability?.forEach((period) => {
+    activeTrainees.forEach((trainee2) => {
+      trainee2.unavailability?.forEach((period) => {
         if (selectedDateStr >= period.startDate && selectedDateStr < period.endDate) {
-          unavailableTrainees2.add(trainee.fullName);
+          unavailableTrainees2.add(trainee2.fullName);
         }
       });
     });
@@ -24770,15 +24770,15 @@ const PeopleTab = ({
     for (const event of flightOrFtdEvents) {
       const traineeName = event.student || event.pilot;
       if (!traineeName || !event.instructor) continue;
-      const trainee = traineeMap.get(traineeName);
-      if (!trainee) continue;
+      const trainee2 = traineeMap.get(traineeName);
+      if (!trainee2) continue;
       const instructorName = event.instructor;
       const instructor = instructorMap.get(instructorName);
-      if (trainee.primaryInstructor === instructorName) {
+      if (trainee2.primaryInstructor === instructorName) {
         traineesWithPrimary.add(traineeName);
-      } else if (trainee.secondaryInstructor === instructorName) {
+      } else if (trainee2.secondaryInstructor === instructorName) {
         traineesWithSecondary.add(traineeName);
-      } else if (instructor && trainee.flight && instructor.flight === trainee.flight) {
+      } else if (instructor && trainee2.flight && instructor.flight === trainee2.flight) {
         traineesWithInstructorFromFlight.add(traineeName);
       } else {
         traineesWithOtherInstructors.add(traineeName);
@@ -24815,9 +24815,9 @@ const PeopleTab = ({
     const nextEventLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
     const nextPlusOneLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
     const activeTrainees = traineesData.filter((t) => !t.isPaused);
-    activeTrainees.forEach((trainee) => {
-      const individualLMP = traineeLMPs.get(trainee.fullName) || [];
-      const traineeScores = scores.get(trainee.fullName) || [];
+    activeTrainees.forEach((trainee2) => {
+      const individualLMP = traineeLMPs.get(trainee2.fullName) || [];
+      const traineeScores = scores.get(trainee2.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
       let nextEvt = null;
       let plusOneEvt = null;
@@ -24844,16 +24844,16 @@ const PeopleTab = ({
         }
       }
       if (nextEvt) {
-        if (nextEvt.type === "Flight") nextEventLists2.flight.push(trainee);
-        else if (nextEvt.type === "FTD") nextEventLists2.ftd.push(trainee);
-        else if (nextEvt.code.includes("CPT")) nextEventLists2.cpt.push(trainee);
+        if (nextEvt.type === "Flight") nextEventLists2.flight.push(trainee2);
+        else if (nextEvt.type === "FTD") nextEventLists2.ftd.push(trainee2);
+        else if (nextEvt.code.includes("CPT")) nextEventLists2.cpt.push(trainee2);
         else if (nextEvt.type === "Ground School") {
-          nextEventLists2.ground.push(trainee);
+          nextEventLists2.ground.push(trainee2);
           if (plusOneEvt) {
-            if (plusOneEvt.type === "Flight") nextPlusOneLists2.flight.push(trainee);
-            else if (plusOneEvt.type === "FTD") nextPlusOneLists2.ftd.push(trainee);
-            else if (plusOneEvt.code.includes("CPT")) nextPlusOneLists2.cpt.push(trainee);
-            else if (plusOneEvt.type === "Ground School") nextPlusOneLists2.ground.push(trainee);
+            if (plusOneEvt.type === "Flight") nextPlusOneLists2.flight.push(trainee2);
+            else if (plusOneEvt.type === "FTD") nextPlusOneLists2.ftd.push(trainee2);
+            else if (plusOneEvt.code.includes("CPT")) nextPlusOneLists2.cpt.push(trainee2);
+            else if (plusOneEvt.type === "Ground School") nextPlusOneLists2.ground.push(trainee2);
           }
         }
       }
@@ -24878,7 +24878,7 @@ const PeopleTab = ({
     return { nextEventLists: nextEventLists2, nextPlusOneLists: nextPlusOneLists2 };
   }, [traineesData, traineeLMPs, scores, date]);
   const allCourses = reactExports.useMemo(() => {
-    const courses = new Set(traineesData.map((trainee) => trainee.course).filter((course) => course));
+    const courses = new Set(traineesData.map((trainee2) => trainee2.course).filter((course) => course));
     return Array.from(courses).sort();
   }, [traineesData]);
   const { availableTrainees, unavailableTrainees, pausedTrainees } = reactExports.useMemo(() => {
@@ -24886,18 +24886,18 @@ const PeopleTab = ({
     const available = [];
     const unavailable = [];
     const paused = [];
-    traineesData.forEach((trainee) => {
-      if (trainee.isPaused) {
-        paused.push(trainee);
+    traineesData.forEach((trainee2) => {
+      if (trainee2.isPaused) {
+        paused.push(trainee2);
         return;
       }
-      const hasUnavailability = (trainee.unavailability || []).some(
+      const hasUnavailability = (trainee2.unavailability || []).some(
         (period) => today >= period.startDate && today < period.endDate
       );
       if (hasUnavailability) {
-        unavailable.push(trainee);
+        unavailable.push(trainee2);
       } else {
-        available.push(trainee);
+        available.push(trainee2);
       }
     });
     return {
@@ -24907,9 +24907,9 @@ const PeopleTab = ({
     };
   }, [traineesData, date]);
   const filterTrainees = (trainees) => {
-    return trainees.filter((trainee) => {
-      const matchesCourse = availabilityFilter === "all" || trainee.course === availabilityFilter;
-      const matchesSearch = searchTerm === "" || trainee.name.toLowerCase().includes(searchTerm.toLowerCase()) || trainee.course.toLowerCase().includes(searchTerm.toLowerCase()) || trainee.rank.toLowerCase().includes(searchTerm.toLowerCase());
+    return trainees.filter((trainee2) => {
+      const matchesCourse = availabilityFilter === "all" || trainee2.course === availabilityFilter;
+      const matchesSearch = searchTerm === "" || trainee2.name.toLowerCase().includes(searchTerm.toLowerCase()) || trainee2.course.toLowerCase().includes(searchTerm.toLowerCase()) || trainee2.rank.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesCourse && matchesSearch;
     });
   };
@@ -24984,14 +24984,14 @@ const PeopleTab = ({
         lineNumber: 367,
         columnNumber: 9
       }, void 0),
-      traineesWaitingForNightFlying.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3", children: traineesWaitingForNightFlying.map(({ trainee, event }, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex justify-between items-center p-3 bg-gray-700/50 rounded-md text-sm", children: [
+      traineesWaitingForNightFlying.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3", children: traineesWaitingForNightFlying.map(({ trainee: trainee2, event }, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex justify-between items-center p-3 bg-gray-700/50 rounded-md text-sm", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-12 text-right", children: trainee.rank }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-12 text-right", children: trainee2.rank }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/tabs/PeopleTab.tsx",
             lineNumber: 374,
             columnNumber: 21
           }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: trainee.name }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: trainee2.name }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/tabs/PeopleTab.tsx",
             lineNumber: 375,
             columnNumber: 21
@@ -25002,7 +25002,7 @@ const PeopleTab = ({
           columnNumber: 19
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-4", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 font-medium", children: trainee.course }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 font-medium", children: trainee2.course }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/tabs/PeopleTab.tsx",
             lineNumber: 378,
             columnNumber: 21
@@ -25954,8 +25954,8 @@ const CourseMetricsTab = ({
       personnelPerCourse.set(course, /* @__PURE__ */ new Set());
       const traineesInCourse = traineesData.filter((t) => t.course === course && !t.isPaused);
       let availableCount = 0;
-      traineesInCourse.forEach((trainee) => {
-        const isUnavailable = trainee.unavailability?.some(
+      traineesInCourse.forEach((trainee2) => {
+        const isUnavailable = trainee2.unavailability?.some(
           (period) => selectedDateStr >= period.startDate && selectedDateStr < period.endDate
         );
         if (!isUnavailable) {
@@ -31044,8 +31044,8 @@ const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee }) => 
     setHoveredTrainee(null);
     setFlyoutPosition(null);
   };
-  const handleTraineeClick = (trainee) => {
-    setSelectedTrainee(trainee);
+  const handleTraineeClick = (trainee2) => {
+    setSelectedTrainee(trainee2);
   };
   const hoveredEvents = hoveredTrainee ? events.filter((f) => f.student === hoveredTrainee || f.flightType === "Solo" && f.pilot === hoveredTrainee) : [];
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -31086,16 +31086,16 @@ const TraineeListView = ({ onClose, events, traineesData, onUpdateTrainee }) => 
                 lineNumber: 53,
                 columnNumber: 11
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 overflow-y-auto", "aria-labelledby": "trainee-list-title", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: traineesData.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 overflow-y-auto", "aria-labelledby": "trainee-list-title", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: traineesData.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "li",
                 {
                   className: "p-3 bg-gray-700/50 rounded-md text-gray-300 hover:bg-sky-800 hover:text-white transition-colors cursor-pointer",
-                  onMouseEnter: (e) => handleMouseEnter(e, trainee.fullName),
+                  onMouseEnter: (e) => handleMouseEnter(e, trainee2.fullName),
                   onMouseLeave: handleMouseLeave,
-                  onClick: () => handleTraineeClick(trainee),
-                  children: trainee.fullName
+                  onClick: () => handleTraineeClick(trainee2),
+                  children: trainee2.fullName
                 },
-                trainee.fullName,
+                trainee2.fullName,
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeListView.tsx",
@@ -50899,7 +50899,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
   }, void 0);
 };
 const ai = new GoogleGenAI({ apiKey: "" });
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
+const PT051View = ({ trainee: trainee2, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
   const [isDirty, setIsDirty] = reactExports.useState(false);
@@ -50947,7 +50947,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }
     return {
       id: v4(),
-      traineeFullName: trainee.fullName,
+      traineeFullName: trainee2.fullName,
       eventId: event.id,
       flightNumber: event.flightNumber,
       date: event.date,
@@ -51008,7 +51008,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       }
     });
     pt051Assessments.forEach((a) => {
-      if (a.traineeFullName === trainee.fullName && a.eventId !== event.id && a.overallGrade !== null && a.overallGrade !== "No Grade") {
+      if (a.traineeFullName === trainee2.fullName && a.eventId !== event.id && a.overallGrade !== null && a.overallGrade !== "No Grade") {
         if (isFlightOrFtd(a.flightNumber)) {
           history.push({
             name: a.flightNumber,
@@ -51023,7 +51023,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     const currentEventTime = new Date(event.date).getTime();
     const past = history.filter((h) => h.timestamp < currentEventTime);
     return past.length > 0 ? past[0] : null;
-  }, [lmpScores, pt051Assessments, trainee.fullName, syllabusDetails, event.date, event.id]);
+  }, [lmpScores, pt051Assessments, trainee2.fullName, syllabusDetails, event.date, event.id]);
   reactExports.useEffect(() => {
     if (overallGrade === 1 && previousPerformance && Number(previousPerformance.score) === 1) {
       setShowDoubleMarginalWarning(true);
@@ -51060,8 +51060,8 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }
   };
   const unitInstructors = reactExports.useMemo(() => {
-    return instructors.filter((instructor) => instructor.unit === trainee.unit);
-  }, [instructors, trainee.unit]);
+    return instructors.filter((instructor) => instructor.unit === trainee2.unit);
+  }, [instructors, trainee2.unit]);
   const handleInstructorNameChange = (value) => {
     setAssessment((prev) => ({ ...prev, instructorName: value }));
     setCommentFields((prev) => ({ ...prev, QFI: value }));
@@ -51577,7 +51577,7 @@ This action cannot be undone.`;
               lineNumber: 840,
               columnNumber: 29
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("dd", { className: "mt-1 text-sm text-white font-semibold", children: `${trainee.rank} ${trainee.name}` }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("dd", { className: "mt-1 text-sm text-white font-semibold", children: `${trainee2.rank} ${trainee2.name}` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/PT051View.tsx",
               lineNumber: 841,
               columnNumber: 29
@@ -51593,7 +51593,7 @@ This action cannot be undone.`;
               lineNumber: 844,
               columnNumber: 29
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("dd", { className: "mt-1 text-sm text-white font-semibold", children: trainee.course }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("dd", { className: "mt-1 text-sm text-white font-semibold", children: trainee2.course }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/PT051View.tsx",
               lineNumber: 845,
               columnNumber: 29
@@ -60108,12 +60108,12 @@ const PermissionsManagerWindow = ({
       ].filter(Boolean).join(", ") || "Instructor",
       permissionLevel: inst.permissions?.[0] || "Staff"
     }));
-    const traineeEntries = trainees.map((trainee) => ({
-      id: trainee.idNumber,
-      name: trainee.name,
+    const traineeEntries = trainees.map((trainee2) => ({
+      id: trainee2.idNumber,
+      name: trainee2.name,
       type: "Trainee",
-      currentRole: trainee.course,
-      permissionLevel: trainee.permissions?.[0] || "Trainee"
+      currentRole: trainee2.course,
+      permissionLevel: trainee2.permissions?.[0] || "Trainee"
     }));
     return [...instructorEntries, ...traineeEntries].sort((a, b) => a.name.localeCompare(b.name));
   }, [instructors, trainees]);
@@ -60143,8 +60143,8 @@ const PermissionsManagerWindow = ({
           onUpdateInstructorPermission(id, permissionLevel);
         }
       } else if (type === "Trainee") {
-        const trainee = trainees.find((t) => t.idNumber === id);
-        if (trainee && trainee.permissions?.[0] !== permissionLevel) {
+        const trainee2 = trainees.find((t) => t.idNumber === id);
+        if (trainee2 && trainee2.permissions?.[0] !== permissionLevel) {
           onUpdateTraineePermission(id, permissionLevel);
         }
       }
@@ -62857,21 +62857,21 @@ const SettingsView = ({
           onUpdateTraineeLMPs && onUpdateTraineeLMPs((prevLMPs) => {
             console.log(`[DEBUG] LMP initialization started. Previous LMPs count: ${prevLMPs.size}`);
             const newLMPs = new Map(prevLMPs);
-            newRecordsWithCourse.forEach((trainee) => {
-              console.log(`[DEBUG] Processing trainee: ${trainee.fullName}, LMP Type: ${trainee.lmpType}`);
-              if (trainee.fullName && trainee.lmpType) {
+            newRecordsWithCourse.forEach((trainee2) => {
+              console.log(`[DEBUG] Processing trainee: ${trainee2.fullName}, LMP Type: ${trainee2.lmpType}`);
+              if (trainee2.fullName && trainee2.lmpType) {
                 const masterLMP = syllabusDetails.filter((item) => {
-                  return item.courses.includes(trainee.lmpType);
+                  return item.courses.includes(trainee2.lmpType);
                 });
-                console.log(`[DEBUG] Found ${masterLMP.length} master LMP items for ${trainee.lmpType}`);
+                console.log(`[DEBUG] Found ${masterLMP.length} master LMP items for ${trainee2.lmpType}`);
                 if (masterLMP.length > 0) {
-                  newLMPs.set(trainee.fullName, [...masterLMP]);
-                  console.log(`[Individual LMP] Initialized ${trainee.fullName}'s Individual LMP with ${trainee.lmpType} (${masterLMP.length} events)`);
+                  newLMPs.set(trainee2.fullName, [...masterLMP]);
+                  console.log(`[Individual LMP] Initialized ${trainee2.fullName}'s Individual LMP with ${trainee2.lmpType} (${masterLMP.length} events)`);
                 } else {
-                  console.warn(`[Individual LMP] No Master LMP found for LMP type: ${trainee.lmpType}`);
+                  console.warn(`[Individual LMP] No Master LMP found for LMP type: ${trainee2.lmpType}`);
                 }
               } else {
-                console.warn(`[DEBUG] Skipping trainee ${trainee.fullName} - missing fullName or lmpType`);
+                console.warn(`[DEBUG] Skipping trainee ${trainee2.fullName} - missing fullName or lmpType`);
               }
             });
             console.log(`[DEBUG] LMP initialization complete. New LMPs count: ${newLMPs.size}`);
@@ -64365,8 +64365,8 @@ const SettingsView = ({
             });
           },
           onUpdateTraineePermission: (idNumber, permissionLevel) => {
-            const trainee = traineesData.find((t) => t.idNumber === idNumber);
-            const oldPermission = trainee?.permissions?.[0] || "None";
+            const trainee2 = traineesData.find((t) => t.idNumber === idNumber);
+            const oldPermission = trainee2?.permissions?.[0] || "None";
             const updatedTrainees = traineesData.map(
               (t) => t.idNumber === idNumber ? { ...t, permissions: [permissionLevel] } : t
             );
@@ -64374,7 +64374,7 @@ const SettingsView = ({
             logAudit({
               page: "Settings - Permissions",
               action: "update",
-              description: `Updated trainee permission: ${trainee?.name}`,
+              description: `Updated trainee permission: ${trainee2?.name}`,
               changes: `From: ${oldPermission} To: ${permissionLevel}`
             });
           },
@@ -66381,14 +66381,14 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
         lineNumber: 315,
         columnNumber: 11
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: sortedTraineeData.map((trainee, index) => {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: sortedTraineeData.map((trainee2, index) => {
         const rowBackgroundColor = index % 2 === 0 ? "bg-green-950/30" : "bg-green-900/20";
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "tr",
           {
             className: rowBackgroundColor,
             children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.name }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee2.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
                 lineNumber: 343,
                 columnNumber: 19
@@ -66398,16 +66398,16 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 lineNumber: 346,
                 columnNumber: 19
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: [trainee.rank, trainee.service].filter(Boolean).join(" / ") || "N/A" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: [trainee2.rank, trainee2.service].filter(Boolean).join(" / ") || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
                 lineNumber: 349,
                 columnNumber: 19
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.course ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
-                trainee.course,
-                trainee.lmpType ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 ml-1 text-xs", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee2.course ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
+                trainee2.course,
+                trainee2.lmpType ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 ml-1 text-xs", children: [
                   "(",
-                  trainee.lmpType,
+                  trainee2.lmpType,
                   ")"
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
@@ -66423,17 +66423,17 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 lineNumber: 352,
                 columnNumber: 19
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: [trainee.unit, trainee.flight].filter(Boolean).join(" / ") || "N/A" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: [trainee2.unit, trainee2.flight].filter(Boolean).join(" / ") || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
                 lineNumber: 357,
                 columnNumber: 19
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.idNumber || "N/A" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee2.idNumber || "N/A" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
                 lineNumber: 360,
                 columnNumber: 19
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee.primaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 italic", children: "Unassigned" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-white", children: trainee2.primaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 italic", children: "Unassigned" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
                 lineNumber: 364,
                 columnNumber: 51
@@ -66442,7 +66442,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 lineNumber: 363,
                 columnNumber: 19
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: trainee.isPaused ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-3 py-1 rounded-full text-xs font-semibold bg-amber-600 text-white", children: "Paused" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: trainee2.isPaused ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-3 py-1 rounded-full text-xs font-semibold bg-amber-600 text-white", children: "Paused" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
                 lineNumber: 368,
                 columnNumber: 23
@@ -66459,7 +66459,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                   "button",
                   {
-                    onClick: () => onNavigateToProfile?.({ ...trainee, _dataSource: "database" }),
+                    onClick: () => onNavigateToProfile?.({ ...trainee2, _dataSource: "database" }),
                     className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors",
                     title: "Edit this trainee record",
                     children: "Edit"
@@ -66473,14 +66473,14 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                   },
                   void 0
                 ),
-                showDeleteConfirm === trainee.id ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
+                showDeleteConfirm === trainee2.id ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                     "button",
                     {
-                      onClick: () => handleDeleteTrainee(trainee.id, trainee.name, trainee.rank),
-                      disabled: deletingId === trainee.id,
+                      onClick: () => handleDeleteTrainee(trainee2.id, trainee2.name, trainee2.rank),
+                      disabled: deletingId === trainee2.id,
                       className: "px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50",
-                      children: deletingId === trainee.id ? "Deleting..." : "Confirm"
+                      children: deletingId === trainee2.id ? "Deleting..." : "Confirm"
                     },
                     void 0,
                     false,
@@ -66514,7 +66514,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                   "button",
                   {
-                    onClick: () => setShowDeleteConfirm(trainee.id),
+                    onClick: () => setShowDeleteConfirm(trainee2.id),
                     className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors",
                     title: "Delete this trainee record",
                     children: "Delete"
@@ -66539,7 +66539,7 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
               }, void 0)
             ]
           },
-          trainee.id,
+          trainee2.id,
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeDatabaseTable.tsx",
@@ -66589,16 +66589,16 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
 };
 const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
   const [deletingId, setDeletingId] = reactExports.useState(null);
-  const handleDelete = async (trainee) => {
-    setDeletingId(trainee.idNumber);
+  const handleDelete = async (trainee2) => {
+    setDeletingId(trainee2.idNumber);
     try {
       if (onDeleteFromMockdata) {
-        console.log(`✓ Removed ${trainee.name} from mockdata display`);
-        onDeleteFromMockdata(trainee.idNumber);
+        console.log(`✓ Removed ${trainee2.name} from mockdata display`);
+        onDeleteFromMockdata(trainee2.idNumber);
       }
     } catch (error) {
       console.error("Error deleting trainee:", error);
-      alert(`Error deleting ${trainee.name}: ${error}`);
+      alert(`Error deleting ${trainee2.name}: ${error}`);
     } finally {
       setDeletingId(null);
     }
@@ -66705,23 +66705,23 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
         lineNumber: 46,
         columnNumber: 25
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: traineesData.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-gray-700/50", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: trainee.idNumber }, void 0, false, {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: traineesData.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-gray-700/50", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: trainee2.idNumber }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 89,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-white font-medium", children: trainee.name }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-white font-medium", children: trainee2.name }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 92,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee.rank }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee2.rank }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 95,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-2 py-1 text-xs font-medium rounded bg-indigo-900/50 text-indigo-300", children: trainee.course }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-2 py-1 text-xs font-medium rounded bg-indigo-900/50 text-indigo-300", children: trainee2.course }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 99,
           columnNumber: 41
@@ -66730,27 +66730,27 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
           lineNumber: 98,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee.unit }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee2.unit }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 103,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee.flight || "-" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee2.flight || "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 106,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee.service || "-" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300", children: trainee2.service || "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 109,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: trainee.traineeCallsign || "-" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 font-mono text-xs", children: trainee2.traineeCallsign || "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 112,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 text-xs", children: trainee.primaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 text-xs", children: trainee2.primaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 116,
           columnNumber: 71
@@ -66759,7 +66759,7 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
           lineNumber: 115,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 text-xs", children: trainee.secondaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-gray-300 text-xs", children: trainee2.secondaryInstructor || /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "-" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 119,
           columnNumber: 73
@@ -66768,7 +66768,7 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
           lineNumber: 118,
           columnNumber: 37
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: trainee.isPaused ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400", children: "⏸" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 whitespace-nowrap text-center", children: trainee2.isPaused ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400", children: "⏸" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
           lineNumber: 123,
           columnNumber: 45
@@ -66786,17 +66786,17 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
           {
             onClick: async () => {
               const confirmed = await showDarkConfirm(
-                `Are you sure you want to remove ${trainee.name} from mockdata display? Note: This is temporary and will reset on refresh.`,
+                `Are you sure you want to remove ${trainee2.name} from mockdata display? Note: This is temporary and will reset on refresh.`,
                 "Confirm Removal",
                 "warning"
               );
               if (confirmed) {
-                handleDelete(trainee);
+                handleDelete(trainee2);
               }
             },
-            disabled: deletingId === trainee.idNumber,
-            className: `px-3 py-1 text-xs font-medium rounded transition-colors ${deletingId === trainee.idNumber ? "bg-gray-600 text-gray-400 cursor-not-allowed" : "bg-red-700 text-white hover:bg-red-600"}`,
-            children: deletingId === trainee.idNumber ? "Removing..." : "Remove"
+            disabled: deletingId === trainee2.idNumber,
+            className: `px-3 py-1 text-xs font-medium rounded transition-colors ${deletingId === trainee2.idNumber ? "bg-gray-600 text-gray-400 cursor-not-allowed" : "bg-red-700 text-white hover:bg-red-600"}`,
+            children: deletingId === trainee2.idNumber ? "Removing..." : "Remove"
           },
           void 0,
           false,
@@ -66811,7 +66811,7 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
           lineNumber: 128,
           columnNumber: 37
         }, void 0)
-      ] }, trainee.idNumber, true, {
+      ] }, trainee2.idNumber, true, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeMockDataTable.tsx",
         lineNumber: 88,
         columnNumber: 33
@@ -68648,16 +68648,16 @@ const simulateProgressAndScores = (trainees, syllabus, instructors) => {
   const scoreMap = /* @__PURE__ */ new Map();
   const qfiInstructors = instructors.filter((i) => i.role === "QFI");
   const syllabusIds = syllabus.map((s) => s.code);
-  trainees.forEach((trainee) => {
-    const range = courseProgressRanges[trainee.course];
+  trainees.forEach((trainee2) => {
+    const range = courseProgressRanges[trainee2.course];
     if (!range) {
-      scoreMap.set(trainee.fullName, []);
+      scoreMap.set(trainee2.fullName, []);
       return;
     }
     const startIndex = syllabusIds.indexOf(range.start);
     const endIndex = syllabusIds.indexOf(range.end);
     if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
-      scoreMap.set(trainee.fullName, []);
+      scoreMap.set(trainee2.fullName, []);
       return;
     }
     const progressIndex = Math.floor(Math.random() * (endIndex - startIndex + 1)) + startIndex;
@@ -68694,14 +68694,14 @@ const simulateProgressAndScores = (trainees, syllabus, instructors) => {
         latestFlightDate = scoreDate;
       }
     });
-    scoreMap.set(trainee.fullName, traineeScores);
+    scoreMap.set(trainee2.fullName, traineeScores);
     if (latestEventDate) {
-      trainee.lastEventDate = latestEventDate.toISOString().split("T")[0];
+      trainee2.lastEventDate = latestEventDate.toISOString().split("T")[0];
     }
     if (latestFlightDate) {
-      trainee.lastFlightDate = latestFlightDate.toISOString().split("T")[0];
+      trainee2.lastFlightDate = latestFlightDate.toISOString().split("T")[0];
     } else if (latestEventDate) {
-      trainee.lastFlightDate = latestEventDate.toISOString().split("T")[0];
+      trainee2.lastFlightDate = latestEventDate.toISOString().split("T")[0];
     }
   });
   return scoreMap;
@@ -68733,10 +68733,10 @@ const allocateInstructors = (trainees, instructors) => {
       (t) => t.unit === instructor.unit && !workload.get(instructor.name)?.primary.includes(t)
     );
     for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
-      const trainee = unitTrainees[i];
-      if (!trainee.primaryInstructor) {
-        trainee.primaryInstructor = instructor.name;
-        workload.get(instructor.name).primary.push(trainee);
+      const trainee2 = unitTrainees[i];
+      if (!trainee2.primaryInstructor) {
+        trainee2.primaryInstructor = instructor.name;
+        workload.get(instructor.name).primary.push(trainee2);
       }
     }
   }
@@ -68746,16 +68746,16 @@ const allocateInstructors = (trainees, instructors) => {
       (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && !workload.get(instructor.name)?.secondary.includes(t)
     );
     for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
-      const trainee = unitTrainees[i];
-      if (!trainee.secondaryInstructor) {
-        trainee.secondaryInstructor = instructor.name;
-        workload.get(instructor.name).secondary.push(trainee);
+      const trainee2 = unitTrainees[i];
+      if (!trainee2.secondaryInstructor) {
+        trainee2.secondaryInstructor = instructor.name;
+        workload.get(instructor.name).secondary.push(trainee2);
       }
     }
   }
-  for (const trainee of eligibleTrainees) {
-    if (!trainee.primaryInstructor && trainee.unit) {
-      const unitInstructors = getInstructorsByUnit(trainee.unit);
+  for (const trainee2 of eligibleTrainees) {
+    if (!trainee2.primaryInstructor && trainee2.unit) {
+      const unitInstructors = getInstructorsByUnit(trainee2.unit);
       const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
         const loadA = workload.get(a.name)?.primary.length || 0;
         const loadB = workload.get(b.name)?.primary.length || 0;
@@ -68763,22 +68763,22 @@ const allocateInstructors = (trainees, instructors) => {
       });
       if (sortedInstructors.length > 0) {
         const instructor = sortedInstructors[0];
-        trainee.primaryInstructor = instructor.name;
-        workload.get(instructor.name).primary.push(trainee);
+        trainee2.primaryInstructor = instructor.name;
+        workload.get(instructor.name).primary.push(trainee2);
       }
     }
-    if (!trainee.secondaryInstructor && trainee.unit) {
-      const unitInstructors = getInstructorsByUnit(trainee.unit);
+    if (!trainee2.secondaryInstructor && trainee2.unit) {
+      const unitInstructors = getInstructorsByUnit(trainee2.unit);
       const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
         const loadA = workload.get(a.name)?.secondary.length || 0;
         const loadB = workload.get(b.name)?.secondary.length || 0;
         return loadA - loadB;
       });
-      const differentInstructors = sortedInstructors.filter((i) => i.name !== trainee.primaryInstructor);
+      const differentInstructors = sortedInstructors.filter((i) => i.name !== trainee2.primaryInstructor);
       const instructorToUse = differentInstructors.length > 0 ? differentInstructors[0] : sortedInstructors[0];
       if (instructorToUse) {
-        trainee.secondaryInstructor = instructorToUse.name;
-        workload.get(instructorToUse.name).secondary.push(trainee);
+        trainee2.secondaryInstructor = instructorToUse.name;
+        workload.get(instructorToUse.name).secondary.push(trainee2);
       }
     }
   }
@@ -68794,10 +68794,10 @@ const allocateInstructors = (trainees, instructors) => {
           (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && t.secondaryInstructor !== instructor.name && !workload.get(instructor.name)?.primary.includes(t)
         );
         if (unitTrainees.length > 0) {
-          const trainee = unitTrainees[0];
-          if (!trainee.primaryInstructor) {
-            trainee.primaryInstructor = instructor.name;
-            workload.get(instructor.name).primary.push(trainee);
+          const trainee2 = unitTrainees[0];
+          if (!trainee2.primaryInstructor) {
+            trainee2.primaryInstructor = instructor.name;
+            workload.get(instructor.name).primary.push(trainee2);
             progressMade = true;
           }
         }
@@ -68807,10 +68807,10 @@ const allocateInstructors = (trainees, instructors) => {
           (t) => t.unit === instructor.unit && t.secondaryInstructor !== instructor.name && t.primaryInstructor !== instructor.name && !workload.get(instructor.name)?.secondary.includes(t)
         );
         if (availableForSecondary.length > 0) {
-          const trainee = availableForSecondary[0];
-          if (!trainee.secondaryInstructor) {
-            trainee.secondaryInstructor = instructor.name;
-            workload.get(instructor.name).secondary.push(trainee);
+          const trainee2 = availableForSecondary[0];
+          if (!trainee2.secondaryInstructor) {
+            trainee2.secondaryInstructor = instructor.name;
+            workload.get(instructor.name).secondary.push(trainee2);
             progressMade = true;
           }
         }
@@ -68856,21 +68856,21 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
       const duration = syllabusItem.flightOrSimHours;
       const instructor = qfis.find((inst) => isAvailable(inst.name, startTime, duration));
       if (!instructor) continue;
-      const trainee = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
-      if (!trainee) continue;
+      const trainee2 = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
+      if (!trainee2) continue;
       bookPerson(instructor.name, startTime, duration);
-      bookPerson(trainee.fullName, startTime, duration);
+      bookPerson(trainee2.fullName, startTime, duration);
       newEvents.push({
         id: v4(),
         date,
         type: "flight",
         instructor: instructor.name,
-        student: trainee.fullName,
+        student: trainee2.fullName,
         flightNumber: syllabusItem.code,
         duration,
         startTime,
         resourceId: `PC-21 ${i + 1}`,
-        color: courseColors[trainee.course] || "bg-gray-400/50",
+        color: courseColors[trainee2.course] || "bg-gray-400/50",
         flightType: "Dual",
         locationType: "Local",
         origin: location,
@@ -68888,16 +68888,16 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
     const duration = syllabusItem.flightOrSimHours;
     const simIp = simIps.find((ip) => isAvailable(ip.name, startTime, duration));
     if (!simIp) continue;
-    const trainee = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
-    if (!trainee) continue;
+    const trainee2 = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
+    if (!trainee2) continue;
     bookPerson(simIp.name, startTime, duration);
-    bookPerson(trainee.fullName, startTime, duration);
+    bookPerson(trainee2.fullName, startTime, duration);
     newEvents.push({
       id: v4(),
       date,
       type: "ftd",
       instructor: simIp.name,
-      student: trainee.fullName,
+      student: trainee2.fullName,
       flightNumber: syllabusItem.code,
       duration,
       startTime,
@@ -68944,8 +68944,8 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
   const startHistoryDate = new Date(today.getFullYear(), today.getMonth() - 24, 1);
   const flightSyllabus = syllabus.filter((s) => s.type === "Flight" && !s.code.includes("MB"));
   const ftdSyllabus = syllabus.filter((s) => s.type === "FTD");
-  trainees.forEach((trainee) => {
-    if (trainee.isPaused) return;
+  trainees.forEach((trainee2) => {
+    if (trainee2.isPaused) return;
     for (let i = 0; i < 24; i++) {
       const monthDate = new Date(startHistoryDate.getFullYear(), startHistoryDate.getMonth() + i, 1);
       const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
@@ -68962,7 +68962,7 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
           date: dateStr,
           type: isFlight ? "flight" : "ftd",
           instructor: instructor.name,
-          student: trainee.fullName,
+          student: trainee2.fullName,
           flightNumber: item.code,
           duration: item.duration,
           startTime,
@@ -72242,7 +72242,7 @@ const SettingsViewWithMenu = (props) => {
     props.onShowSuccess(`Staff member removed from mockdata display`);
   };
   const handleDeleteTraineeFromMockdata = (idNumber) => {
-    setFilteredTraineeMockdata((prev) => prev.filter((trainee) => trainee.idNumber !== idNumber));
+    setFilteredTraineeMockdata((prev) => prev.filter((trainee2) => trainee2.idNumber !== idNumber));
     props.onShowSuccess(`Trainee removed from mockdata display`);
   };
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 sm:p-6", children: [
@@ -72781,9 +72781,9 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     if (instructor) {
       return `${instructor.rank} ${cleanName.split(",")[0]}`;
     }
-    const trainee = traineesData.find((t) => t.name === cleanName || t.fullName === name);
-    if (trainee) {
-      return `${trainee.rank} ${cleanName.split(",")[0]}`;
+    const trainee2 = traineesData.find((t) => t.name === cleanName || t.fullName === name);
+    if (trainee2) {
+      return `${trainee2.rank} ${cleanName.split(",")[0]}`;
     }
     return cleanName.split(",")[0];
   };
@@ -74490,7 +74490,7 @@ const CheckIcon = () => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xml
   lineNumber: 130,
   columnNumber: 5
 }, void 0);
-const TraineeLmpView = ({ trainee, traineeLmp, scores, onBack }) => {
+const TraineeLmpView = ({ trainee: trainee2, traineeLmp, scores, onBack }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
   const completedEventIds = reactExports.useMemo(() => {
@@ -74510,7 +74510,7 @@ const TraineeLmpView = ({ trainee, traineeLmp, scores, onBack }) => {
   }, [scores, traineeLmp]);
   reactExports.useEffect(() => {
     setSelectedItem(null);
-  }, [trainee.fullName]);
+  }, [trainee2.fullName]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
@@ -74520,11 +74520,11 @@ const TraineeLmpView = ({ trainee, traineeLmp, scores, onBack }) => {
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: [
-          trainee.rank,
+          trainee2.rank,
           " ",
-          trainee.name,
+          trainee2.name,
           " - ",
-          trainee.course
+          trainee2.course
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
           lineNumber: 176,
@@ -74662,7 +74662,7 @@ const TraineeLmpView = ({ trainee, traineeLmp, scores, onBack }) => {
   }, void 0);
 };
 const AddRemedialPackageFlyout = ({
-  trainee,
+  trainee: trainee2,
   instructors,
   scores,
   traineeLmp,
@@ -74740,7 +74740,7 @@ const AddRemedialPackageFlyout = ({
       alert("Please select an event to remediate and add at least one remedial event.");
       return;
     }
-    onSave(trainee, eventToRemediate, remedialEvents);
+    onSave(trainee2, eventToRemediate, remedialEvents);
   };
   const InputRow = ({ label, state, setState }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-end space-x-2", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-28 flex-shrink-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-300", children: label }, void 0, false, {
@@ -74820,7 +74820,7 @@ const AddRemedialPackageFlyout = ({
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: [
         "Add Remedial Package for ",
-        trainee.name
+        trainee2.name
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/AddRemedialPackageFlyout.tsx",
         lineNumber: 167,
@@ -75118,9 +75118,9 @@ const CourseDataWindow = ({
     const representativeLMP = traineeLMPs.get(courseTrainees[0]?.fullName) || [];
     const schedulableSyllabusEvents = representativeLMP.filter((item) => !item.id.includes(" MB") && !item.isRemedial);
     const totalSyllabusEvents = schedulableSyllabusEvents.length;
-    const traineesWithDetails = courseTrainees.map((trainee) => {
-      const individualLMP = traineeLMPs.get(trainee.fullName) || [];
-      const traineeScores = scores.get(trainee.fullName) || [];
+    const traineesWithDetails = courseTrainees.map((trainee2) => {
+      const individualLMP = traineeLMPs.get(trainee2.fullName) || [];
+      const traineeScores = scores.get(trainee2.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
       let nextEvent = "Finished";
       const completedCount = getCompletedCount(traineeScores);
@@ -75137,7 +75137,7 @@ const CourseDataWindow = ({
         }
       }
       const percentage = totalSyllabusEvents > 0 ? completedCount / totalSyllabusEvents * 100 : 0;
-      return { trainee, percentage, nextEvent, completedCount };
+      return { trainee: trainee2, percentage, nextEvent, completedCount };
     }).sort((a, b) => b.completedCount - a.completedCount);
     const progressCounts = traineesWithDetails.map((t) => t.completedCount).sort((a, b) => a - b);
     const frontRunnerCount = progressCounts.length > 0 ? progressCounts[progressCounts.length - 1] : 0;
@@ -75360,9 +75360,9 @@ const CourseDataWindow = ({
       lineNumber: 134,
       columnNumber: 13
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 space-y-3 max-h-60 overflow-y-auto", children: courseData.trainees.map(({ trainee, percentage, nextEvent }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 space-y-3 max-h-60 overflow-y-auto", children: courseData.trainees.map(({ trainee: trainee2, percentage, nextEvent }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between mb-1", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-gray-300", children: trainee.name }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-gray-300", children: trainee2.name }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
           lineNumber: 182,
           columnNumber: 29
@@ -75396,7 +75396,7 @@ const CourseDataWindow = ({
         lineNumber: 185,
         columnNumber: 25
       }, void 0)
-    ] }, trainee.idNumber, true, {
+    ] }, trainee2.idNumber, true, {
       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
       lineNumber: 180,
       columnNumber: 21
@@ -75447,15 +75447,15 @@ function calculateCourseStatistics(trainees, scores, traineeLMPs, courses) {
     };
   }
   const traineeStats = [];
-  for (const trainee of trainees) {
-    const course = courses.find((c) => c.name === trainee.course);
+  for (const trainee2 of trainees) {
+    const course = courses.find((c) => c.name === trainee2.course);
     if (!course) {
-      console.log(`[CourseStatistics] No course found for trainee ${trainee.fullName}, course: ${trainee.course}`);
+      console.log(`[CourseStatistics] No course found for trainee ${trainee2.fullName}, course: ${trainee2.course}`);
       continue;
     }
-    const traineeScores = scores.get(trainee.fullName) || [];
-    const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
-    console.log(`[CourseStatistics] Processing trainee: ${trainee.fullName}`, {
+    const traineeScores = scores.get(trainee2.fullName) || [];
+    const traineeLMP = traineeLMPs.get(trainee2.fullName) || [];
+    console.log(`[CourseStatistics] Processing trainee: ${trainee2.fullName}`, {
       scoresCount: traineeScores.length,
       lmpCount: traineeLMP.length,
       courseName: course.name,
@@ -75475,9 +75475,9 @@ function calculateCourseStatistics(trainees, scores, traineeLMPs, courses) {
     const totalRequired = traineeLMP.filter(
       (item) => (item.type === "Flight" || item.type === "FTD") && !item.isRemedial
     ).length;
-    console.log(`[CourseStatistics] ${trainee.fullName}: completed=${completedEvents}, total=${totalRequired}`);
+    console.log(`[CourseStatistics] ${trainee2.fullName}: completed=${completedEvents}, total=${totalRequired}`);
     if (totalRequired === 0) {
-      console.log(`[CourseStatistics] Skipping ${trainee.fullName} - no required events`);
+      console.log(`[CourseStatistics] Skipping ${trainee2.fullName} - no required events`);
       continue;
     }
     const completionRate = completedEvents / totalRequired;
@@ -75488,9 +75488,9 @@ function calculateCourseStatistics(trainees, scores, traineeLMPs, courses) {
     const weeksRemaining = Math.max(0, (courseEndDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24 * 7));
     const eventsRemaining = totalRequired - completedEvents;
     const eventsPerWeek = weeksRemaining > 0 ? eventsRemaining / weeksRemaining : 0;
-    console.log(`[CourseStatistics] ${trainee.fullName}: weeksRemaining=${weeksRemaining.toFixed(1)}, eventsRemaining=${eventsRemaining}, eventsPerWeek=${eventsPerWeek.toFixed(1)}`);
+    console.log(`[CourseStatistics] ${trainee2.fullName}: weeksRemaining=${weeksRemaining.toFixed(1)}, eventsRemaining=${eventsRemaining}, eventsPerWeek=${eventsPerWeek.toFixed(1)}`);
     traineeStats.push({
-      name: trainee.fullName,
+      name: trainee2.fullName,
       completedEvents,
       totalRequired,
       completionRate,
@@ -75567,9 +75567,9 @@ const FullPageProgressGraph = ({
       const startDate = /* @__PURE__ */ new Date(course.startDate + "T00:00:00Z");
       const endDate = /* @__PURE__ */ new Date(course.gradDate + "T00:00:00Z");
       let firstEventDate = null;
-      for (const trainee of courseTrainees) {
-        const traineeScores = scores.get(trainee.fullName) || [];
-        const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
+      for (const trainee2 of courseTrainees) {
+        const traineeScores = scores.get(trainee2.fullName) || [];
+        const traineeLMP = traineeLMPs.get(trainee2.fullName) || [];
         for (const score of traineeScores) {
           if (score.event.includes("MB") || score.event.includes("-REM-") || score.event.includes("-RF")) {
             continue;
@@ -75596,9 +75596,9 @@ const FullPageProgressGraph = ({
         const weekEnd = new Date(currentWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 7);
         const traineeProgress = [];
-        for (const trainee of courseTrainees) {
-          const traineeScores = scores.get(trainee.fullName) || [];
-          const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
+        for (const trainee2 of courseTrainees) {
+          const traineeScores = scores.get(trainee2.fullName) || [];
+          const traineeLMP = traineeLMPs.get(trainee2.fullName) || [];
           let completedCount = 0;
           for (const score of traineeScores) {
             const scoreDate = /* @__PURE__ */ new Date(score.date + "T00:00:00Z");
@@ -75612,7 +75612,7 @@ const FullPageProgressGraph = ({
               }
             }
           }
-          traineeProgress.push({ name: trainee.fullName, count: completedCount });
+          traineeProgress.push({ name: trainee2.fullName, count: completedCount });
         }
         if (traineeProgress.length > 0) {
           traineeProgress.sort((a, b) => b.count - a.count);
@@ -77317,36 +77317,36 @@ const TrainingRecordsExportView = ({
     console.log("🔍 FILTER DEBUG - Before status filter:", filtered.length);
     if (statusFilter === "dco") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
-        if (!trainee) return false;
-        const traineeScores = scores.get(trainee);
+        const trainee2 = e.student || e.pilot;
+        if (!trainee2) return false;
+        const traineeScores = scores.get(trainee2);
         if (!traineeScores) return false;
         const eventScore = traineeScores.find((s) => s.syllabusId === e.flightNumber && s.date === e.date);
         return eventScore?.outcome === "DCO";
       });
     } else if (statusFilter === "dnco") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
-        if (!trainee) return false;
-        const traineeScores = scores.get(trainee);
+        const trainee2 = e.student || e.pilot;
+        if (!trainee2) return false;
+        const traineeScores = scores.get(trainee2);
         if (!traineeScores) return false;
         const eventScore = traineeScores.find((s) => s.syllabusId === e.flightNumber && s.date === e.date);
         return eventScore?.outcome === "DNCO";
       });
     } else if (statusFilter === "pass") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
-        if (!trainee) return false;
-        const traineeScores = scores.get(trainee);
+        const trainee2 = e.student || e.pilot;
+        if (!trainee2) return false;
+        const traineeScores = scores.get(trainee2);
         if (!traineeScores) return false;
         const eventScore = traineeScores.find((s) => s.syllabusId === e.flightNumber && s.date === e.date);
         return eventScore?.outcome === "Pass";
       });
     } else if (statusFilter === "fail") {
       filtered = filtered.filter((e) => {
-        const trainee = e.student || e.pilot;
-        if (!trainee) return false;
-        const traineeScores = scores.get(trainee);
+        const trainee2 = e.student || e.pilot;
+        if (!trainee2) return false;
+        const traineeScores = scores.get(trainee2);
         if (!traineeScores) return false;
         const eventScore = traineeScores.find((s) => s.syllabusId === e.flightNumber && s.date === e.date);
         return eventScore?.outcome === "Fail";
@@ -77432,20 +77432,20 @@ const TrainingRecordsExportView = ({
       (e) => selectedCourses.some((course) => {
         const studentName = e.student || e.pilot;
         if (!studentName) return false;
-        const trainee = courseTrainees.find(
+        const trainee2 = courseTrainees.find(
           (t) => studentName === t.name || studentName.startsWith(t.name + " –") || studentName.startsWith(t.name + " -")
         );
-        return trainee;
+        return trainee2;
       })
     );
     const scheduledTraineeNames = [...new Set(
       courseEvents.map((e) => {
         const studentName = e.student || e.pilot;
         if (!studentName) return null;
-        const trainee = courseTrainees.find(
+        const trainee2 = courseTrainees.find(
           (t) => studentName === t.name || studentName.startsWith(t.name + " –") || studentName.startsWith(t.name + " -")
         );
-        return trainee?.name;
+        return trainee2?.name;
       }).filter(Boolean)
     )];
     return scheduledTraineeNames;
@@ -77686,7 +77686,7 @@ const TrainingRecordsExportView = ({
     return result;
   };
   const renderPT051ToPDF = (pdf, event) => {
-    const trainee = allTrainees.find((t) => t.fullName === event.student || t.fullName === event.pilot);
+    const trainee2 = allTrainees.find((t) => t.fullName === event.student || t.fullName === event.pilot);
     const instructor = allInstructors.find((i) => i.name === event.instructor);
     const formatDate22 = (dateStr) => {
       if (!dateStr) return "N/A";
@@ -77729,11 +77729,11 @@ const TrainingRecordsExportView = ({
     pdf.setFont("helvetica", "bold");
     pdf.text("Trainee:", col1X, y);
     pdf.setFont("helvetica", "normal");
-    pdf.text(`${trainee?.rank || ""} ${trainee?.name || event.student || event.pilot || "N/A"}`, col1X + 20, y);
+    pdf.text(`${trainee2?.rank || ""} ${trainee2?.name || event.student || event.pilot || "N/A"}`, col1X + 20, y);
     pdf.setFont("helvetica", "bold");
     pdf.text("Course:", col2X, y);
     pdf.setFont("helvetica", "normal");
-    pdf.text(trainee?.course || "N/A", col2X + 20, y);
+    pdf.text(trainee2?.course || "N/A", col2X + 20, y);
     y += 5;
     pdf.setFont("helvetica", "bold");
     pdf.text("Instructor:", col1X, y);
@@ -77955,8 +77955,8 @@ const TrainingRecordsExportView = ({
       let completedCount = 0;
       for (let i = 0; i < selectedForCompletion.length; i++) {
         const traineeName = selectedForCompletion[i];
-        const trainee = allTrainees.find((t) => t.name === traineeName);
-        if (!trainee) continue;
+        const trainee2 = allTrainees.find((t) => t.name === traineeName);
+        if (!trainee2) continue;
         let eventsInDateRange = allEvents;
         if (timePeriod === "single-date" && singleDate) {
           eventsInDateRange = eventsInDateRange.filter((e) => e.date === singleDate);
@@ -77969,12 +77969,12 @@ const TrainingRecordsExportView = ({
           return studentName === traineeName || studentName.startsWith(traineeName + " –") || studentName.startsWith(traineeName + " -");
         });
         for (const event of traineeEvents) {
-          const assessmentId = `${trainee.name}_${event.id}_PT051`;
+          const assessmentId = `${trainee2.name}_${event.id}_PT051`;
           let assessment = pt051Assessments.get(assessmentId);
           if (!assessment) {
             assessment = {
               id: assessmentId,
-              traineeFullName: trainee.name,
+              traineeFullName: trainee2.name,
               eventId: event.id,
               flightNumber: event.flightNumber,
               date: event.date,
@@ -78921,15 +78921,15 @@ const TrainingRecordsExportView = ({
                 },
                 className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white",
                 size: 5,
-                children: filteredTrainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee.name, children: [
-                  trainee.rank,
+                children: filteredTrainees.map((trainee2) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee2.name, children: [
+                  trainee2.rank,
                   " ",
-                  trainee.name,
+                  trainee2.name,
                   " (",
-                  trainee.course,
+                  trainee2.course,
                   ") ",
-                  trainee.isPaused ? "(Archived)" : ""
-                ] }, trainee.name, true, {
+                  trainee2.isPaused ? "(Archived)" : ""
+                ] }, trainee2.name, true, {
                   fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TrainingRecordsExportView.tsx",
                   lineNumber: 1513,
                   columnNumber: 45
@@ -79733,7 +79733,7 @@ const TrainingRecordsExportView = ({
             columnNumber: 37
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "max-h-60 overflow-y-auto border border-gray-600 rounded p-2 bg-gray-700/50", children: getScheduledTraineesForCompletion.map((traineeName) => {
-            const trainee = allTrainees.find((t) => t.name === traineeName);
+            const trainee2 = allTrainees.find((t) => t.name === traineeName);
             return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-2 p-2 hover:bg-gray-600/30 rounded cursor-pointer", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "input",
@@ -79759,11 +79759,11 @@ const TrainingRecordsExportView = ({
                 void 0
               ),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-200", children: [
-                trainee?.rank,
+                trainee2?.rank,
                 " ",
                 traineeName,
                 " (",
-                trainee?.course,
+                trainee2?.course,
                 ")"
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/TrainingRecordsExportView.tsx",
@@ -81040,17 +81040,17 @@ const UnavailabilityReportModal = ({
     });
     const traineesUnavailable = [];
     const paused = [];
-    trainees.forEach((trainee) => {
+    trainees.forEach((trainee2) => {
       const scheduledEvents = events.filter(
-        (e) => e.student === trainee.fullName || e.pilot === trainee.fullName || e.attendees?.includes(trainee.fullName)
+        (e) => e.student === trainee2.fullName || e.pilot === trainee2.fullName || e.attendees?.includes(trainee2.fullName)
       );
-      if (trainee.isPaused) {
-        paused.push({ name: trainee.fullName, rank: trainee.rank, scheduledEvents });
+      if (trainee2.isPaused) {
+        paused.push({ name: trainee2.fullName, rank: trainee2.rank, scheduledEvents });
       } else {
-        (trainee.unavailability || []).forEach((period) => {
+        (trainee2.unavailability || []).forEach((period) => {
           const isInDateRange = period.allDay ? date >= period.startDate && date < period.endDate : date >= period.startDate && date <= period.endDate;
           if (isInDateRange) {
-            traineesUnavailable.push({ name: trainee.fullName, rank: trainee.rank, period, scheduledEvents });
+            traineesUnavailable.push({ name: trainee2.fullName, rank: trainee2.rank, period, scheduledEvents });
           }
         });
       }
@@ -82657,7 +82657,7 @@ const NextDayTraineeScheduleView = ({
               renderGridLines(),
               renderNightShade(),
               renderDaylightLines(),
-              sortedTrainees.flatMap((trainee, rowIndex) => {
+              sortedTrainees.flatMap((trainee2, rowIndex) => {
                 const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                   "div",
                   {
@@ -82679,7 +82679,7 @@ const NextDayTraineeScheduleView = ({
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee).sort((a, b) => a.startTime - b.startTime);
+                  const traineeEventsForBars = events.filter((e) => e.student === trainee2 || e.flightType === "Solo" && e.pilot === trainee2).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < traineeEventsForBars.length; i++) {
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
@@ -82733,7 +82733,7 @@ const NextDayTraineeScheduleView = ({
                   }
                 }
                 const traineeEvents = events.filter(
-                  (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee
+                  (event) => event.student === trainee2 || event.flightType === "Solo" && event.pilot === trainee2
                 ).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = traineeEvents.map((event) => {
                   const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
@@ -82773,7 +82773,7 @@ const NextDayTraineeScheduleView = ({
                       isDraggable: true,
                       currentTime
                     },
-                    `${event.id}-${trainee}`,
+                    `${event.id}-${trainee2}`,
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-github/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
@@ -82812,6 +82812,216 @@ const NextDayTraineeScheduleView = ({
     columnNumber: 5
   }, void 0);
 };
+function assignTraineesToInstructors(trainees, instructors) {
+  console.log("🎓 Starting trainee assignment...");
+  console.log(`  Instructors: ${instructors.length}`);
+  console.log(`  Trainees: ${trainees.length}`);
+  const allocatableInstructors = instructors.filter((i) => i.role === "QFI");
+  console.log(`  Allocatable (QFI) instructors: ${allocatableInstructors.length}`);
+  if (!allocatableInstructors.length) {
+    console.warn("⚠️ No QFI instructors found - no assignments made");
+    return {
+      trainees,
+      summary: {
+        totalInstructors: instructors.length,
+        totalTrainees: trainees.length,
+        assignmentsMade: 0,
+        instructorsWith2Primaries: 0,
+        instructorsWith2Secondaries: 0,
+        traineesWithPrimary: 0,
+        traineesWithSecondary: 0
+      }
+    };
+  }
+  const eligibleTrainees = trainees.filter((t) => !t.course.includes("FIC"));
+  console.log(`  Eligible trainees (non-FIC): ${eligibleTrainees.length}`);
+  if (!eligibleTrainees.length) {
+    console.warn("⚠️ No eligible trainees found - no assignments made");
+    return {
+      trainees,
+      summary: {
+        totalInstructors: instructors.length,
+        totalTrainees: trainees.length,
+        assignmentsMade: 0,
+        instructorsWith2Primaries: 0,
+        instructorsWith2Secondaries: 0,
+        traineesWithPrimary: 0,
+        traineesWithSecondary: 0
+      }
+    };
+  }
+  const traineesWithAssignments = JSON.parse(JSON.stringify(eligibleTrainees));
+  const workload = /* @__PURE__ */ new Map();
+  allocatableInstructors.forEach(
+    (i) => workload.set(i.name, { primary: [], secondary: [] })
+  );
+  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+  const getInstructorsByUnit = (traineeUnit) => {
+    if (!traineeUnit) return [];
+    return allocatableInstructors.filter((i) => i.unit === traineeUnit);
+  };
+  const needsMorePrimaries = (instructor) => {
+    const load = workload.get(instructor.name);
+    return load ? load.primary.length < 2 : true;
+  };
+  const needsMoreSecondaries = (instructor) => {
+    const load = workload.get(instructor.name);
+    return load ? load.secondary.length < 2 : true;
+  };
+  const isAssigned = (trainee2, instructorName) => {
+    const load = workload.get(instructorName);
+    if (!load) return false;
+    return load.primary.includes(trainee2) || load.secondary.includes(trainee2);
+  };
+  console.log("\n📋 Phase 1: Assigning minimum 2 primary trainees per instructor...");
+  for (const instructor of allocatableInstructors) {
+    if (!instructor.unit) {
+      console.log(`  ⚠️ Skipping ${instructor.name} - no unit assigned`);
+      continue;
+    }
+    const unitTrainees = traineesWithAssignments.filter(
+      (t) => t.unit === instructor.unit && !trainee.primaryInstructor && !isAssigned(t, instructor.name)
+    );
+    for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
+      const trainee2 = unitTrainees[i];
+      if (!trainee2.primaryInstructor) {
+        trainee2.primaryInstructor = instructor.name;
+        workload.get(instructor.name).primary.push(trainee2);
+        console.log(`  ✅ Primary: ${trainee2.name} → ${instructor.name} (${trainee2.unit})`);
+      }
+    }
+  }
+  console.log("\n📋 Phase 2: Assigning minimum 2 secondary trainees per instructor...");
+  for (const instructor of allocatableInstructors) {
+    if (!instructor.unit) {
+      console.log(`  ⚠️ Skipping ${instructor.name} - no unit assigned`);
+      continue;
+    }
+    const unitTrainees = traineesWithAssignments.filter(
+      (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && !trainee.secondaryInstructor && !isAssigned(t, instructor.name)
+    );
+    for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
+      const trainee2 = unitTrainees[i];
+      if (!trainee2.secondaryInstructor) {
+        trainee2.secondaryInstructor = instructor.name;
+        workload.get(instructor.name).secondary.push(trainee2);
+        console.log(`  ✅ Secondary: ${trainee2.name} → ${instructor.name} (${trainee2.unit})`);
+      }
+    }
+  }
+  console.log("\n📋 Phase 3: Ensuring all trainees have at least one primary and one secondary...");
+  for (const trainee2 of traineesWithAssignments) {
+    if (!trainee2.primaryInstructor && trainee2.unit) {
+      const unitInstructors = getInstructorsByUnit(trainee2.unit);
+      const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
+        const loadA = workload.get(a.name)?.primary.length || 0;
+        const loadB = workload.get(b.name)?.primary.length || 0;
+        return loadA - loadB;
+      });
+      if (sortedInstructors.length > 0) {
+        const instructor = sortedInstructors[0];
+        trainee2.primaryInstructor = instructor.name;
+        workload.get(instructor.name).primary.push(trainee2);
+        console.log(`  ✅ Primary (catch-up): ${trainee2.name} → ${instructor.name} (${trainee2.unit})`);
+      } else {
+        console.warn(`  ⚠️ Cannot assign primary for ${trainee2.name} - no instructors in unit ${trainee2.unit}`);
+      }
+    }
+    if (!trainee2.secondaryInstructor && trainee2.unit) {
+      const unitInstructors = getInstructorsByUnit(trainee2.unit);
+      const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
+        const loadA = workload.get(a.name)?.secondary.length || 0;
+        const loadB = workload.get(b.name)?.secondary.length || 0;
+        return loadA - loadB;
+      });
+      const differentInstructors = sortedInstructors.filter((i) => i.name !== trainee2.primaryInstructor);
+      const instructorToUse = differentInstructors.length > 0 ? differentInstructors[0] : sortedInstructors[0];
+      if (instructorToUse) {
+        trainee2.secondaryInstructor = instructorToUse.name;
+        workload.get(instructorToUse.name).secondary.push(trainee2);
+        console.log(`  ✅ Secondary (catch-up): ${trainee2.name} → ${instructorToUse.name} (${trainee2.unit})`);
+      } else {
+        console.warn(`  ⚠️ Cannot assign secondary for ${trainee2.name} - no instructors in unit ${trainee2.unit}`);
+      }
+    }
+  }
+  console.log("\n📋 Phase 4: Adding third trainees to balance workload...");
+  for (const instructor of allocatableInstructors) {
+    if (!instructor.unit) continue;
+    let progressMade = true;
+    let maxIterations = 10;
+    while ((needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) && progressMade && maxIterations > 0) {
+      progressMade = false;
+      maxIterations--;
+      if (needsMorePrimaries(instructor)) {
+        const unitTrainees = traineesWithAssignments.filter(
+          (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && t.secondaryInstructor !== instructor.name && !isAssigned(t, instructor.name)
+        );
+        if (unitTrainees.length > 0) {
+          const trainee2 = unitTrainees[0];
+          if (!trainee2.primaryInstructor) {
+            trainee2.primaryInstructor = instructor.name;
+            workload.get(instructor.name).primary.push(trainee2);
+            console.log(`  ✅ Primary (extra): ${trainee2.name} → ${instructor.name} (${trainee2.unit})`);
+            progressMade = true;
+          }
+        }
+      }
+      if (needsMoreSecondaries(instructor)) {
+        const availableForSecondary = traineesWithAssignments.filter(
+          (t) => t.unit === instructor.unit && t.secondaryInstructor !== instructor.name && t.primaryInstructor !== instructor.name && !isAssigned(t, instructor.name)
+        );
+        if (availableForSecondary.length > 0) {
+          const trainee2 = availableForSecondary[0];
+          if (!trainee2.secondaryInstructor) {
+            trainee2.secondaryInstructor = instructor.name;
+            workload.get(instructor.name).secondary.push(trainee2);
+            console.log(`  ✅ Secondary (extra): ${trainee2.name} → ${instructor.name} (${trainee2.unit})`);
+            progressMade = true;
+          }
+        }
+      }
+    }
+  }
+  let assignmentsMade = 0;
+  let instructorsWith2Primaries = 0;
+  let instructorsWith2Secondaries = 0;
+  let traineesWithPrimary = 0;
+  let traineesWithSecondary = 0;
+  for (const instructor of allocatableInstructors) {
+    const load = workload.get(instructor.name);
+    if (load) {
+      assignmentsMade += load.primary.length + load.secondary.length;
+      if (load.primary.length >= 2) instructorsWith2Primaries++;
+      if (load.secondary.length >= 2) instructorsWith2Secondaries++;
+    }
+  }
+  for (const trainee2 of traineesWithAssignments) {
+    if (trainee2.primaryInstructor) traineesWithPrimary++;
+    if (trainee2.secondaryInstructor) traineesWithSecondary++;
+  }
+  const summary = {
+    totalInstructors: allocatableInstructors.length,
+    totalTrainees: eligibleTrainees.length,
+    assignmentsMade,
+    instructorsWith2Primaries,
+    instructorsWith2Secondaries,
+    traineesWithPrimary,
+    traineesWithSecondary
+  };
+  console.log("\n📊 Assignment Summary:");
+  console.log(`  Total instructors: ${summary.totalInstructors}`);
+  console.log(`  Total trainees: ${summary.totalTrainees}`);
+  console.log(`  Assignments made: ${summary.assignmentsMade}`);
+  console.log(`  Instructors with 2+ primaries: ${summary.instructorsWith2Primaries}/${summary.totalInstructors}`);
+  console.log(`  Instructors with 2+ secondaries: ${summary.instructorsWith2Secondaries}/${summary.totalInstructors}`);
+  console.log(`  Trainees with primary: ${summary.traineesWithPrimary}/${summary.totalTrainees}`);
+  console.log(`  Trainees with secondary: ${summary.traineesWithSecondary}/${summary.totalTrainees}`);
+  return {
+    trainees: traineesWithAssignments,
+    summary
+  };
+}
 function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   console.log("🔄 Merging instructor data...");
   console.log("  Database instructors:", dbInstructors.length);
@@ -82886,27 +83096,6 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   console.log("  Merged result:", merged.length, "instructors");
   return merged;
 }
-function assignTraineesToBurns(instructors, trainees) {
-  const burns = instructors.find((i) => i.name && i.name.toLowerCase().includes("burns"));
-  if (!burns) {
-    console.log("⚠️  Burns not found in instructors - skipping trainee assignment");
-    return;
-  }
-  console.log("👨‍✈️  Assigning trainees to Burns:", burns.name);
-  const unassignedTrainees = trainees.filter((t) => !t.primaryInstructor);
-  console.log("  Found", unassignedTrainees.length, "unassigned trainees");
-  const primaryAssignments = unassignedTrainees.slice(0, 2);
-  primaryAssignments.forEach((trainee) => {
-    trainee.primaryInstructor = burns.name;
-    console.log("  Assigned primary:", trainee.name, "→", burns.name);
-  });
-  const remainingTrainees = unassignedTrainees.slice(2);
-  const secondaryAssignments = remainingTrainees.slice(0, 2);
-  secondaryAssignments.forEach((trainee) => {
-    trainee.secondaryInstructor = burns.name;
-    console.log("  Assigned secondary:", trainee.name, "→", burns.name);
-  });
-}
 function mergeTraineeData(dbTrainees, mockTrainees, includeMockData) {
   console.log("🔄 Merging trainee data...");
   console.log("  Database trainees:", dbTrainees.length);
@@ -82915,18 +83104,18 @@ function mergeTraineeData(dbTrainees, mockTrainees, includeMockData) {
   const dbCourses = [...new Set(dbTrainees.map((t) => t.course).filter(Boolean))];
   console.log("  DB trainee courses:", dbCourses);
   const dbTraineeMap = /* @__PURE__ */ new Map();
-  const taggedDbTrainees = dbTrainees.map((trainee) => ({
-    ...trainee,
+  const taggedDbTrainees = dbTrainees.map((trainee2) => ({
+    ...trainee2,
     _dataSource: "database"
   }));
-  taggedDbTrainees.forEach((trainee) => {
-    dbTraineeMap.set(trainee.idNumber, trainee);
+  taggedDbTrainees.forEach((trainee2) => {
+    dbTraineeMap.set(trainee2.idNumber, trainee2);
   });
   const merged = [...taggedDbTrainees];
   {
-    mockTrainees.forEach((trainee) => {
-      if (!dbTraineeMap.has(trainee.idNumber)) {
-        merged.push({ ...trainee, _dataSource: "mockdata" });
+    mockTrainees.forEach((trainee2) => {
+      if (!dbTraineeMap.has(trainee2.idNumber)) {
+        merged.push({ ...trainee2, _dataSource: "mockdata" });
       }
     });
   }
@@ -82983,7 +83172,11 @@ async function initializeData() {
     console.log("✅ Trainee DB loaded:", trainees.length);
     trainees = mergeTraineeData(trainees, ESL_DATA.trainees, true);
     console.log("🔄 Loaded all trainees (DB + mock) with _dataSource tags for UI filtering");
-    assignTraineesToBurns(instructors, trainees);
+    console.log("🔧 Applying trainee assignment logic...");
+    const assignmentResult = assignTraineesToInstructors(trainees, instructors);
+    trainees = assignmentResult.trainees;
+    console.log("✅ Trainee assignment complete");
+    console.log("📊 Assignment Summary:", assignmentResult.summary);
     console.log("✈️ Fetching aircraft from API...");
     aircraft = await fetchAircraft();
     console.log("✅ Aircraft loaded:", aircraft.length);
@@ -83408,24 +83601,24 @@ const getEffectiveLastCompletedEvent = (traineeName, publishedSchedules, buildDa
   console.log(`✓ ELCE for ${traineeName}: ${lastEvent.flightNumber} (completed ${yesterdayStr})`);
   return lastEvent.flightNumber;
 };
-const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate) => {
-  const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
-  const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+const computeNextEventsForTrainee = (trainee2, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate) => {
+  const hasIndividualLMP = traineeLMPs.has(trainee2.fullName);
+  const individualLMP = traineeLMPs.get(trainee2.fullName) || masterSyllabus;
   if (hasIndividualLMP) {
     const remedialEvents = individualLMP.filter((item) => item.isRemedial);
     if (remedialEvents.length > 0) {
-      console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
+      console.log(`🔍 [${trainee2.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
     }
   } else {
-    console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
+    console.log(`⚠️ [${trainee2.fullName}] Using Master LMP (no Individual LMP found)`);
   }
   if (!individualLMP || individualLMP.length === 0) {
     return { next: null, plusOne: null };
   }
-  const traineeScores = scores.get(trainee.fullName) || [];
+  const traineeScores = scores.get(trainee2.fullName) || [];
   const completedEventIds = new Set(traineeScores.map((s) => s.event));
   if (publishedSchedules && buildDate) {
-    const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
+    const elce = getEffectiveLastCompletedEvent(trainee2.fullName, publishedSchedules, buildDate);
     if (elce) {
       completedEventIds.add(elce);
     }
@@ -83443,7 +83636,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
       nextEvt = item;
       nextEventIndex = i;
       if (item.isRemedial) {
-        console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
+        console.log(`✅ [${trainee2.fullName}] Next event is REMEDIAL: ${item.code}`);
       }
       break;
     }
@@ -83465,10 +83658,10 @@ function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, sco
     possibleEventCounts.set(course, 0);
   });
   const activeTrainees = allTraineesData.filter((t) => !t.isPaused);
-  activeTrainees.forEach((trainee) => {
-    if (!coursePriorities.includes(trainee.course)) return;
+  activeTrainees.forEach((trainee2) => {
+    if (!coursePriorities.includes(trainee2.course)) return;
     const { next, plusOne } = computeNextEventsForTrainee(
-      trainee,
+      trainee2,
       traineeLMPs,
       scores,
       syllabusDetails,
@@ -83476,12 +83669,12 @@ function countPossibleEvents(allTraineesData, coursePriorities, traineeLMPs, sco
       buildDate
     );
     if (next) {
-      const currentCount = possibleEventCounts.get(trainee.course) || 0;
-      possibleEventCounts.set(trainee.course, currentCount + 1);
+      const currentCount = possibleEventCounts.get(trainee2.course) || 0;
+      possibleEventCounts.set(trainee2.course, currentCount + 1);
     }
     if (plusOne) {
-      const currentCount = possibleEventCounts.get(trainee.course) || 0;
-      possibleEventCounts.set(trainee.course, currentCount + 1);
+      const currentCount = possibleEventCounts.get(trainee2.course) || 0;
+      possibleEventCounts.set(trainee2.course, currentCount + 1);
     }
   });
   return possibleEventCounts;
@@ -83508,9 +83701,9 @@ function analyzeBuildResults(events, coursePercentages, coursePriorities, availa
     courseEventsByType.set(course, { flight: 0, ftd: 0, cpt: 0, ground: 0 });
   });
   scheduledEvents.forEach((event) => {
-    const trainee = allTraineesData.find((t) => t.fullName === event.student || t.fullName === event.pilot);
-    if (trainee && coursePriorities.includes(trainee.course)) {
-      const course = trainee.course;
+    const trainee2 = allTraineesData.find((t) => t.fullName === event.student || t.fullName === event.pilot);
+    if (trainee2 && coursePriorities.includes(trainee2.course)) {
+      const course = trainee2.course;
       courseEventCounts.set(course, (courseEventCounts.get(course) || 0) + 1);
       const typeCount = courseEventsByType.get(course);
       if (event.type === "flight") typeCount.flight++;
@@ -83918,17 +84111,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
   };
   const fullUnit = (unit) => (unit || "").trim();
-  const isInstructorEligibleByUnit = (instructor, trainee) => {
-    const traineeUnit = normalizeUnit(trainee.unit || "");
+  const isInstructorEligibleByUnit = (instructor, trainee2) => {
+    const traineeUnit = normalizeUnit(trainee2.unit || "");
     const instructorUnit = normalizeUnit(instructor.unit || "");
     if (!staffSharingEnabled) {
       return instructorUnit === traineeUnit;
     }
     if (priorityEnabled) {
-      if (softGroups.primary && instructor.name === trainee.primaryInstructor) return true;
-      if (softGroups.secondary && instructor.name === trainee.secondaryInstructor) return true;
-      if (hardGroups.primary && instructor.name === trainee.primaryInstructor) return true;
-      if (hardGroups.secondary && instructor.name === trainee.secondaryInstructor) return true;
+      if (softGroups.primary && instructor.name === trainee2.primaryInstructor) return true;
+      if (softGroups.secondary && instructor.name === trainee2.secondaryInstructor) return true;
+      if (hardGroups.primary && instructor.name === trainee2.primaryInstructor) return true;
+      if (hardGroups.secondary && instructor.name === trainee2.secondaryInstructor) return true;
     }
     const traineeInGroup = staffSharingUnits.includes(traineeUnit);
     if (!traineeInGroup) {
@@ -84099,36 +84292,36 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     (t) => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
   const traineeNextEventMap = /* @__PURE__ */ new Map();
-  activeTrainees.forEach((trainee) => {
-    const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
-    traineeNextEventMap.set(trainee.fullName, nextEvents);
+  activeTrainees.forEach((trainee2) => {
+    const nextEvents = computeNextEventsForTrainee(trainee2, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+    traineeNextEventMap.set(trainee2.fullName, nextEvents);
   });
   const nextEventLists = { flight: [], ftd: [], cpt: [], ground: [], bnf: [] };
   const nextPlusOneLists = { flight: [], ftd: [], cpt: [], ground: [] };
-  activeTrainees.forEach((trainee) => {
-    const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+  activeTrainees.forEach((trainee2) => {
+    const { next, plusOne } = traineeNextEventMap.get(trainee2.fullName) || { next: null, plusOne: null };
     if (next) {
       if (next.code.startsWith("BNF") && next.type === "Flight") {
-        if (isPersonScheduledForDayEvents(trainee.fullName)) {
-          console.log(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
-          nextEventLists.flight.push(trainee);
+        if (isPersonScheduledForDayEvents(trainee2.fullName)) {
+          console.log(`🌙 ❌ ${trainee2.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
+          nextEventLists.flight.push(trainee2);
         } else {
-          nextEventLists.bnf.push(trainee);
+          nextEventLists.bnf.push(trainee2);
         }
       } else if (next.type === "Flight") {
-        nextEventLists.flight.push(trainee);
+        nextEventLists.flight.push(trainee2);
       } else if (next.type === "FTD") {
-        nextEventLists.ftd.push(trainee);
+        nextEventLists.ftd.push(trainee2);
       } else if (next.type === "Ground School" && next.methodOfDelivery.includes("CPT")) {
-        nextEventLists.cpt.push(trainee);
+        nextEventLists.cpt.push(trainee2);
       } else if (next.type === "Ground School") {
-        nextEventLists.ground.push(trainee);
+        nextEventLists.ground.push(trainee2);
       }
       if (plusOne) {
-        if (plusOne.type === "Flight") nextPlusOneLists.flight.push(trainee);
-        else if (plusOne.type === "FTD") nextPlusOneLists.ftd.push(trainee);
-        else if (plusOne.type === "Ground School" && plusOne.methodOfDelivery.includes("CPT")) nextPlusOneLists.cpt.push(trainee);
-        else if (plusOne.type === "Ground School") nextPlusOneLists.ground.push(trainee);
+        if (plusOne.type === "Flight") nextPlusOneLists.flight.push(trainee2);
+        else if (plusOne.type === "FTD") nextPlusOneLists.ftd.push(trainee2);
+        else if (plusOne.type === "Ground School" && plusOne.methodOfDelivery.includes("CPT")) nextPlusOneLists.cpt.push(trainee2);
+        else if (plusOne.type === "Ground School") nextPlusOneLists.ground.push(trainee2);
       }
     }
   });
@@ -84178,8 +84371,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }
   const reorderSoloWithTwrDi = (list) => {
     const soloWithTwrDiIndices = [];
-    list.forEach((trainee, index) => {
-      const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+    list.forEach((trainee2, index) => {
+      const nextEvent = traineeNextEventMap.get(trainee2.fullName)?.next;
       if (nextEvent && nextEvent.sortieType === "Solo" && nextEvent.twrDiReqd === "YES") {
         soloWithTwrDiIndices.push(index);
       }
@@ -84194,9 +84387,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     otherIndices.forEach((idx) => {
       soloWithTwrDiToMove.push(list[idx]);
     });
-    list.forEach((trainee, index) => {
+    list.forEach((trainee2, index) => {
       if (!otherIndices.includes(index)) {
-        reorderedList.push(trainee);
+        reorderedList.push(trainee2);
         if (index === firstIndex) {
           reorderedList.push(...soloWithTwrDiToMove);
         }
@@ -84225,8 +84418,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const applyCoursePriority = (rankedList) => {
     if (!rankedList.length) return [];
     const soloWithTwrDiIndices = [];
-    rankedList.forEach((trainee, index) => {
-      const nextEvent = traineeNextEventMap.get(trainee.fullName)?.next;
+    rankedList.forEach((trainee2, index) => {
+      const nextEvent = traineeNextEventMap.get(trainee2.fullName)?.next;
       if (nextEvent && nextEvent.sortieType === "Solo" && nextEvent.twrDiReqd === "YES") {
         soloWithTwrDiIndices.push(index);
       }
@@ -84239,9 +84432,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       soloWithTwrDiIndices.forEach((idx) => {
         soloWithTwrDiBlock.push(rankedList[idx]);
       });
-      rankedList.forEach((trainee, index) => {
+      rankedList.forEach((trainee2, index) => {
         if (!soloWithTwrDiIndices.includes(index)) {
-          traineesForCourseMixing.push(trainee);
+          traineesForCourseMixing.push(trainee2);
         }
       });
     } else {
@@ -84274,8 +84467,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (selectedCourse2) {
         const courseTrainees = listByCourse.get(selectedCourse2);
-        const trainee = courseTrainees.shift();
-        mixedTrainees.push(trainee);
+        const trainee2 = courseTrainees.shift();
+        mixedTrainees.push(trainee2);
         courseAllocations.set(selectedCourse2, (courseAllocations.get(selectedCourse2) || 0) + 1);
       } else {
         break;
@@ -84332,9 +84525,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log(`🌙 Selected instructors: ${nightFlyingInstructors.map((i) => i.name).join(", ")}`);
     const bnfTrainees = nextEventLists.bnf;
     nightFlyingInstructors.forEach((nfi, index) => {
-      const trainee = bnfTrainees[index];
-      if (trainee) {
-        nightPairings.set(trainee.fullName, nfi.name);
+      const trainee2 = bnfTrainees[index];
+      if (trainee2) {
+        nightPairings.set(trainee2.fullName, nfi.name);
         intendedNightStaff.add(nfi.name);
         const instructorToUpdate = instructors.find((i) => i.idNumber === nfi.idNumber);
         if (instructorToUpdate) {
@@ -84381,12 +84574,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const mm = Math.round((h - hh) * 60);
     return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
   };
-  const _fbLogSuccess = (trainee, syllabusItem, isNext, startTime, endTime, instructorName, aircraft, area) => {
+  const _fbLogSuccess = (trainee2, syllabusItem, isNext, startTime, endTime, instructorName, aircraft, area) => {
     if (_fbSuccessCount >= 2) return;
     _fbSuccessCount++;
     console.log(`
 ✅ [FLIGHT-DIAG] SUCCESS #${_fbSuccessCount}`);
-    console.log(`   Trainee:   ${trainee.fullName}`);
+    console.log(`   Trainee:   ${trainee2.fullName}`);
     console.log(`   Event:     ${syllabusItem.id} (${syllabusItem.code})`);
     console.log(`   Type:      ${isNext ? "NEXT" : "NEXT+1"}`);
     console.log(`   Time:      ${_fmtT(startTime)} - ${_fmtT(endTime)}`);
@@ -84395,7 +84588,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log(`   Area:      ${area || "N/A"}`);
     console.log(`   Slot:      ${_fmtT(startTime)}`);
   };
-  const _fbLogFailure = (trainee, syllabusItem, isNext, startTime, endTime, reason) => {
+  const _fbLogFailure = (trainee2, syllabusItem, isNext, startTime, endTime, reason) => {
     if (_fbBuckets[reason] !== void 0) _fbBuckets[reason]++;
     else _fbBuckets["OTHER"]++;
     const slotKey = Math.round(startTime * 12) / 12;
@@ -84407,7 +84600,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     _fbFailCount++;
     console.log(`
 ❌ [FLIGHT-DIAG] FAIL #${_fbFailCount}`);
-    console.log(`   Trainee:  ${trainee.fullName}`);
+    console.log(`   Trainee:  ${trainee2.fullName}`);
     console.log(`   Event:    ${syllabusItem.id} (${syllabusItem.code})`);
     console.log(`   Type:     ${isNext ? "NEXT" : "NEXT+1"}`);
     console.log(`   Proposed: ${_fmtT(startTime)} - ${_fmtT(endTime)}`);
@@ -84486,17 +84679,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     while (placedThisPass && unplacedTrainees.length > 0) {
       placedThisPass = false;
       const remainingForNextPass = [];
-      for (const trainee of unplacedTrainees) {
-        const { next, plusOne } = traineeNextEventMap.get(trainee.fullName);
+      for (const trainee2 of unplacedTrainees) {
+        const { next, plusOne } = traineeNextEventMap.get(trainee2.fullName);
         const syllabusItem = isPlusOne ? plusOne : next;
         if (!syllabusItem) {
           continue;
         }
         let searchStartTime = startTimeBoundary;
         if (isPlusOne) {
-          const nextEvent = generatedEvents.find((e) => getPersonnel(e).includes(trainee.fullName) && e.flightNumber === next.id);
+          const nextEvent = generatedEvents.find((e) => getPersonnel(e).includes(trainee2.fullName) && e.flightNumber === next.id);
           if (!nextEvent) {
-            remainingForNextPass.push(trainee);
+            remainingForNextPass.push(trainee2);
             continue;
           }
           searchStartTime = Math.max(startTimeBoundary, nextEvent.startTime + nextEvent.duration);
@@ -84510,11 +84703,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           for (const space of searchSpaces) {
             if (placed) break;
             for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement2) {
-              const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
+              const result = scheduleEvent(trainee2, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
               if (result && typeof result === "object" && "id" in result) {
-                generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee2.fullName });
                 const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-                const tCounts = eventCounts.get(trainee.fullName);
+                const tCounts = eventCounts.get(trainee2.fullName);
                 if (type === "flight" || type === "ftd") {
                   tCounts.flightFtd++;
                   if (ipCounts) ipCounts.flightFtd++;
@@ -84537,22 +84730,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         }
         if (!placed) {
-          remainingForNextPass.push(trainee);
+          remainingForNextPass.push(trainee2);
         }
       }
       unplacedTrainees = remainingForNextPass;
     }
   };
-  const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false) => {
+  const scheduleEvent = (trainee2, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false) => {
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + syllabusItem.duration;
-    const traineeCounts = eventCounts.get(trainee.fullName);
+    const traineeCounts = eventCounts.get(trainee2.fullName);
     const isBnfEvent = syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight";
     const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
     if (type === "flight" || type === "ftd") {
       if (traineeCounts.flightFtd >= bnfFlightLimit) {
-        if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_EVENT_LIMIT_EXCEEDED");
+        if (_isFlight) _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_EVENT_LIMIT_EXCEEDED");
         return null;
       }
     } else {
@@ -84560,12 +84753,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
     if (traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt >= bnfTotalLimit) {
-      if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TOTAL_LIMIT_EXCEEDED");
+      if (_isFlight) _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TOTAL_LIMIT_EXCEEDED");
       return null;
     }
     const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.id, duration: syllabusItem.duration }, syllabusDetails);
-    if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
-      if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
+    if (isPersonStaticallyUnavailable(trainee2, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
+      if (_isFlight) _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return null;
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
@@ -84827,7 +85020,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             const conflictingTraineeName = e._traineeName || e.student || e.pilot || "";
             const reqTurnaround = type === "flight" ? flightTurnaround : type === "ftd" ? ftdTurnaround : cptTurnaround;
             _logSameTraineeConflict(
-              trainee.fullName,
+              trainee2.fullName,
               syllabusItem.id,
               !isPlusOne,
               proposedBookingWindow.start + (syllabusItem.preFlightTime || 0),
@@ -84902,7 +85095,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let instructor = null;
     let hardModeStby = false;
     if (!isSoloFlight) {
-      instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne, primaryPreferOnly);
+      instructor = findAvailableInstructor(trainee2, syllabusItem, isPlusOne, primaryPreferOnly);
       if (!instructor) {
         if (_isFlight) {
           const diagEntry = _instructorDiag?.entries[_instructorDiag.entries.length - 1];
@@ -84919,14 +85112,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             else if (diagEntry.rejections.crewDutyPeriod > 0) noInstrReason = "INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED";
             else noInstrReason = "OTHER";
           }
-          _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
+          _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
         }
         return null;
       }
       if (anyHardGroup && (type === "flight" || type === "ftd") && !isNightPass && !primaryPreferOnly) {
-        const traineeFlight = (trainee.flight || "").trim();
-        const traineeBase = normalizeUnit(trainee.unit || "");
-        const instructorInHardGroup = hardGroups.primary && instructor.name === trainee.primaryInstructor || hardGroups.secondary && instructor.name === trainee.secondaryInstructor || hardGroups.sameFlight && (() => {
+        const traineeFlight = (trainee2.flight || "").trim();
+        const traineeBase = normalizeUnit(trainee2.unit || "");
+        const instructorInHardGroup = hardGroups.primary && instructor.name === trainee2.primaryInstructor || hardGroups.secondary && instructor.name === trainee2.secondaryInstructor || hardGroups.sameFlight && (() => {
           const instrFlight = (instructor.flight || "").trim();
           const instrBase = normalizeUnit(instructor.unit || "");
           return instrBase === traineeBase && instrFlight !== "" && traineeFlight !== "" && instrFlight === traineeFlight;
@@ -84949,13 +85142,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         id: v4(),
         type,
         instructor: "",
-        student: trainee.fullName,
-        pilot: trainee.fullName,
+        student: trainee2.fullName,
+        pilot: trainee2.fullName,
         flightNumber: syllabusItem.id,
         duration: syllabusItem.duration,
         startTime,
         resourceId,
-        color: courseColors[trainee.course] || "bg-gray-500",
+        color: courseColors[trainee2.course] || "bg-gray-500",
         flightType: syllabusItem.sortieType || "Dual",
         locationType: "Local",
         origin: school,
@@ -84976,7 +85169,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (e.type === "flight") {
           const isExistingEventNight = e.flightNumber.startsWith("BNF");
           if (isNightPass && isExistingEventNight) {
-            const currentCrew = [instructor?.name, trainee.fullName].filter(Boolean);
+            const currentCrew = [instructor?.name, trainee2.fullName].filter(Boolean);
             const existingCrew = getPersonnel(e);
             const hasCommonCrew = currentCrew.some((p) => p && existingCrew.includes(p));
             if (hasCommonCrew) {
@@ -85003,7 +85196,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     if (!resourceId) {
-      if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AIRCRAFT_AVAILABLE");
+      if (_isFlight) _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "NO_AIRCRAFT_AVAILABLE");
       return null;
     }
     let area = void 0;
@@ -85011,12 +85204,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const isBnf = syllabusItem.code.startsWith("BNF");
       const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
       if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) {
-        _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
+        _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
         return null;
       }
       area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
       if (!area) {
-        _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AREA_AVAILABLE");
+        _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "NO_AREA_AVAILABLE");
         return null;
       }
       const nonStbyFlights = generatedEvents.filter(
@@ -85024,7 +85217,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       );
       const takeoffsInLastHour = nonStbyFlights.filter((e) => e.type === "flight" && e.startTime > startTime - 1 && e.startTime <= startTime).length;
       if (takeoffsInLastHour >= 8) {
-        _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "HOURLY_DISPATCH_LIMIT");
+        _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "HOURLY_DISPATCH_LIMIT");
         return null;
       }
       const takeoffConflict = nonStbyFlights.some((e) => {
@@ -85036,7 +85229,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return diffMinutes < minSeparation;
       });
       if (takeoffConflict) {
-        _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TAKEOFF_SEPARATION_VIOLATION");
+        _fbLogFailure(trainee2, syllabusItem, _isNext, startTime, _fbEnd, "TAKEOFF_SEPARATION_VIOLATION");
         return null;
       }
     }
@@ -85054,13 +85247,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       id: v4(),
       type,
       instructor: syllabusItem.sortieType === "Solo" ? "" : instructor?.name || "",
-      student: trainee.fullName,
-      pilot: syllabusItem.sortieType === "Solo" ? trainee.fullName : instructor?.name || "",
+      student: trainee2.fullName,
+      pilot: syllabusItem.sortieType === "Solo" ? trainee2.fullName : instructor?.name || "",
       flightNumber: syllabusItem.id,
       duration: syllabusItem.duration,
       startTime,
       resourceId,
-      color: courseColors[trainee.course] || "bg-gray-500",
+      color: courseColors[trainee2.course] || "bg-gray-500",
       flightType: syllabusItem.sortieType || "Dual",
       locationType: "Local",
       origin: school,
@@ -85070,7 +85263,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       postEnd: syllabusItem.postFlightTime
     };
     if (_isFlight) {
-      _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || "", result.area);
+      _fbLogSuccess(trainee2, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || "", result.area);
     }
     return result;
   };
@@ -85305,8 +85498,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   );
   if (nextEventLists.bnf.length >= 2) {
     setProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
-    const bnfWaveTwoList = nextEventLists.bnf.filter((trainee) => {
-      const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
+    const bnfWaveTwoList = nextEventLists.bnf.filter((trainee2) => {
+      const { plusOne } = traineeNextEventMap.get(trainee2.fullName) || { plusOne: null };
       return plusOne && plusOne.code.startsWith("BNF") && plusOne.type === "Flight";
     });
     scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
@@ -85382,7 +85575,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return eventStart < existingBookingWindow.end && eventEnd > existingBookingWindow.start;
     });
   };
-  const findBestInstructorForStby = (trainee, syllabusItem, startTime, duration, type, events) => {
+  const findBestInstructorForStby = (trainee2, syllabusItem, startTime, duration, type, events) => {
     let candidates = [];
     console.log("🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:", instructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
     console.log("🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:", config.school);
@@ -85438,11 +85631,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return Math.max(4, lineEvents.size) + 1;
   };
-  const traineesNeedingStby = nextEventLists.flight.filter((trainee) => {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
+  const traineesNeedingStby = nextEventLists.flight.filter((trainee2) => {
+    const { next } = traineeNextEventMap.get(trainee2.fullName);
     if (!next) return false;
     return !generatedEvents.some(
-      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "flight" && !e.resourceId.startsWith("STBY")
+      (e) => e.student === trainee2.fullName && e.flightNumber === next.id && e.type === "flight" && !e.resourceId.startsWith("STBY")
     );
   });
   console.log("Trainees needing STBY flights:", traineesNeedingStby.length);
@@ -85450,8 +85643,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduledTrainees = /* @__PURE__ */ new Set();
   console.log("PASS 1: Scheduling STBY with instructors available...");
   console.log(`Flying window: ${flyingStartTime.toFixed(2)} to ${flyingEndTime.toFixed(2)}`);
-  for (const trainee of traineesNeedingStby) {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
+  for (const trainee2 of traineesNeedingStby) {
+    const { next } = traineeNextEventMap.get(trainee2.fullName);
     if (!next) continue;
     let placed = false;
     for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
@@ -85469,7 +85662,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Would violate 8-per-hour rule`);
         continue;
       }
-      const instructor = findBestInstructorForStby(trainee, next, time, next.duration, "flight", generatedEvents);
+      const instructor = findBestInstructorForStby(trainee2, next, time, next.duration, "flight", generatedEvents);
       if (!instructor) {
         if (isDebugWindow) console.log(`  ${time.toFixed(2)}: No instructor available`);
         continue;
@@ -85479,12 +85672,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         id: v4(),
         type: "flight",
         instructor,
-        student: trainee.fullName,
+        student: trainee2.fullName,
         flightNumber: next.id,
         duration: next.duration,
         startTime: time,
         resourceId: `STBY ${stbyLine}`,
-        color: courseColors[trainee.course] || "bg-gray-500",
+        color: courseColors[trainee2.course] || "bg-gray-500",
         flightType: "Dual",
         locationType: "Local",
         origin: school,
@@ -85492,21 +85685,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         preStart: next.preFlightTime,
         postEnd: next.postFlightTime
       });
-      console.log(`PASS 1: STBY at ${time.toFixed(2)} for ${trainee.fullName}, instructor: ${instructor}`);
-      scheduledTrainees.add(trainee.fullName);
+      console.log(`PASS 1: STBY at ${time.toFixed(2)} for ${trainee2.fullName}, instructor: ${instructor}`);
+      scheduledTrainees.add(trainee2.fullName);
       placed = true;
       break;
     }
     if (!placed) {
-      console.log(`PASS 1: Could not place ${trainee.fullName} anywhere in flying window`);
+      console.log(`PASS 1: Could not place ${trainee2.fullName} anywhere in flying window`);
     }
   }
   console.log(`PASS 1 complete: ${scheduledTrainees.size} STBY flights with instructors`);
   console.log("PASS 2: Going back to beginning to schedule remaining STBY with TBA...");
   const remainingTrainees = traineesNeedingStby.filter((t) => !scheduledTrainees.has(t.fullName));
   console.log(`Remaining trainees needing STBY: ${remainingTrainees.length}`);
-  for (const trainee of remainingTrainees) {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
+  for (const trainee2 of remainingTrainees) {
+    const { next } = traineeNextEventMap.get(trainee2.fullName);
     if (!next) continue;
     for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
       if (hasFlightStartTime(time, generatedEvents)) continue;
@@ -85518,12 +85711,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         id: v4(),
         type: "flight",
         instructor: "TBA",
-        student: trainee.fullName,
+        student: trainee2.fullName,
         flightNumber: next.id,
         duration: next.duration,
         startTime: time,
         resourceId: `STBY ${stbyLine}`,
-        color: courseColors[trainee.course] || "bg-gray-500",
+        color: courseColors[trainee2.course] || "bg-gray-500",
         flightType: "Dual",
         locationType: "Local",
         origin: school,
@@ -85531,18 +85724,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         preStart: next.preFlightTime,
         postEnd: next.postFlightTime
       });
-      console.log(`PASS 2: STBY at ${time.toFixed(2)} for ${trainee.fullName}, instructor: TBA`);
-      scheduledTrainees.add(trainee.fullName);
+      console.log(`PASS 2: STBY at ${time.toFixed(2)} for ${trainee2.fullName}, instructor: TBA`);
+      scheduledTrainees.add(trainee2.fullName);
       break;
     }
   }
   console.log(`PASS 2 complete: Total STBY flights: ${scheduledTrainees.size} (Pass 1: ${scheduledTrainees.size - remainingTrainees.length}, Pass 2: ${remainingTrainees.length})`);
   setProgress({ message: "Scheduling STBY FTD events...", percentage: 90 });
-  const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
-    const { next } = traineeNextEventMap.get(trainee.fullName);
+  const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee2) => {
+    const { next } = traineeNextEventMap.get(trainee2.fullName);
     if (!next || next.type !== "FTD") return false;
     return !generatedEvents.some(
-      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY")
+      (e) => e.student === trainee2.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY")
     );
   });
   console.log("Trainees needing STBY FTD events:", traineesNeedingStbyFtd.length);
@@ -85551,8 +85744,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let currentTime = ftdStartTime;
     const minSpacing = ftdTurnaround;
     console.log(`FTD STBY: Scheduling ${traineesNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
-    for (const trainee of traineesNeedingStbyFtd) {
-      const { next } = traineeNextEventMap.get(trainee.fullName);
+    for (const trainee2 of traineesNeedingStbyFtd) {
+      const { next } = traineeNextEventMap.get(trainee2.fullName);
       if (!next) continue;
       let placed = false;
       while (!placed && currentStbyLine <= 20) {
@@ -85563,18 +85756,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             return currentTime < eventEnd;
           });
           if (!hasConflict) {
-            const instructor = findBestInstructorForStby(trainee, next, currentTime, next.duration, "ftd", generatedEvents);
+            const instructor = findBestInstructorForStby(trainee2, next, currentTime, next.duration, "ftd", generatedEvents);
             generatedEvents.push({
               id: v4(),
               type: "ftd",
               instructor: instructor || "TBA",
-              student: trainee.fullName,
+              student: trainee2.fullName,
               pilot: instructor || "TBA",
               flightNumber: next.id,
               duration: next.duration,
               startTime: currentTime,
               resourceId: `STBY ${currentStbyLine}`,
-              color: courseColors[trainee.course] || "bg-gray-500",
+              color: courseColors[trainee2.course] || "bg-gray-500",
               flightType: "Dual",
               locationType: "Local",
               origin: school,
@@ -85582,7 +85775,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               preStart: next.preFlightTime,
               postEnd: next.postFlightTime
             });
-            console.log(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
+            console.log(`FTD STBY: Placed ${trainee2.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
             currentTime += next.duration + minSpacing;
             placed = true;
           } else {
@@ -85595,7 +85788,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       }
       if (!placed) {
-        console.log(`FTD STBY: Could not place ${trainee.fullName} - all STBY lines full`);
+        console.log(`FTD STBY: Could not place ${trainee2.fullName} - all STBY lines full`);
       }
     }
     const ftdStbyEvents = generatedEvents.filter((e) => e.type === "ftd" && e.resourceId.startsWith("STBY"));
@@ -86143,17 +86336,17 @@ const App = () => {
         if (dbTrainees.length > 0) {
           setTraineeLMPs((prev) => {
             const newLMPs = new Map(prev);
-            dbTrainees.forEach((trainee) => {
-              let lmpType = trainee.lmpType || "BPC+IPC";
-              if (lmpType === "BPC+IPC" && trainee.course) {
-                const courseUpper = trainee.course.toUpperCase();
+            dbTrainees.forEach((trainee2) => {
+              let lmpType = trainee2.lmpType || "BPC+IPC";
+              if (lmpType === "BPC+IPC" && trainee2.course) {
+                const courseUpper = trainee2.course.toUpperCase();
                 if (courseUpper.startsWith("FIC")) {
                   lmpType = "FIC";
-                  console.log(`[LMP Init] Detected FIC course for ${trainee.fullName} (${trainee.course}) — overriding lmpType to 'FIC'`);
+                  console.log(`[LMP Init] Detected FIC course for ${trainee2.fullName} (${trainee2.course}) — overriding lmpType to 'FIC'`);
                 }
               }
               const isFicTrainee = lmpType === "FIC";
-              const alreadySet = newLMPs.has(trainee.fullName);
+              const alreadySet = newLMPs.has(trainee2.fullName);
               if (!alreadySet || isFicTrainee) {
                 const masterLMP = INITIAL_SYLLABUS_DETAILS.filter((item) => {
                   if (lmpType === "BPC+IPC") {
@@ -86162,8 +86355,8 @@ const App = () => {
                   return item.courses && item.courses.includes(lmpType);
                 });
                 if (masterLMP.length > 0) {
-                  newLMPs.set(trainee.fullName, [...masterLMP]);
-                  console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? " [CORRECTED]" : ""}`);
+                  newLMPs.set(trainee2.fullName, [...masterLMP]);
+                  console.log(`[LMP Init] ${trainee2.fullName} (${trainee2.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? " [CORRECTED]" : ""}`);
                 }
               }
             });
@@ -87306,9 +87499,9 @@ ${"=".repeat(60)}`);
         data.set(instructor.name, instructor.seatConfig);
       }
     });
-    allTraineesData.forEach((trainee) => {
-      if (trainee.name && trainee.seatConfig) {
-        data.set(trainee.name, trainee.seatConfig);
+    allTraineesData.forEach((trainee2) => {
+      if (trainee2.name && trainee2.seatConfig) {
+        data.set(trainee2.name, trainee2.seatConfig);
       }
     });
     return data;
@@ -87716,16 +87909,16 @@ ${"=".repeat(60)}`);
     setSyllabusBackTarget(activeView);
     handleNavigation("Syllabus");
   };
-  const handleViewTraineeLMP = (trainee) => {
-    setSelectedTraineeForLMP(trainee);
+  const handleViewTraineeLMP = (trainee2) => {
+    setSelectedTraineeForLMP(trainee2);
     handleNavigation("TraineeLMP");
   };
   const handleViewLogbook = (person) => {
     setSelectedPersonForLogbook(person);
     handleNavigation("Logbook");
   };
-  const handleOpenAddRemedialPackage = (trainee) => {
-    setSelectedTraineeForRemedial(trainee);
+  const handleOpenAddRemedialPackage = (trainee2) => {
+    setSelectedTraineeForRemedial(trainee2);
     setShowAddRemedialPackage(true);
   };
   const handleBuildDateChange = (direction) => {
@@ -87795,12 +87988,12 @@ ${"=".repeat(60)}`);
       }
     }
   }, []);
-  const handleSaveRemedialPackage = (trainee, eventToRemediate, newEvents) => {
+  const handleSaveRemedialPackage = (trainee2, eventToRemediate, newEvents) => {
     setTraineeLMPs((prevLMPs) => {
       const newLMPs = new Map(prevLMPs);
-      const originalTraineeLMP = newLMPs.get(trainee.fullName);
+      const originalTraineeLMP = newLMPs.get(trainee2.fullName);
       if (!originalTraineeLMP) {
-        console.error("LMP not found for trainee:", trainee.fullName);
+        console.error("LMP not found for trainee:", trainee2.fullName);
         return prevLMPs;
       }
       let lastNewEventId = eventToRemediate.id;
@@ -87874,7 +88067,7 @@ ${"=".repeat(60)}`);
           console.log(`✅ Updated prerequisite for ${subsequentEvent.code}: ${eventToRemediate.id} → ${reFlyEvent.id}`);
         }
       });
-      newLMPs.set(trainee.fullName, cleanedLmp);
+      newLMPs.set(trainee2.fullName, cleanedLmp);
       return newLMPs;
     });
     setShowAddRemedialPackage(false);
@@ -88344,9 +88537,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           addCurrencyEventToTraineeLMP(traineeName, event.flightNumber);
         } else if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
           event.groupTraineeIds.forEach((traineeId) => {
-            const trainee = allTraineesData.find((t) => t.idNumber === traineeId);
-            if (trainee) {
-              addCurrencyEventToTraineeLMP(trainee.fullName, event.flightNumber);
+            const trainee2 = allTraineesData.find((t) => t.idNumber === traineeId);
+            if (trainee2) {
+              addCurrencyEventToTraineeLMP(trainee2.fullName, event.flightNumber);
             }
           });
         }
@@ -88711,10 +88904,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         if (existingEvent) {
           console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
         } else if (!existingEvent) {
-          const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
+          const trainee2 = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
           let syllabusItem = null;
-          if (trainee) {
-            const individualLMP = traineeLMPs.get(trainee.fullName);
+          if (trainee2) {
+            const individualLMP = traineeLMPs.get(trainee2.fullName);
             if (individualLMP) {
               syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
               if (syllabusItem) {
@@ -88732,10 +88925,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           if (!syllabusItem) {
             console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
           }
-          if (!trainee) {
+          if (!trainee2) {
             console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
           }
-          if (trainee && syllabusItem) {
+          if (trainee2 && syllabusItem) {
             const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : "";
             console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
             const newEvent = {
@@ -88744,7 +88937,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : "flight",
               instructor: allocatedInstructor,
               // Use allocated instructor from remedial package
-              student: trainee.fullName,
+              student: trainee2.fullName,
               flightNumber: syllabusItem.code,
               duration,
               startTime: 8,
@@ -88762,7 +88955,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             };
             newPriorityEvents.push(newEvent);
             added++;
-            console.log("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee.fullName);
+            console.log("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee2.fullName);
           }
         }
       }
@@ -88938,9 +89131,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
   };
   const handleSelectTraineeFromSchedule = (traineeFullName) => {
-    const trainee = allTraineesData.find((t) => t.fullName === traineeFullName);
-    if (trainee) {
-      setSelectedPersonForProfile(trainee);
+    const trainee2 = allTraineesData.find((t) => t.fullName === traineeFullName);
+    if (trainee2) {
+      setSelectedPersonForProfile(trainee2);
       handleNavigation("CourseRoster");
     }
   };
@@ -88992,8 +89185,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
     const activeTrainees = allTraineesData.filter((t) => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, "flight"));
     let bnfTraineeCount = 0;
-    activeTrainees.forEach((trainee) => {
-      const { next } = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+    activeTrainees.forEach((trainee2) => {
+      const { next } = computeNextEventsForTrainee(trainee2, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
       if (next && next.code.startsWith("BNF") && next.type === "Flight") {
         bnfTraineeCount++;
       }
@@ -89568,11 +89761,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   };
   const allTraineesByCourse = reactExports.useMemo(() => {
     const groups = {};
-    allTraineesData.forEach((trainee) => {
-      if (!groups[trainee.course]) {
-        groups[trainee.course] = [];
+    allTraineesData.forEach((trainee2) => {
+      if (!groups[trainee2.course]) {
+        groups[trainee2.course] = [];
       }
-      groups[trainee.course].push(trainee);
+      groups[trainee2.course].push(trainee2);
     });
     return groups;
   }, [allTraineesData]);
@@ -89605,25 +89798,25 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
     const conflictedSyllabusId = conflictedEvent.flightNumber;
     const otherTrainees = allTraineesData.filter((t) => t.fullName !== conflictedEvent.student && !t.isPaused);
-    for (const trainee of otherTrainees) {
-      const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
+    for (const trainee2 of otherTrainees) {
+      const nextEvents = computeNextEventsForTrainee(trainee2, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
       if (nextEvents.next?.id !== conflictedSyllabusId) {
         continue;
       }
-      if (isPersonStaticallyUnavailable(trainee, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type)) {
+      if (isPersonStaticallyUnavailable(trainee2, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type)) {
         continue;
       }
       const hasOverlap = allEvents.some((e) => {
         if (e.id === conflictedEvent.id) return false;
-        if (!getPersonnel(e).includes(trainee.fullName)) return false;
+        if (!getPersonnel(e).includes(trainee2.fullName)) return false;
         const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
         return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
       });
       if (hasOverlap) {
         continue;
       }
-      const daysSinceLastFlight = daysSince(trainee.lastFlightDate, conflictedEvent.date);
-      const traineeEventsToday = allEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
+      const daysSinceLastFlight = daysSince(trainee2.lastFlightDate, conflictedEvent.date);
+      const traineeEventsToday = allEvents.filter((e) => getPersonnel(e).includes(trainee2.fullName));
       const flightsToday = traineeEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = traineeEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = traineeEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -89631,9 +89824,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       suggestions.push({
         type: "trainee",
         trainee: {
-          name: trainee.fullName,
-          rank: trainee.rank,
-          course: trainee.course,
+          name: trainee2.fullName,
+          rank: trainee2.rank,
+          course: trainee2.course,
           daysSinceLastFlight,
           flightsToday,
           ftdsToday,
@@ -90215,43 +90408,43 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       currentEvents.filter((e) => getPersonnel(e).includes(instructor.name));
       return { instructor, availableWindows: [] };
     });
-    const traineesAnalysis = allTraineesData.map((trainee) => {
-      const events2 = currentEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
+    const traineesAnalysis = allTraineesData.map((trainee2) => {
+      const events2 = currentEvents.filter((e) => getPersonnel(e).includes(trainee2.fullName));
       const hasFtd = events2.some((e) => e.type === "ftd" && e.date === analysisDate);
       const hasFlight = events2.some((e) => e.type === "flight" && e.date === analysisDate);
       const groundEventsToday = events2.filter((e) => e.type === "ground" && e.date === analysisDate).length;
-      const nextSyllabusEvent = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
+      const nextSyllabusEvent = computeNextEventsForTrainee(trainee2, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate).next;
       let isEligible = nextSyllabusEvent?.type === "Flight";
-      if (trainee.isPaused) {
+      if (trainee2.isPaused) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} excluded - trainee is PAUSED`);
+        console.log(`Oracle: ${trainee2.fullName} excluded - trainee is PAUSED`);
       }
-      const isNtsc = trainee.course.includes("NTSC") || trainee.fullName.includes("NTSC");
+      const isNtsc = trainee2.course.includes("NTSC") || trainee2.fullName.includes("NTSC");
       if (isNtsc) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} excluded - trainee is NTSC`);
+        console.log(`Oracle: ${trainee2.fullName} excluded - trainee is NTSC`);
       }
       if (nextSyllabusEvent && nextSyllabusEvent.isRemedial) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} excluded - next event ${nextSyllabusEvent.code} is REMEDIAL`);
+        console.log(`Oracle: ${trainee2.fullName} excluded - next event ${nextSyllabusEvent.code} is REMEDIAL`);
       }
       if (hasFlight) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - already has flight scheduled for ${analysisDate}`);
+        console.log(`Oracle: ${trainee2.fullName} ineligible - already has flight scheduled for ${analysisDate}`);
       }
       if (hasFtd && hasFlight) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - has both FTD and flight scheduled for ${analysisDate}`);
+        console.log(`Oracle: ${trainee2.fullName} ineligible - has both FTD and flight scheduled for ${analysisDate}`);
       }
       if (groundEventsToday >= 2) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - already has ${groundEventsToday} ground events for ${analysisDate}`);
+        console.log(`Oracle: ${trainee2.fullName} ineligible - already has ${groundEventsToday} ground events for ${analysisDate}`);
       }
       if (!nextSyllabusEvent) {
         isEligible = false;
-        console.log(`Oracle: ${trainee.fullName} ineligible - no next syllabus event found`);
+        console.log(`Oracle: ${trainee2.fullName} ineligible - no next syllabus event found`);
       }
-      return { trainee, availableWindows: [], nextSyllabusEvent, isEligible };
+      return { trainee: trainee2, availableWindows: [], nextSyllabusEvent, isEligible };
     });
     traineesAnalysis.filter((t) => t.isEligible).length;
     setOracleAnalysis({ instructors: instructorsAnalysis, trainees: traineesAnalysis });
@@ -90790,8 +90983,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             courseColors,
             archivedCourses,
             personnelData,
-            onNavigateToHateSheet: (trainee) => {
-              setSelectedTraineeForHateSheet(trainee);
+            onNavigateToHateSheet: (trainee2) => {
+              setSelectedTraineeForHateSheet(trainee2);
               handleNavigation("HateSheet");
             },
             onRestoreCourse: () => {
@@ -90811,18 +91004,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onProfileOpened: () => setSelectedPersonForProfile(null),
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
-            onDeleteTrainee: (trainee) => {
-              setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee.idNumber));
+            onDeleteTrainee: (trainee2) => {
+              setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee2.idNumber));
               setTraineeLMPs((prev) => {
                 const newLMPs = new Map(prev);
-                newLMPs.delete(trainee.fullName);
+                newLMPs.delete(trainee2.fullName);
                 return newLMPs;
               });
               logAudit({
                 page: "Trainee Roster",
                 action: "delete",
                 description: `Deleted trainee from roster`,
-                changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+                changes: `Removed: ${trainee2.rank} ${trainee2.name} (${trainee2.course}) - ID: ${trainee2.idNumber}`
               });
             },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
@@ -90876,16 +91069,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 changes: `${courseNumber} unit changed to ${newUnit}`
               });
             },
-            onBackcourseTrainee: (trainee, newCourse) => {
-              console.log(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
+            onBackcourseTrainee: (trainee2, newCourse) => {
+              console.log(`[CourseEdit] 🔄 Backcoursing ${trainee2.name} to "${newCourse}"`);
               setTraineesData((prev) => prev.map(
-                (t) => t.idNumber === trainee.idNumber ? { ...t, course: newCourse } : t
+                (t) => t.idNumber === trainee2.idNumber ? { ...t, course: newCourse } : t
               ));
               logAudit({
                 page: "Trainee Roster",
                 action: "edit",
                 description: `Trainee backcoursed`,
-                changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
+                changes: `${trainee2.rank} ${trainee2.name} moved from ${trainee2.course} to ${newCourse}`
               });
             },
             date,
@@ -90919,8 +91112,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             courseColors,
             archivedCourses,
             personnelData,
-            onNavigateToHateSheet: (trainee) => {
-              setSelectedTraineeForHateSheet(trainee);
+            onNavigateToHateSheet: (trainee2) => {
+              setSelectedTraineeForHateSheet(trainee2);
               handleNavigation("HateSheet");
             },
             onRestoreCourse: () => {
@@ -90940,18 +91133,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onProfileOpened: () => setSelectedPersonForProfile(null),
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
-            onDeleteTrainee: (trainee) => {
-              setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee.idNumber));
+            onDeleteTrainee: (trainee2) => {
+              setTraineesData((prev) => prev.filter((t) => t.idNumber !== trainee2.idNumber));
               setTraineeLMPs((prev) => {
                 const newLMPs = new Map(prev);
-                newLMPs.delete(trainee.fullName);
+                newLMPs.delete(trainee2.fullName);
                 return newLMPs;
               });
               logAudit({
                 page: "Trainee Roster",
                 action: "delete",
                 description: `Deleted trainee from roster`,
-                changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+                changes: `Removed: ${trainee2.rank} ${trainee2.name} (${trainee2.course}) - ID: ${trainee2.idNumber}`
               });
             },
             onUpdateCourseNumber: (oldCourseNumber, newCourseNumber) => {
@@ -91004,15 +91197,15 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 changes: `${courseNumber} unit changed to ${newUnit}`
               });
             },
-            onBackcourseTrainee: (trainee, newCourse) => {
+            onBackcourseTrainee: (trainee2, newCourse) => {
               setTraineesData((prev) => prev.map(
-                (t) => t.idNumber === trainee.idNumber ? { ...t, course: newCourse } : t
+                (t) => t.idNumber === trainee2.idNumber ? { ...t, course: newCourse } : t
               ));
               logAudit({
                 page: "Trainee Roster",
                 action: "edit",
                 description: `Trainee backcoursed`,
-                changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
+                changes: `${trainee2.rank} ${trainee2.name} moved from ${trainee2.course} to ${newCourse}`
               });
             }
           },
@@ -91547,12 +91740,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               console.log("Total events available:", allPublishedEvents.length);
               const event = allPublishedEvents.find((e) => e.id === assessment.eventId);
               console.log("Found event:", event);
-              const trainee = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
-              console.log("Found trainee:", trainee);
-              if (event && trainee) {
+              const trainee2 = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
+              console.log("Found trainee:", trainee2);
+              if (event && trainee2) {
                 console.log("✅ Setting event and trainee, navigating to PT051");
                 setEventForPt051(event);
-                setSelectedTraineeForHateSheet(trainee);
+                setSelectedTraineeForHateSheet(trainee2);
                 setTimeout(() => {
                   console.log("🚀 Navigating to PT051 view");
                   handleNavigation("PT051");
@@ -91561,7 +91754,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 console.error("❌ Could not find event or trainee for PT-051:", {
                   assessment,
                   eventFound: !!event,
-                  traineeFound: !!trainee,
+                  traineeFound: !!trainee2,
                   searchingForEventId: assessment.eventId,
                   availableEventIds: allPublishedEvents.map((e) => e.id).slice(0, 10),
                   availableTrainees: allTraineesData.map((t) => t.fullName).slice(0, 10),
@@ -91577,10 +91770,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   (e) => e.flightNumber === assessment.flightNumber && e.date === assessment.date && e.instructor === assessment.instructorName
                 );
                 console.log("Fallback result:", fallbackEvent);
-                if (fallbackEvent && trainee) {
+                if (fallbackEvent && trainee2) {
                   console.log("✅ Found event using fallback (flight number + date + instructor):", fallbackEvent);
                   setEventForPt051(fallbackEvent);
-                  setSelectedTraineeForHateSheet(trainee);
+                  setSelectedTraineeForHateSheet(trainee2);
                   setTimeout(() => {
                     console.log("🚀 Navigating to PT051 view (fallback)");
                     handleNavigation("PT051");
@@ -91588,7 +91781,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 } else {
                   console.error("❌ Primary fallback failed", {
                     fallbackEventFound: !!fallbackEvent,
-                    traineeFound: !!trainee,
+                    traineeFound: !!trainee2,
                     matchingFlightNumbers: allPublishedEvents.filter((e) => e.flightNumber === assessment.flightNumber).length,
                     matchingDates: allPublishedEvents.filter((e) => e.date === assessment.date).length,
                     matchingInstructors: allPublishedEvents.filter((e) => e.instructor === assessment.instructorName).length
@@ -91597,11 +91790,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   const secondaryFallbackEvent = allPublishedEvents.find(
                     (e) => e.flightNumber === assessment.flightNumber && e.instructor === assessment.instructorName
                   );
-                  if (secondaryFallbackEvent && trainee) {
+                  if (secondaryFallbackEvent && trainee2) {
                     console.log("✅ Found event using secondary fallback:", secondaryFallbackEvent);
                     console.warn("⚠️ Note: Event date may differ from PT-051 date");
                     setEventForPt051(secondaryFallbackEvent);
-                    setSelectedTraineeForHateSheet(trainee);
+                    setSelectedTraineeForHateSheet(trainee2);
                     setTimeout(() => {
                       console.log("🚀 Navigating to PT051 view (secondary fallback)");
                       handleNavigation("PT051");
@@ -91631,10 +91824,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                       notes: "",
                       crew: []
                     };
-                    if (trainee) {
+                    if (trainee2) {
                       console.log("✅ Created mock event:", mockEvent);
                       setEventForPt051(mockEvent);
-                      setSelectedTraineeForHateSheet(trainee);
+                      setSelectedTraineeForHateSheet(trainee2);
                       setTimeout(() => {
                         console.log("🚀 Navigating to PT051 view (mock event)");
                         handleNavigation("PT051");
@@ -91860,8 +92053,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               setInstructorForSct(instructor);
               setShowSctRequest(true);
             },
-            onNavigateToTrainee: (trainee) => {
-              setSelectedPersonForProfile(trainee);
+            onNavigateToTrainee: (trainee2) => {
+              setSelectedPersonForProfile(trainee2);
             }
           },
           void 0,
@@ -91888,17 +92081,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToCurrency: handleNavigateToCurrency,
             onBulkUpdateTrainees: handleBulkUpdateTrainees,
             onArchiveTrainee: (id) => {
-              const trainee = allTraineesData.find((t) => t.idNumber === id);
-              if (trainee) {
-                setArchivedTraineesData((prev) => [...prev, trainee]);
+              const trainee2 = allTraineesData.find((t) => t.idNumber === id);
+              if (trainee2) {
+                setArchivedTraineesData((prev) => [...prev, trainee2]);
                 setTraineesData((prev) => prev.filter((t) => t.idNumber !== id));
               }
             },
             selectedPersonForProfile,
             onProfileOpened: () => setSelectedPersonForProfile(null),
             onViewLogbook: handleViewLogbook,
-            onRequestSct: (trainee) => {
-              setTraineeForSct(trainee);
+            onRequestSct: (trainee2) => {
+              setTraineeForSct(trainee2);
               setShowSctRequest(true);
             }
           },
@@ -92501,17 +92694,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           instructorsData,
           courseColors,
           eventsForDate,
-          onNavigateToHateSheet: (trainee) => {
-            setSelectedTraineeForHateSheet(trainee);
+          onNavigateToHateSheet: (trainee2) => {
+            setSelectedTraineeForHateSheet(trainee2);
             handleNavigation("HateSheet");
           },
           onNavigateToSyllabus: (id) => {
             onNavigateToSyllabus(id);
           },
-          onOpenPt051: (trainee) => {
+          onOpenPt051: (trainee2) => {
             setEventForPt051(selectedEvent);
-            setSelectedTraineeForHateSheet(trainee);
-            logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
+            setSelectedTraineeForHateSheet(trainee2);
+            logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee2.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);
             handleNavigation("PT051");
           },
           onOpenAuth: (e) => {
@@ -92539,12 +92732,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             const traineeNamesWithNewScores = [...new Set(newScores.map((s) => s.traineeName))];
             traineeNamesWithNewScores.forEach(async (traineeName) => {
               try {
-                const trainee = allTraineesData.find((t) => t.fullName === traineeName);
-                if (!trainee || !trainee.id) return;
+                const trainee2 = allTraineesData.find((t) => t.fullName === traineeName);
+                if (!trainee2 || !trainee2.id) return;
                 const allScoresForTrainee = updatedScores.get(traineeName) || [];
                 const completedEventIds = allScoresForTrainee.map((s) => s.event);
-                let lmpType = trainee.lmpType || "BPC+IPC";
-                if (lmpType === "BPC+IPC" && trainee.course?.toUpperCase().startsWith("FIC")) {
+                let lmpType = trainee2.lmpType || "BPC+IPC";
+                if (lmpType === "BPC+IPC" && trainee2.course?.toUpperCase().startsWith("FIC")) {
                   lmpType = "FIC";
                 }
                 const masterSyllabus = INITIAL_SYLLABUS_DETAILS.filter((item) => {
@@ -92557,7 +92750,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   completedAt: completedSet.has(item.id || item.code) ? allScoresForTrainee.find((s) => s.event === (item.id || item.code))?.date || (/* @__PURE__ */ new Date()).toISOString() : null
                 }));
                 const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
-                const res = await fetch(`${apiBase2}/trainees/${trainee.id}/lmp`, {
+                const res = await fetch(`${apiBase2}/trainees/${trainee2.id}/lmp`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({

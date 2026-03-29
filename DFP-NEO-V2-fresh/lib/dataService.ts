@@ -3,6 +3,7 @@
 
 import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule } from './api';
 import { ESL_DATA, PEA_DATA } from '../mockData';
+import { assignTraineesToInstructors } from './traineeAssignmentService';
 
 
 // Merge database instructors with mock data, deduplicating by idNumber
@@ -254,8 +255,13 @@ export async function initializeData() {
          trainees = mergeTraineeData(trainees, ESL_DATA.trainees, true);
          console.log('🔄 Loaded all trainees (DB + mock) with _dataSource tags for UI filtering');
        
-       // Assign trainees to Burns (real database instructor)
-       assignTraineesToBurns(instructors, trainees);
+       // Assign trainees to instructors using the new assignment service
+       // This ensures all instructors have minimum 2 primary and 2 secondary trainees
+       console.log('\ud83d\udd27 Applying trainee assignment logic...');
+       const assignmentResult = assignTraineesToInstructors(trainees, instructors);
+       trainees = assignmentResult.trainees;
+       console.log('\u2705 Trainee assignment complete');
+       console.log('\ud83d\udcca Assignment Summary:', assignmentResult.summary);
    
     // Fetch aircraft
     console.log('✈️ Fetching aircraft from API...');
