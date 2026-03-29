@@ -55,7 +55,9 @@ export function assignTraineesToInstructors(
 
   // Filter eligible trainees (exclude FIC courses)
   const eligibleTrainees = trainees.filter(t => !t.course.includes('FIC'));
+  const ficTrainees = trainees.filter(t => t.course.includes('FIC'));
   console.log(`  Eligible trainees (non-FIC): ${eligibleTrainees.length}`);
+  console.log(`  FIC trainees (excluded from assignment): ${ficTrainees.length}`);
 
   if (!eligibleTrainees.length) {
     console.warn('⚠️ No eligible trainees found - no assignments made');
@@ -301,7 +303,7 @@ export function assignTraineesToInstructors(
   console.log(`  Trainees with secondary: ${summary.traineesWithSecondary}/${summary.totalTrainees}`);
 
   return {
-    trainees: traineesWithAssignments,
+    trainees: [...traineesWithAssignments, ...ficTrainees],
     summary,
   };
 }

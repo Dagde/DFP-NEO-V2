@@ -82834,7 +82834,9 @@ function assignTraineesToInstructors(trainees, instructors) {
     };
   }
   const eligibleTrainees = trainees.filter((t) => !t.course.includes("FIC"));
+  const ficTrainees = trainees.filter((t) => t.course.includes("FIC"));
   console.log(`  Eligible trainees (non-FIC): ${eligibleTrainees.length}`);
+  console.log(`  FIC trainees (excluded from assignment): ${ficTrainees.length}`);
   if (!eligibleTrainees.length) {
     console.warn("⚠️ No eligible trainees found - no assignments made");
     return {
@@ -83018,7 +83020,7 @@ function assignTraineesToInstructors(trainees, instructors) {
   console.log(`  Trainees with primary: ${summary.traineesWithPrimary}/${summary.totalTrainees}`);
   console.log(`  Trainees with secondary: ${summary.traineesWithSecondary}/${summary.totalTrainees}`);
   return {
-    trainees: traineesWithAssignments,
+    trainees: [...traineesWithAssignments, ...ficTrainees],
     summary
   };
 }
