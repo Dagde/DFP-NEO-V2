@@ -250,9 +250,15 @@ export async function initializeData() {
          trainees = await fetchTrainees();
          console.log('\u2705 Trainee DB loaded:', trainees.length);
 
-         // Exclude mock data - only load database trainees
-         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, false);
-         console.log('\ud83d\udd04 Loaded trainees (DB only - mock data excluded)');
+         // Read trainee mock data setting from localStorage
+         // If trainee mock data is enabled, merge mock trainees with DB trainees
+         const storedSettings = typeof localStorage !== 'undefined' ? localStorage.getItem('dataSourceSettings') : null;
+         const dataSourceSettings = storedSettings ? JSON.parse(storedSettings) : null;
+         const includeTraineeMockData = dataSourceSettings?.trainee !== false; // Default to true if not set
+         
+         console.log('\ud83d\udd04 Data Sources - Trainee MockData:', includeTraineeMockData ? 'ENABLED' : 'DISABLED');
+         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
+         console.log('\ud83d\udd04 Loaded trainees (DB' + (includeTraineeMockData ? ' + mock' : ' only') + ') with _dataSource tags for UI filtering');
        
        // Assign trainees to instructors using the new assignment service
        // This ensures all instructors have minimum 2 primary and 2 secondary trainees
