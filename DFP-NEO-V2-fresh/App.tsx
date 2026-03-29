@@ -2101,34 +2101,46 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
                     : [{ start: searchStartTime, end: endTimeBoundary }];
 
-                for (const space of searchSpaces) {
-                    if (placed) break;
-                    for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
-                        const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne);
-                        if (result && typeof result === 'object' && 'id' in result) {
-                            generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
-                            // Only get instructor counts if not a solo flight
-                               const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
-                            const tCounts = eventCounts.get(trainee.fullName)!;
-                            if (type === 'flight' || type === 'ftd') { 
-                                tCounts.flightFtd++; 
-                                if (ipCounts) ipCounts.flightFtd++; 
-                            } else if (type === 'ground') { 
-                                tCounts.ground++; 
-                                if (ipCounts) ipCounts.ground++; // Count ground events for instructors
-                            } else if (type === 'cpt') {
-                                tCounts.cpt++; 
-                                if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
-                            }
-                            
-                            if (type === 'cpt' || type === 'ground') {
-                                const segment = segments.find(s => time >= s.start && time < s.end);
-                                if (segment) segment.count++;
-                            }
+                // TWO-PASS SLOT SEARCH (programWithPrimaries only):
+                // Pass 1 (primaryPreferOnly=true):  scan all time slots accepting ONLY primary/secondary instructor matches
+                // Pass 2 (primaryPreferOnly=false): scan all time slots with any available instructor (normal fallback)
+                // This maximises primary/secondary assignments without reducing total events scheduled —
+                // every trainee that can fly with their primary will, and those who can't still get scheduled.
+                const passModes: boolean[] = programWithPrimaries && !isNightPass
+                    ? [true, false]   // primary-only pass first, then fallback
+                    : [false];        // no primary preference active, single pass only
 
-                            placed = true;
-                            placedThisPass = true;
-                            break;
+                for (const primaryOnly of passModes) {
+                    if (placed) break;
+                    for (const space of searchSpaces) {
+                        if (placed) break;
+                        for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
+                            const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
+                            if (result && typeof result === 'object' && 'id' in result) {
+                                generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                // Only get instructor counts if not a solo flight
+                                   const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
+                                const tCounts = eventCounts.get(trainee.fullName)!;
+                                if (type === 'flight' || type === 'ftd') { 
+                                    tCounts.flightFtd++; 
+                                    if (ipCounts) ipCounts.flightFtd++; 
+                                } else if (type === 'ground') { 
+                                    tCounts.ground++; 
+                                    if (ipCounts) ipCounts.ground++; // Count ground events for instructors
+                                } else if (type === 'cpt') {
+                                    tCounts.cpt++; 
+                                    if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                                }
+                                
+                                if (type === 'cpt' || type === 'ground') {
+                                    const segment = segments.find(s => time >= s.start && time < s.end);
+                                    if (segment) segment.count++;
+                                }
+
+                                placed = true;
+                                placedThisPass = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -2149,7 +2161,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         startTime: number,
         type: 'flight' | 'ftd' | 'ground' | 'cpt',
         isNightPass: boolean,
-        isPlusOne: boolean
+        isPlusOne: boolean,
+        primaryPreferOnly: boolean = false
     ): ScheduleEventResult => {
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
@@ -2187,7 +2200,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const findAvailableInstructor = (
             traineeForCheck: Trainee, 
             syllabusItemForCheck: SyllabusItemDetail,
-            isPlusOneCheck: boolean
+            isPlusOneCheck: boolean,
+            primaryOnlyMode: boolean = false
         ): Instructor | null => {
             const isBnfEvent = syllabusItemForCheck.code.startsWith('BNF');
             
@@ -2376,13 +2390,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const isPrimary = (i: Instructor) => i.name === primaryName;
                 const isSecondary = (i: Instructor) => i.name === secondaryName;
 
-                // Buckets — non-primary/secondary slots sorted by weighted workload ascending
-                const primarySameUnit    = candidates.filter(i => isPrimary(i) && isSameUnit(i));
-                const secondarySameUnit  = candidates.filter(i => isSecondary(i) && isSameUnit(i));
+                // Buckets — all buckets sorted by weighted workload ascending so less-loaded instructors are tried first
+                // Primary/secondary buckets also sorted by workload so the least-loaded primary is tried first
+                const primarySameUnit    = candidates.filter(i => isPrimary(i) && isSameUnit(i))
+                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
+                const secondarySameUnit  = candidates.filter(i => isSecondary(i) && isSameUnit(i))
+                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
                 const otherSameUnit      = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && isSameUnit(i))
                                                       .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const primaryOtherUnit   = candidates.filter(i => isPrimary(i) && !isSameUnit(i));
-                const secondaryOtherUnit = candidates.filter(i => isSecondary(i) && !isSameUnit(i));
+                const primaryOtherUnit   = candidates.filter(i => isPrimary(i) && !isSameUnit(i))
+                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
+                const secondaryOtherUnit = candidates.filter(i => isSecondary(i) && !isSameUnit(i))
+                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
                 const otherOtherUnit     = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && !isSameUnit(i))
                                                       .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
 
@@ -2394,6 +2413,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ...secondaryOtherUnit,
                     ...otherOtherUnit,
                 ];
+
+                // PRIMARY-ONLY MODE: In the first scheduling pass (when programWithPrimaries is on),
+                // restrict the candidate pool to only primary and secondary instructors.
+                // This forces the time-slot search to only succeed when a primary/secondary is available,
+                // so the outer loop will find a time slot that works for the primary/secondary.
+                // If no primary/secondary slot exists, the second pass (primaryOnlyMode=false) handles it.
+                if (primaryOnlyMode) {
+                    const primaryName2 = traineeForCheck.primaryInstructor;
+                    const secondaryName2 = traineeForCheck.secondaryInstructor;
+                    candidates = candidates.filter(i => i.name === primaryName2 || i.name === secondaryName2);
+                }
             } else {
                 // Without primary preference: same-unit first, then shared-unit, both sorted by weighted workload
                 const traineeUnit = normalizeUnit(traineeForCheck.unit || '');
@@ -2565,7 +2595,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         
         let instructor: Instructor | null = null;
         if (!isSoloFlight) {
-            instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne);
+            instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne, primaryPreferOnly);
             if (!instructor) {
                 if (_isFlight) {
                     // Map _zeroReason from findAvailableInstructor diagnostic to bucket
