@@ -83174,11 +83174,16 @@ async function initializeData() {
     console.log("✅ Trainee DB loaded:", trainees.length);
     trainees = mergeTraineeData(trainees, ESL_DATA.trainees, true);
     console.log("🔄 Loaded all trainees (DB + mock) with _dataSource tags for UI filtering");
-    console.log("🔧 Applying trainee assignment logic...");
-    const assignmentResult = assignTraineesToInstructors(trainees, instructors);
-    trainees = assignmentResult.trainees;
-    console.log("✅ Trainee assignment complete");
-    console.log("📊 Assignment Summary:", assignmentResult.summary);
+    try {
+      console.log("🔧 Applying trainee assignment logic...");
+      const assignmentResult = assignTraineesToInstructors(trainees, instructors);
+      trainees = assignmentResult.trainees;
+      console.log("✅ Trainee assignment complete");
+      console.log("📊 Assignment Summary:", assignmentResult.summary);
+    } catch (error) {
+      console.error("\\u274c Error during trainee assignment:", error);
+      console.warn("\\u26a0️ Continuing without trainee assignment - trainees will have no instructors assigned");
+    }
     console.log("✈️ Fetching aircraft from API...");
     aircraft = await fetchAircraft();
     console.log("✅ Aircraft loaded:", aircraft.length);

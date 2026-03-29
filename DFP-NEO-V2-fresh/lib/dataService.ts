@@ -257,11 +257,17 @@ export async function initializeData() {
        
        // Assign trainees to instructors using the new assignment service
        // This ensures all instructors have minimum 2 primary and 2 secondary trainees
+       try {
        console.log('\ud83d\udd27 Applying trainee assignment logic...');
        const assignmentResult = assignTraineesToInstructors(trainees, instructors);
        trainees = assignmentResult.trainees;
        console.log('\u2705 Trainee assignment complete');
        console.log('\ud83d\udcca Assignment Summary:', assignmentResult.summary);
+       } catch (error) {
+         console.error('\\u274c Error during trainee assignment:', error);
+         console.warn('\\u26a0\ufe0f Continuing without trainee assignment - trainees will have no instructors assigned');
+         // Continue without assignment - trainees will keep their existing instructor assignments (if any)
+       }
    
     // Fetch aircraft
     console.log('✈️ Fetching aircraft from API...');
