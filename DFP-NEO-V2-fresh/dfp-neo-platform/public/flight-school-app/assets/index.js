@@ -68784,30 +68784,35 @@ const allocateInstructors = (trainees, instructors) => {
   }
   for (const instructor of allocatableInstructors) {
     if (!instructor.unit) continue;
-    while (needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) {
-      const unitTrainees = eligibleTrainees.filter(
-        (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && t.secondaryInstructor !== instructor.name
-      );
-      if (unitTrainees.length === 0) break;
+    let progressMade = true;
+    let maxIterations = 10;
+    while ((needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) && progressMade && maxIterations > 0) {
+      progressMade = false;
+      maxIterations--;
       if (needsMorePrimaries(instructor)) {
-        const trainee = unitTrainees[0];
-        if (!trainee.primaryInstructor) {
-          trainee.primaryInstructor = instructor.name;
-          workload.get(instructor.name).primary.push(trainee);
+        const unitTrainees = eligibleTrainees.filter(
+          (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && t.secondaryInstructor !== instructor.name && !workload.get(instructor.name)?.primary.includes(t)
+        );
+        if (unitTrainees.length > 0) {
+          const trainee = unitTrainees[0];
+          if (!trainee.primaryInstructor) {
+            trainee.primaryInstructor = instructor.name;
+            workload.get(instructor.name).primary.push(trainee);
+            progressMade = true;
+          }
         }
       }
       if (needsMoreSecondaries(instructor)) {
         const availableForSecondary = eligibleTrainees.filter(
-          (t) => t.unit === instructor.unit && t.secondaryInstructor !== instructor.name && t.primaryInstructor !== instructor.name
+          (t) => t.unit === instructor.unit && t.secondaryInstructor !== instructor.name && t.primaryInstructor !== instructor.name && !workload.get(instructor.name)?.secondary.includes(t)
         );
         if (availableForSecondary.length > 0) {
           const trainee = availableForSecondary[0];
           if (!trainee.secondaryInstructor) {
             trainee.secondaryInstructor = instructor.name;
             workload.get(instructor.name).secondary.push(trainee);
+            progressMade = true;
           }
-        } else {
-          break;
         }
       }
     }

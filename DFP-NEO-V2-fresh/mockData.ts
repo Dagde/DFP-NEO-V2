@@ -2014,24 +2014,32 @@ const allocateInstructors = (trainees: Trainee[], instructors: Instructor[]): Tr
     for (const instructor of allocatableInstructors) {
         if (!instructor.unit) continue;
 
-        while (needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) {
-            const unitTrainees = eligibleTrainees.filter(t => 
-                t.unit === instructor.unit &&
-                t.primaryInstructor !== instructor.name &&
-                t.secondaryInstructor !== instructor.name
-            );
+        let progressMade = true;
+        let maxIterations = 10; // Prevent infinite loops
 
-            if (unitTrainees.length === 0) break;
+        while ((needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) && progressMade && maxIterations > 0) {
+            progressMade = false;
+            maxIterations--;
 
             // Assign as primary if needed
             if (needsMorePrimaries(instructor)) {
-                const trainee = unitTrainees[0];
-                // Allow multiple primaries - just add this instructor as another primary
-                // Note: Current data model only supports one primary, so we're limited
-                // If the trainee already has a primary, we skip
-                if (!trainee.primaryInstructor) {
-                    trainee.primaryInstructor = instructor.name;
-                    workload.get(instructor.name)!.primary.push(trainee);
+                const unitTrainees = eligibleTrainees.filter(t => 
+                    t.unit === instructor.unit &&
+                    t.primaryInstructor !== instructor.name &&
+                    t.secondaryInstructor !== instructor.name &&
+                    !workload.get(instructor.name)?.primary.includes(t)
+                );
+
+                if (unitTrainees.length > 0) {
+                    const trainee = unitTrainees[0];
+                    // Allow multiple primaries - just add this instructor as another primary
+                    // Note: Current data model only supports one primary, so we're limited
+                    // If the trainee already has a primary, we skip
+                    if (!trainee.primaryInstructor) {
+                        trainee.primaryInstructor = instructor.name;
+                        workload.get(instructor.name)!.primary.push(trainee);
+                        progressMade = true;
+                    }
                 }
             }
 
@@ -2040,7 +2048,8 @@ const allocateInstructors = (trainees: Trainee[], instructors: Instructor[]): Tr
                 const availableForSecondary = eligibleTrainees.filter(t => 
                     t.unit === instructor.unit &&
                     t.secondaryInstructor !== instructor.name &&
-                    t.primaryInstructor !== instructor.name
+                    t.primaryInstructor !== instructor.name &&
+                    !workload.get(instructor.name)?.secondary.includes(t)
                 );
 
                 if (availableForSecondary.length > 0) {
@@ -2051,9 +2060,8 @@ const allocateInstructors = (trainees: Trainee[], instructors: Instructor[]): Tr
                     if (!trainee.secondaryInstructor) {
                         trainee.secondaryInstructor = instructor.name;
                         workload.get(instructor.name)!.secondary.push(trainee);
+                        progressMade = true;
                     }
-                } else {
-                    break;
                 }
             }
         }
