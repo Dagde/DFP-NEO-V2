@@ -213,7 +213,18 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   
   const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
   const studentName = event.flightType === 'Solo' ? '' : (isSctEvent ? event.student : event.student || '');
-  
+
+  // For STBY events, show "TBA" for instructor and ensure trainee name is displayed
+  let displayPicNameForRender = picName;
+  let displayStudentNameForRender = studentName;
+
+  if (isStbyEvent) {
+    // Show "TBA" for instructor position
+    displayPicNameForRender = 'TBA';
+    // Ensure trainee name is displayed from student or pilot field
+    displayStudentNameForRender = event.student || event.pilot || studentName || '';
+  }
+
   let picClasses = `font-semibold truncate`;
   let studentClasses = `truncate`;
 
@@ -378,8 +389,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     };
 
     // Apply name abbreviation for short flights
-    const displayPicName = isShortFlight ? abbreviateName(picName || '') : picName;
-    const displayStudentName = isShortFlight ? abbreviateName(studentName || '') : studentName;
+    const displayPicName = isShortFlight ? abbreviateName(displayPicNameForRender || '') : displayPicNameForRender;
+    const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || '') : displayStudentNameForRender;
     
     const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
     

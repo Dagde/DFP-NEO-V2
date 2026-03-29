@@ -10426,6 +10426,7 @@ updates.forEach(update => {
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
                     trainees={[...allTraineesData]
+                        .filter(t => t.location === school)
                         .sort((a, b) => {
                             // First sort by course (matching Daily Schedule behavior)
                             if (a.course !== b.course) {
@@ -11494,6 +11495,9 @@ updates.forEach(update => {
                             onRequestSct={(instructor) => {
                                 setInstructorForSct(instructor);
                                 setShowSctRequest(true);
+                            }}
+                            onNavigateToTrainee={(trainee) => {
+                                setSelectedPersonForProfile(trainee);
                             }}
                         />;
                 case 'Trainees':

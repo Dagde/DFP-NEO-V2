@@ -22,6 +22,7 @@ interface InstructorProfileFlyoutProps {
   traineesData: Trainee[];
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
+  onNavigateToTrainee?: (trainee: Trainee) => void;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -118,7 +119,7 @@ const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 6
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, onViewLogbook, onRequestSct
+  locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -582,7 +583,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {primaryTrainees[0] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(primaryTrainees[0])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {primaryTrainees[0].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -597,7 +604,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {primaryTrainees[1] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(primaryTrainees[1])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {primaryTrainees[1].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -612,7 +625,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {secondaryTrainees[0] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(secondaryTrainees[0])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {secondaryTrainees[0].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -627,7 +646,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {secondaryTrainees[1] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(secondaryTrainees[1])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {secondaryTrainees[1].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">

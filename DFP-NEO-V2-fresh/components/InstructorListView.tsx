@@ -50,21 +50,22 @@ interface InstructorListViewProps {
   locations: string[];
   units: string[];
   selectedPersonForProfile?: Instructor | null;
+  onNavigateToTrainee?: (trainee: Trainee) => void;
   onProfileOpened?: () => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
 }
 
-const InstructorListView: React.FC<InstructorListViewProps> = ({ 
-    onClose, 
-    events, 
+const InstructorListView: React.FC<InstructorListViewProps> = ({
+    onClose,
+    events,
     traineesData,
-    instructorsData, 
+    instructorsData,
     archivedInstructorsData,
-    school, 
-    personnelData, 
-    onUpdateInstructor, 
-    onNavigateToCurrency, 
+    school,
+    personnelData,
+    onUpdateInstructor,
+    onNavigateToCurrency,
     onBulkUpdateInstructors,
     onArchiveInstructor,
     onRestoreInstructor,
@@ -73,7 +74,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     selectedPersonForProfile,
     onProfileOpened,
     onViewLogbook,
-    onRequestSct
+    onRequestSct,
+    onNavigateToTrainee
 }) => {
   console.log(`🏫 [INSTRUCTORLISTVIEW RENDER] school=${school}, instructorsData.length=${instructorsData.length}`);
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
@@ -571,6 +573,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             onRequestSct(instructorToPass);
                         }
                     }}
+                    onNavigateToTrainee={onNavigateToTrainee}
                 />
         )}
       
