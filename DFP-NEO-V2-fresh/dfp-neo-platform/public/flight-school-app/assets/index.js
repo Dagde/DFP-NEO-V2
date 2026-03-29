@@ -68713,46 +68713,103 @@ const allocateInstructors = (trainees, instructors) => {
   const eligibleTrainees = traineesWithAssignments.filter((t) => !t.course.includes("FIC"));
   if (!eligibleTrainees.length) return traineesWithAssignments;
   const workload = /* @__PURE__ */ new Map();
-  allocatableInstructors.forEach((i) => workload.set(i.name, { primary: 0, secondary: 0 }));
+  allocatableInstructors.forEach((i) => workload.set(i.name, { primary: [], secondary: [] }));
   const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
-  const shuffledEligibleTrainees = shuffle(eligibleTrainees);
-  let shuffledInstructors = shuffle(allocatableInstructors);
-  const remainingTraineesForPrimary = [];
-  shuffledEligibleTrainees.forEach((trainee, index) => {
-    if (index < shuffledInstructors.length) {
-      const instructor = shuffledInstructors[index];
-      trainee.primaryInstructor = instructor.name;
-      workload.get(instructor.name).primary++;
-    } else {
-      remainingTraineesForPrimary.push(trainee);
-    }
-  });
-  let availableForSecondPrimary = shuffle(allocatableInstructors.filter((i) => !i.isExecutive));
-  remainingTraineesForPrimary.forEach((trainee) => {
-    if (!availableForSecondPrimary.length) {
-      availableForSecondPrimary = shuffle(allocatableInstructors.filter((i) => !i.isExecutive));
-    }
-    const instructor = availableForSecondPrimary.shift();
-    trainee.primaryInstructor = instructor.name;
-    workload.get(instructor.name).primary++;
-  });
-  const getTotalAssignments = (ipName) => {
-    const load = workload.get(ipName);
-    if (!load) return 999;
-    return load.primary + load.secondary;
+  const getInstructorsByUnit = (traineeUnit) => {
+    if (!traineeUnit) return [];
+    return allocatableInstructors.filter((i) => i.unit === traineeUnit);
   };
-  const execs = new Set(allocatableInstructors.filter((i) => i.isExecutive).map((i) => i.name));
-  for (const trainee of eligibleTrainees) {
-    const sortedInstructors = shuffle(allocatableInstructors).sort((a, b) => getTotalAssignments(a.name) - getTotalAssignments(b.name));
-    for (const instructor of sortedInstructors) {
-      if (instructor.name === trainee.primaryInstructor) continue;
-      const load = workload.get(instructor.name);
-      if (execs.has(instructor.name) && (load.primary + load.secondary >= 3 || load.secondary >= 1)) {
-        continue;
+  const needsMorePrimaries = (instructor) => {
+    const load = workload.get(instructor.name);
+    return load ? load.primary.length < 2 : true;
+  };
+  const needsMoreSecondaries = (instructor) => {
+    const load = workload.get(instructor.name);
+    return load ? load.secondary.length < 2 : true;
+  };
+  for (const instructor of allocatableInstructors) {
+    if (!instructor.unit) continue;
+    const unitTrainees = eligibleTrainees.filter(
+      (t) => t.unit === instructor.unit && !workload.get(instructor.name)?.primary.includes(t)
+    );
+    for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
+      const trainee = unitTrainees[i];
+      if (!trainee.primaryInstructor) {
+        trainee.primaryInstructor = instructor.name;
+        workload.get(instructor.name).primary.push(trainee);
       }
-      trainee.secondaryInstructor = instructor.name;
-      load.secondary++;
-      break;
+    }
+  }
+  for (const instructor of allocatableInstructors) {
+    if (!instructor.unit) continue;
+    const unitTrainees = eligibleTrainees.filter(
+      (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && !workload.get(instructor.name)?.secondary.includes(t)
+    );
+    for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
+      const trainee = unitTrainees[i];
+      if (!trainee.secondaryInstructor) {
+        trainee.secondaryInstructor = instructor.name;
+        workload.get(instructor.name).secondary.push(trainee);
+      }
+    }
+  }
+  for (const trainee of eligibleTrainees) {
+    if (!trainee.primaryInstructor && trainee.unit) {
+      const unitInstructors = getInstructorsByUnit(trainee.unit);
+      const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
+        const loadA = workload.get(a.name)?.primary.length || 0;
+        const loadB = workload.get(b.name)?.primary.length || 0;
+        return loadA - loadB;
+      });
+      if (sortedInstructors.length > 0) {
+        const instructor = sortedInstructors[0];
+        trainee.primaryInstructor = instructor.name;
+        workload.get(instructor.name).primary.push(trainee);
+      }
+    }
+    if (!trainee.secondaryInstructor && trainee.unit) {
+      const unitInstructors = getInstructorsByUnit(trainee.unit);
+      const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
+        const loadA = workload.get(a.name)?.secondary.length || 0;
+        const loadB = workload.get(b.name)?.secondary.length || 0;
+        return loadA - loadB;
+      });
+      const differentInstructors = sortedInstructors.filter((i) => i.name !== trainee.primaryInstructor);
+      const instructorToUse = differentInstructors.length > 0 ? differentInstructors[0] : sortedInstructors[0];
+      if (instructorToUse) {
+        trainee.secondaryInstructor = instructorToUse.name;
+        workload.get(instructorToUse.name).secondary.push(trainee);
+      }
+    }
+  }
+  for (const instructor of allocatableInstructors) {
+    if (!instructor.unit) continue;
+    while (needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) {
+      const unitTrainees = eligibleTrainees.filter(
+        (t) => t.unit === instructor.unit && t.primaryInstructor !== instructor.name && t.secondaryInstructor !== instructor.name
+      );
+      if (unitTrainees.length === 0) break;
+      if (needsMorePrimaries(instructor)) {
+        const trainee = unitTrainees[0];
+        if (!trainee.primaryInstructor) {
+          trainee.primaryInstructor = instructor.name;
+          workload.get(instructor.name).primary.push(trainee);
+        }
+      }
+      if (needsMoreSecondaries(instructor)) {
+        const availableForSecondary = eligibleTrainees.filter(
+          (t) => t.unit === instructor.unit && t.secondaryInstructor !== instructor.name && t.primaryInstructor !== instructor.name
+        );
+        if (availableForSecondary.length > 0) {
+          const trainee = availableForSecondary[0];
+          if (!trainee.secondaryInstructor) {
+            trainee.secondaryInstructor = instructor.name;
+            workload.get(instructor.name).secondary.push(trainee);
+          }
+        } else {
+          break;
+        }
+      }
     }
   }
   return traineesWithAssignments;
