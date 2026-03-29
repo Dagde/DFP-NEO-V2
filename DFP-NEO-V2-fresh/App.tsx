@@ -10425,7 +10425,17 @@ updates.forEach(update => {
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    trainees={allTraineesData.map(t => t.fullName)}
+                    trainees={[...allTraineesData]
+                        .sort((a, b) => {
+                            // First sort by course (matching Daily Schedule behavior)
+                            if (a.course !== b.course) {
+                                return a.course.localeCompare(b.course);
+                            }
+                            // Then sort alphabetically by name within the same course
+                            return a.name.localeCompare(b.name);
+                        })
+                        .map(t => t.fullName)
+                    }
                     traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}

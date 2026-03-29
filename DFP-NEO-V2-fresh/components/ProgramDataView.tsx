@@ -262,8 +262,10 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
 
     for (const event of flightOrFtdEvents) {
         const traineeName = event.student || event.pilot;
+        // Skip events with no trainee name or no assigned instructor (e.g. STBY events)
         if (!traineeName || !event.instructor) continue;
 
+        // Skip if trainee not found in our data (prevents ghost entries)
         const trainee = traineeMap.get(traineeName);
         if (!trainee) continue;
         
@@ -282,6 +284,18 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             traineesWithOtherInstructors.add(traineeName);
         }
     }
+
+    // A trainee in "Other Instructors" should only appear there if they have NO events
+    // with their primary, secondary, or same-flight instructor. If they have at least one
+    // preferred pairing for the day, remove them from the "Other" category.
+    // Also ensure only trainees with actual events (in traineeEventCounts) are included.
+    traineesWithPrimary.forEach(name => traineesWithOtherInstructors.delete(name));
+    traineesWithSecondary.forEach(name => traineesWithOtherInstructors.delete(name));
+    traineesWithInstructorFromFlight.forEach(name => traineesWithOtherInstructors.delete(name));
+    // Remove any trainee from "Other" who has zero total flight/FTD events (edge-case guard)
+    traineesWithOtherInstructors.forEach(name => {
+        if (!traineeEventCounts.has(name)) traineesWithOtherInstructors.delete(name);
+    });
     
     return {
       flightTiles,
