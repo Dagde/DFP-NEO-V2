@@ -10426,7 +10426,17 @@ updates.forEach(update => {
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
                     trainees={[...allTraineesData]
-                        .filter(t => t.location === school)
+                        .filter(t => {
+                            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                            if (t.location) {
+                                return t.location === locationFullName;
+                            }
+                            if (t.unit) {
+                                if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                                if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+                            }
+                            return true;
+                        })
                         .sort((a, b) => {
                             // First sort by course (matching Daily Schedule behavior)
                             if (a.course !== b.course) {
