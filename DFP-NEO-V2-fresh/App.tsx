@@ -346,6 +346,28 @@ const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
 };
 
 
+// --- INSTRUCTOR PRIORITY CONFIG ---
+
+export interface InstructorPriorityGroups {
+  primary: boolean;
+  secondary: boolean;
+  sameFlight: boolean; // exact unit+flight suffix match (e.g. CFS/A)
+}
+
+export interface InstructorPriorityConfig {
+  enabled: boolean;
+  mode: 'soft' | 'hard';
+  softGroups: InstructorPriorityGroups;  // which groups to prefer (soft mode)
+  hardGroups: InstructorPriorityGroups;  // which groups MUST match for flight/FTD (hard mode)
+}
+
+export const DEFAULT_INSTRUCTOR_PRIORITY_CONFIG: InstructorPriorityConfig = {
+  enabled: true,
+  mode: 'soft',
+  softGroups: { primary: true, secondary: true, sameFlight: false },
+  hardGroups: { primary: false, secondary: false, sameFlight: false },
+};
+
 // --- DFP GENERATION ALGORITHM ---
 
 interface DfpConfig {
@@ -369,7 +391,7 @@ interface DfpConfig {
   commenceNightFlying: number;
   ceaseNightFlying: number;
   highestPriorityEvents: ScheduleEvent[];
-  programWithPrimaries: boolean;
+  instructorPriority: InstructorPriorityConfig;
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
   flightTurnaround: number;
   ftdTurnaround: number;
@@ -1294,12 +1316,26 @@ function generateDfpInternal(
         courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
         ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying, buildDate,
-        highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
+        highestPriorityEvents, instructorPriority, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
         getEventDayNightClassification,
         staffSharingEnabled, staffSharingUnits
     } = config;
+
+    // --- INSTRUCTOR PRIORITY HELPERS ---
+    // Derived convenience flags from the new instructorPriority config.
+    // These replace the old programWithPrimaries boolean throughout the algorithm.
+    const priorityEnabled      = instructorPriority.enabled;
+    const priorityMode         = instructorPriority.mode;           // 'soft' | 'hard'
+    const softGroups           = instructorPriority.softGroups;     // { primary, secondary, sameFlight }
+    const hardGroups           = instructorPriority.hardGroups;     // { primary, secondary, sameFlight }
+
+    // Whether ANY soft-preference group is selected (replaces old programWithPrimaries for ordering)
+    const anySoftGroup  = priorityEnabled && (softGroups.primary || softGroups.secondary || softGroups.sameFlight);
+    // Whether ANY hard group is selected (determines if flight/FTD can be blocked)
+    const anyHardGroup  = priorityEnabled && priorityMode === 'hard' &&
+                          (hardGroups.primary || hardGroups.secondary || hardGroups.sameFlight);
 
     // --- STAFF SHARING HELPER ---
     // Determines if an instructor is eligible to teach a trainee based on unit sharing rules.
@@ -1314,22 +1350,27 @@ function generateDfpInternal(
         return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
     };
 
+    // Full unit string including flight suffix (e.g. "CFS/A") for exact same-flight matching
+    const fullUnit = (unit: string): string => (unit || '').trim();
+
     const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
         const traineeUnit = normalizeUnit(trainee.unit || '');
         const instructorUnit = normalizeUnit(instructor.unit || '');
 
         if (!staffSharingEnabled) {
             // Staff sharing OFF: must be same unit (normalised).
-            // Primary/secondary preference is respected in ordering (STEP 3) but NOT as a
+            // Priority preference is respected in ordering (STEP 3) but NOT as a
             // unit-eligibility bypass — cross-unit primaries are still blocked when sharing is OFF.
             return instructorUnit === traineeUnit;
         }
 
-        // Staff sharing ON — primary/secondary from ANY shared unit are eligible
-        if (programWithPrimaries) {
-            if (instructor.name === trainee.primaryInstructor || instructor.name === trainee.secondaryInstructor) {
-                return true;
-            }
+        // Staff sharing ON — primary/secondary from ANY shared unit are eligible when priority is on
+        if (priorityEnabled) {
+            if (softGroups.primary && instructor.name === trainee.primaryInstructor) return true;
+            if (softGroups.secondary && instructor.name === trainee.secondaryInstructor) return true;
+            // Hard mode groups also grant eligibility
+            if (hardGroups.primary && instructor.name === trainee.primaryInstructor) return true;
+            if (hardGroups.secondary && instructor.name === trainee.secondaryInstructor) return true;
         }
 
         // Staff sharing ON — standard group check
@@ -2101,12 +2142,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
                     : [{ start: searchStartTime, end: endTimeBoundary }];
 
-                // TWO-PASS SLOT SEARCH (programWithPrimaries only):
-                // Pass 1 (primaryPreferOnly=true):  scan all time slots accepting ONLY primary/secondary instructor matches
+                // TWO-PASS SLOT SEARCH (soft priority mode only):
+                // Pass 1 (primaryPreferOnly=true):  scan all time slots accepting ONLY priority-group instructor matches
                 // Pass 2 (primaryPreferOnly=false): scan all time slots with any available instructor (normal fallback)
-                // This maximises primary/secondary assignments without reducing total events scheduled —
-                // every trainee that can fly with their primary will, and those who can't still get scheduled.
-                const passModes: boolean[] = programWithPrimaries && !isNightPass
+                // This maximises primary/secondary/same-flight assignments without reducing total events scheduled —
+                // every trainee that can fly with their preferred instructor will, and those who can't still get scheduled.
+                // Hard mode: single pass with primaryPreferOnly=false (hard blocking is handled in scheduleEvent itself)
+                // Night pass: single pass (night pairings are fixed, two-pass not applicable)
+                const passModes: boolean[] = anySoftGroup && priorityMode === 'soft' && !isNightPass
                     ? [true, false]   // primary-only pass first, then fallback
                     : [false];        // no primary preference active, single pass only
 
@@ -2381,55 +2424,79 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return (c.flightFtd * 2) + (c.cpt) + (c.ground);
             };
 
-            if (programWithPrimaries) {
-                const primaryName = traineeForCheck.primaryInstructor;
-                const secondaryName = traineeForCheck.secondaryInstructor;
-                const traineeUnit = normalizeUnit(traineeForCheck.unit || '');
+            if (priorityEnabled) {
+                // ── Priority ordering: Primary → Secondary → Same-flight → Other same-unit → Other ──
+                // "Same-flight" means exact unit+flight suffix match (e.g. instructor.unit === trainee.unit = "CFS/A")
+                // All buckets sorted by workload ascending so least-loaded instructor is tried first.
+                const primaryName    = traineeForCheck.primaryInstructor;
+                const secondaryName  = traineeForCheck.secondaryInstructor;
+                const traineeFull    = fullUnit(traineeForCheck.unit || '');   // e.g. "CFS/A"
+                const traineeBase    = normalizeUnit(traineeForCheck.unit || ''); // e.g. "CFS"
 
-                const isSameUnit = (i: Instructor) => normalizeUnit(i.unit || '') === traineeUnit;
-                const isPrimary = (i: Instructor) => i.name === primaryName;
-                const isSecondary = (i: Instructor) => i.name === secondaryName;
+                const isPrimary    = (i: Instructor) => i.name === primaryName;
+                const isSecondary  = (i: Instructor) => i.name === secondaryName;
+                const isSameFlight = (i: Instructor) => fullUnit(i.unit || '') === traineeFull && traineeFull !== '';
+                const isSameBase   = (i: Instructor) => normalizeUnit(i.unit || '') === traineeBase;
+                const wSort = (a: Instructor, b: Instructor) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name);
 
-                // Buckets — all buckets sorted by weighted workload ascending so less-loaded instructors are tried first
-                // Primary/secondary buckets also sorted by workload so the least-loaded primary is tried first
-                const primarySameUnit    = candidates.filter(i => isPrimary(i) && isSameUnit(i))
-                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const secondarySameUnit  = candidates.filter(i => isSecondary(i) && isSameUnit(i))
-                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const otherSameUnit      = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && isSameUnit(i))
-                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const primaryOtherUnit   = candidates.filter(i => isPrimary(i) && !isSameUnit(i))
-                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const secondaryOtherUnit = candidates.filter(i => isSecondary(i) && !isSameUnit(i))
-                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const otherOtherUnit     = candidates.filter(i => !isPrimary(i) && !isSecondary(i) && !isSameUnit(i))
-                                                      .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
+                // Determine which groups are active for ordering (soft OR hard selections drive ordering)
+                const usePrimary    = softGroups.primary    || hardGroups.primary;
+                const useSecondary  = softGroups.secondary  || hardGroups.secondary;
+                const useSameFlight = softGroups.sameFlight || hardGroups.sameFlight;
+
+                // Bucket 1: Primary instructors (if group enabled)
+                const bucket1Primary    = usePrimary
+                    ? candidates.filter(i => isPrimary(i)).sort(wSort)
+                    : [];
+                // Bucket 2: Secondary instructors (if group enabled)
+                const bucket2Secondary  = useSecondary
+                    ? candidates.filter(i => !isPrimary(i) && isSecondary(i)).sort(wSort)
+                    : [];
+                // Bucket 3: Same-flight instructors who are not primary/secondary (if group enabled)
+                const bucket3SameFlight = useSameFlight
+                    ? candidates.filter(i => !isPrimary(i) && !isSecondary(i) && isSameFlight(i)).sort(wSort)
+                    : [];
+                // Bucket 4: Other same-base-unit instructors not in higher buckets (always included, lowest priority)
+                const higherBucketNames = new Set([
+                    ...bucket1Primary.map(i => i.name),
+                    ...bucket2Secondary.map(i => i.name),
+                    ...bucket3SameFlight.map(i => i.name),
+                ]);
+                const bucket4OtherSameUnit = candidates
+                    .filter(i => isSameBase(i) && !higherBucketNames.has(i.name))
+                    .sort(wSort);
+                // Bucket 5: Instructors from other units
+                const allHigherNames = new Set([...higherBucketNames, ...bucket4OtherSameUnit.map(i => i.name)]);
+                const bucket5Other   = candidates
+                    .filter(i => !allHigherNames.has(i.name))
+                    .sort(wSort);
 
                 candidates = [
-                    ...primarySameUnit,
-                    ...secondarySameUnit,
-                    ...otherSameUnit,
-                    ...primaryOtherUnit,
-                    ...secondaryOtherUnit,
-                    ...otherOtherUnit,
+                    ...bucket1Primary,
+                    ...bucket2Secondary,
+                    ...bucket3SameFlight,
+                    ...bucket4OtherSameUnit,
+                    ...bucket5Other,
                 ];
 
-                // PRIMARY-ONLY MODE: In the first scheduling pass (when programWithPrimaries is on),
-                // restrict the candidate pool to only primary and secondary instructors.
-                // This forces the time-slot search to only succeed when a primary/secondary is available,
-                // so the outer loop will find a time slot that works for the primary/secondary.
-                // If no primary/secondary slot exists, the second pass (primaryOnlyMode=false) handles it.
+                // PRIMARY-ONLY MODE (soft pass 1): restrict pool to only the selected priority groups.
+                // This forces the time-slot search to only succeed when a priority-group instructor is free.
+                // If no priority-group slot exists in the full time window, pass 2 (primaryOnlyMode=false)
+                // falls back to any available instructor — so no events are ever dropped.
                 if (primaryOnlyMode) {
-                    const primaryName2 = traineeForCheck.primaryInstructor;
-                    const secondaryName2 = traineeForCheck.secondaryInstructor;
-                    candidates = candidates.filter(i => i.name === primaryName2 || i.name === secondaryName2);
+                    candidates = candidates.filter(i => {
+                        if (softGroups.primary    && isPrimary(i))    return true;
+                        if (softGroups.secondary  && isSecondary(i))  return true;
+                        if (softGroups.sameFlight && isSameFlight(i)) return true;
+                        return false;
+                    });
                 }
             } else {
-                // Without primary preference: same-unit first, then shared-unit, both sorted by weighted workload
-                const traineeUnit = normalizeUnit(traineeForCheck.unit || '');
-                const sameUnit  = candidates.filter(i => normalizeUnit(i.unit || '') === traineeUnit)
+                // Priority disabled: same-unit first, then shared-unit, both sorted by weighted workload
+                const traineeBase = normalizeUnit(traineeForCheck.unit || '');
+                const sameUnit  = candidates.filter(i => normalizeUnit(i.unit || '') === traineeBase)
                                             .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
-                const otherUnit = candidates.filter(i => normalizeUnit(i.unit || '') !== traineeUnit)
+                const otherUnit = candidates.filter(i => normalizeUnit(i.unit || '') !== traineeBase)
                                             .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
                 candidates = [...sameUnit, ...otherUnit];
             }
@@ -2594,6 +2661,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const isSoloFlight = syllabusItem.sortieType === 'Solo';
         
         let instructor: Instructor | null = null;
+        // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
+        let hardModeStby = false;
+
         if (!isSoloFlight) {
             instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne, primaryPreferOnly);
             if (!instructor) {
@@ -2619,9 +2689,50 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
                 return null;
             }
+
+            // ── HARD MODE CHECK ──
+            // If hard priority mode is active for flight/FTD, check whether the found instructor
+            // belongs to one of the hard-required groups. If not, we place this event on STBY
+            // (no instructor assigned) rather than flying with a non-priority instructor.
+            // CPT and Ground events are NEVER subject to hard mode blocking.
+            if (anyHardGroup && (type === 'flight' || type === 'ftd') && !isNightPass && !primaryPreferOnly) {
+                const traineeFull    = fullUnit(trainee.unit || '');
+                const instructorInHardGroup =
+                    (hardGroups.primary    && instructor.name === trainee.primaryInstructor) ||
+                    (hardGroups.secondary  && instructor.name === trainee.secondaryInstructor) ||
+                    (hardGroups.sameFlight && fullUnit(instructor.unit || '') === traineeFull && traineeFull !== '');
+
+                if (!instructorInHardGroup) {
+                    // Instructor found but not from required hard group → place on STBY with no instructor
+                    hardModeStby = true;
+                    instructor = null; // no instructor assigned to this STBY event
+                }
+            }
         }
         
         let resourceId: string | null = null;
+
+        // HARD MODE STBY: place on STBY line immediately (no instructor, no normal resource)
+        if (hardModeStby && (type === 'flight' || type === 'ftd')) {
+            // Find an available STBY line for this time slot
+            const stbyPrefix = type === 'flight' ? 'STBY' : 'FTD-STBY';
+            let stbyLine = 1;
+            while (generatedEvents.some(e => e.resourceId === `${stbyPrefix} ${stbyLine}` &&
+                e.startTime < startTime + syllabusItem.duration && e.startTime + e.duration > startTime)) {
+                stbyLine++;
+            }
+            resourceId = `${stbyPrefix} ${stbyLine}`;
+            const stbyResult = {
+                id: uuidv4(), type: type, instructor: '', student: trainee.fullName,
+                pilot: trainee.fullName,
+                flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
+                color: courseColors[trainee.course] || 'bg-gray-500',
+                flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
+                area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
+            };
+            return stbyResult;
+        }
+
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
@@ -4804,7 +4915,7 @@ useEffect(() => {
     const [unavailabilityNotifications, setUnavailabilityNotifications] = useState<string[]>([]);
     const [isPriorityEventCreation, setIsPriorityEventCreation] = useState(false);
     const [highestPriorityEvents, setHighestPriorityEvents] = useState<ScheduleEvent[]>([]);
-    const [programWithPrimaries, setProgramWithPrimaries] = useState(true);
+    const [instructorPriority, setInstructorPriority] = useState<InstructorPriorityConfig>(DEFAULT_INSTRUCTOR_PRIORITY_CONFIG);
     
     // Cancellation Records State
     const [cancellationRecords, setCancellationRecords] = useState<CancellationRecord[]>(() => {
@@ -8210,7 +8321,7 @@ useEffect(() => {
             ceaseNightFlying,
             buildDate: buildDfpDate,
             highestPriorityEvents: eventsToUse,
-            programWithPrimaries,
+            instructorPriority,
             traineeLMPs,
             flightTurnaround,
             ftdTurnaround,
@@ -10793,8 +10904,8 @@ updates.forEach(update => {
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
                     onDeletePriorityEvent={handleDeletePriorityEvent}
-                    programWithPrimaries={programWithPrimaries}
-                    onUpdateProgramWithPrimaries={setProgramWithPrimaries}
+                    instructorPriority={instructorPriority}
+                    onUpdateInstructorPriority={setInstructorPriority}
                     sctFlights={sctFlights}
                     sctFtds={sctFtds}
                     onAddSctRequest={async (type) => {

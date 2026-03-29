@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
+import { InstructorPriorityConfig } from '../App';
 
 interface PrioritiesViewWithMenuProps {
   coursePriorities: string[];
@@ -34,8 +35,8 @@ interface PrioritiesViewWithMenuProps {
   highestPriorityEvents: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
-  programWithPrimaries: boolean;
-  onUpdateProgramWithPrimaries: (value: boolean) => void;
+  instructorPriority: InstructorPriorityConfig;
+  onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
   onAddSctRequest: (type: 'flight' | 'ftd') => void;

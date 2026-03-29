@@ -5,7 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
-   import { logAudit } from '../utils/auditLogger';
+import { logAudit } from '../utils/auditLogger';
+import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 
 interface PrioritiesViewProps {
   coursePriorities: string[];
@@ -39,8 +40,8 @@ interface PrioritiesViewProps {
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
   onDeletePriorityEvent: (eventId: string) => void;
-  programWithPrimaries: boolean;
-  onUpdateProgramWithPrimaries: (value: boolean) => void;
+  instructorPriority: InstructorPriorityConfig;
+  onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
@@ -90,8 +91,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   onSelectEvent,
   onUpdatePriorityEvent,
   onDeletePriorityEvent,
-  programWithPrimaries,
-  onUpdateProgramWithPrimaries,
+  instructorPriority,
+  onUpdateInstructorPriority,
   sctFlights,
   sctFtds,
   onAddSctRequest,
@@ -550,15 +551,156 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 </div>
                             </div>
                          )}
-                         <div>
-                            <label className="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" checked={programWithPrimaries} onChange={(e) => { logAudit("Priorities", "Edit", "Updated program with primaries", `${programWithPrimaries} → ${e.target.checked}`); onUpdateProgramWithPrimaries(e.target.checked); }} className="h-5 w-5 bg-gray-700 rounded accent-sky-500" />
-                                <span className="font-semibold text-sky-400">Program with Primaries</span>
-                            </label>
-                        </div>
-                    </div>
+                         </div>
                 </div>
 
+                {/* ── INSTRUCTOR ALLOCATION PRIORITIES ── */}
+                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
+                    <div className="p-4 flex justify-between items-center">
+                        <h2 className="text-lg font-semibold text-gray-200">Instructor Allocation Priorities</h2>
+                    </div>
+                    <div className="p-4 border-t border-gray-700 space-y-5">
+
+                        {/* Master switch */}
+                        <div>
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <div
+                                    onClick={() => {
+                                        const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
+                                        logAudit("Priorities", "Edit", "Instructor Priority Mode toggled", `${instructorPriority.enabled} → ${next.enabled}`);
+                                        onUpdateInstructorPriority(next);
+                                    }}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? 'bg-sky-500' : 'bg-gray-600'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${instructorPriority.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </div>
+                                <span className="font-semibold text-sky-400">Priority Mode</span>
+                            </label>
+                            <p className="text-xs text-gray-400 mt-1 ml-14">
+                                When on, the scheduler prioritises selected instructor groups for flight and FTD events.
+                            </p>
+                        </div>
+
+                        {instructorPriority.enabled && (
+                            <div className="space-y-5 pl-2">
+
+                                {/* Hard / Soft toggle */}
+                                <div>
+                                    <p className="text-sm font-medium text-gray-300 mb-2">Mode</p>
+                                    <div className="flex items-center space-x-2 bg-gray-700 rounded-lg p-1 w-fit">
+                                        {(['soft', 'hard'] as const).map((m) => (
+                                            <button
+                                                key={m}
+                                                onClick={() => {
+                                                    const next = { ...instructorPriority, mode: m };
+                                                    logAudit("Priorities", "Edit", "Instructor Priority mode changed", `${instructorPriority.mode} → ${m}`);
+                                                    onUpdateInstructorPriority(next);
+                                                }}
+                                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                                    instructorPriority.mode === m
+                                                        ? m === 'hard' ? 'bg-red-600 text-white shadow' : 'bg-sky-600 text-white shadow'
+                                                        : 'text-gray-400 hover:text-white'
+                                                }`}
+                                            >
+                                                {m === 'soft' ? 'Soft' : 'Hard'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {instructorPriority.mode === 'soft' && (
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler will prefer instructors from selected groups but will use any available instructor if none are free.
+                                        </p>
+                                    )}
+                                    {instructorPriority.mode === 'hard' && (
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            <span className="text-red-400 font-medium">Hard:</span> Flight and FTD events will only be placed if an instructor from the required groups is available. If none are free, the event is placed on STBY with no instructor. CPT and Ground are unaffected.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Soft mode group selection */}
+                                {instructorPriority.mode === 'soft' && (
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-300 mb-2">Preferred Groups
+                                            <span className="text-xs text-gray-400 font-normal ml-2">(select one or more)</span>
+                                        </p>
+                                        <div className="space-y-2">
+                                            {([ 
+                                                { key: 'primary',    label: 'Primary Instructor',         desc: "Trainee's assigned primary instructor" },
+                                                { key: 'secondary',  label: 'Secondary Instructor',       desc: "Trainee's assigned secondary instructor" },
+                                                { key: 'sameFlight', label: 'Same Flight Instructor',     desc: 'Instructor from the exact same flight (e.g. CFS/A)' },
+                                            ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
+                                                <label key={key} className="flex items-start space-x-3 cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={instructorPriority.softGroups[key]}
+                                                        onChange={(e) => {
+                                                            const next: InstructorPriorityConfig = {
+                                                                ...instructorPriority,
+                                                                softGroups: { ...instructorPriority.softGroups, [key]: e.target.checked }
+                                                            };
+                                                            logAudit("Priorities", "Edit", `Soft group ${key} changed`, `${instructorPriority.softGroups[key]} → ${e.target.checked}`);
+                                                            onUpdateInstructorPriority(next);
+                                                        }}
+                                                        className="mt-0.5 h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                                                    />
+                                                    <div>
+                                                        <span className="text-sm font-medium text-gray-200 group-hover:text-white">{label}</span>
+                                                        <p className="text-xs text-gray-400">{desc}</p>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Hard mode group selection */}
+                                {instructorPriority.mode === 'hard' && (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-300 mb-1">Required Groups
+                                                <span className="text-xs text-gray-400 font-normal ml-2">(flight/FTD will go to STBY if none available)</span>
+                                            </p>
+                                            <p className="text-xs text-gray-400 mb-2">
+                                                Select which instructor groups must be available for a flight or FTD to be placed on the schedule. If none from the selected groups are free, the event is placed on STBY with no instructor assigned.
+                                            </p>
+                                            <div className="space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3">
+                                                {([
+                                                    { key: 'primary',    label: 'Primary Instructor',     desc: "Trainee's assigned primary instructor" },
+                                                    { key: 'secondary',  label: 'Secondary Instructor',   desc: "Trainee's assigned secondary instructor" },
+                                                    { key: 'sameFlight', label: 'Same Flight Instructor', desc: 'Instructor from the exact same flight (e.g. CFS/A)' },
+                                                ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
+                                                    <label key={key} className="flex items-start space-x-3 cursor-pointer group">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={instructorPriority.hardGroups[key]}
+                                                            onChange={(e) => {
+                                                                const next: InstructorPriorityConfig = {
+                                                                    ...instructorPriority,
+                                                                    hardGroups: { ...instructorPriority.hardGroups, [key]: e.target.checked }
+                                                                };
+                                                                logAudit("Priorities", "Edit", `Hard group ${key} changed`, `${instructorPriority.hardGroups[key]} → ${e.target.checked}`);
+                                                                onUpdateInstructorPriority(next);
+                                                            }}
+                                                            className="mt-0.5 h-4 w-4 bg-gray-700 rounded accent-red-500"
+                                                        />
+                                                        <div>
+                                                            <span className="text-sm font-medium text-gray-200 group-hover:text-white">{label}</span>
+                                                            <p className="text-xs text-gray-400">{desc}</p>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3">
+                                            <span className="font-semibold">Note:</span> CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal.
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
             </div>
         </div>
