@@ -351,7 +351,7 @@ const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
 export interface InstructorPriorityGroups {
   primary: boolean;
   secondary: boolean;
-  sameFlight: boolean; // exact unit+flight suffix match (e.g. CFS/A)
+  sameFlight: boolean; // same base unit AND same flight letter (e.g. unit="CFS", flight="A")
 }
 
 export interface InstructorPriorityConfig {
@@ -2430,16 +2430,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             if (priorityEnabled) {
                 // ── Priority ordering: Primary → Secondary → Same-flight → Other same-unit → Other ──
-                // "Same-flight" means exact unit+flight suffix match (e.g. instructor.unit === trainee.unit = "CFS/A")
+                // "Same-flight" means same base unit AND same flight letter (e.g. unit="CFS", flight="A" for both)
                 // All buckets sorted by workload ascending so least-loaded instructor is tried first.
                 const primaryName    = traineeForCheck.primaryInstructor;
                 const secondaryName  = traineeForCheck.secondaryInstructor;
-                const traineeFull    = fullUnit(traineeForCheck.unit || '');   // e.g. "CFS/A"
+                const traineeFull    = fullUnit(traineeForCheck.unit || '');   // e.g. "CFS/A" or "CFS"
                 const traineeBase    = normalizeUnit(traineeForCheck.unit || ''); // e.g. "CFS"
+                const traineeFlight  = (traineeForCheck.flight || '').trim();   // e.g. "A", "B", "C", "D"
 
                 const isPrimary    = (i: Instructor) => i.name === primaryName;
                 const isSecondary  = (i: Instructor) => i.name === secondaryName;
-                const isSameFlight = (i: Instructor) => fullUnit(i.unit || '') === traineeFull && traineeFull !== '';
+                // Same-flight: instructor and trainee share the same base unit AND the same flight letter
+                const isSameFlight = (i: Instructor) => {
+                    const instrFlight = (i.flight || '').trim();
+                    const instrBase   = normalizeUnit(i.unit || '');
+                    return instrBase === traineeBase && instrFlight !== '' && traineeFlight !== '' && instrFlight === traineeFlight;
+                };
                 const isSameBase   = (i: Instructor) => normalizeUnit(i.unit || '') === traineeBase;
                 const wSort = (a: Instructor, b: Instructor) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name);
 
@@ -2706,11 +2712,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             // (no instructor assigned) rather than flying with a non-priority instructor.
             // CPT and Ground events are NEVER subject to hard mode blocking.
             if (anyHardGroup && (type === 'flight' || type === 'ftd') && !isNightPass && !primaryPreferOnly) {
-                const traineeFull    = fullUnit(trainee.unit || '');
+                const traineeFlight  = (trainee.flight || '').trim();
+                const traineeBase    = normalizeUnit(trainee.unit || '');
                 const instructorInHardGroup =
                     (hardGroups.primary    && instructor.name === trainee.primaryInstructor) ||
                     (hardGroups.secondary  && instructor.name === trainee.secondaryInstructor) ||
-                    (hardGroups.sameFlight && fullUnit(instructor.unit || '') === traineeFull && traineeFull !== '');
+                    (hardGroups.sameFlight && ((): boolean => {
+                        const instrFlight = (instructor.flight || '').trim();
+                        const instrBase   = normalizeUnit(instructor.unit || '');
+                        return instrBase === traineeBase && instrFlight !== '' && traineeFlight !== '' && instrFlight === traineeFlight;
+                    })());
 
                 if (!instructorInHardGroup) {
                     // Instructor found but not from required hard group → place on STBY with no instructor
