@@ -208,6 +208,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
   const isSctEvent = event.eventCategory === 'sct';
+  const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   
   
   
@@ -528,10 +529,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   const shadowClass = isDragging ? 'shadow-xl' : 'shadow-md';
   const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${isDragging ? 'opacity-80 z-50' : 'z-10'} ${shadowClass}`;
-  
-  // Check if this is a STBY event
-  const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
-  
+
   // Handle deployment tile special styling
   const backgroundClass = event.type === 'deployment' 
     ? 'bg-gray-600/30 border border-white/60' 
