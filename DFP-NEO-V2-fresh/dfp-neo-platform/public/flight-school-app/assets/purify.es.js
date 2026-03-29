@@ -228,7 +228,7 @@ const _createHooksMap = function _createHooksMap2() {
 function createDOMPurify() {
   let window2 = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : getGlobal();
   const DOMPurify = (root) => createDOMPurify(root);
-  DOMPurify.version = "3.3.3";
+  DOMPurify.version = "3.3.1";
   DOMPurify.removed = [];
   if (!window2 || !window2.document || window2.document.nodeType !== NODE_TYPE.document || !window2.Element) {
     DOMPurify.isSupported = false;
@@ -429,7 +429,7 @@ function createDOMPurify() {
     }
     if (USE_PROFILES) {
       ALLOWED_TAGS = addToSet({}, text);
-      ALLOWED_ATTR = create(null);
+      ALLOWED_ATTR = [];
       if (USE_PROFILES.html === true) {
         addToSet(ALLOWED_TAGS, html$1);
         addToSet(ALLOWED_ATTR, html);
@@ -449,12 +449,6 @@ function createDOMPurify() {
         addToSet(ALLOWED_ATTR, mathMl);
         addToSet(ALLOWED_ATTR, xml);
       }
-    }
-    if (!objectHasOwnProperty(cfg, "ADD_TAGS")) {
-      EXTRA_ELEMENT_HANDLING.tagCheck = null;
-    }
-    if (!objectHasOwnProperty(cfg, "ADD_ATTR")) {
-      EXTRA_ELEMENT_HANDLING.attributeCheck = null;
     }
     if (cfg.ADD_TAGS) {
       if (typeof cfg.ADD_TAGS === "function") {
@@ -734,9 +728,6 @@ function createDOMPurify() {
     return false;
   };
   const _isValidAttribute = function _isValidAttribute2(lcTag, lcName, value) {
-    if (FORBID_ATTR[lcName]) {
-      return false;
-    }
     if (SANITIZE_DOM && (lcName === "id" || lcName === "name") && (value in document || value in formElement)) {
       return false;
     }
@@ -803,7 +794,7 @@ function createDOMPurify() {
         _removeAttribute(name, currentNode);
         value = SANITIZE_NAMED_PROPS_PREFIX + value;
       }
-      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/i, value)) {
+      if (SAFE_FOR_XML && regExpTest(/((--!?|])>)|<\/(style|title|textarea)/i, value)) {
         _removeAttribute(name, currentNode);
         continue;
       }
