@@ -2142,16 +2142,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
                     : [{ start: searchStartTime, end: endTimeBoundary }];
 
-                // TWO-PASS SLOT SEARCH (soft priority mode only):
-                // Pass 1 (primaryPreferOnly=true):  scan all time slots accepting ONLY priority-group instructor matches
-                // Pass 2 (primaryPreferOnly=false): scan all time slots with any available instructor (normal fallback)
-                // This maximises primary/secondary/same-flight assignments without reducing total events scheduled —
-                // every trainee that can fly with their preferred instructor will, and those who can't still get scheduled.
-                // Hard mode: single pass with primaryPreferOnly=false (hard blocking is handled in scheduleEvent itself)
+                // TWO-PASS SLOT SEARCH (priority mode active, non-night):
+                // Pass 1 (primaryPreferOnly=true):
+                //   Soft mode: scan all time slots accepting ONLY priority-group instructors.
+                //              If a slot with a priority instructor is found, use it.
+                //   Hard mode: same — try to find a slot where a hard-group instructor IS available.
+                // Pass 2 (primaryPreferOnly=false):
+                //   Soft mode: fall back to any available instructor (event always gets placed).
+                //   Hard mode: fall back — scheduleEvent will detect no hard-group instructor and
+                //              place event on STBY with no instructor assigned.
                 // Night pass: single pass (night pairings are fixed, two-pass not applicable)
-                const passModes: boolean[] = anySoftGroup && priorityMode === 'soft' && !isNightPass
-                    ? [true, false]   // primary-only pass first, then fallback
-                    : [false];        // no primary preference active, single pass only
+                // Priority disabled: single pass, any instructor.
+                const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass
+                    ? [true, false]   // priority-only pass first, then fallback
+                    : [false];        // priority disabled or night pass — single pass only
 
                 for (const primaryOnly of passModes) {
                     if (placed) break;
@@ -2479,15 +2483,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ...bucket5Other,
                 ];
 
-                // PRIMARY-ONLY MODE (soft pass 1): restrict pool to only the selected priority groups.
+                // PRIMARY-ONLY MODE (pass 1 for both soft and hard mode):
+                // Restrict the candidate pool to ONLY instructors from the selected priority groups.
                 // This forces the time-slot search to only succeed when a priority-group instructor is free.
-                // If no priority-group slot exists in the full time window, pass 2 (primaryOnlyMode=false)
-                // falls back to any available instructor — so no events are ever dropped.
+                //
+                // Soft mode: if no priority-group slot found in full time window, pass 2 falls back to any instructor.
+                // Hard mode: if no priority-group slot found in full time window, pass 2 uses any instructor BUT
+                //            scheduleEvent's hard-mode check will detect a non-priority instructor and place on STBY.
+                //
+                // In primary-only mode, use the UNION of soft and hard groups as the allowed set —
+                // if a group is selected in either mode, it qualifies during pass 1.
                 if (primaryOnlyMode) {
                     candidates = candidates.filter(i => {
-                        if (softGroups.primary    && isPrimary(i))    return true;
-                        if (softGroups.secondary  && isSecondary(i))  return true;
-                        if (softGroups.sameFlight && isSameFlight(i)) return true;
+                        if ((softGroups.primary    || hardGroups.primary)    && isPrimary(i))    return true;
+                        if ((softGroups.secondary  || hardGroups.secondary)  && isSecondary(i))  return true;
+                        if ((softGroups.sameFlight || hardGroups.sameFlight) && isSameFlight(i)) return true;
                         return false;
                     });
                 }
