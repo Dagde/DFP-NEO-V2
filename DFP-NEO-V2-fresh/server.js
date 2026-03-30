@@ -275,96 +275,76 @@ app.post('/api/personnel/bulk', async (req, res) => {
 // ============================================================
 
 // GET /api/staff-trainee-analysis
-// Returns analysis of staff trainee assignments
+// Returns analysis of staff trainee assignments (supports array instructor fields)
 app.get('/api/staff-trainee-analysis', async (req, res) => {
   try {
     const prisma = await getPrisma();
-    
-    // Get all trainees with their instructor assignments
+
+    // Get all trainees with their instructor assignments (now arrays)
     const trainees = await prisma.trainee.findMany({
-      where: {
-        isActive: true
-      },
+      where: { isActive: true },
       select: {
         primaryInstructor: true,
         secondaryInstructor: true
       }
     });
-    
-    // Log sample trainee data for debugging
-    console.log('Sample trainees:', trainees.slice(0, 5));
-    
-    // Count primary trainees per instructor (by name)
+
+    // Count primary trainees per instructor - each instructor in the array gets +1
     const primaryCounts = {};
-    let nullPrimaryCount = 0;
-    let emptyPrimaryCount = 0;
-    
     trainees.forEach(t => {
-      if (t.primaryInstructor === null || t.primaryInstructor === undefined) {
-        nullPrimaryCount++;
-      } else if (t.primaryInstructor === '' || t.primaryInstructor.trim() === '') {
-        emptyPrimaryCount++;
-      } else {
-        primaryCounts[t.primaryInstructor] = (primaryCounts[t.primaryInstructor] || 0) + 1;
-      }
+      const names = Array.isArray(t.primaryInstructor) ? t.primaryInstructor : t.primaryInstructor ? [t.primaryInstructor] : [];
+      names.forEach(name => {
+        if (name && name.trim()) {
+          primaryCounts[name] = (primaryCounts[name] || 0) + 1;
+        }
+      });
     });
-    
-    // Count secondary trainees per instructor (by name)
+
+    // Count secondary trainees per instructor
     const secondaryCounts = {};
-    let nullSecondaryCount = 0;
-    let emptySecondaryCount = 0;
-    
     trainees.forEach(t => {
-      if (t.secondaryInstructor === null || t.secondaryInstructor === undefined) {
-        nullSecondaryCount++;
-      } else if (t.secondaryInstructor === '' || t.secondaryInstructor.trim() === '') {
-        emptySecondaryCount++;
-      } else {
-        secondaryCounts[t.secondaryInstructor] = (secondaryCounts[t.secondaryInstructor] || 0) + 1;
-      }
+      const names = Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : t.secondaryInstructor ? [t.secondaryInstructor] : [];
+      names.forEach(name => {
+        if (name && name.trim()) {
+          secondaryCounts[name] = (secondaryCounts[name] || 0) + 1;
+        }
+      });
     });
-    
-    // Get unique instructor names from trainee assignments
-    const primaryInstructorNames = Object.keys(primaryCounts);
-    const secondaryInstructorNames = Object.keys(secondaryCounts);
+
+    // Get all personnel to find staff with 0 trainees too
+    const allPersonnel = await prisma.personnel.findMany({
+      select: { name: true, unit: true, role: true }
+    });
+
+    // Build complete instructor set (all personnel + anyone referenced in trainee assignments)
     const instructorNames = new Set([
-      ...primaryInstructorNames,
-      ...secondaryInstructorNames
+      ...allPersonnel.map(p => p.name),
+      ...Object.keys(primaryCounts),
+      ...Object.keys(secondaryCounts)
     ]);
-    
     const totalStaff = instructorNames.size;
-    
-    console.log('Primary instructor names found:', primaryInstructorNames);
-    console.log('Secondary instructor names found:', secondaryInstructorNames);
-    console.log('Total unique instructors:', totalStaff);
-    console.log('Trainees with null primary:', nullPrimaryCount);
-    console.log('Trainees with empty primary:', emptyPrimaryCount);
-    console.log('Trainees with null secondary:', nullSecondaryCount);
-    console.log('Trainees with empty secondary:', emptySecondaryCount);
-    
-    // Build distribution for primary trainees
+
+    // Build distribution: how many staff have 0, 1, 2, 3 primary trainees
     const primaryDistributionCounts = {};
-    Object.values(primaryCounts).forEach(count => {
-      primaryDistributionCounts[count] = (primaryDistributionCounts[count] || 0) + 1;
-    });
-    
-    // Build distribution for secondary trainees
     const secondaryDistributionCounts = {};
-    Object.values(secondaryCounts).forEach(count => {
-      secondaryDistributionCounts[count] = (secondaryDistributionCounts[count] || 0) + 1;
+
+    instructorNames.forEach(name => {
+      const pc = primaryCounts[name] || 0;
+      const sc = secondaryCounts[name] || 0;
+      primaryDistributionCounts[pc] = (primaryDistributionCounts[pc] || 0) + 1;
+      secondaryDistributionCounts[sc] = (secondaryDistributionCounts[sc] || 0) + 1;
     });
-    
+
     // Calculate summary statistics
-    const totalPrimaryTrainees = Object.values(primaryCounts).reduce((sum, count) => sum + count, 0);
-    const totalSecondaryTrainees = Object.values(secondaryCounts).reduce((sum, count) => sum + count, 0);
-    
-    const avgPrimary = totalStaff > 0 ? (totalPrimaryTrainees / totalStaff).toFixed(2) : '0';
-    const avgSecondary = totalStaff > 0 ? (totalSecondaryTrainees / totalStaff).toFixed(2) : '0';
-    
+    const totalPrimaryAssignments = Object.values(primaryCounts).reduce((sum, c) => sum + c, 0);
+    const totalSecondaryAssignments = Object.values(secondaryCounts).reduce((sum, c) => sum + c, 0);
+    const avgPrimary = totalStaff > 0 ? (totalPrimaryAssignments / totalStaff).toFixed(2) : '0';
+    const avgSecondary = totalStaff > 0 ? (totalSecondaryAssignments / totalStaff).toFixed(2) : '0';
+
     // Build distribution arrays
     const maxPrimary = Math.max(...Object.keys(primaryDistributionCounts).map(Number), 0);
     const maxSecondary = Math.max(...Object.keys(secondaryDistributionCounts).map(Number), 0);
-    
+
     const primaryDistribution = [];
     for (let i = 0; i <= maxPrimary; i++) {
       const count = primaryDistributionCounts[i] || 0;
@@ -374,7 +354,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
         percentage: totalStaff > 0 ? ((count / totalStaff) * 100).toFixed(1) : '0'
       });
     }
-    
+
     const secondaryDistribution = [];
     for (let i = 0; i <= maxSecondary; i++) {
       const count = secondaryDistributionCounts[i] || 0;
@@ -384,25 +364,30 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
         percentage: totalStaff > 0 ? ((count / totalStaff) * 100).toFixed(1) : '0'
       });
     }
-    
+
+    // Also compute per-trainee stats: how many instructors does each trainee have?
+    const traineesWith0Primary = trainees.filter(t => { const a = Array.isArray(t.primaryInstructor) ? t.primaryInstructor : t.primaryInstructor ? [t.primaryInstructor] : []; return a.length === 0; }).length;
+    const traineesWith1Primary = trainees.filter(t => { const a = Array.isArray(t.primaryInstructor) ? t.primaryInstructor : t.primaryInstructor ? [t.primaryInstructor] : []; return a.length === 1; }).length;
+    const traineesWith2PlusPrimary = trainees.filter(t => { const a = Array.isArray(t.primaryInstructor) ? t.primaryInstructor : t.primaryInstructor ? [t.primaryInstructor] : []; return a.length >= 2; }).length;
+    const traineesWith0Secondary = trainees.filter(t => { const a = Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : t.secondaryInstructor ? [t.secondaryInstructor] : []; return a.length === 0; }).length;
+    const traineesWith1Secondary = trainees.filter(t => { const a = Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : t.secondaryInstructor ? [t.secondaryInstructor] : []; return a.length === 1; }).length;
+    const traineesWith2PlusSecondary = trainees.filter(t => { const a = Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : t.secondaryInstructor ? [t.secondaryInstructor] : []; return a.length >= 2; }).length;
+
     res.json({
       success: true,
       data: {
         totalStaff,
         totalTrainees: trainees.length,
-        debug: {
-          nullPrimaryCount,
-          emptyPrimaryCount,
-          nullSecondaryCount,
-          emptySecondaryCount,
-          primaryInstructorNames,
-          secondaryInstructorNames
-        },
+        distinctRoles: [...new Set(allPersonnel.map(p => p.role).filter(Boolean))],
         summary: {
           averagePrimaryTrainees: avgPrimary,
           averageSecondaryTrainees: avgSecondary,
-          totalPrimaryAssignments: totalPrimaryTrainees,
-          totalSecondaryAssignments: totalSecondaryTrainees
+          totalPrimaryAssignments,
+          totalSecondaryAssignments
+        },
+        traineeStats: {
+          primaryInstructors: { with0: traineesWith0Primary, with1: traineesWith1Primary, with2Plus: traineesWith2PlusPrimary },
+          secondaryInstructors: { with0: traineesWith0Secondary, with1: traineesWith1Secondary, with2Plus: traineesWith2PlusSecondary }
         },
         primaryDistribution,
         secondaryDistribution,
