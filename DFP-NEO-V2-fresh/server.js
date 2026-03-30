@@ -44,7 +44,11 @@ async function getPrisma() {
     // Ensure DailySnapshot table exists (create if missing)
     await ensureDailySnapshotTable(prisma);
     // Ensure instructor fields are TEXT[] arrays (migrate from String if needed)
-    await ensureInstructorArrayColumns(prisma);
+    try {
+      await ensureInstructorArrayColumns(prisma);
+    } catch (migrationErr) {
+      console.error('Instructor column migration failed (non-fatal):', migrationErr.message);
+    }
   }
   return prisma;
 }
@@ -416,7 +420,8 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       error: error.message
     });
   }
-});\n
+});
+
 // TRAINEE API ROUTES
 // ============================================================
 
@@ -2952,45 +2957,61 @@ async function ensureDailySnapshotTable(db) {
 
 async function ensureInstructorArrayColumns(db) {
   try {
-    // Check current column types for primaryInstructor and secondaryInstructor
-    const colInfo = await db.$queryRawUnsafe(`
-      SELECT column_name, data_type, udt_name
-      FROM information_schema.columns
-      WHERE table_name = 'Trainee'
-        AND column_name IN ('primaryInstructor', 'secondaryInstructor');
-    `);
+    for (const colName of ['primaryInstructor', 'secondaryInstructor']) {
+      // Check current column type using pg catalog (handles quoted identifiers properly)
+      const colInfo = await db.$queryRawUnsafe(`
+        SELECT pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type
+        FROM pg_catalog.pg_attribute a
+        JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+        WHERE c.relname = 'Trainee'
+          AND a.attname = $1
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+      `, colName);
 
-    for (const col of colInfo) {
-      if (col.data_type !== 'ARRAY') {
-        console.log(`🔄 Migrating Trainee."${col.column_name}" from TEXT to TEXT[]...`);
-        // Step 1: Add new array column
+      if (!colInfo || colInfo.length === 0) {
+        console.log(`Warning: Column "${colName}" not found in Trainee table - skipping`);
+        continue;
+      }
+
+      const dataType = colInfo[0].data_type;
+      console.log(`Info: Trainee."${colName}" current type: ${dataType}`);
+
+      if (!dataType.includes('[]') && !dataType.includes('ARRAY')) {
+        console.log(`Migrating Trainee."${colName}" from TEXT to TEXT[]...`);
+
         await db.$executeRawUnsafe(`
-          ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "${col.column_name}_new" TEXT[] DEFAULT ARRAY[]::TEXT[];
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_catalog.pg_attribute a
+              JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+              WHERE c.relname = 'Trainee' AND a.attname = '${colName}_arr' AND NOT a.attisdropped
+            ) THEN
+              ALTER TABLE "Trainee" ADD COLUMN "${colName}_arr" TEXT[] DEFAULT ARRAY[]::TEXT[];
+            END IF;
+
+            UPDATE "Trainee"
+            SET "${colName}_arr" = CASE
+              WHEN "${colName}" IS NOT NULL AND "${colName}" <> ''
+              THEN ARRAY["${colName}"]::TEXT[]
+              ELSE ARRAY[]::TEXT[]
+            END;
+
+            ALTER TABLE "Trainee" DROP COLUMN IF EXISTS "${colName}";
+
+            ALTER TABLE "Trainee" RENAME COLUMN "${colName}_arr" TO "${colName}";
+          END $$;
         `);
-        // Step 2: Copy existing data - wrap single value in array if not null
-        await db.$executeRawUnsafe(`
-          UPDATE "Trainee"
-          SET "${col.column_name}_new" = CASE
-            WHEN "${col.column_name}" IS NOT NULL AND "${col.column_name}" != ''
-            THEN ARRAY["${col.column_name}"]
-            ELSE ARRAY[]::TEXT[]
-          END;
-        `);
-        // Step 3: Drop old column
-        await db.$executeRawUnsafe(`
-          ALTER TABLE "Trainee" DROP COLUMN "${col.column_name}";
-        `);
-        // Step 4: Rename new column
-        await db.$executeRawUnsafe(`
-          ALTER TABLE "Trainee" RENAME COLUMN "${col.column_name}_new" TO "${col.column_name}";
-        `);
-        console.log(`✅ Migrated "${col.column_name}" to TEXT[]`);
+
+        console.log(`Migrated "${colName}" to TEXT[]`);
       } else {
-        console.log(`✅ "${col.column_name}" is already TEXT[] - no migration needed`);
+        console.log(`"${colName}" is already an array type - no migration needed`);
       }
     }
   } catch (err) {
-    console.error('❌ Failed to ensure instructor array columns:', err.message);
+    console.error('Failed to ensure instructor array columns:', err.message);
+    // Don't rethrow - allow server to continue starting up
   }
 }
 
