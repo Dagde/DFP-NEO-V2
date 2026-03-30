@@ -204,7 +204,7 @@ const SparkLine: React.FC<{
   const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
 
   return (
-    <div className="relative" style={{ display: 'inline-block' }}>
+    <div className="relative" style={{ display: 'inline-block', overflow: 'visible' }}>
       <svg
         ref={svgRef}
         width={width}
@@ -253,8 +253,9 @@ const SparkLine: React.FC<{
       {interactive && tooltip !== null && hoveredVal !== null && (() => {
         const label = labels?.[tooltip.i] ?? `Assessment #${tooltip.i + 1}`;
         const ttW = 130, ttH = 44;
-        // Position: right of point, flip left if near right edge
-        const leftPos = tooltip.svgX + ttW + 10 > width ? tooltip.svgX - ttW - 6 : tooltip.svgX + 10;
+        // Position: right of point if in left half, left of point if in right half
+        const flipLeft = tooltip.svgX + ttW + 14 > width;
+        const leftPos = flipLeft ? tooltip.svgX - ttW - 8 : tooltip.svgX + 10;
         const topPos = Math.max(0, tooltip.svgY - ttH / 2);
         return (
           <div
@@ -826,11 +827,13 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
       {gradeByTraineeModal && (
         <GradeByTraineeModal
           trainees={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
-            // Use surname if name has spaces, otherwise truncate the full string
-            const parts = t.traineeFullName.trim().split(/\s+/);
-            const label = parts.length >= 2
-              ? parts[parts.length - 1]  // surname (last word)
-              : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
+            // Use surname if name has spaces; if no spaces, use last underscore-segment
+            const spaceParts = t.traineeFullName.trim().split(/\s+/);
+            const label = spaceParts.length >= 2
+              ? spaceParts[spaceParts.length - 1]  // surname (last word)
+              : t.traineeFullName.includes('_')
+                ? t.traineeFullName.split('_').pop() || t.traineeFullName  // last underscore segment e.g. "1" from "ADF302_TRAINEE_1"
+                : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
             return { label, value: safeN(t.avgOverallGrade) };
           })}
           onClose={() => setGradeByTraineeModal(false)}
@@ -923,10 +926,12 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   <div className="overflow-x-auto">
                     <ColChart
                       data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
-                        const parts = t.traineeFullName.trim().split(/\s+/);
-                        const label = parts.length >= 2
-                          ? parts[parts.length - 1]
-                          : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
+                        const spaceParts = t.traineeFullName.trim().split(/\s+/);
+                        const label = spaceParts.length >= 2
+                          ? spaceParts[spaceParts.length - 1]
+                          : t.traineeFullName.includes('_')
+                            ? t.traineeFullName.split('_').pop() || t.traineeFullName
+                            : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
                         return { label, value: safeN(t.avgOverallGrade) };
                       })}
                       max={5} height={130} />
