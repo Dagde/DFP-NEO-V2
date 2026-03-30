@@ -274,52 +274,82 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
   try {
     const prisma = await getPrisma();
     
-    // Get all staff/instructors from the database
+    // Get all trainees with their instructor assignments
+    const trainees = await prisma.trainee.findMany({
+      where: {
+        isActive: true
+      },
+      select: {
+        primaryInstructor: true,
+        secondaryInstructor: true
+      }
+    });
+    
+    // Get all staff/instructors
     const staff = await prisma.personnel.findMany({
       where: {
         role: { in: ['INSTRUCTOR', 'STAFF'] }
       },
       select: {
         id: true,
-        name: true,
-        rank: true,
-        role: true,
-        primaryTrainees: true,
-        secondaryTrainees: true
+        name: true
       }
     });
     
-    // Analyze primary trainees
+    const totalStaff = staff.length;
+    
+    // Count primary trainees per instructor
     const primaryCounts = {};
-    staff.forEach(s => {
-      const trainees = s.primaryTrainees || [];
-      const count = Array.isArray(trainees) ? trainees.length : 0;
-      primaryCounts[count] = (primaryCounts[count] || 0) + 1;
+    trainees.forEach(t => {
+      if (t.primaryInstructor) {
+        primaryCounts[t.primaryInstructor] = (primaryCounts[t.primaryInstructor] || 0) + 1;
+      }
     });
     
-    // Analyze secondary trainees
+    // Count secondary trainees per instructor
     const secondaryCounts = {};
+    trainees.forEach(t => {
+      if (t.secondaryInstructor) {
+        secondaryCounts[t.secondaryInstructor] = (secondaryCounts[t.secondaryInstructor] || 0) + 1;
+      }
+    });
+    
+    // Initialize counts for all staff (those with 0 trainees)
     staff.forEach(s => {
-      const trainees = s.secondaryTrainees || [];
-      const count = Array.isArray(trainees) ? trainees.length : 0;
-      secondaryCounts[count] = (secondaryCounts[count] || 0) + 1;
+      if (!primaryCounts[s.name]) {
+        primaryCounts[s.name] = 0;
+      }
+      if (!secondaryCounts[s.name]) {
+        secondaryCounts[s.name] = 0;
+      }
+    });
+    
+    // Build distribution for primary trainees
+    const primaryDistributionCounts = {};
+    Object.values(primaryCounts).forEach(count => {
+      primaryDistributionCounts[count] = (primaryDistributionCounts[count] || 0) + 1;
+    });
+    
+    // Build distribution for secondary trainees
+    const secondaryDistributionCounts = {};
+    Object.values(secondaryCounts).forEach(count => {
+      secondaryDistributionCounts[count] = (secondaryDistributionCounts[count] || 0) + 1;
     });
     
     // Calculate summary statistics
-    const totalStaff = staff.length;
-    const totalPrimaryTrainees = Object.entries(primaryCounts).reduce((sum, [count, num]) => sum + (parseInt(count) * num), 0);
-    const totalSecondaryTrainees = Object.entries(secondaryCounts).reduce((sum, [count, num]) => sum + (parseInt(count) * num), 0);
+    const totalPrimaryTrainees = Object.values(primaryCounts).reduce((sum, count) => sum + count, 0);
+    const totalSecondaryTrainees = Object.values(secondaryCounts).reduce((sum, count) => sum + count, 0);
     
     const avgPrimary = (totalPrimaryTrainees / totalStaff).toFixed(2);
     const avgSecondary = (totalSecondaryTrainees / totalStaff).toFixed(2);
     
     // Build distribution arrays
-    const maxPrimary = Math.max(...Object.keys(primaryCounts).map(Number), 0);
-    const maxSecondary = Math.max(...Object.keys(secondaryCounts).map(Number), 0);
+    const maxPrimary = Math.max(...Object.keys(primaryDistributionCounts).map(Number), 0);
+    const maxSecondary = Math.max(...Object.keys(secondaryDistributionCounts).map(Number), 0);
     
     const primaryDistribution = [];
     for (let i = 0; i <= maxPrimary; i++) {
-      const count = primaryCounts[i] || 0;
+      const count = primaryDistributionCounts[i] || 0;
       primaryDistribution.push({
         traineeCount: i,
         staffCount: count,
@@ -329,7 +359,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
     
     const secondaryDistribution = [];
     for (let i = 0; i <= maxSecondary; i++) {
-      const count = secondaryCounts[i] || 0;
+      const count = secondaryDistributionCounts[i] || 0;
       secondaryDistribution.push({
         traineeCount: i,
         staffCount: count,
@@ -341,6 +371,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       success: true,
       data: {
         totalStaff,
+        totalTrainees: trainees.length,
         summary: {
           averagePrimaryTrainees: avgPrimary,
           averageSecondaryTrainees: avgSecondary,
