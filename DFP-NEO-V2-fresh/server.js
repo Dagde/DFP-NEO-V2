@@ -3004,120 +3004,135 @@ async function ensureInstructorArrayColumns(db) {
 // TRAINEE REALLOCATION ENDPOINT
 // ============================================================
 
-// POST /api/trainee-reallocation/preview - Preview reallocation without saving
-app.get('/api/trainee-reallocation/preview', async (req, res) => {
-  try {
-    const prisma = await getPrisma();
+// ============================================================
+// REALLOCATION RULES (v2):
+//   - Each trainee: exactly 1 primary instructor, min 2 secondary (up to 3)
+//   - Each instructor: max 3 primary trainees, max 4 secondary trainees
+//   - Same-unit assignments only
+// ============================================================
 
-    // Get all active trainees with unit
-    const trainees = await prisma.trainee.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, unit: true }
-    });
+// Shared allocation logic used by both preview and apply
+function buildReallocation(trainees, personnel) {
+  const units = ['1FTS', '2FTS', 'CFS'];
+  const allResults = [];
 
-    // Get all personnel with unit and name
-    const personnel = await prisma.personnel.findMany({
-      select: { id: true, name: true, unit: true, role: true }
-    });
+  // Seeded deterministic shuffle
+  const seededRandom = (seed) => {
+    let s = seed;
+    return () => {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+  };
 
-    const units = ['1FTS', '2FTS', 'CFS'];
-    const allResults = [];
+  for (const unit of units) {
+    const unitTrainees = trainees.filter(t => t.unit === unit);
+    const unitStaff = personnel.filter(p => p.unit === unit);
 
-    for (const unit of units) {
-      const unitTrainees = trainees.filter(t => t.unit === unit);
-      const unitStaff = personnel.filter(p => p.unit === unit);
-      const maxPerStaff = 3;
+    const MAX_PRIMARY_PER_INSTRUCTOR = 3;
+    const MAX_SECONDARY_PER_INSTRUCTOR = 4;
+    const MIN_SECONDARY_PER_TRAINEE = 2;
 
-      // Seeded shuffle for reproducibility
-      const seededRandom = (seed) => {
-        let s = seed;
-        return () => {
-          s = (s * 1664525 + 1013904223) & 0xffffffff;
-          return (s >>> 0) / 0xffffffff;
-        };
-      };
-      const randFn = seededRandom(42);
-      const shuffle = (arr) => {
-        const a = [...arr];
-        for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(randFn() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-      };
-
-      const shuffledTrainees = shuffle(unitTrainees);
-      const shuffledStaff = shuffle(unitStaff);
-
-      const allocate = (tList, sList, max) => {
-        const staffLoad = {};
-        sList.forEach(s => { staffLoad[s.name] = 0; });
-        const traineeMap = {};
-        tList.forEach(t => { traineeMap[t.id] = []; });
-
-        for (let round = 1; round <= 2; round++) {
-          for (const trainee of tList) {
-            if (traineeMap[trainee.id].length >= round) continue;
-            const alreadyAssigned = new Set(traineeMap[trainee.id]);
-            const candidates = sList
-              .filter(s => !alreadyAssigned.has(s.name) && staffLoad[s.name] < max)
-              .sort((a, b) => staffLoad[a.name] - staffLoad[b.name]);
-            if (candidates.length === 0) continue;
-            traineeMap[trainee.id].push(candidates[0].name);
-            staffLoad[candidates[0].name]++;
-          }
-        }
-        return { traineeMap, staffLoad };
-      };
-
-      const { traineeMap: primaryMap, staffLoad: primaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
-      const { traineeMap: secondaryMap, staffLoad: secondaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
-
-      // Resolve primary/secondary overlaps
-      for (const trainee of shuffledTrainees) {
-        const primary = new Set(primaryMap[trainee.id]);
-        const secondary = secondaryMap[trainee.id];
-        const newSecondary = [];
-        for (const secInst of secondary) {
-          if (primary.has(secInst)) {
-            const available = shuffledStaff
-              .filter(s => !primary.has(s.name) && !newSecondary.includes(s.name) && secondaryLoad[s.name] < maxPerStaff)
-              .sort((a, b) => secondaryLoad[a.name] - secondaryLoad[b.name]);
-            if (available.length > 0) {
-              secondaryLoad[secInst]--;
-              secondaryLoad[available[0].name]++;
-              newSecondary.push(available[0].name);
-            } else {
-              newSecondary.push(secInst);
-            }
-          } else {
-            newSecondary.push(secInst);
-          }
-        }
-        secondaryMap[trainee.id] = newSecondary;
+    const randFn = seededRandom(42);
+    const shuffle = (arr) => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(randFn() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
       }
+      return a;
+    };
 
+    const shuffledTrainees = shuffle(unitTrainees);
+    const shuffledStaff = shuffle(unitStaff);
+
+    // Track loads
+    const primaryLoad = {};
+    const secondaryLoad = {};
+    shuffledStaff.forEach(s => { primaryLoad[s.name] = 0; secondaryLoad[s.name] = 0; });
+
+    // Helper: get candidates sorted by load ascending
+    const getCandidates = (loadMap, maxLoad, exclude = new Set()) => {
+      return shuffledStaff
+        .filter(s => !exclude.has(s.name) && (loadMap[s.name] ?? 0) < maxLoad)
+        .sort((a, b) => (loadMap[a.name] ?? 0) - (loadMap[b.name] ?? 0));
+    };
+
+    // PRIMARY: exactly 1 per trainee, max 3 per instructor
+    const primaryMap = {};
+    shuffledTrainees.forEach(t => { primaryMap[t.id] = null; });
+
+    for (const trainee of shuffledTrainees) {
+      const candidates = getCandidates(primaryLoad, MAX_PRIMARY_PER_INSTRUCTOR);
+      if (candidates.length === 0) {
+        console.log(`⚠️ No primary available for ${trainee.name} (${unit})`);
+        continue;
+      }
+      primaryMap[trainee.id] = candidates[0].name;
+      primaryLoad[candidates[0].name]++;
+    }
+
+    // SECONDARY: min 2 per trainee, max 4 per instructor, must differ from primary
+    const secondaryMap = {};
+    shuffledTrainees.forEach(t => { secondaryMap[t.id] = []; });
+
+    for (let round = 0; round < MIN_SECONDARY_PER_TRAINEE; round++) {
       for (const trainee of shuffledTrainees) {
-        allResults.push({
-          id: trainee.id,
-          name: trainee.name,
-          unit: trainee.unit,
-          primaryInstructors: primaryMap[trainee.id],
-          secondaryInstructors: secondaryMap[trainee.id]
-        });
+        const primaryName = primaryMap[trainee.id];
+        const alreadySecondary = new Set(secondaryMap[trainee.id]);
+
+        // Exclude primary and already-assigned secondaries
+        const excluded = new Set([...alreadySecondary]);
+        if (primaryName) excluded.add(primaryName);
+
+        let candidates = getCandidates(secondaryLoad, MAX_SECONDARY_PER_INSTRUCTOR, excluded);
+
+        // Fallback: if no candidates excluding primary, allow primary overlap
+        if (candidates.length === 0) {
+          candidates = getCandidates(secondaryLoad, MAX_SECONDARY_PER_INSTRUCTOR, alreadySecondary);
+        }
+
+        if (candidates.length === 0) {
+          console.log(`⚠️ No secondary available for ${trainee.name} (${unit}) round ${round + 1}`);
+          continue;
+        }
+        secondaryMap[trainee.id].push(candidates[0].name);
+        secondaryLoad[candidates[0].name]++;
       }
     }
 
-    // Summary stats
+    for (const trainee of shuffledTrainees) {
+      allResults.push({
+        id: trainee.id,
+        name: trainee.name,
+        unit: trainee.unit,
+        primaryInstructors: primaryMap[trainee.id] ? [primaryMap[trainee.id]] : [],
+        secondaryInstructors: secondaryMap[trainee.id]
+      });
+    }
+  }
+
+  return allResults;
+}
+
+// GET /api/trainee-reallocation/preview - Preview reallocation without saving
+app.get('/api/trainee-reallocation/preview', async (req, res) => {
+  try {
+    const prisma = await getPrisma();
+    const trainees = await prisma.trainee.findMany({ where: { isActive: true }, select: { id: true, name: true, unit: true } });
+    const personnel = await prisma.personnel.findMany({ select: { id: true, name: true, unit: true, role: true } });
+
+    const allResults = buildReallocation(trainees, personnel);
+
     const summary = {
       total: allResults.length,
       primary: {
-        with2Plus: allResults.filter(r => r.primaryInstructors.length >= 2).length,
         with1: allResults.filter(r => r.primaryInstructors.length === 1).length,
         with0: allResults.filter(r => r.primaryInstructors.length === 0).length,
       },
       secondary: {
-        with2Plus: allResults.filter(r => r.secondaryInstructors.length >= 2).length,
+        with3: allResults.filter(r => r.secondaryInstructors.length === 3).length,
+        with2: allResults.filter(r => r.secondaryInstructors.length === 2).length,
         with1: allResults.filter(r => r.secondaryInstructors.length === 1).length,
         with0: allResults.filter(r => r.secondaryInstructors.length === 0).length,
       }
@@ -3134,106 +3149,11 @@ app.get('/api/trainee-reallocation/preview', async (req, res) => {
 app.post('/api/trainee-reallocation/apply', async (req, res) => {
   try {
     const prisma = await getPrisma();
+    const trainees = await prisma.trainee.findMany({ where: { isActive: true }, select: { id: true, name: true, unit: true } });
+    const personnel = await prisma.personnel.findMany({ select: { id: true, name: true, unit: true, role: true } });
 
-    // Get all active trainees with unit
-    const trainees = await prisma.trainee.findMany({
-      where: { isActive: true },
-      select: { id: true, name: true, unit: true }
-    });
+    const allResults = buildReallocation(trainees, personnel);
 
-    // Get all personnel with unit and name
-    const personnel = await prisma.personnel.findMany({
-      select: { id: true, name: true, unit: true, role: true }
-    });
-
-    const units = ['1FTS', '2FTS', 'CFS'];
-    const allResults = [];
-
-    for (const unit of units) {
-      const unitTrainees = trainees.filter(t => t.unit === unit);
-      const unitStaff = personnel.filter(p => p.unit === unit);
-      const maxPerStaff = 3;
-
-      const seededRandom = (seed) => {
-        let s = seed;
-        return () => {
-          s = (s * 1664525 + 1013904223) & 0xffffffff;
-          return (s >>> 0) / 0xffffffff;
-        };
-      };
-      const randFn = seededRandom(42);
-      const shuffle = (arr) => {
-        const a = [...arr];
-        for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(randFn() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-      };
-
-      const shuffledTrainees = shuffle(unitTrainees);
-      const shuffledStaff = shuffle(unitStaff);
-
-      const allocate = (tList, sList, max) => {
-        const staffLoad = {};
-        sList.forEach(s => { staffLoad[s.name] = 0; });
-        const traineeMap = {};
-        tList.forEach(t => { traineeMap[t.id] = []; });
-
-        for (let round = 1; round <= 2; round++) {
-          for (const trainee of tList) {
-            if (traineeMap[trainee.id].length >= round) continue;
-            const alreadyAssigned = new Set(traineeMap[trainee.id]);
-            const candidates = sList
-              .filter(s => !alreadyAssigned.has(s.name) && staffLoad[s.name] < max)
-              .sort((a, b) => staffLoad[a.name] - staffLoad[b.name]);
-            if (candidates.length === 0) continue;
-            traineeMap[trainee.id].push(candidates[0].name);
-            staffLoad[candidates[0].name]++;
-          }
-        }
-        return { traineeMap, staffLoad };
-      };
-
-      const { traineeMap: primaryMap, staffLoad: primaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
-      const { traineeMap: secondaryMap, staffLoad: secondaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
-
-      // Resolve primary/secondary overlaps
-      for (const trainee of shuffledTrainees) {
-        const primary = new Set(primaryMap[trainee.id]);
-        const secondary = secondaryMap[trainee.id];
-        const newSecondary = [];
-        for (const secInst of secondary) {
-          if (primary.has(secInst)) {
-            const available = shuffledStaff
-              .filter(s => !primary.has(s.name) && !newSecondary.includes(s.name) && secondaryLoad[s.name] < maxPerStaff)
-              .sort((a, b) => secondaryLoad[a.name] - secondaryLoad[b.name]);
-            if (available.length > 0) {
-              secondaryLoad[secInst]--;
-              secondaryLoad[available[0].name]++;
-              newSecondary.push(available[0].name);
-            } else {
-              newSecondary.push(secInst);
-            }
-          } else {
-            newSecondary.push(secInst);
-          }
-        }
-        secondaryMap[trainee.id] = newSecondary;
-      }
-
-      for (const trainee of shuffledTrainees) {
-        allResults.push({
-          id: trainee.id,
-          name: trainee.name,
-          unit: trainee.unit,
-          primaryInstructors: primaryMap[trainee.id],
-          secondaryInstructors: secondaryMap[trainee.id]
-        });
-      }
-    }
-
-    // Apply updates to database in batches
     console.log(`🔄 Applying reallocation for ${allResults.length} trainees...`);
     let updated = 0;
     const errors = [];
@@ -3260,12 +3180,12 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
       updated,
       errors: errors.length,
       primary: {
-        with2Plus: allResults.filter(r => r.primaryInstructors.length >= 2).length,
         with1: allResults.filter(r => r.primaryInstructors.length === 1).length,
         with0: allResults.filter(r => r.primaryInstructors.length === 0).length,
       },
       secondary: {
-        with2Plus: allResults.filter(r => r.secondaryInstructors.length >= 2).length,
+        with3: allResults.filter(r => r.secondaryInstructors.length === 3).length,
+        with2: allResults.filter(r => r.secondaryInstructors.length === 2).length,
         with1: allResults.filter(r => r.secondaryInstructors.length === 1).length,
         with0: allResults.filter(r => r.secondaryInstructors.length === 0).length,
       }
