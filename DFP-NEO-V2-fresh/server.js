@@ -3465,22 +3465,78 @@ app.post('/api/scores/bulk', async (req, res) => {
 // TRAINING INTELLIGENCE ENGINE (TIE) API ROUTES
 // ============================================================
 
-// POST /api/tie/run - trigger analytics run
+// POST /api/tie/run - trigger analytics run (fire-and-forget to avoid Railway timeout)
 app.post('/api/tie/run', async (req, res) => {
   try {
     const db = await getPrisma();
     const { courseFilter, triggeredBy } = req.body;
-    const result = await runTIEAnalytics(db, courseFilter || null, triggeredBy || 'manual');
-    res.json(result);
+
+    // Start the analytics run in background WITHOUT awaiting it
+    // This prevents Railway's 60s request timeout from killing the connection
+    setImmediate(async () => {
+      try {
+        await runTIEAnalytics(db, courseFilter || null, triggeredBy || 'manual');
+      } catch (err) {
+        console.error('❌ TIE background run error:', err.message);
+      }
+    });
+
+    // Immediately respond so the client knows the run has started
+    // The client should poll GET /api/tie/status to check completion
+    res.json({ started: true, message: 'TIE analytics run started. Poll /api/tie/status for progress.' });
   } catch (error) {
     console.error('❌ POST /api/tie/run error:', error);
     res.status(500).json({ 
-      error: 'TIE run failed', 
-      details: error.message,
-      diagnostic: error.tieDiag || null,
-      sql: error.tieSql || null,
-      params: error.tieParams || null
+      error: 'TIE run failed to start', 
+      details: error.message
     });
+  }
+});
+
+// GET /api/tie/status - get status of the most recent analytics run (for polling)
+app.get('/api/tie/status', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const courseFilter = req.query.course || null;
+    let rows = [];
+    try {
+      if (courseFilter) {
+        rows = await db.$queryRawUnsafe(`
+          SELECT id, status, "courseFilter", "startedAt", "completedAt", "recordsProcessed", "errorMessage"
+          FROM "TIEAnalyticsRun"
+          WHERE "courseFilter" = $1::text
+          ORDER BY "startedAt" DESC
+          LIMIT 1
+        `, courseFilter);
+      } else {
+        rows = await db.$queryRawUnsafe(`
+          SELECT id, status, "courseFilter", "startedAt", "completedAt", "recordsProcessed", "errorMessage"
+          FROM "TIEAnalyticsRun"
+          ORDER BY "startedAt" DESC
+          LIMIT 1
+        `);
+      }
+    } catch (e) { /* table may not exist yet */ }
+
+    if (!rows || rows.length === 0) {
+      return res.json({ status: 'none' });
+    }
+    const run = rows[0];
+    res.json({
+      status: run.status,
+      runId: run.id,
+      courseFilter: run.courseFilter,
+      startedAt: run.startedAt,
+      completedAt: run.completedAt,
+      recordsProcessed: run.recordsProcessed,
+      errorMessage: run.errorMessage,
+      success: run.status === 'complete',
+      running: run.status === 'running',
+      failed: run.status === 'failed'
+    });
+  } catch (error) {
+    console.error('❌ GET /api/tie/status error:', error);
+    res.status(500).json({ error: 'Failed to fetch TIE status', details: error.message });
   }
 });
 

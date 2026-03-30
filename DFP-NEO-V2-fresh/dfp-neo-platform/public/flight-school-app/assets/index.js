@@ -26910,27 +26910,63 @@ const TrainingIntelligenceTab = () => {
     setRunProgress("Initialising analytics engine...");
     setError(null);
     try {
-      setRunProgress("Processing PT-051 records...");
+      // Fire-and-forget: server starts run immediately and responds without waiting
       const r = await fetch("/api/tie/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ courseFilter: selectedCourse2 || null, triggeredBy: "manual-ui" })
       });
-      const result = await r.json();
-      if (result.success) {
-        setRunProgress(`✅ Complete — ${result.recordsProcessed} records, ${result.trainees} trainees, ${result.events} events`);
-        setTimeout(() => {
+      const startResult = await r.json();
+      if (!startResult.started) {
+        setError(`Run failed to start: ${startResult.error || "Unknown error"}`);
+        setRunProgress("");
+        setIsRunning(false);
+        return;
+      }
+      // Poll /api/tie/status every 3 seconds until complete or failed
+      setRunProgress("Processing PT-051 records…");
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusUrl = selectedCourse2
+            ? `/api/tie/status?course=${encodeURIComponent(selectedCourse2)}`
+            : "/api/tie/status";
+          const sr = await fetch(statusUrl);
+          const status = await sr.json();
+          if (status.running) {
+            setRunProgress(`Processing… (run in progress)`);
+          } else if (status.success) {
+            clearInterval(pollInterval);
+            setRunProgress(`✅ Complete — ${status.recordsProcessed || 0} records processed`);
+            setTimeout(() => {
+              setRunProgress("");
+              setIsRunning(false);
+              fetchRecentRuns();
+              if (selectedCourse2) loadCourseData(selectedCourse2);
+              fetchCourses();
+            }, 2500);
+          } else if (status.failed) {
+            clearInterval(pollInterval);
+            setError(`Run failed: ${status.errorMessage || "Unknown error"}`);
+            setRunProgress("");
+            setIsRunning(false);
+          }
+          // status 'none' means run hasn't started yet in DB - keep polling
+        } catch (pollErr) {
+          // Transient poll error - keep trying
+          console.warn("TIE status poll error:", pollErr.message);
+        }
+      }, 3000);
+      // Safety timeout: stop polling after 10 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (isRunning) {
           setRunProgress("");
           setIsRunning(false);
           fetchRecentRuns();
           if (selectedCourse2) loadCourseData(selectedCourse2);
           fetchCourses();
-        }, 2500);
-      } else {
-        setError(`Run failed: ${result.error}`);
-        setRunProgress("");
-        setIsRunning(false);
-      }
+        }
+      }, 600000);
     } catch (e) {
       setError(`Run failed: ${e.message}`);
       setRunProgress("");
