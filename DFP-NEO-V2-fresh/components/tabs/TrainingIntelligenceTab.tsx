@@ -157,7 +157,7 @@ const parseProgression = (raw: any): number[] => {
   }).filter((v: number) => v > 0);
 };
 
-// ── SparkBar ───────────────────────────────────────────────────────────────────
+// ── SparkBar ────────────────────────────────────────────────────────────────────
 
 const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> = ({ value, max = 5, colorClass }) => {
   const pct = Math.min(100, (safeN(value) / max) * 100);
@@ -172,12 +172,12 @@ const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> =
   );
 };
 
-// ── SparkLine (SVG) ────────────────────────────────────────────────────────────
+// ── SparkLine (SVG) ─────────────────────────────────────────────────────────────
 
 const SparkLine: React.FC<{ data: number[]; width?: number; height?: number; color?: string }> = ({
   data, width = 100, height = 32, color = '#60a5fa'
 }) => {
-  if (!data || data.length < 2) return <span className="text-gray-600 text-xs">\u2014</span>;
+  if (!data || data.length < 2) return <span className="text-gray-600 text-xs">&mdash;</span>;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const rng = max - min || 1;
@@ -198,7 +198,7 @@ const SparkLine: React.FC<{ data: number[]; width?: number; height?: number; col
   );
 };
 
-// ── HBarChart ──────────────────────────────────────────────────────────────────
+// ── HBarChart ───────────────────────────────────────────────────────────────────
 
 const HBarChart: React.FC<{ data: Array<{ label: string; value: number; color?: string }>; max?: number }> = ({ data, max = 5 }) => {
   if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
@@ -223,12 +223,12 @@ const HBarChart: React.FC<{ data: Array<{ label: string; value: number; color?: 
   );
 };
 
-// ── DonutChart (SVG) ───────────────────────────────────────────────────────────
+// ── DonutChart (SVG) ────────────────────────────────────────────────────────────
 
-const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; color: string }>; size?: number }> = ({ segments, size = 110 }) => {
+const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; color: string }>; size?: number }> = ({ segments, size = 140 }) => {
   const total = segments.reduce((s, seg) => s + safeN(seg.value), 0);
   if (total === 0) return <p className="text-gray-500 text-sm">No data</p>;
-  const r = (size - 24) / 2;
+  const r = (size - 28) / 2;
   const cx = size / 2;
   const cy = size / 2;
   const circ = 2 * Math.PI * r;
@@ -240,22 +240,24 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
     return arc;
   });
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center justify-center gap-6 py-2">
       <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#374151" strokeWidth="18" />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#374151" strokeWidth="22" />
         {arcs.map((a, i) => (
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={a.color} strokeWidth="18"
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={a.color} strokeWidth="22"
             strokeDasharray={`${a.dash} ${circ}`} strokeDashoffset={a.dashOff}
             transform={`rotate(-90 ${cx} ${cy})`} />
         ))}
-        <text x={cx} y={cy + 4} textAnchor="middle" fontSize="12" fill="#9ca3af">{total}</text>
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="18" fontWeight="bold" fill="#f9fafb">{total}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="10" fill="#9ca3af">trainees</text>
       </svg>
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {segments.map(seg => (
-          <div key={seg.label} className="flex items-center gap-1.5 text-xs">
-            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-            <span className="text-gray-400">{seg.label}</span>
-            <span className="text-gray-200 font-semibold ml-1">{seg.value}</span>
+          <div key={seg.label} className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+            <span className="text-gray-300">{seg.label}</span>
+            <span className="text-gray-100 font-bold ml-1">{seg.value}</span>
+            <span className="text-gray-500 text-xs">({total > 0 ? Math.round((seg.value / total) * 100) : 0}%)</span>
           </div>
         ))}
       </div>
@@ -263,7 +265,7 @@ const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; col
   );
 };
 
-// ── RadarChart (SVG) ───────────────────────────────────────────────────────────
+// ── RadarChart (SVG) ────────────────────────────────────────────────────────────
 
 const RadarChart: React.FC<{ data: Record<string, number>; size?: number }> = ({ data, size = 180 }) => {
   const entries = Object.entries(data).filter(([, v]) => safeN(v) > 0);
@@ -291,13 +293,13 @@ const RadarChart: React.FC<{ data: Record<string, number>; size?: number }> = ({
         const lx = cx + (r + 16) * Math.cos(angle(i));
         const ly = cy + (r + 16) * Math.sin(angle(i));
         const anchor = lx < cx - 5 ? 'end' : lx > cx + 5 ? 'start' : 'middle';
-        return <text key={i} x={lx} y={ly + 4} textAnchor={anchor} fontSize="8" fill="#9ca3af">{lbl.length > 13 ? lbl.slice(0, 13) + '\u2026' : lbl}</text>;
+        return <text key={i} x={lx} y={ly + 4} textAnchor={anchor} fontSize="8" fill="#9ca3af">{lbl.length > 13 ? lbl.slice(0, 13) + '...' : lbl}</text>;
       })}
     </svg>
   );
 };
 
-// ── ColChart (SVG) ─────────────────────────────────────────────────────────────
+// ── ColChart (SVG) ──────────────────────────────────────────────────────────────
 
 const ColChart: React.FC<{ data: Array<{ label: string; value: number; color?: string }>; max?: number; height?: number }> = ({
   data, max = 5, height = 120
@@ -319,7 +321,7 @@ const ColChart: React.FC<{ data: Array<{ label: string; value: number; color?: s
         const x = gap + i * (bw + gap);
         const y = tp + ch - bh;
         const color = item.color || (item.value >= 4 ? '#10b981' : item.value >= 3 ? '#eab308' : '#ef4444');
-        const lbl = item.label.length > 7 ? item.label.slice(0, 7) + '\u2026' : item.label;
+        const lbl = item.label.length > 7 ? item.label.slice(0, 7) + '...' : item.label;
         return (
           <g key={i}>
             <rect x={x} y={y} width={bw} height={bh} fill={color} fillOpacity={0.85} rx="2" />
@@ -333,24 +335,19 @@ const ColChart: React.FC<{ data: Array<{ label: string; value: number; color?: s
   );
 };
 
-// ── StatCard ───────────────────────────────────────────────────────────────────
+// ── StatCard ────────────────────────────────────────────────────────────────────
 
-const StatCard: React.FC<{ label: string; value: string | number; sub?: string; color?: string; icon?: string }> = ({
-  label, value, sub, color = 'text-white', icon
+const StatCard: React.FC<{ label: string; value: string | number; sub?: string; color?: string }> = ({
+  label, value, sub, color = 'text-white'
 }) => (
   <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-    <div className="flex items-start justify-between">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
-      </div>
-      {icon && <span className="text-2xl flex-shrink-0 ml-2">{icon}</span>}
-    </div>
+    <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+    <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
+    {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
   </div>
 );
 
-// ── SectionCard ────────────────────────────────────────────────────────────────
+// ── SectionCard ─────────────────────────────────────────────────────────────────
 
 const SCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
   <div className={`bg-gray-800 border border-gray-700 rounded-lg p-4 ${className || ''}`}>
@@ -359,7 +356,7 @@ const SCard: React.FC<{ title: string; children: React.ReactNode; className?: st
   </div>
 );
 
-// ── Tag ────────────────────────────────────────────────────────────────────────
+// ── Tag ─────────────────────────────────────────────────────────────────────────
 
 const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' | 'gray' }> = ({ text, type = 'gray' }) => {
   const m: Record<string, string> = {
@@ -372,7 +369,40 @@ const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' |
   return <span className={`border text-xs px-2 py-0.5 rounded ${m[type]}`}>{text}</span>;
 };
 
-// ── COURSE TAB ─────────────────────────────────────────────────────────────────
+// ── Grade Progression Modal ─────────────────────────────────────────────────────
+
+const ProgressionModal: React.FC<{ data: number[]; name: string; trend: string; onClose: () => void }> = ({ data, name, trend, onClose }) => {
+  const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-white font-bold text-base">{name} — Grade Progression</h3>
+            <p className="text-gray-400 text-xs mt-0.5">{data.length} assessments recorded</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none ml-4">&times;</button>
+        </div>
+        <div className="bg-gray-800 rounded-lg p-4">
+          <SparkLine data={data} width={580} height={140} color={color} />
+          <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
+            <span>Earliest assessment</span>
+            <span>Latest assessment</span>
+          </div>
+          <div className="flex justify-between mt-3 text-xs">
+            <span className="text-gray-400">Min: <span className={gradeColor(Math.min(...data))}>{Math.min(...data).toFixed(2)}</span></span>
+            <span className="text-gray-400">Avg: <span className="text-gray-200">{(data.reduce((s, v) => s + v, 0) / data.length).toFixed(2)}</span></span>
+            <span className="text-gray-400">Max: <span className={gradeColor(Math.max(...data))}>{Math.max(...data).toFixed(2)}</span></span>
+            <span className="text-gray-400">Trend: <span className={trendColor(trend)}>{trendIcon(trend)} {trend || 'stable'}</span></span>
+          </div>
+        </div>
+        <p className="text-gray-600 text-xs mt-3 text-center">Click outside or press &times; to close</p>
+      </div>
+    </div>
+  );
+};
+
+// ── COURSE TAB ──────────────────────────────────────────────────────────────────
 
 const CourseTab: React.FC<{
   summary: TIECourseSummary;
@@ -388,17 +418,21 @@ const CourseTab: React.FC<{
   const skillHeatmap = parseJ(summary.skillHeatmap, {}) as Record<string, number>;
   const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
   const bottleneckEvents = parseJ(summary.bottleneckEvents, []) as string[];
-  const overServicedEvents = parseJ(summary.overServicedEvents, []) as string[];
+  const overServicedEventsFromSummary = parseJ(summary.overServicedEvents, []) as string[];
 
-  const scoreDist = [
-    { label: '1\u20131.9', value: trainees.filter(t => safeN(t.avgOverallGrade) < 2).length, color: '#ef4444' },
-    { label: '2\u20132.9', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 2 && safeN(t.avgOverallGrade) < 3).length, color: '#f97316' },
-    { label: '3\u20133.9', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 3 && safeN(t.avgOverallGrade) < 4).length, color: '#eab308' },
-    { label: '4\u20134.9', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 4 && safeN(t.avgOverallGrade) < 5).length, color: '#22c55e' },
-    { label: '5.0', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 5).length, color: '#10b981' },
-  ].filter(d => d.value > 0);
+  // Derive over-serviced events from event data if summary is empty
+  const overServicedFromEvents = events
+    .filter(ev => ev.overServiceIndicator === true || (ev as any).overServiceIndicator === 'true' || (ev as any).overServiceIndicator === 1)
+    .map(ev => ev.eventCode);
+  const overServicedEvents = overServicedEventsFromSummary.length > 0
+    ? overServicedEventsFromSummary
+    : overServicedFromEvents;
 
-  const eventsByDiff = [...events].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
+  // Difficulty ranking — sort by avgOverallGrade ascending (hardest first), filter events with valid grade
+  const eventsByDiff = [...events]
+    .filter(ev => safeN(ev.avgOverallGrade) > 0)
+    .sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
+
   const topByAttempts = [...events].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
 
   const allSkills = Array.from(new Set(events.flatMap(ev => Object.keys(parseJ(ev.skillFamilyScores, {})))));
@@ -407,22 +441,22 @@ const CourseTab: React.FC<{
     <div className="space-y-5">
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard label="Avg Score" value={safe(avgGrade, 2)} icon="\u2B50" color={gradeColor(avgGrade)} sub="course average" />
-        <StatCard label="Pass Rate" value={`${passRate.toFixed(0)}%`} icon="\u2705"
+        <StatCard label="Avg Score" value={safe(avgGrade, 2)} color={gradeColor(avgGrade)} sub="course average" />
+        <StatCard label="Pass Rate" value={`${passRate.toFixed(0)}%`}
           color={passRate >= 80 ? 'text-emerald-400' : passRate >= 60 ? 'text-yellow-400' : 'text-red-400'}
-          sub="trainees \u2265 3.0 avg" />
-        <StatCard label="At-Risk" value={atRisk} icon="\uD83D\uDD34"
+          sub="trainees >= 3.0 avg" />
+        <StatCard label="At-Risk" value={atRisk}
           color={atRisk > 0 ? 'text-red-400' : 'text-gray-400'} sub={`of ${trainees.length} trainees`} />
-        <StatCard label="PT-051 Records" value={summary.totalPt051s} icon="\uD83D\uDCCB" sub={`${trainees.length} trainees`} />
-        <StatCard label="Events" value={events.length} icon="\u2708\uFE0F"
+        <StatCard label="PT-051 Records" value={summary.totalPt051s} sub={`${trainees.length} trainees`} />
+        <StatCard label="Events" value={events.length}
           sub={`${bottleneckEvents.length} bottleneck`}
           color={bottleneckEvents.length > 0 ? 'text-orange-400' : 'text-white'} />
       </div>
 
-      {/* Row 1 */}
+      {/* Row 1: Status Donut + Skill Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SCard title="Trainee Status Distribution">
-          <DonutChart size={120} segments={[
+          <DonutChart size={150} segments={[
             { label: 'At Risk', value: atRisk, color: '#ef4444' },
             { label: 'Monitor', value: monitor, color: '#eab308' },
             { label: 'Normal', value: normal, color: '#3b82f6' },
@@ -436,27 +470,28 @@ const CourseTab: React.FC<{
         </SCard>
       </div>
 
-      {/* Row 2 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SCard title="Score Distribution (Trainee Avg Grades)">
-          <ColChart data={scoreDist} max={Math.max(1, ...scoreDist.map(d => d.value))} height={100} />
-        </SCard>
-        <SCard title="Event Difficulty Ranking (lowest avg first)">
-          {eventsByDiff.length > 0 ? (
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {eventsByDiff.map((ev, i) => (
-                <div key={ev.id} className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 w-4 flex-shrink-0">{i + 1}</span>
-                  <span className="text-xs text-gray-300 flex-1 truncate" title={ev.eventCode}>{ev.eventCode}</span>
+      {/* Row 2: Event Difficulty Ranking */}
+      <SCard title="Event Difficulty Ranking (lowest avg grade first — hardest events at top)">
+        {eventsByDiff.length > 0 ? (
+          <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            {eventsByDiff.map((ev, i) => (
+              <div key={ev.id || ev.eventCode} className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 w-5 flex-shrink-0 text-right">{i + 1}.</span>
+                <span className="text-xs text-gray-200 flex-1 truncate font-medium" title={ev.eventCode}>{ev.eventCode}</span>
+                <div className="w-32 flex-shrink-0">
                   <SparkBar value={safeN(ev.avgOverallGrade)} />
-                  {safeN(ev.bottleneckScore) > 0.5 && <span title="Bottleneck">\uD83D\uDEA7</span>}
-                  {ev.overServiceIndicator && <span title="Over-serviced">\u2705</span>}
                 </div>
-              ))}
-            </div>
-          ) : <p className="text-gray-500 text-sm">No event data</p>}
-        </SCard>
-      </div>
+                <span className="text-xs text-gray-500 w-16 flex-shrink-0 text-right">{ev.totalAttempts} tries</span>
+                {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1.5 py-0.5 rounded flex-shrink-0">BOTTLENECK</span>}
+              </div>
+            ))}
+          </div>
+        ) : events.length > 0 ? (
+          <p className="text-gray-500 text-sm">Event grades not yet computed — run analytics to populate</p>
+        ) : (
+          <p className="text-gray-500 text-sm">No event data — run analytics first</p>
+        )}
+      </SCard>
 
       {/* Row 3: Event avg bar chart */}
       {topByAttempts.length > 0 && (
@@ -469,21 +504,30 @@ const CourseTab: React.FC<{
 
       {/* Row 4: Bottleneck + Over-Service */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SCard title="\uD83D\uDEA7 Bottleneck Events">
+        <SCard title="Bottleneck Events">
           {bottleneckEvents.length === 0
             ? <p className="text-gray-500 text-sm">No bottlenecks detected</p>
-            : <div className="flex flex-wrap gap-2">{bottleneckEvents.map(e => <Tag key={e} text={e} type="red" />)}</div>}
+            : (
+              <>
+                <p className="text-xs text-gray-500 mb-2">Events where trainees consistently struggle — high difficulty score, low pass rate, or recurring weak elements.</p>
+                <div className="flex flex-wrap gap-2">{bottleneckEvents.slice(0, 5).map(e => <Tag key={e} text={e} type="red" />)}</div>
+                {bottleneckEvents.length > 5 && <p className="text-xs text-gray-600 mt-2">+{bottleneckEvents.length - 5} more</p>}
+              </>
+            )}
         </SCard>
-        <SCard title="\u2705 Over-Serviced Events">
+        <SCard title="Over-Serviced Events">
+          <p className="text-xs text-gray-500 mb-2">
+            Over-serviced events are events where trainees perform well above expectations — high pass rates and grades suggest these events may receive disproportionate training time relative to their difficulty. Consider reallocating focus to bottleneck events.
+          </p>
           {overServicedEvents.length === 0
-            ? <p className="text-gray-500 text-sm">No over-serviced events</p>
+            ? <p className="text-gray-500 text-sm">No over-serviced events detected</p>
             : <div className="flex flex-wrap gap-2">{overServicedEvents.map(e => <Tag key={e} text={e} type="green" />)}</div>}
         </SCard>
       </div>
 
       {/* Row 5: Skill heatmap matrix */}
       {events.length > 0 && allSkills.length > 0 && (
-        <SCard title="Skill Weakness Heatmap (Event \u00D7 Skill Family)">
+        <SCard title="Skill Weakness Heatmap (Event x Skill Family)">
           <div className="overflow-x-auto">
             <table className="text-xs">
               <thead>
@@ -505,7 +549,7 @@ const CourseTab: React.FC<{
                           <td key={sk} className="px-2 py-1.5 text-center">
                             {v !== undefined
                               ? <span className={`font-mono font-bold ${gradeColor(v)}`}>{safe(v, 1)}</span>
-                              : <span className="text-gray-700">\u2014</span>}
+                              : <span className="text-gray-700">&mdash;</span>}
                           </td>
                         );
                       })}
@@ -523,21 +567,22 @@ const CourseTab: React.FC<{
 
       {/* Narrative */}
       {summary.narrativeSummary && (
-        <SCard title="\uD83D\uDCDD Course Analysis Narrative">
+        <SCard title="Course Analysis Narrative">
           <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{summary.narrativeSummary}</p>
-          <p className="text-gray-600 text-xs mt-3">Last analysed: {formatDate(summary.completedAt)} \u00B7 {summary.recordsProcessed} records processed</p>
+          <p className="text-gray-600 text-xs mt-3">Last analysed: {formatDate(summary.completedAt)} &middot; {summary.recordsProcessed} records processed</p>
         </SCard>
       )}
     </div>
   );
 };
 
-// ── TRAINEE TAB ────────────────────────────────────────────────────────────────
+// ── TRAINEE TAB ─────────────────────────────────────────────────────────────────
 
 const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
   const [selected, setSelected] = useState<TIETraineeSummary | null>(null);
+  const [progressionModal, setProgressionModal] = useState<{ data: number[]; name: string; trend: string } | null>(null);
 
   const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
   const monitorCount = trainees.filter(t => t.riskLevel === 'monitor').length;
@@ -558,21 +603,33 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const strongFams = selected ? parseJ(selected.strongestSkillFamilies, []) as string[] : [];
   const atRiskReasons = selected ? parseJ(selected.atRiskReasons, []) as string[] : [];
 
+  const filterButtons = [
+    { k: 'all' as const, label: `All (${trainees.length})` },
+    { k: 'at_risk' as const, label: `At Risk (${atRiskCount})` },
+    { k: 'monitor' as const, label: `Monitor (${monitorCount})` },
+    { k: 'exceeding' as const, label: `Exceeding (${exceedingCount})` },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Grade Progression Modal */}
+      {progressionModal && (
+        <ProgressionModal
+          data={progressionModal.data}
+          name={progressionModal.name}
+          trend={progressionModal.trend}
+          onClose={() => setProgressionModal(null)}
+        />
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <input type="text" placeholder="Search trainee..." value={search}
           onChange={e => setSearch(e.target.value)}
           className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 w-56 focus:outline-none focus:border-blue-500" />
         <div className="flex gap-1 flex-wrap">
-          {([
-            { k: 'all', label: `All (${trainees.length})` },
-            { k: 'at_risk', label: `\uD83D\uDD34 At Risk (${atRiskCount})` },
-            { k: 'monitor', label: `\u26A0\uFE0F Monitor (${monitorCount})` },
-            { k: 'exceeding', label: `\uD83C\uDF1F Exceeding (${exceedingCount})` },
-          ] as const).map(({ k, label }) => (
-            <button key={k} onClick={() => setFilter(k as any)}
+          {filterButtons.map(({ k, label }) => (
+            <button key={k} onClick={() => setFilter(k)}
               className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${filter === k ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
               {label}
             </button>
@@ -618,8 +675,19 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                       </td>
                       <td className="px-3 py-2.5">
                         {prog.length >= 2
-                          ? <SparkLine data={prog} width={70} height={24} color={t.overallTrend === 'improving' ? '#10b981' : t.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
-                          : <span className="text-gray-600 text-xs">\u2014</span>}
+                          ? (
+                            <button
+                              title="Click to enlarge"
+                              onClick={e => {
+                                e.stopPropagation();
+                                setProgressionModal({ data: prog, name: t.traineeFullName, trend: t.overallTrend });
+                              }}
+                              className="hover:opacity-80 transition-opacity cursor-zoom-in"
+                            >
+                              <SparkLine data={prog} width={70} height={24} color={t.overallTrend === 'improving' ? '#10b981' : t.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
+                            </button>
+                          )
+                          : <span className="text-gray-600 text-xs">&mdash;</span>}
                       </td>
                     </tr>
                   );
@@ -628,10 +696,10 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
             </table>
           </div>
 
-          {/* Bottom: distribution + recent vs overall table */}
+          {/* Bottom: grade by trainee + recent vs overall */}
           {trainees.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <SCard title="Grade by Trainee (sorted low\u2192high)">
+              <SCard title="Grade by Trainee (sorted low to high)">
                 <div className="overflow-x-auto">
                   <ColChart
                     data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
@@ -650,7 +718,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                         <th className="text-left text-gray-400 py-1 pr-2">Trainee</th>
                         <th className="text-center text-gray-400 py-1 px-2">Overall</th>
                         <th className="text-center text-gray-400 py-1 px-2">Recent</th>
-                        <th className="text-center text-gray-400 py-1 px-2">\u0394</th>
+                        <th className="text-center text-gray-400 py-1 px-2">Delta</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -684,7 +752,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   <h3 className="text-white font-bold text-sm">{selected.traineeFullName}</h3>
                   <p className="text-gray-400 text-xs">{selected.courseName}</p>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">\u00D7</button>
+                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">&times;</button>
               </div>
               <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`}>
                 <div className="flex justify-between items-center">
@@ -697,7 +765,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                 </div>
                 <div className="mt-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${riskBadge(selected.riskLevel)}`}>
-                    {selected.riskLevel === 'at_risk' ? '\uD83D\uDD34 At Risk' : selected.riskLevel === 'monitor' ? '\u26A0\uFE0F Monitor' : selected.riskLevel === 'exceeding' ? '\uD83C\uDF1F Exceeding' : '\u2705 Normal'}
+                    {selected.riskLevel === 'at_risk' ? 'At Risk' : selected.riskLevel === 'monitor' ? 'Monitor' : selected.riskLevel === 'exceeding' ? 'Exceeding' : 'Normal'}
                   </span>
                 </div>
               </div>
@@ -723,21 +791,27 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
               </div>
             </SCard>
 
-            {/* Progression sparkline */}
+            {/* Progression sparkline — click to enlarge */}
             {selProgression.length >= 2 && (
               <SCard title="Grade Progression">
-                <div className="flex justify-center py-1">
-                  <SparkLine data={selProgression} width={210} height={55}
-                    color={selected.overallTrend === 'improving' ? '#10b981' : selected.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
-                </div>
+                <button
+                  onClick={() => setProgressionModal({ data: selProgression, name: selected.traineeFullName, trend: selected.overallTrend })}
+                  className="w-full hover:opacity-80 transition-opacity cursor-zoom-in"
+                  title="Click to enlarge"
+                >
+                  <div className="flex justify-center py-1">
+                    <SparkLine data={selProgression} width={210} height={55}
+                      color={selected.overallTrend === 'improving' ? '#10b981' : selected.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
+                  </div>
+                </button>
                 <div className="flex justify-between text-xs text-gray-600 mt-0.5">
                   <span>Earliest</span><span>Latest</span>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">{selProgression.length} assessments</p>
+                <p className="text-xs text-gray-600 mt-1">{selProgression.length} assessments &middot; <span className="text-gray-500">click to enlarge</span></p>
               </SCard>
             )}
 
-            {/* Skill radar (if enough skills) */}
+            {/* Skill radar */}
             {hasSkillScores && Object.keys(selSkills).length >= 3 && (
               <SCard title="Skill Family Radar">
                 <div className="flex justify-center">
@@ -746,7 +820,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
               </SCard>
             )}
 
-            {/* Skill bars (if fewer than 3) */}
+            {/* Skill bars */}
             {hasSkillScores && Object.keys(selSkills).length < 3 && (
               <SCard title="Skill Families">
                 <HBarChart data={Object.entries(selSkills).map(([l, v]) => ({ label: l, value: v }))} />
@@ -769,11 +843,11 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
 
             {/* At-risk reasons */}
             {selected.riskLevel === 'at_risk' && atRiskReasons.length > 0 && (
-              <SCard title="\u26A0\uFE0F At-Risk Reasons">
+              <SCard title="At-Risk Reasons">
                 <ul className="space-y-1">
                   {atRiskReasons.map((r, i) => (
                     <li key={i} className="text-xs text-red-300 flex items-start gap-1">
-                      <span className="text-red-500 flex-shrink-0">\u2022</span>{r}
+                      <span className="text-red-500 flex-shrink-0">&bull;</span>{r}
                     </li>
                   ))}
                 </ul>
@@ -793,7 +867,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   );
 };
 
-// ── EVENTS TAB ─────────────────────────────────────────────────────────────────
+// ── EVENTS TAB ──────────────────────────────────────────────────────────────────
 
 const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   const [selected, setSelected] = useState<TIEEventSummary | null>(null);
@@ -818,7 +892,6 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
     </th>
   );
 
-  // KPI tiles from events
   if (events.length === 0) return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 text-center">
       <p className="text-gray-500">No event data available for this course</p>
@@ -841,13 +914,13 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
     <div className="space-y-5">
       {/* KPI Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Hardest Event" value={hardest.eventCode} icon="\uD83D\uDEA7"
+        <StatCard label="Hardest Event" value={hardest.eventCode}
           color="text-red-400" sub={`Avg: ${safe(hardest.avgOverallGrade, 2)}`} />
-        <StatCard label="Easiest Event" value={easiest.eventCode} icon="\uD83C\uDF1F"
+        <StatCard label="Easiest Event" value={easiest.eventCode}
           color="text-emerald-400" sub={`Avg: ${safe(easiest.avgOverallGrade, 2)}`} />
-        <StatCard label="Most Attempted" value={mostAttempts.eventCode} icon="\uD83D\uDCCA"
+        <StatCard label="Most Attempted" value={mostAttempts.eventCode}
           color="text-blue-400" sub={`${mostAttempts.totalAttempts} attempts`} />
-        <StatCard label="Most Variable" value={mostVariable.eventCode} icon="\uD83D\uDCC8"
+        <StatCard label="Most Variable" value={mostVariable.eventCode}
           color="text-yellow-400" sub={`Variance: ${safe(mostVariable.gradeVariance, 2)}`} />
       </div>
 
@@ -882,8 +955,10 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                       <SparkBar value={safeN(ev.difficultyScore)} max={1} />
                     </td>
                     <td className="px-3 py-2.5 text-center">
-                      {safeN(ev.bottleneckScore) > 0.5 && <span className="mr-1" title="Bottleneck">\uD83D\uDEA7</span>}
-                      {ev.overServiceIndicator && <span title="Over-serviced">\u2705</span>}
+                      <div className="flex items-center justify-center gap-1">
+                        {safeN(ev.bottleneckScore) > 0.5 && <span className="text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none">BN</span>}
+                        {ev.overServiceIndicator && <span className="text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none">OS</span>}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -893,7 +968,6 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
 
           {/* Bottom charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {/* Pass rate column chart */}
             <SCard title="Pass Rate by Event (%)">
               <div className="overflow-x-auto">
                 <ColChart
@@ -906,7 +980,6 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               </div>
             </SCard>
 
-            {/* Grade variance chart */}
             <SCard title="Grade Variance by Event (spread indicator)">
               <div className="overflow-x-auto">
                 <ColChart
@@ -920,7 +993,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
             </SCard>
           </div>
 
-          {/* Skill weakness stacked view */}
+          {/* Skill weakness table */}
           {allSkills.length > 0 && (
             <div className="mt-4">
               <SCard title="Skill Weakness by Event (sorted by avg grade)">
@@ -947,7 +1020,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                                 <td key={sk} className="px-2 py-1.5 text-center">
                                   {v !== undefined
                                     ? <span className={`font-mono font-bold ${gradeColor(v)}`}>{safe(v, 1)}</span>
-                                    : <span className="text-gray-700">\u2014</span>}
+                                    : <span className="text-gray-700">&mdash;</span>}
                                 </td>
                               );
                             })}
@@ -975,7 +1048,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                   <h3 className="text-white font-bold text-sm">{selected.eventCode}</h3>
                   <p className="text-gray-400 text-xs">{selected.courseName}</p>
                 </div>
-                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">\u00D7</button>
+                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">&times;</button>
               </div>
               <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`}>
                 <div className="flex justify-between items-center">
@@ -990,8 +1063,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {safeN(selected.bottleneckScore) > 0.5 && <Tag text="\uD83D\uDEA7 Bottleneck" type="red" />}
-                {selected.overServiceIndicator && <Tag text="\u2705 Over-Serviced" type="green" />}
+                {safeN(selected.bottleneckScore) > 0.5 && <Tag text="Bottleneck" type="red" />}
+                {selected.overServiceIndicator && <Tag text="Over-Serviced" type="green" />}
               </div>
             </div>
 
@@ -1029,7 +1102,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   );
 };
 
-// ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
+// ── MAIN COMPONENT ──────────────────────────────────────────────────────────────
 
 const TrainingIntelligenceTab: React.FC = () => {
   const [courses, setCourses] = useState<TIECourse[]>([]);
@@ -1047,7 +1120,6 @@ const TrainingIntelligenceTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Polling for run status
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -1104,7 +1176,7 @@ const TrainingIntelligenceTab: React.FC = () => {
         const r = await fetch(`/api/tie/status${selectedCourse ? `?course=${encodeURIComponent(selectedCourse)}` : ''}`);
         const data = await r.json();
         if (data.status === 'complete') {
-          setRunProgress(`\u2705 Complete \u2014 ${data.recordsProcessed ?? '?'} records processed`);
+          setRunProgress(`Complete \u2014 ${data.recordsProcessed ?? '?'} records processed`);
           clearInterval(pollRef.current!);
           pollRef.current = null;
           setTimeout(() => {
@@ -1143,7 +1215,7 @@ const TrainingIntelligenceTab: React.FC = () => {
         setRunProgress('Analytics run started \u2014 processing in background\u2026');
         startPolling();
       } else if (result.success) {
-        setRunProgress(`\u2705 Complete \u2014 ${result.recordsProcessed} records`);
+        setRunProgress(`Complete \u2014 ${result.recordsProcessed} records`);
         setTimeout(() => {
           setRunProgress('');
           setIsRunning(false);
@@ -1163,13 +1235,15 @@ const TrainingIntelligenceTab: React.FC = () => {
     }
   };
 
-  // cleanup poll on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
+  const atRiskBadge = trainees.filter(t => t.riskLevel === 'at_risk').length;
+  const bottleneckBadge = events.filter(e => safeN(e.bottleneckScore) > 0.5).length;
+
   const tabs = [
-    { id: 'course' as const, label: 'Course', icon: '\uD83D\uDCCA' },
-    { id: 'trainee' as const, label: 'Trainee', icon: '\uD83D\uDC64', badge: trainees.filter(t => t.riskLevel === 'at_risk').length || undefined },
-    { id: 'events' as const, label: 'Events', icon: '\u2708\uFE0F', badge: events.filter(e => safeN(e.bottleneckScore) > 0.5).length || undefined },
+    { id: 'course' as const, label: 'Course' },
+    { id: 'trainee' as const, label: 'Trainee', badge: atRiskBadge || undefined },
+    { id: 'events' as const, label: 'Events', badge: bottleneckBadge || undefined },
   ];
 
   return (
@@ -1179,20 +1253,20 @@ const TrainingIntelligenceTab: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-shrink-0">
             <h2 className="text-white font-bold text-lg leading-tight">Training Intelligence Engine</h2>
-            <p className="text-gray-400 text-xs">Offline PT-051 analytics \u00B7 all data stored in database</p>
+            <p className="text-gray-400 text-xs">Offline PT-051 analytics &middot; all data stored in database</p>
           </div>
           <div className="flex-1 min-w-0" />
           <div className="flex items-center gap-2">
             <label className="text-gray-400 text-sm whitespace-nowrap">Course:</label>
             <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} disabled={isRunning}
               className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-500">
-              <option value="">\u2014 All Courses \u2014</option>
+              <option value="">&mdash; All Courses &mdash;</option>
               {courses.map(c => <option key={c.name} value={c.name}>{c.name} ({c.recordCount} records)</option>)}
             </select>
           </div>
           <button onClick={handleRunAnalytics} disabled={isRunning}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'}`}>
-            {isRunning ? <><span className="animate-spin">\u27F3</span>Running...</> : <>\u25B6 Run Analytics</>}
+            {isRunning ? <><span className="animate-spin inline-block">\u27F3</span> Running...</> : 'Run Analytics'}
           </button>
         </div>
 
@@ -1201,16 +1275,16 @@ const TrainingIntelligenceTab: React.FC = () => {
         )}
         {error && (
           <div className="mt-3 bg-red-900/30 border border-red-700 rounded px-3 py-2 text-red-300 text-sm flex items-center justify-between">
-            <span>\u26A0 {error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-3">\u00D7</button>
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-3">&times;</button>
           </div>
         )}
         {recentRuns.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
             {recentRuns.slice(0, 3).map(run => (
               <span key={run.id} className="flex items-center gap-1">
-                <span className={run.status === 'complete' ? 'text-emerald-500' : run.status === 'failed' ? 'text-red-500' : 'text-yellow-500'}>\u25CF</span>
-                {run.courseFilter || 'All'} \u00B7 {formatDate(run.completedAt)} \u00B7 {run.recordsProcessed ?? '\u2014'} records
+                <span className={run.status === 'complete' ? 'text-emerald-500' : run.status === 'failed' ? 'text-red-500' : 'text-yellow-500'}>&bull;</span>
+                {run.courseFilter || 'All'} &middot; {formatDate(run.completedAt)} &middot; {run.recordsProcessed ?? '\u2014'} records
               </span>
             ))}
           </div>
@@ -1220,11 +1294,10 @@ const TrainingIntelligenceTab: React.FC = () => {
       {/* ── No Data State ── */}
       {!loading && !summary && !isRunning && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-10 text-center">
-          <p className="text-4xl mb-3">\uD83E\uDDE0</p>
           <p className="text-white font-semibold text-lg">No analytics data yet</p>
           <p className="text-gray-400 text-sm mt-1 mb-4">Select a course and click <strong>Run Analytics</strong> to process PT-051 data.</p>
           <button onClick={handleRunAnalytics} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold">
-            \u25B6 Run Analytics Now
+            Run Analytics Now
           </button>
         </div>
       )}
@@ -1248,7 +1321,6 @@ const TrainingIntelligenceTab: React.FC = () => {
                     ? 'bg-gray-800 text-white border border-b-0 border-gray-600'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                 }`}>
-                <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {tab.badge !== undefined && (
                   <span className="ml-1 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
@@ -1261,7 +1333,7 @@ const TrainingIntelligenceTab: React.FC = () => {
 
           {/* Tab panels */}
           {activeTab === 'course' && (
-            <CourseTab summary={summary} trainees={trainees} events={events} findings={findings} />
+            <CourseTab summary={summary} trainees={trainees} events={events} />
           )}
           {activeTab === 'trainee' && (
             <TraineeTab trainees={trainees} />

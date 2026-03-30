@@ -1,0 +1,39 @@
+
+> daily-flying-program@0.0.0 build
+> prisma generate && vite build --outDir dfp-neo-platform/public/flight-school-app --emptyOutDir && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html && node update_css.js
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+┌─────────────────────────────────────────────────────────┐
+│  Update available 6.19.2 -> 7.6.0                       │
+│                                                         │
+│  This is a major update - please follow the guide at    │
+│  https://pris.ly/d/major-version-upgrade                │
+│                                                         │
+│  Run the following to update                            │
+│    npm i --save-dev prisma@latest                       │
+│    npm i @prisma/client@latest                          │
+└─────────────────────────────────────────────────────────┘
+
+✔ Generated Prisma Client (v6.19.2) to ./node_modules/@prisma/client in 263ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+vite v7.3.1 building client environment for production...
+transforming...
+✓ 784 modules transformed.
+rendering chunks...
+computing gzip size...
+dfp-neo-platform/public/flight-school-app/index.html                  7.93 kB │ gzip:   1.88 kB
+dfp-neo-platform/public/flight-school-app/assets/index.css           12.96 kB │ gzip:   2.69 kB
+dfp-neo-platform/public/flight-school-app/assets/purify.es.js        45.74 kB │ gzip:  11.22 kB │ map:    92.69 kB
+dfp-neo-platform/public/flight-school-app/assets/index.es.js        360.28 kB │ gzip:  75.65 kB │ map:   640.55 kB
+dfp-neo-platform/public/flight-school-app/assets/vendor-pdf.js      946.48 kB │ gzip: 212.17 kB │ map: 1,895.90 kB
+dfp-neo-platform/public/flight-school-app/assets/vendor-react.js  1,037.92 kB │ gzip: 183.83 kB │ map: 1,661.92 kB
+dfp-neo-platform/public/flight-school-app/assets/index.js         4,542.73 kB │ gzip: 587.93 kB │ map: 6,111.68 kB
+✓ built in 11.16s
+✅ Updated index.html successfully!
+✅ Updated index-v2.html successfully!
+✅ All CSS updates complete!

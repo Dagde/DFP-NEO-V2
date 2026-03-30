@@ -1,33 +1,33 @@
 # Training Intelligence Engine - Integration & Frontend
 
 ## Phase 1: Server.js - TIE API Routes
-- [ ] Add TIE require/import at top of server.js (ESM createRequire)
-- [ ] Add ensureTIETables + seedTIEDefaults call in getPrisma() startup
-- [ ] Add POST /api/tie/run route
-- [ ] Add GET /api/tie/courses route
-- [ ] Add GET /api/tie/summary/:course route
-- [ ] Add GET /api/tie/trainees/:course route
-- [ ] Add GET /api/tie/trainee/:name route
-- [ ] Add GET /api/tie/events/:course route
-- [ ] Add GET /api/tie/findings/:course route
-- [ ] Add GET /api/tie/settings route
-- [ ] Add PUT /api/tie/settings route
-- [ ] Add GET /api/tie/runs route (list recent runs)
+- [x] Add TIE require/import at top of server.js (ESM createRequire)
+- [x] Add ensureTIETables + seedTIEDefaults call in getPrisma() startup
+- [x] Add POST /api/tie/run route
+- [x] Add GET /api/tie/courses route
+- [x] Add GET /api/tie/summary/:course route
+- [x] Add GET /api/tie/trainees/:course route
+- [x] Add GET /api/tie/trainee/:name route
+- [x] Add GET /api/tie/events/:course route
+- [x] Add GET /api/tie/findings/:course route
+- [x] Add GET /api/tie/settings route
+- [x] Add PUT /api/tie/settings route
+- [x] Add GET /api/tie/runs route (list recent runs)
 
 ## Phase 2: Frontend - TrainingIntelligenceTab Component
-- [ ] Create components/tabs/TrainingIntelligenceTab.tsx
-- [ ] Course selector + Run Analytics button + last run status
-- [ ] Overview panel: trainee risk distribution, event effectiveness summary
-- [ ] Trainee table: at-risk list with drill-down
-- [ ] Event heatmap: skill family scores per event
-- [ ] Findings panel: bottlenecks, weak spots, over-service alerts
-- [ ] Course summary narrative section
-- [ ] Settings panel (thresholds)
+- [x] Create components/tabs/TrainingIntelligenceTab.tsx
+- [x] Course selector + Run Analytics button + last run status
+- [x] Overview panel: trainee risk distribution, event effectiveness summary
+- [x] Trainee table: at-risk list with drill-down
+- [x] Event heatmap: skill family scores per event
+- [x] Findings panel: bottlenecks, weak spots, over-service alerts
+- [x] Course summary narrative section
+- [x] Settings panel (thresholds)
 
 ## Phase 3: Wire into BuildIntelligenceView
-- [ ] Import TrainingIntelligenceTab in BuildIntelligenceView.tsx
-- [ ] Replace "coming soon" placeholder with component
+- [x] Import TrainingIntelligenceTab in BuildIntelligenceView.tsx
+- [x] Replace "coming soon" placeholder with component
 
 ## Phase 4: Build & Deploy
-- [ ] npm run build
-- [ ] Commit and push to GitHub
+- [x] npm run build (784 modules, success)
+- [x] Commit 460fcca6 and push to GitHub
