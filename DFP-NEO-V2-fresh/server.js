@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 // Training Intelligence Engine
-const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine');
+const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
