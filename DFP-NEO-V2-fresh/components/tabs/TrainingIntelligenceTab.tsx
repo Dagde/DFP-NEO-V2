@@ -172,28 +172,90 @@ const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> =
   );
 };
 
-// ── SparkLine (SVG) ─────────────────────────────────────────────────────────────
+// ── SparkLine (SVG) — with optional hover tooltip ───────────────────────────────
 
-const SparkLine: React.FC<{ data: number[]; width?: number; height?: number; color?: string }> = ({
-  data, width = 100, height = 32, color = '#60a5fa'
-}) => {
+const SparkLine: React.FC<{
+  data: number[];
+  labels?: string[];
+  width?: number;
+  height?: number;
+  color?: string;
+  interactive?: boolean;
+}> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false }) => {
+  const [hovered, setHovered] = React.useState<{ i: number; x: number; y: number } | null>(null);
+
   if (!data || data.length < 2) return <span className="text-gray-600 text-xs">&mdash;</span>;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const rng = max - min || 1;
-  const pts = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - 4 - ((v - min) / rng) * (height - 8);
-    return `${x},${y}`;
-  }).join(' ');
+
+  const getX = (i: number) => (i / (data.length - 1)) * width;
+  const getY = (v: number) => height - 4 - ((v - min) / rng) * (height - 8);
+
+  const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
+
+  const TW = 110, TH = 38, PAD = 6;
+
   return (
-    <svg width={width} height={height} className="overflow-visible">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
-      {data.map((v, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - 4 - ((v - min) / rng) * (height - 8);
-        return <circle key={i} cx={x} cy={y} r="2" fill={color} />;
+    <svg
+      width={width}
+      height={height}
+      className="overflow-visible"
+      style={{ cursor: interactive ? 'crosshair' : 'default' }}
+    >
+      {interactive && [0, 0.25, 0.5, 0.75, 1].map(pct => {
+        const y = getY(min + pct * rng);
+        return (
+          <line key={pct} x1={0} y1={y} x2={width} y2={y}
+            stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
+        );
       })}
+
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 2 : 1.5} strokeLinejoin="round" />
+
+      {interactive && (
+        <polygon
+          points={`0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`}
+          fill={color} fillOpacity={0.08}
+        />
+      )}
+
+      {data.map((v, i) => {
+        const x = getX(i);
+        const y = getY(v);
+        const isHovered = hovered?.i === i;
+        return (
+          <g key={i}>
+            <circle cx={x} cy={y} r={interactive ? (isHovered ? 5 : 3.5) : 2} fill={color}
+              stroke={isHovered ? '#fff' : 'none'} strokeWidth={1.5}
+              style={{ transition: 'r 0.1s' }} />
+            {interactive && (
+              <circle cx={x} cy={y} r={12} fill="transparent"
+                onMouseEnter={() => setHovered({ i, x, y })}
+                onMouseLeave={() => setHovered(null)} />
+            )}
+          </g>
+        );
+      })}
+
+      {interactive && hovered !== null && (() => {
+        const { i, x, y } = hovered;
+        const v = data[i];
+        const label = labels?.[i] ?? `Assessment #${i + 1}`;
+        const tx = x + TW + PAD > width ? x - TW - PAD : x + PAD;
+        const ty = Math.max(0, y - TH / 2);
+        const gc = v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
+        return (
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={tx} y={ty} width={TW} height={TH} rx={5} ry={5}
+              fill="#1f2937" stroke="#374151" strokeWidth={1} />
+            <text x={tx + 8} y={ty + 13} fontSize="9" fill="#9ca3af">{label}</text>
+            <text x={tx + 8} y={ty + 28} fontSize="12" fontWeight="bold" fill={gc}>
+              Grade: {v.toFixed(2)}
+            </text>
+          </g>
+        );
+      })()}
     </svg>
   );
 };
@@ -369,38 +431,157 @@ const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' |
   return <span className={`border text-xs px-2 py-0.5 rounded ${m[type]}`}>{text}</span>;
 };
 
-// ── Grade Progression Modal ─────────────────────────────────────────────────────
+// ── Grade Progression Modal (interactive, enlarged) ─────────────────────────────
 
 const ProgressionModal: React.FC<{ data: number[]; name: string; trend: string; onClose: () => void }> = ({ data, name, trend, onClose }) => {
   const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
+  const avgVal = data.reduce((s, v) => s + v, 0) / data.length;
+  const minVal = Math.min(...data);
+  const maxVal = Math.max(...data);
+  const labels = data.map((_, i) => `Assessment #${i + 1}`);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4" style={{ maxWidth: '860px' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-white font-bold text-base">{name} — Grade Progression</h3>
-            <p className="text-gray-400 text-xs mt-0.5">{data.length} assessments recorded</p>
+            <h3 className="text-white font-bold text-lg">{name} &mdash; Grade Progression</h3>
+            <p className="text-gray-400 text-sm mt-0.5">{data.length} assessments &middot; hover over a point to see details</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none ml-4">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
         </div>
-        <div className="bg-gray-800 rounded-lg p-4">
-          <SparkLine data={data} width={580} height={140} color={color} />
-          <div className="flex justify-between text-xs text-gray-500 mt-2 px-1">
-            <span>Earliest assessment</span>
-            <span>Latest assessment</span>
+
+        <div className="bg-gray-800 rounded-xl p-5">
+          <div className="flex gap-3">
+            <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
+              <span>5.0</span><span>3.75</span><span>2.5</span><span>1.25</span><span>0</span>
+            </div>
+            <div className="flex-1 overflow-x-auto">
+              <SparkLine
+                data={data}
+                labels={labels}
+                width={Math.max(760, data.length * 48)}
+                height={220}
+                color={color}
+                interactive={true}
+              />
+            </div>
           </div>
-          <div className="flex justify-between mt-3 text-xs">
-            <span className="text-gray-400">Min: <span className={gradeColor(Math.min(...data))}>{Math.min(...data).toFixed(2)}</span></span>
-            <span className="text-gray-400">Avg: <span className="text-gray-200">{(data.reduce((s, v) => s + v, 0) / data.length).toFixed(2)}</span></span>
-            <span className="text-gray-400">Max: <span className={gradeColor(Math.max(...data))}>{Math.max(...data).toFixed(2)}</span></span>
-            <span className="text-gray-400">Trend: <span className={trendColor(trend)}>{trendIcon(trend)} {trend || 'stable'}</span></span>
+          <div className="flex justify-between text-xs text-gray-500 mt-2 ml-9 px-1">
+            <span>Assessment 1</span>
+            <span>Assessment {data.length}</span>
           </div>
         </div>
-        <p className="text-gray-600 text-xs mt-3 text-center">Click outside or press &times; to close</p>
+
+        <div className="grid grid-cols-4 gap-3 mt-4">
+          {([
+            { label: 'Minimum', value: minVal },
+            { label: 'Average', value: avgVal },
+            { label: 'Maximum', value: maxVal },
+          ] as Array<{label: string; value: number}>).map((s) => (
+            <div key={s.label} className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{s.label}</p>
+              <p className={`text-xl font-bold font-mono ${gradeColor(s.value)}`}>{s.value.toFixed(2)}</p>
+            </div>
+          ))}
+          <div className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Trend</p>
+            <p className={`text-base font-bold ${trendColor(trend)}`}>{trendIcon(trend)} {trend || 'stable'}</p>
+          </div>
+        </div>
+
+        <p className="text-gray-600 text-xs mt-3 text-center">Click outside or &times; to close</p>
       </div>
     </div>
   );
 };
+
+// ── Grade by Trainee Modal ────────────────────────────────────────────────────────
+
+const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>; max?: number; height?: number }> = ({
+  data, max = 5, height = 240
+}) => {
+  if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
+  const bw = Math.max(20, Math.min(52, 800 / data.length));
+  const gap = Math.max(5, bw * 0.4);
+  const leftPad = 32;
+  const tw = leftPad + data.length * (bw + gap) + gap;
+  const tp = 16, bp = 44, ch = height - tp - bp;
+  return (
+    <svg width={tw} height={height} className="overflow-visible" style={{ minWidth: '100%' }}>
+      {[0, 1, 2, 3, 4, 5].map(v => {
+        const y = tp + ch * (1 - v / max);
+        return (
+          <g key={v}>
+            <line x1={leftPad} y1={y} x2={tw} y2={y} stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
+            <text x={leftPad - 5} y={y + 3} textAnchor="end" fontSize="9" fill="#6b7280">{v.toFixed(0)}</text>
+          </g>
+        );
+      })}
+      {data.map((item, i) => {
+        const pct = Math.min(1, safeN(item.value) / max);
+        const bh = Math.max(3, pct * ch);
+        const x = leftPad + gap + i * (bw + gap);
+        const y = tp + ch - bh;
+        const color = item.value >= 4 ? '#10b981' : item.value >= 3 ? '#eab308' : '#ef4444';
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={bw} height={bh} fill={color} fillOpacity={0.9} rx="3" />
+            <text x={x + bw / 2} y={y - 5} textAnchor="middle" fontSize="10" fill="#e5e7eb" fontWeight="bold">
+              {safe(item.value, 2)}
+            </text>
+            <text
+              x={x + bw / 2}
+              y={height - 6}
+              textAnchor="end"
+              fontSize="10"
+              fill="#9ca3af"
+              transform={`rotate(-45,${x + bw / 2},${height - 6})`}
+            >
+              {item.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+const GradeByTraineeModal: React.FC<{
+  trainees: Array<{ label: string; value: number }>;
+  onClose: () => void;
+}> = ({ trainees, onClose }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4" style={{ maxWidth: '900px' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-white font-bold text-lg">Grade by Trainee (sorted low to high)</h3>
+            <p className="text-gray-400 text-sm mt-0.5">{trainees.length} trainees &middot; avg grade per trainee</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+        </div>
+        <div className="bg-gray-800 rounded-xl p-5 overflow-x-auto">
+          <ColChartExpanded data={trainees} max={5} height={260} />
+        </div>
+        <div className="flex flex-wrap gap-4 mt-4 justify-center text-xs">
+          {[
+            { color: '#ef4444', label: 'Below 3.0 — unsatisfactory' },
+            { color: '#eab308', label: '3.0–3.9 — satisfactory' },
+            { color: '#10b981', label: '4.0+ — good / excellent' },
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: l.color }} />
+              <span className="text-gray-400">{l.label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-gray-600 text-xs mt-3 text-center">Click outside or &times; to close</p>
+      </div>
+    </div>
+  );
+};
+
 
 // ── COURSE TAB ──────────────────────────────────────────────────────────────────
 
@@ -583,6 +764,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const [filter, setFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
   const [selected, setSelected] = useState<TIETraineeSummary | null>(null);
   const [progressionModal, setProgressionModal] = useState<{ data: number[]; name: string; trend: string } | null>(null);
+  const [gradeByTraineeModal, setGradeByTraineeModal] = useState(false);
 
   const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
   const monitorCount = trainees.filter(t => t.riskLevel === 'monitor').length;
@@ -619,6 +801,16 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
           name={progressionModal.name}
           trend={progressionModal.trend}
           onClose={() => setProgressionModal(null)}
+        />
+      )}
+
+      {gradeByTraineeModal && (
+        <GradeByTraineeModal
+          trainees={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
+            label: t.traineeFullName.split(' ').pop() || t.traineeFullName,
+            value: safeN(t.avgOverallGrade),
+          }))}
+          onClose={() => setGradeByTraineeModal(false)}
         />
       )}
 
@@ -700,14 +892,21 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
           {trainees.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <SCard title="Grade by Trainee (sorted low to high)">
-                <div className="overflow-x-auto">
-                  <ColChart
-                    data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
-                      label: t.traineeFullName.split(' ').pop() || t.traineeFullName,
-                      value: safeN(t.avgOverallGrade),
-                    }))}
-                    max={5} height={110} />
-                </div>
+                <button
+                  onClick={() => setGradeByTraineeModal(true)}
+                  className="w-full hover:opacity-80 transition-opacity cursor-zoom-in text-left"
+                  title="Click to enlarge"
+                >
+                  <div className="overflow-x-auto">
+                    <ColChart
+                      data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
+                        label: t.traineeFullName.split(' ').pop() || t.traineeFullName,
+                        value: safeN(t.avgOverallGrade),
+                      }))}
+                      max={5} height={130} />
+                  </div>
+                </button>
+                <p className="text-xs text-gray-600 mt-1 text-center">click to enlarge</p>
               </SCard>
 
               <SCard title="Recent vs Overall Grade Delta">
@@ -791,23 +990,29 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
               </div>
             </SCard>
 
-            {/* Progression sparkline — click to enlarge */}
+            {/* Progression sparkline — interactive inline + click to enlarge */}
             {selProgression.length >= 2 && (
               <SCard title="Grade Progression">
-                <button
-                  onClick={() => setProgressionModal({ data: selProgression, name: selected.traineeFullName, trend: selected.overallTrend })}
-                  className="w-full hover:opacity-80 transition-opacity cursor-zoom-in"
-                  title="Click to enlarge"
-                >
-                  <div className="flex justify-center py-1">
-                    <SparkLine data={selProgression} width={210} height={55}
-                      color={selected.overallTrend === 'improving' ? '#10b981' : selected.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
-                  </div>
-                </button>
-                <div className="flex justify-between text-xs text-gray-600 mt-0.5">
+                <div className="overflow-x-auto">
+                  <SparkLine
+                    data={selProgression}
+                    labels={selProgression.map((_, i) => `Assessment #${i + 1}`)}
+                    width={Math.max(230, selProgression.length * 28)}
+                    height={90}
+                    color={selected.overallTrend === 'improving' ? '#10b981' : selected.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'}
+                    interactive={true}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-gray-600 mt-1">
                   <span>Earliest</span><span>Latest</span>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">{selProgression.length} assessments &middot; <span className="text-gray-500">click to enlarge</span></p>
+                <p className="text-xs text-gray-600 mt-1">{selProgression.length} assessments</p>
+                <button
+                  onClick={() => setProgressionModal({ data: selProgression, name: selected.traineeFullName, trend: selected.overallTrend })}
+                  className="mt-2 w-full text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded py-1 transition-colors border border-blue-900/40"
+                >
+                  Expand full view
+                </button>
               </SCard>
             )}
 
