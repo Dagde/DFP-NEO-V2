@@ -1504,13 +1504,13 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
     let query = `SELECT * FROM "AircraftAvailabilityHistory"`;
     const params = [];
     if (startDate && endDate) {
-      query += ` WHERE "date" >= $1 AND "date" <= $2`;
+      query += ` WHERE "date" >= $1::text AND "date" <= $2::text`;
       params.push(startDate, endDate);
     } else if (startDate) {
-      query += ` WHERE "date" >= $1`;
+      query += ` WHERE "date" >= $1::text`;
       params.push(startDate);
     } else if (endDate) {
-      query += ` WHERE "date" <= $1`;
+      query += ` WHERE "date" <= $1::text`;
       params.push(endDate);
     }
     query += ` ORDER BY "date" ASC`;
@@ -1532,7 +1532,7 @@ app.post('/api/aircraft-availability-history', async (req, res) => {
     if (!date) return res.status(400).json({ error: 'date is required' });
     await db.$executeRawUnsafe(`
       INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      VALUES ($1::text, $2::int, $3::numeric, $4::text, $5::text, NOW(), NOW())
       ON CONFLICT ("date") DO UPDATE SET
         "totalFleet" = EXCLUDED."totalFleet",
         "dailyAverage" = EXCLUDED."dailyAverage",
@@ -1542,7 +1542,7 @@ app.post('/api/aircraft-availability-history', async (req, res) => {
         "updatedAt" = NOW()
     `, date, totalFleet || 0, dailyAverage || 0, flyingWindowStart || null, flyingWindowEnd || null);
     const updated = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1`, date
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text`, date
     );
     console.log(`✅ POST /api/aircraft-availability-history - upserted record for date: ${date}`);
     res.json({ record: updated[0] });
@@ -1557,7 +1557,7 @@ app.delete('/api/aircraft-availability-history/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    await db.$executeRawUnsafe(`DELETE FROM "AircraftAvailabilityHistory" WHERE "id" = $1`, id);
+    await db.$executeRawUnsafe(`DELETE FROM "AircraftAvailabilityHistory" WHERE "id" = $1::text`, id);
     console.log(`✅ DELETE /api/aircraft-availability-history/${id}`);
     res.json({ success: true });
   } catch (error) {
@@ -1573,7 +1573,7 @@ app.get('/api/aircraft-availability-events', async (req, res) => {
     const { date } = req.query;
     if (!date) return res.status(400).json({ error: 'date query param required' });
     const events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" ASC`,
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" ASC`,
       date
     );
     // Convert BigInt ids to numbers
@@ -1596,11 +1596,11 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     const ts = timestamp ? new Date(timestamp) : new Date();
     await db.$executeRawUnsafe(
       `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalFleet", "notes")
-       VALUES ($1, $2, $3, $4, $5)`,
+       VALUES ($1::text, $2::text, $3::int, $4::int, $5::text)`,
       date, ts, availableCount, totalFleet, notes || null
     );
     const inserted = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "id" DESC LIMIT 1`, date
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "id" DESC LIMIT 1`, date
     );
     const record = inserted[0];
     res.json({ event: { ...record, id: Number(record.id) } });
@@ -1618,7 +1618,7 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     if (!date) return res.status(400).json({ error: 'date is required' });
 
     const events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" ASC`,
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" ASC`,
       date
     );
 
@@ -1671,7 +1671,7 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     // Upsert the summary
     await db.$executeRawUnsafe(`
       INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      VALUES ($1::text, $2::int, $3::numeric, $4::text, $5::text, NOW(), NOW())
       ON CONFLICT ("date") DO UPDATE SET
         "totalFleet" = EXCLUDED."totalFleet",
         "dailyAverage" = EXCLUDED."dailyAverage",
@@ -1682,7 +1682,7 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     `, date, totalFleet || 0, dailyAverage, flyingWindowStart || null, flyingWindowEnd || null);
 
     const updated = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1`, date
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text`, date
     );
 
     console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}`);
@@ -1699,7 +1699,7 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
     const db = await getPrisma();
     const today = new Date().toISOString().split('T')[0];
     const events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" DESC LIMIT 1`,
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
       today
     );
     if (events.length === 0) {
@@ -1813,7 +1813,7 @@ async function seedCancellationCodesIfEmpty(db) {
     ];
     for (const d of defaults) {
       await db.$executeRawUnsafe(
-        `INSERT INTO "CancellationCode" ("code", "category", "description") VALUES ($1, $2, $3) ON CONFLICT ("code") DO NOTHING`,
+        `INSERT INTO "CancellationCode" ("code", "category", "description") VALUES ($1::text, $2::text, $3::text) ON CONFLICT ("code") DO NOTHING`,
         d.code, d.category, d.description
       );
     }
@@ -1844,14 +1844,14 @@ app.post('/api/cancellation-codes', async (req, res) => {
     if (!code) return res.status(400).json({ success: false, error: 'code is required' });
     await db.$executeRawUnsafe(`
       INSERT INTO "CancellationCode" ("code", "category", "description", "isActive", "updatedAt")
-      VALUES ($1, $2, $3, $4, NOW())
+      VALUES ($1::text, $2::text, $3::text, $4::boolean, NOW())
       ON CONFLICT ("code") DO UPDATE SET
         "category" = EXCLUDED."category",
         "description" = EXCLUDED."description",
         "isActive" = EXCLUDED."isActive",
         "updatedAt" = NOW()
     `, code, category || 'Other', description || '', isActive !== false);
-    const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1::text`, code);
     const record = updated[0];
     res.json({ success: true, code: { ...record, id: Number(record.id) } });
   } catch (error) {
@@ -1866,9 +1866,9 @@ app.patch('/api/cancellation-codes/:code/toggle', async (req, res) => {
     const db = await getPrisma();
     const { code } = req.params;
     await db.$executeRawUnsafe(`
-      UPDATE "CancellationCode" SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE "code" = $1
+      UPDATE "CancellationCode" SET "isActive" = NOT "isActive", "updatedAt" = NOW() WHERE "code" = $1::text
     `, code);
-    const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    const updated = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1::text`, code);
     if (!updated.length) return res.status(404).json({ success: false, error: 'Code not found' });
     const record = updated[0];
     res.json({ success: true, code: { ...record, id: Number(record.id) } });
@@ -1883,9 +1883,9 @@ app.delete('/api/cancellation-codes/:code', async (req, res) => {
   try {
     const db = await getPrisma();
     const { code } = req.params;
-    const existing = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1`, code);
+    const existing = await db.$queryRawUnsafe(`SELECT * FROM "CancellationCode" WHERE "code" = $1::text`, code);
     if (!existing.length) return res.status(404).json({ success: false, error: 'Code not found' });
-    await db.$executeRawUnsafe(`DELETE FROM "CancellationCode" WHERE "code" = $1`, code);
+    await db.$executeRawUnsafe(`DELETE FROM "CancellationCode" WHERE "code" = $1::text`, code);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ DELETE /api/cancellation-codes error:', error);
@@ -2959,7 +2959,7 @@ async function ensureInstructorArrayColumns(db) {
         FROM pg_catalog.pg_attribute a
         JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
         WHERE c.relname = 'Trainee'
-          AND a.attname = $1
+          AND a.attname = $1::text
           AND a.attnum > 0
           AND NOT a.attisdropped
       `, colName);
@@ -3217,7 +3217,7 @@ app.post('/api/trainee-reallocation/apply', async (req, res) => {
           SET "primaryInstructor" = $1::TEXT[],
               "secondaryInstructor" = $2::TEXT[],
               "updatedAt" = NOW()
-          WHERE id = $3
+          WHERE id = $3::text
         `, result.primaryInstructors, result.secondaryInstructors, result.id);
         updated++;
       } catch (err) {
@@ -3281,7 +3281,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
 
     // Upsert: update if date exists, create if not
     const existing = await db.$queryRawUnsafe(
-      `SELECT id FROM "DailySnapshot" WHERE date = $1 LIMIT 1`,
+      `SELECT id FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
       date
     );
 
@@ -3301,8 +3301,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
           "staffCurrency" = $7::jsonb,
           "staffLogbook" = $8::jsonb,
           "savedAt" = NOW(),
-          "savedBy" = $9
-        WHERE date = $10
+          "savedBy" = $9::text
+        WHERE date = $10::text
       `,
         JSON.stringify(scheduleEvents || []),
         JSON.stringify(staffEvents || []),
@@ -3322,7 +3322,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
           ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
            "pt051Assessments", "traineeProfiles", "lmpCompletedIds",
            "staffCurrency", "staffLogbook", "savedAt", "savedBy")
-        VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, NOW(), $11)
+        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, NOW(), $11::text)
       `,
         id, date,
         JSON.stringify(scheduleEvents || []),
@@ -3390,7 +3390,7 @@ app.get('/api/daily-snapshot/:date', async (req, res) => {
       return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
     }
     const rows = await db.$queryRawUnsafe(
-      `SELECT * FROM "DailySnapshot" WHERE date = $1 LIMIT 1`,
+      `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
       date
     );
     if (!rows || rows.length === 0) {
@@ -3488,7 +3488,7 @@ app.get('/api/tie/runs', async (req, res) => {
              "recordsProcessed", "errorMessage"
       FROM "TIEAnalyticsRun"
       ORDER BY "startedAt" DESC
-      LIMIT $1
+      LIMIT $1::int
     `, limit);
     res.json(rows);
   } catch (error) {
@@ -3568,7 +3568,7 @@ app.get('/api/tie/summary/:course', async (req, res) => {
         SELECT cs.*, r."completedAt", r."triggeredBy", r."recordsProcessed"
         FROM "TIECourseSummary" cs
         JOIN "TIEAnalyticsRun" r ON r.id = cs."runId"
-        WHERE cs."courseName" = $1 AND r.status = 'complete'
+        WHERE cs."courseName" = $1::text AND r.status = 'complete'
         ORDER BY r."completedAt" DESC
         LIMIT 1
       `, course);
@@ -3598,7 +3598,7 @@ app.get('/api/tie/trainees/:course', async (req, res) => {
         SELECT ts.*
         FROM "TIETraineeSummary" ts
         JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
-        WHERE ts."courseName" = $1 AND r.status = 'complete'
+        WHERE ts."courseName" = $1::text AND r.status = 'complete'
         AND r."completedAt" = (
           SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
           WHERE r2.status = 'complete'
@@ -3630,7 +3630,7 @@ app.get('/api/tie/trainee/:name', async (req, res) => {
         SELECT ts.*
         FROM "TIETraineeSummary" ts
         JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
-        WHERE ts."traineeName" = $1 AND r.status = 'complete'
+        WHERE ts."traineeName" = $1::text AND r.status = 'complete'
         ORDER BY r."completedAt" DESC
         LIMIT 5
       `, name);
@@ -3649,7 +3649,7 @@ app.get('/api/tie/trainee/:name', async (req, res) => {
         SELECT f.*
         FROM "TIEFinding" f
         JOIN "TIEAnalyticsRun" r ON r.id = f."runId"
-        WHERE f."subjectKey" = $1 AND f.level = 'trainee' AND r.status = 'complete'
+        WHERE f."subjectKey" = $1::text AND f.level = 'trainee' AND r.status = 'complete'
         ORDER BY r."completedAt" DESC
         LIMIT 20
       `, name);
@@ -3673,7 +3673,7 @@ app.get('/api/tie/events/:course', async (req, res) => {
         SELECT es.*
         FROM "TIEEventSummary" es
         JOIN "TIEAnalyticsRun" r ON r.id = es."runId"
-        WHERE es."courseName" = $1 AND r.status = 'complete'
+        WHERE es."courseName" = $1::text AND r.status = 'complete'
         AND r."completedAt" = (
           SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
           WHERE r2.status = 'complete'
@@ -3707,7 +3707,7 @@ app.get('/api/tie/findings/:course', async (req, res) => {
         FROM "TIEFinding" f
         JOIN "TIEAnalyticsRun" r ON r.id = f."runId"
         WHERE r.status = 'complete'
-        AND (f."subjectKey" = $1 OR f."subjectKey" LIKE $2)
+        AND (f."subjectKey" = $1::text OR f."subjectKey" LIKE $2::text)
         ${levelFilter}
         AND r."completedAt" = (
           SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
@@ -3735,7 +3735,7 @@ app.get('/api/tie/rootcauses/:course', async (req, res) => {
         SELECT rc.*
         FROM "TIERootCause" rc
         JOIN "TIEAnalyticsRun" r ON r.id = rc."runId"
-        WHERE rc."subjectKey" = $1 AND rc.level = 'course' AND r.status = 'complete'
+        WHERE rc."subjectKey" = $1::text AND rc.level = 'course' AND r.status = 'complete'
         AND r."completedAt" = (
           SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
           WHERE r2.status = 'complete'
@@ -3774,7 +3774,7 @@ app.put('/api/tie/settings', async (req, res) => {
     const { key, value } = req.body;
     if (!key) return res.status(400).json({ error: 'key required' });
     await db.$executeRawUnsafe(`
-      UPDATE "TIESettings" SET value = $1 WHERE key = $2
+      UPDATE "TIESettings" SET value = $1::text WHERE key = $2::text
     `, String(value), key);
     res.json({ success: true });
   } catch (error) {
