@@ -1258,7 +1258,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
-          VALUES($1::text,$2::text,'event',$3::text,'over_service',$4::text,$5::text,$6::text,'medium',0.65,$9::int,'stable')
+          VALUES($1::text,$2::text,'event',$3::text,'over_service',$4::text,$5::text,$6::text,'medium',0.65,$7::int,'stable')
           ON CONFLICT DO NOTHING
         `, fid, runId, eventCode,
            `${eventCode} average grade is ${avgGrade.toFixed(2)} with low variance (σ=${Math.sqrt(variance).toFixed(2)}).`,
@@ -1344,7 +1344,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount")
-          VALUES($1::text,$2::text,'course',$3::text,'bottleneck',$4::text,$5::text,$6::text,'high',0.80,$9::int)
+          VALUES($1::text,$2::text,'course',$3::text,'bottleneck',$4::text,$5::text,$6::text,'high',0.80,$7::int)
           ON CONFLICT DO NOTHING
         `, fid, runId, courseName,
            `${bottleneckEvents.length} bottleneck events identified in ${courseName}: ${bottleneckEvents.slice(0,3).join(', ')}.`,
