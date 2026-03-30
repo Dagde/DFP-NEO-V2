@@ -793,8 +793,15 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     // Filter by course if specified
     if (courseFilter) {
       pt051Records = pt051Records.filter(r => {
+        const directCourse = r.course || r.courseName || '';
+        if (directCourse && directCourse.toLowerCase().includes(courseFilter.toLowerCase())) return true;
         const name = r.traineeFullName || '';
-        return name.includes(courseFilter);
+        const dashPos = name.indexOf('–');
+        if (dashPos !== -1) {
+          const embedded = name.substring(dashPos + 1).trim();
+          if (embedded.toLowerCase().includes(courseFilter.toLowerCase())) return true;
+        }
+        return false;
       });
     }
 
@@ -852,14 +859,14 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "eventCode","eventDate","overallGrade","overallResult",
            "elementScores","commentsByElement","overallComment",
            "isFirstAttempt","isRepeat","isRemedial","recencyWeight")
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9,$10,$11::jsonb,$12::jsonb,$13,$14,$15,$16,$17)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::numeric,$10,$11::jsonb,$12::jsonb,$13,$14::boolean,$15::boolean,$16::boolean,$17::numeric)
         ON CONFLICT DO NOTHING
       `, normId, runId, rec.id, rec.traineeFullName, courseName, rec.instructorName,
          rec.flightNumber || rec.eventCode || '?',
-         rec.date, rec.overallGrade || null, rec.overallResult || null,
+         rec.date, rec.overallGrade != null ? Number(rec.overallGrade) : null, rec.overallResult || null,
          JSON.stringify(elementScores), JSON.stringify(commentsByElement),
          rec.overallComments || null,
-         true, false, false, recencyWeight
+         true, false, false, Number(recencyWeight)
       );
 
       // ── LAYER 3: Comment tagging ───────────────────────────
@@ -1027,13 +1034,13 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "strongestSkillFamilies","weakestSkillFamilies","recurringWeakElements",
            "positiveCommentThemes","negativeCommentThemes","totalPt051Count",
            "avgOverallGrade","recentAvgGrade","gradeProgression","narrativeSummary","atRiskReasons")
-        VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,$13,$14,$15::jsonb,$16,$17::jsonb)
+        VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::int,$13::numeric,$14::numeric,$15::jsonb,$16,$17::jsonb)
         ON CONFLICT DO NOTHING
       `, sumId, runId, traineeFullName, courseName, trend, riskLevel,
          JSON.stringify(strongSkillFamilies), JSON.stringify(weakSkillFamilies),
          JSON.stringify(weakElements), JSON.stringify(posTags.slice(0, 8)),
          JSON.stringify(negTags.slice(0, 8)), grades.length,
-         avgGrade, recentAvg, JSON.stringify(gradeProgression), narrative,
+         Number(avgGrade), Number(recentAvg), JSON.stringify(gradeProgression), narrative,
          JSON.stringify(atRiskReasons)
       );
 
@@ -1051,13 +1058,13 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount","sourcePt051Ids",
              "trendDirection","element")
-          VALUES($1,$2,'trainee',$3,'recurring_weakness',$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12)
+          VALUES($1,$2,'trainee',$3,'recurring_weakness',$4,$5,$6,$7,$8::numeric,$9::int,$10::jsonb,$11,$12)
           ON CONFLICT DO NOTHING
         `, fid, runId, traineeFullName,
            `${weakElements.slice(0,3).join(', ')} average at or below ${CONCERN_THRESHOLD} across ${grades.length} PT-051s.`,
            `Recurring weakness in ${weakSkillFamilies.slice(0,2).join(' and ')} — appears consistently across multiple events.`,
            `Focus remedial coaching on ${weakElements[0]}. Consider targeted exercises before next progression event.`,
-           conf.level, conf.score, grades.length,
+           conf.level, Number(conf.score), grades.length,
            JSON.stringify(sorted.slice(0,5).map(r => r.id)),
            trend, weakElements.slice(0,3).join(', ')
         );
@@ -1071,10 +1078,10 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           await db.$executeRawUnsafe(`
             INSERT INTO "TIERootCause"
               ("id","runId","level","subjectKey","likelyCause","causeCategory","confidenceScore","confidenceLevel")
-            VALUES($1,$2,'trainee',$3,$4,$5,$6,$7)
+            VALUES($1,$2,'trainee',$3,$4,$5,$6::numeric,$7)
             ON CONFLICT DO NOTHING
           `, rcId, runId, traineeFullName, cause.likelyCause, cause.causeCategory,
-             cause.confidence, cause.confidence >= 0.7 ? 'high' : cause.confidence >= 0.4 ? 'medium' : 'low'
+             Number(cause.confidence), cause.confidence >= 0.7 ? 'high' : cause.confidence >= 0.4 ? 'medium' : 'low'
           );
         }
       }
@@ -1151,13 +1158,13 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "weakElementsByAvg","strongElementsByAvg","dominantNegativeTags","dominantPositiveTags",
            "difficultyScore","bottleneckScore","overServiceIndicator","differentiationScore",
            "narrativeSummary")
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16)
+        VALUES($1,$2,$3,$4,$5::int,$6::numeric,$7::numeric,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::numeric,$13::numeric,$14::boolean,$15::numeric,$16)
         ON CONFLICT DO NOTHING
       `, evtSumId, runId, eventCode, courseName, grades.length,
-         avgGrade, variance,
+         Number(avgGrade), Number(variance),
          JSON.stringify(weakEls), JSON.stringify(strongEls),
          JSON.stringify(negTagsEvt), JSON.stringify(posTagsEvt),
-         difficultyScore, bottleneckScore, isOverService, differentiationScore,
+         Number(difficultyScore), Number(bottleneckScore), Boolean(isOverService), Number(differentiationScore),
          narrative
       );
 
@@ -1172,13 +1179,13 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
-          VALUES($1,$2,'event',$3,'bottleneck',$4,$5,$6,$7,$8,$9,'stable')
+          VALUES($1,$2,'event',$3,'bottleneck',$4,$5,$6,$7,$8::numeric,$9::int,'stable')
           ON CONFLICT DO NOTHING
         `, fid, runId, eventCode,
            `${bottleneckPct.toFixed(0)}% of trainees score at or below ${CONCERN_THRESHOLD} in ${eventCode} (${grades.length} assessments).`,
            `${eventCode} is a training bottleneck. Weak elements: ${weakEls.slice(0,3).map(e => e.element).join(', ')}.`,
            `Review pre-event preparation and consider whether the syllabus sequence adequately builds the required skills before ${eventCode}.`,
-           conf.level, conf.score, grades.length
+           conf.level, Number(conf.score), grades.length
         );
       }
 
@@ -1188,7 +1195,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
-          VALUES($1,$2,'event',$3,'over_service',$4,$5,$6,'medium',0.65,$9,'stable')
+          VALUES($1,$2,'event',$3,'over_service',$4,$5,$6,'medium',0.65,$9::int,'stable')
           ON CONFLICT DO NOTHING
         `, fid, runId, eventCode,
            `${eventCode} average grade is ${avgGrade.toFixed(2)} with low variance (σ=${Math.sqrt(variance).toFixed(2)}).`,
@@ -1256,7 +1263,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           ("id","runId","courseName","totalTrainees","totalPt051s","bottleneckEvents",
            "bottleneckSkillFamilies","atRiskTrainees","exceedingTrainees",
            "overServicedEvents","skillHeatmap","narrativeSummary","lastCalculated")
-        VALUES($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,NOW())
+        VALUES($1,$2,$3,$4::int,$5::int,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12,NOW())
         ON CONFLICT DO NOTHING
       `, csumId, runId, courseName, trainees.length, grades.length,
          JSON.stringify(bottleneckEvents),
@@ -1273,7 +1280,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount")
-          VALUES($1,$2,'course',$3,'bottleneck',$4,$5,$6,'high',0.80,$9)
+          VALUES($1,$2,'course',$3,'bottleneck',$4,$5,$6,'high',0.80,$9::int)
           ON CONFLICT DO NOTHING
         `, fid, runId, courseName,
            `${bottleneckEvents.length} bottleneck events identified in ${courseName}: ${bottleneckEvents.slice(0,3).join(', ')}.`,
