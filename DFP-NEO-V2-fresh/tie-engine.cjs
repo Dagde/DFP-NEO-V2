@@ -787,19 +787,23 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       return { success: false, error: 'No PT-051 data found', runId };
     }
 
-    const allPt051 = typeof pt051Backup.data === 'string' ? JSON.parse(pt051Backup.data) : pt051Backup.data;
-    let pt051Records = Object.values(allPt051);
+    const allPt051Raw = typeof pt051Backup.data === 'string' ? JSON.parse(pt051Backup.data) : pt051Backup.data;
+    // PT-051 data stored as dict keyed by record ID - extract values
+    let pt051Records = Array.isArray(allPt051Raw) ? allPt051Raw : Object.values(allPt051Raw);
 
     // Filter by course if specified
     if (courseFilter) {
+      const cfLower = courseFilter.toLowerCase().trim();
       pt051Records = pt051Records.filter(r => {
-        const directCourse = r.course || r.courseName || '';
-        if (directCourse && directCourse.toLowerCase().includes(courseFilter.toLowerCase())) return true;
+        // Check direct course field
+        const directCourse = (r.course || r.courseName || '').toLowerCase().trim();
+        if (directCourse && (directCourse === cfLower || directCourse.includes(cfLower))) return true;
+        // Check traineeFullName embedded course (e.g. "Smith, John – ADF301")
         const name = r.traineeFullName || '';
         const dashPos = name.indexOf('–');
         if (dashPos !== -1) {
-          const embedded = name.substring(dashPos + 1).trim();
-          if (embedded.toLowerCase().includes(courseFilter.toLowerCase())) return true;
+          const embedded = name.substring(dashPos + 1).trim().toLowerCase();
+          if (embedded === cfLower || embedded.includes(cfLower)) return true;
         }
         return false;
       });
@@ -846,9 +850,15 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         }
       }
 
-      const courseName = (rec.traineeFullName || '').includes('–')
-        ? rec.traineeFullName.split('–')[1].trim()
-        : null;
+      // Extract course from traineeFullName (e.g. "Smith, John – ADF301")
+      // or from direct course/courseName field
+      let courseName = rec.course || rec.courseName || null;
+      if (!courseName && rec.traineeFullName) {
+        const emDashIdx = rec.traineeFullName.indexOf('–');
+        if (emDashIdx !== -1) {
+          courseName = rec.traineeFullName.substring(emDashIdx + 1).trim();
+        }
+      }
 
       const recencyWeight = calculateRecencyWeight(rec.date, allDates, RECENCY_FACTOR);
 

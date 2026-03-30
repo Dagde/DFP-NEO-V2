@@ -3507,9 +3507,15 @@ app.get('/api/tie/courses', async (req, res) => {
     for (const b of backups) {
       try {
         const parsed = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
-        const records = Array.isArray(parsed) ? parsed : (parsed.records || []);
+        // PT-051 data is stored as a dict keyed by record ID; course is embedded in traineeFullName after em-dash
+        const records = Array.isArray(parsed) ? parsed : Object.values(parsed);
         for (const r of records) {
-          const c = r.course || r.courseName || 'Unknown';
+          // Try direct course field first, then extract from traineeFullName (e.g. "Smith, John – ADF301")
+          let c = r.course || r.courseName || null;
+          if (!c && r.traineeFullName && r.traineeFullName.includes('\u2013')) {
+            c = r.traineeFullName.split('\u2013')[1].trim();
+          }
+          if (!c) continue;
           if (!courseMap[c]) courseMap[c] = 0;
           courseMap[c]++;
         }
@@ -3519,8 +3525,8 @@ app.get('/api/tie/courses', async (req, res) => {
     let courseSummaries = [];
     try {
       courseSummaries = await db.$queryRawUnsafe(`
-        SELECT DISTINCT cs."courseName", cs."avgGrade", cs."totalRecords", cs."atRiskCount",
-               r."completedAt", r."runId"
+        SELECT DISTINCT cs."courseName", cs."totalTrainees", cs."totalPt051s",
+               r."completedAt", r.id as "runId"
         FROM "TIECourseSummary" cs
         JOIN "TIEAnalyticsRun" r ON r.id = cs."runId"
         WHERE r.status = 'complete'
@@ -3538,9 +3544,8 @@ app.get('/api/tie/courses', async (req, res) => {
       recordCount: count,
       lastRun: summaryByName[name] ? {
         completedAt: summaryByName[name].completedAt,
-        avgGrade: summaryByName[name].avgGrade,
-        atRiskCount: summaryByName[name].atRiskCount,
-        totalRecords: summaryByName[name].totalRecords
+        totalTrainees: summaryByName[name].totalTrainees,
+        totalRecords: summaryByName[name].totalPt051s
       } : null
     }));
 
@@ -3593,12 +3598,12 @@ app.get('/api/tie/trainees/:course', async (req, res) => {
         SELECT ts.*
         FROM "TIETraineeSummary" ts
         JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
-        WHERE ts."courseFilter" = $1 AND r.status = 'complete'
+        WHERE ts."courseName" = $1 AND r.status = 'complete'
         AND r."completedAt" = (
           SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
           WHERE r2.status = 'complete'
         )
-        ORDER BY ts."avgGrade" ASC
+        ORDER BY ts."avgOverallGrade" ASC
       `, course);
     } catch (e) { /* no data */ }
 
