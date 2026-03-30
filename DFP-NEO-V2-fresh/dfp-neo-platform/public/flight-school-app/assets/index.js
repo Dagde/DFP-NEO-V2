@@ -27269,9 +27269,9 @@ const TrainingIntelligenceTab = () => {
             StatCard,
             {
               label: "Avg Grade",
-              value: summary.avgGrade.toFixed(2),
+              value: (summary.avgGrade != null ? summary.avgGrade.toFixed(2) : "N/A"),
               icon: "⭐",
-              color: gradeColor(summary.avgGrade)
+              color: gradeColor(summary.avgGrade || 0)
             },
             void 0,
             false,
@@ -27304,7 +27304,7 @@ const TrainingIntelligenceTab = () => {
             StatCard,
             {
               label: "Pass Rate",
-              value: `${summary.passRate.toFixed(0)}%`,
+              value: `${(summary.passRate != null ? summary.passRate.toFixed(0) : "N/A")}%`,
               icon: "✅",
               color: summary.passRate >= 80 ? "text-emerald-400" : summary.passRate >= 60 ? "text-yellow-400" : "text-red-400"
             },
@@ -27616,7 +27616,7 @@ const TrainingIntelligenceTab = () => {
                       lineNumber: 672,
                       columnNumber: 29
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(t.avgGrade)}`, children: t.avgGrade.toFixed(2) }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(t.avgGrade || 0)}`, children: (t.avgGrade != null ? t.avgGrade.toFixed(2) : "N/A") }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                       lineNumber: 673,
                       columnNumber: 29
@@ -27702,14 +27702,14 @@ const TrainingIntelligenceTab = () => {
               lineNumber: 699,
               columnNumber: 23
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded-lg border p-3 ${gradeBg(selectedTrainee.avgGrade)}`, children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded-lg border p-3 ${gradeBg(selectedTrainee.avgGrade || 0)}`, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 text-xs", children: "Average Grade" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 710,
                   columnNumber: 27
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-2xl font-bold font-mono ${gradeColor(selectedTrainee.avgGrade)}`, children: selectedTrainee.avgGrade.toFixed(2) }, void 0, false, {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-2xl font-bold font-mono ${gradeColor(selectedTrainee.avgGrade || 0)}`, children: (selectedTrainee.avgGrade != null ? selectedTrainee.avgGrade.toFixed(2) : "N/A") }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 711,
                   columnNumber: 27
@@ -27722,7 +27722,7 @@ const TrainingIntelligenceTab = () => {
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-4 mt-2 text-xs text-gray-400", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
                   "Min: ",
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor(selectedTrainee.gradeMin), children: selectedTrainee.gradeMin.toFixed(1) }, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor((selectedTrainee.gradeMin || 0)), children: (selectedTrainee.gradeMin != null ? selectedTrainee.gradeMin.toFixed(1) : "N/A") }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                     lineNumber: 716,
                     columnNumber: 38
@@ -27734,7 +27734,7 @@ const TrainingIntelligenceTab = () => {
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
                   "Max: ",
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor(selectedTrainee.gradeMax), children: selectedTrainee.gradeMax.toFixed(1) }, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor((selectedTrainee.gradeMax || 0)), children: (selectedTrainee.gradeMax != null ? selectedTrainee.gradeMax.toFixed(1) : "N/A") }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                     lineNumber: 717,
                     columnNumber: 38
@@ -27851,7 +27851,7 @@ const TrainingIntelligenceTab = () => {
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-xs px-2 py-1 rounded-full bg-gray-700 border border-gray-600 ${confidenceColor(selectedTrainee.confidenceLevel)}`, children: [
                 selectedTrainee.confidenceLevel,
                 " confidence (",
-                (selectedTrainee.confidenceScore * 100).toFixed(0),
+                (selectedTrainee.confidenceScore != null ? (selectedTrainee.confidenceScore * 100).toFixed(0) : "N/A"),
                 "%)"
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
@@ -27946,13 +27946,13 @@ const TrainingIntelligenceTab = () => {
                       lineNumber: 810,
                       columnNumber: 29
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(ev.avgGrade)}`, children: ev.avgGrade.toFixed(2) }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(ev.avgGrade || 0)}`, children: (ev.avgGrade != null ? ev.avgGrade.toFixed(2) : "N/A") }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                       lineNumber: 811,
                       columnNumber: 29
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center text-xs font-medium ${ev.passRate >= 80 ? "text-emerald-400" : ev.passRate >= 60 ? "text-yellow-400" : "text-red-400"}`, children: [
-                      ev.passRate.toFixed(0),
+                      (ev.passRate != null ? ev.passRate.toFixed(0) : "N/A"),
                       "%"
                     ] }, void 0, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
@@ -28042,14 +28042,14 @@ const TrainingIntelligenceTab = () => {
               lineNumber: 836,
               columnNumber: 23
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded-lg border p-3 ${gradeBg(selectedEvent.avgGrade)}`, children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded-lg border p-3 ${gradeBg(selectedEvent.avgGrade || 0)}`, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 text-xs", children: "Average Grade" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 846,
                   columnNumber: 27
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-2xl font-bold font-mono ${gradeColor(selectedEvent.avgGrade)}`, children: selectedEvent.avgGrade.toFixed(2) }, void 0, false, {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-2xl font-bold font-mono ${gradeColor(selectedEventt.avgGrade || 0)}`, children: (selectedEvent.avgGrade != null ? selectedEvent.avgGrade.toFixed(2) : "N/A") }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 847,
                   columnNumber: 27
@@ -28063,7 +28063,7 @@ const TrainingIntelligenceTab = () => {
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
                   "Pass Rate: ",
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: selectedEvent.passRate >= 80 ? "text-emerald-400" : "text-yellow-400", children: [
-                    selectedEvent.passRate.toFixed(0),
+                    (selectedEvent.passRate != null ? selectedEvent.passRate.toFixed(0) : "N/A"),
                     "%"
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
