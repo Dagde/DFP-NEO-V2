@@ -1,31 +1,33 @@
-# Daily Schedule Persistence Fix
+# Training Intelligence Engine - Integration & Frontend
 
-## Phase 1: Understand current data structures
-- [ ] Find where staff/trainee logbook hours are stored
-- [ ] Find the date selector component in the Main Daily Schedule viewer
-- [ ] Find where currency state is stored for instructors
-- [ ] Check existing DataBackup API endpoints
-- [ ] Check Prisma schema for any existing daily snapshot tables
+## Phase 1: Server.js - TIE API Routes
+- [ ] Add TIE require/import at top of server.js (ESM createRequire)
+- [ ] Add ensureTIETables + seedTIEDefaults call in getPrisma() startup
+- [ ] Add POST /api/tie/run route
+- [ ] Add GET /api/tie/courses route
+- [ ] Add GET /api/tie/summary/:course route
+- [ ] Add GET /api/tie/trainees/:course route
+- [ ] Add GET /api/tie/trainee/:name route
+- [ ] Add GET /api/tie/events/:course route
+- [ ] Add GET /api/tie/findings/:course route
+- [ ] Add GET /api/tie/settings route
+- [ ] Add PUT /api/tie/settings route
+- [ ] Add GET /api/tie/runs route (list recent runs)
 
-## Phase 2: Database schema
-- [ ] Add new DailySnapshot table to Prisma schema (per-date snapshot of all data)
-- [ ] Push schema migration via prisma db push on Railway
+## Phase 2: Frontend - TrainingIntelligenceTab Component
+- [ ] Create components/tabs/TrainingIntelligenceTab.tsx
+- [ ] Course selector + Run Analytics button + last run status
+- [ ] Overview panel: trainee risk distribution, event effectiveness summary
+- [ ] Trainee table: at-risk list with drill-down
+- [ ] Event heatmap: skill family scores per event
+- [ ] Findings panel: bottlenecks, weak spots, over-service alerts
+- [ ] Course summary narrative section
+- [ ] Settings panel (thresholds)
 
-## Phase 3: Server-side API
-- [ ] POST /api/daily-snapshot/save — save full daily snapshot (non-seed only)
-- [ ] GET /api/daily-snapshot?startDate=X&endDate=Y — load snapshots for date range
-- [ ] GET /api/daily-snapshot/dates — list all dates that have snapshots (for calendar)
-- [ ] DELETE seed data cleanup endpoint
+## Phase 3: Wire into BuildIntelligenceView
+- [ ] Import TrainingIntelligenceTab in BuildIntelligenceView.tsx
+- [ ] Replace "coming soon" placeholder with component
 
-## Phase 4: Frontend — save on publish
-- [ ] Update handleConfirmPublish in App.tsx to call save endpoint (skip isHistoricalSeed)
-- [ ] Load last 5 days of snapshots on app startup
-
-## Phase 5: Frontend — date selector calendar
-- [ ] Find the date selector component
-- [ ] Add calendar dropdown to date selector
-- [ ] Load snapshot on demand for dates older than 5 days
-
-## Phase 6: Build & deploy
+## Phase 4: Build & Deploy
 - [ ] npm run build
 - [ ] Commit and push to GitHub

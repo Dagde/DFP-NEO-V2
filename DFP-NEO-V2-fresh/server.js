@@ -7,6 +7,9 @@ import fs from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
+// Training Intelligence Engine
+const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -48,6 +51,13 @@ async function getPrisma() {
       await ensureInstructorArrayColumns(prisma);
     } catch (migrationErr) {
       console.error('Instructor column migration failed (non-fatal):', migrationErr.message);
+    }
+    // Ensure Training Intelligence Engine tables exist and defaults are seeded
+    try {
+      await ensureTIETables(prisma);
+      await seedTIEDefaults(prisma);
+    } catch (tieErr) {
+      console.error('TIE startup failed (non-fatal):', tieErr.message);
     }
   }
   return prisma;
@@ -3448,6 +3458,323 @@ app.post('/api/scores/bulk', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/scores/bulk error:', error);
     res.status(500).json({ error: 'Failed to bulk insert scores', details: error.message });
+  }
+});
+
+// ============================================================
+// TRAINING INTELLIGENCE ENGINE (TIE) API ROUTES
+// ============================================================
+
+// POST /api/tie/run - trigger analytics run
+app.post('/api/tie/run', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseFilter, triggeredBy } = req.body;
+    const result = await runTIEAnalytics(db, courseFilter || null, triggeredBy || 'manual');
+    res.json(result);
+  } catch (error) {
+    console.error('❌ POST /api/tie/run error:', error);
+    res.status(500).json({ error: 'TIE run failed', details: error.message });
+  }
+});
+
+// GET /api/tie/runs - list recent analytics runs
+app.get('/api/tie/runs', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const limit = parseInt(req.query.limit) || 10;
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, status, "triggeredBy", "courseFilter", "startedAt", "completedAt",
+             "recordsProcessed", "errorMessage"
+      FROM "TIEAnalyticsRun"
+      ORDER BY "startedAt" DESC
+      LIMIT $1
+    `, limit);
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ GET /api/tie/runs error:', error);
+    res.status(500).json({ error: 'Failed to fetch runs', details: error.message });
+  }
+});
+
+// GET /api/tie/courses - list courses with PT-051 data and last run info
+app.get('/api/tie/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    // Pull available courses from DataBackup
+    const backups = await db.dataBackup.findMany({ where: { type: 'historical_pt051_assessments' } });
+    const courseMap = {};
+    for (const b of backups) {
+      try {
+        const parsed = typeof b.data === 'string' ? JSON.parse(b.data) : b.data;
+        const records = Array.isArray(parsed) ? parsed : (parsed.records || []);
+        for (const r of records) {
+          const c = r.course || r.courseName || 'Unknown';
+          if (!courseMap[c]) courseMap[c] = 0;
+          courseMap[c]++;
+        }
+      } catch (e) { /* skip */ }
+    }
+    // Get last run per course from TIECourseSummary
+    let courseSummaries = [];
+    try {
+      courseSummaries = await db.$queryRawUnsafe(`
+        SELECT DISTINCT cs."courseName", cs."avgGrade", cs."totalRecords", cs."atRiskCount",
+               r."completedAt", r."runId"
+        FROM "TIECourseSummary" cs
+        JOIN "TIEAnalyticsRun" r ON r.id = cs."runId"
+        WHERE r.status = 'complete'
+        ORDER BY r."completedAt" DESC
+      `);
+    } catch (e) { /* table may be empty */ }
+
+    const summaryByName = {};
+    for (const s of courseSummaries) {
+      if (!summaryByName[s.courseName]) summaryByName[s.courseName] = s;
+    }
+
+    const courses = Object.entries(courseMap).map(([name, count]) => ({
+      name,
+      recordCount: count,
+      lastRun: summaryByName[name] ? {
+        completedAt: summaryByName[name].completedAt,
+        avgGrade: summaryByName[name].avgGrade,
+        atRiskCount: summaryByName[name].atRiskCount,
+        totalRecords: summaryByName[name].totalRecords
+      } : null
+    }));
+
+    res.json(courses);
+  } catch (error) {
+    console.error('❌ GET /api/tie/courses error:', error);
+    res.status(500).json({ error: 'Failed to fetch courses', details: error.message });
+  }
+});
+
+// GET /api/tie/summary/:course - course-level analytics summary
+app.get('/api/tie/summary/:course', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const course = decodeURIComponent(req.params.course);
+    // Get latest run for this course
+    let rows = [];
+    try {
+      rows = await db.$queryRawUnsafe(`
+        SELECT cs.*, r."completedAt", r."triggeredBy", r."recordsProcessed"
+        FROM "TIECourseSummary" cs
+        JOIN "TIEAnalyticsRun" r ON r.id = cs."runId"
+        WHERE cs."courseName" = $1 AND r.status = 'complete'
+        ORDER BY r."completedAt" DESC
+        LIMIT 1
+      `, course);
+    } catch (e) { /* no data yet */ }
+
+    if (!rows.length) return res.json(null);
+    const summary = rows[0];
+    // Parse JSON fields
+    try { summary.bottleneckEvents = JSON.parse(summary.bottleneckEvents || '[]'); } catch(e) {}
+    try { summary.overServicedEvents = JSON.parse(summary.overServicedEvents || '[]'); } catch(e) {}
+    try { summary.skillHeatmap = JSON.parse(summary.skillHeatmap || '{}'); } catch(e) {}
+    res.json(summary);
+  } catch (error) {
+    console.error('❌ GET /api/tie/summary error:', error);
+    res.status(500).json({ error: 'Failed to fetch course summary', details: error.message });
+  }
+});
+
+// GET /api/tie/trainees/:course - all trainee summaries for a course
+app.get('/api/tie/trainees/:course', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const course = decodeURIComponent(req.params.course);
+    let rows = [];
+    try {
+      rows = await db.$queryRawUnsafe(`
+        SELECT ts.*
+        FROM "TIETraineeSummary" ts
+        JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
+        WHERE ts."courseFilter" = $1 AND r.status = 'complete'
+        AND r."completedAt" = (
+          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          WHERE r2.status = 'complete'
+        )
+        ORDER BY ts."avgGrade" ASC
+      `, course);
+    } catch (e) { /* no data */ }
+
+    for (const row of rows) {
+      try { row.skillFamilyScores = JSON.parse(row.skillFamilyScores || '{}'); } catch(e) {}
+      try { row.weakElements = JSON.parse(row.weakElements || '[]'); } catch(e) {}
+      try { row.strongElements = JSON.parse(row.strongElements || '[]'); } catch(e) {}
+    }
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ GET /api/tie/trainees error:', error);
+    res.status(500).json({ error: 'Failed to fetch trainee summaries', details: error.message });
+  }
+});
+
+// GET /api/tie/trainee/:name - single trainee analytics detail
+app.get('/api/tie/trainee/:name', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const name = decodeURIComponent(req.params.name);
+    let rows = [];
+    try {
+      rows = await db.$queryRawUnsafe(`
+        SELECT ts.*
+        FROM "TIETraineeSummary" ts
+        JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
+        WHERE ts."traineeName" = $1 AND r.status = 'complete'
+        ORDER BY r."completedAt" DESC
+        LIMIT 5
+      `, name);
+    } catch (e) { /* no data */ }
+
+    for (const row of rows) {
+      try { row.skillFamilyScores = JSON.parse(row.skillFamilyScores || '{}'); } catch(e) {}
+      try { row.weakElements = JSON.parse(row.weakElements || '[]'); } catch(e) {}
+      try { row.strongElements = JSON.parse(row.strongElements || '[]'); } catch(e) {}
+    }
+
+    // Also fetch findings for this trainee
+    let findings = [];
+    try {
+      findings = await db.$queryRawUnsafe(`
+        SELECT f.*
+        FROM "TIEFinding" f
+        JOIN "TIEAnalyticsRun" r ON r.id = f."runId"
+        WHERE f."subjectKey" = $1 AND f.level = 'trainee' AND r.status = 'complete'
+        ORDER BY r."completedAt" DESC
+        LIMIT 20
+      `, name);
+    } catch (e) { /* no findings */ }
+
+    res.json({ summaries: rows, findings });
+  } catch (error) {
+    console.error('❌ GET /api/tie/trainee error:', error);
+    res.status(500).json({ error: 'Failed to fetch trainee detail', details: error.message });
+  }
+});
+
+// GET /api/tie/events/:course - event summaries for a course
+app.get('/api/tie/events/:course', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const course = decodeURIComponent(req.params.course);
+    let rows = [];
+    try {
+      rows = await db.$queryRawUnsafe(`
+        SELECT es.*
+        FROM "TIEEventSummary" es
+        JOIN "TIEAnalyticsRun" r ON r.id = es."runId"
+        WHERE es."courseName" = $1 AND r.status = 'complete'
+        AND r."completedAt" = (
+          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          WHERE r2.status = 'complete'
+        )
+        ORDER BY es."avgGrade" ASC
+      `, course);
+    } catch (e) { /* no data */ }
+
+    for (const row of rows) {
+      try { row.skillFamilyScores = JSON.parse(row.skillFamilyScores || '{}'); } catch(e) {}
+      try { row.weakElements = JSON.parse(row.weakElements || '[]'); } catch(e) {}
+    }
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ GET /api/tie/events error:', error);
+    res.status(500).json({ error: 'Failed to fetch event summaries', details: error.message });
+  }
+});
+
+// GET /api/tie/findings/:course - findings for a course from latest run
+app.get('/api/tie/findings/:course', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const course = decodeURIComponent(req.params.course);
+    const level = req.query.level || null;
+    let rows = [];
+    try {
+      const levelFilter = level ? `AND f.level = '${level.replace(/'/g,"''")}' ` : '';
+      rows = await db.$queryRawUnsafe(`
+        SELECT f.*
+        FROM "TIEFinding" f
+        JOIN "TIEAnalyticsRun" r ON r.id = f."runId"
+        WHERE r.status = 'complete'
+        AND (f."subjectKey" = $1 OR f."subjectKey" LIKE $2)
+        ${levelFilter}
+        AND r."completedAt" = (
+          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          WHERE r2.status = 'complete'
+        )
+        ORDER BY f."confidenceScore" DESC
+        LIMIT 100
+      `, course, `%${course}%`);
+    } catch (e) { /* no data */ }
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ GET /api/tie/findings error:', error);
+    res.status(500).json({ error: 'Failed to fetch findings', details: error.message });
+  }
+});
+
+// GET /api/tie/rootcauses/:course - root causes for a course from latest run
+app.get('/api/tie/rootcauses/:course', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const course = decodeURIComponent(req.params.course);
+    let rows = [];
+    try {
+      rows = await db.$queryRawUnsafe(`
+        SELECT rc.*
+        FROM "TIERootCause" rc
+        JOIN "TIEAnalyticsRun" r ON r.id = rc."runId"
+        WHERE rc."subjectKey" = $1 AND rc.level = 'course' AND r.status = 'complete'
+        AND r."completedAt" = (
+          SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
+          WHERE r2.status = 'complete'
+        )
+        ORDER BY rc."confidenceScore" DESC
+      `, course);
+    } catch (e) { /* no data */ }
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ GET /api/tie/rootcauses error:', error);
+    res.status(500).json({ error: 'Failed to fetch root causes', details: error.message });
+  }
+});
+
+// GET /api/tie/settings - get TIE settings
+app.get('/api/tie/settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    let rows = [];
+    try {
+      rows = await db.$queryRawUnsafe(`SELECT key, value, description FROM "TIESettings"`);
+    } catch (e) { /* no table yet */ }
+    const settings = {};
+    for (const r of rows) settings[r.key] = r.value;
+    res.json(settings);
+  } catch (error) {
+    console.error('❌ GET /api/tie/settings error:', error);
+    res.status(500).json({ error: 'Failed to fetch settings', details: error.message });
+  }
+});
+
+// PUT /api/tie/settings - update a TIE setting
+app.put('/api/tie/settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { key, value } = req.body;
+    if (!key) return res.status(400).json({ error: 'key required' });
+    await db.$executeRawUnsafe(`
+      UPDATE "TIESettings" SET value = $1 WHERE key = $2
+    `, String(value), key);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ PUT /api/tie/settings error:', error);
+    res.status(500).json({ error: 'Failed to update setting', details: error.message });
   }
 });
 

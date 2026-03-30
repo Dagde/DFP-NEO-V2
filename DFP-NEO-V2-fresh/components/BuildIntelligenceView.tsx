@@ -3,6 +3,7 @@ import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail } from '.
 import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
+import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
 
 interface CourseAnalysis {
   courseName: string;
@@ -170,9 +171,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
             )}
 
             {activeTab === 'managerial-analytics' && (
-              <div className="bg-gray-800 rounded-lg p-8 text-center">
-                <p className="text-gray-400">Managerial Analytics coming soon...</p>
-              </div>
+              <TrainingIntelligenceTab />
             )}
           </div>
         </div>
