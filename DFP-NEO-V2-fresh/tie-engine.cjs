@@ -750,7 +750,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
   // Create analytics run record
   const runRows = await db.$queryRawUnsafe(`
     INSERT INTO "TIEAnalyticsRun"("id","runType","courseFilter","status","logicVersion","triggeredBy")
-    VALUES(gen_random_uuid()::text,$1,$2,'running','1.0',$3)
+    VALUES(gen_random_uuid()::text,$1::text,$2::text,'running','1.0',$3::text)
     RETURNING id
   `, courseFilter ? 'course' : 'full', courseFilter || null, triggeredBy);
   const runId = runRows[0].id;
@@ -869,7 +869,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "eventCode","eventDate","overallGrade","overallResult",
            "elementScores","commentsByElement","overallComment",
            "isFirstAttempt","isRepeat","isRemedial","recencyWeight")
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8::date,$9::numeric,$10::text,$11::jsonb,$12::jsonb,$13::text,$14::boolean,$15::boolean,$16::boolean,$17::numeric)
+        VALUES($1::text,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8::date,$9::numeric,$10::text,$11::jsonb,$12::jsonb,$13::text,$14::boolean,$15::boolean,$16::boolean,$17::numeric)
         ON CONFLICT DO NOTHING
       `, normId, runId, rec.id, rec.traineeFullName, courseName, rec.instructorName,
          rec.flightNumber || rec.eventCode || '?',
@@ -887,7 +887,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           await db.$executeRawUnsafe(`
             INSERT INTO "TIECommentTag"
               ("id","runId","sourcePt051Id","traineeFullName","eventCode","element","tag","tagCategory","matchedPhrase","confidence")
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::numeric)
+            VALUES($1::text,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8::text,$9::text,$10::numeric)
             ON CONFLICT DO NOTHING
           `, tagId, runId, rec.id,
              rec.traineeFullName, rec.flightNumber || '?',
@@ -904,7 +904,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           await db.$executeRawUnsafe(`
             INSERT INTO "TIECommentTag"
               ("id","runId","sourcePt051Id","traineeFullName","eventCode","element","tag","tagCategory","matchedPhrase","confidence")
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::numeric)
+            VALUES($1::text,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8::text,$9::text,$10::numeric)
             ON CONFLICT DO NOTHING
           `, tagId, runId, rec.id,
              rec.traineeFullName, rec.flightNumber || '?',
@@ -1044,7 +1044,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "strongestSkillFamilies","weakestSkillFamilies","recurringWeakElements",
            "positiveCommentThemes","negativeCommentThemes","totalPt051Count",
            "avgOverallGrade","recentAvgGrade","gradeProgression","narrativeSummary","atRiskReasons")
-        VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::int,$13::numeric,$14::numeric,$15::jsonb,$16::text,$17::jsonb)
+        VALUES($1::text,$2::text,$3::text,$4::text,$5::text,$6::text,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::int,$13::numeric,$14::numeric,$15::jsonb,$16::text,$17::jsonb)
         ON CONFLICT DO NOTHING
       `, sumId, runId, traineeFullName, courseName, trend, riskLevel,
          JSON.stringify(strongSkillFamilies), JSON.stringify(weakSkillFamilies),
@@ -1068,7 +1068,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount","sourcePt051Ids",
              "trendDirection","element")
-          VALUES($1,$2,'trainee',$3,'recurring_weakness',$4,$5,$6,$7,$8::numeric,$9::int,$10::jsonb,$11::text,$12::text)
+          VALUES($1::text,$2::text,'trainee',$3::text,'recurring_weakness',$4::text,$5::text,$6::text,$7::text,$8::numeric,$9::int,$10::jsonb,$11::text,$12::text)
           ON CONFLICT DO NOTHING
         `, fid, runId, traineeFullName,
            `${weakElements.slice(0,3).join(', ')} average at or below ${CONCERN_THRESHOLD} across ${grades.length} PT-051s.`,
@@ -1088,7 +1088,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           await db.$executeRawUnsafe(`
             INSERT INTO "TIERootCause"
               ("id","runId","level","subjectKey","likelyCause","causeCategory","confidenceScore","confidenceLevel")
-            VALUES($1,$2,'trainee',$3,$4::text,$5::text,$6::numeric,$7::text)
+            VALUES($1::text,$2::text,'trainee',$3::text,$4::text,$5::text,$6::numeric,$7::text)
             ON CONFLICT DO NOTHING
           `, rcId, runId, traineeFullName, cause.likelyCause, cause.causeCategory,
              Number(cause.confidence), cause.confidence >= 0.7 ? 'high' : cause.confidence >= 0.4 ? 'medium' : 'low'
@@ -1168,7 +1168,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "weakElementsByAvg","strongElementsByAvg","dominantNegativeTags","dominantPositiveTags",
            "difficultyScore","bottleneckScore","overServiceIndicator","differentiationScore",
            "narrativeSummary")
-        VALUES($1,$2,$3,$4,$5::int,$6::numeric,$7::numeric,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::numeric,$13::numeric,$14::boolean,$15::numeric,$16::text)
+        VALUES($1::text,$2::text,$3::text,$4::text,$5::int,$6::numeric,$7::numeric,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::numeric,$13::numeric,$14::boolean,$15::numeric,$16::text)
         ON CONFLICT DO NOTHING
       `, evtSumId, runId, eventCode, courseName, grades.length,
          Number(avgGrade), Number(variance),
@@ -1189,7 +1189,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
-          VALUES($1,$2,'event',$3,'bottleneck',$4::text,$5::text,$6::text,$7::text,$8::numeric,$9::int,'stable')
+          VALUES($1::text,$2::text,'event',$3::text,'bottleneck',$4::text,$5::text,$6::text,$7::text,$8::numeric,$9::int,'stable')
           ON CONFLICT DO NOTHING
         `, fid, runId, eventCode,
            `${bottleneckPct.toFixed(0)}% of trainees score at or below ${CONCERN_THRESHOLD} in ${eventCode} (${grades.length} assessments).`,
@@ -1205,7 +1205,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
-          VALUES($1,$2,'event',$3,'over_service',$4::text,$5::text,$6::text,'medium',0.65,$9::int,'stable')
+          VALUES($1::text,$2::text,'event',$3::text,'over_service',$4::text,$5::text,$6::text,'medium',0.65,$9::int,'stable')
           ON CONFLICT DO NOTHING
         `, fid, runId, eventCode,
            `${eventCode} average grade is ${avgGrade.toFixed(2)} with low variance (σ=${Math.sqrt(variance).toFixed(2)}).`,
@@ -1273,7 +1273,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           ("id","runId","courseName","totalTrainees","totalPt051s","bottleneckEvents",
            "bottleneckSkillFamilies","atRiskTrainees","exceedingTrainees",
            "overServicedEvents","skillHeatmap","narrativeSummary","lastCalculated")
-        VALUES($1,$2,$3,$4::int,$5::int,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::text,NOW())
+        VALUES($1::text,$2::text,$3::text,$4::int,$5::int,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::text,NOW())
         ON CONFLICT DO NOTHING
       `, csumId, runId, courseName, trainees.length, grades.length,
          JSON.stringify(bottleneckEvents),
@@ -1290,7 +1290,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount")
-          VALUES($1,$2,'course',$3,'bottleneck',$4::text,$5::text,$6::text,'high',0.80,$9::int)
+          VALUES($1::text,$2::text,'course',$3::text,'bottleneck',$4::text,$5::text,$6::text,'high',0.80,$9::int)
           ON CONFLICT DO NOTHING
         `, fid, runId, courseName,
            `${bottleneckEvents.length} bottleneck events identified in ${courseName}: ${bottleneckEvents.slice(0,3).join(', ')}.`,
