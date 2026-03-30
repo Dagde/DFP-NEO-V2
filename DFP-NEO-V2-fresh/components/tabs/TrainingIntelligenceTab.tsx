@@ -1,16 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface TIECourse {
   name: string;
   recordCount: number;
-  lastRun: {
-    completedAt: string;
-    avgGrade: number;
-    atRiskCount: number;
-    totalRecords: number;
-  } | null;
+  lastRun: { completedAt: string; totalTrainees?: number; totalRecords?: number } | null;
 }
 
 interface TIERun {
@@ -26,17 +21,15 @@ interface TIERun {
 
 interface TIECourseSummary {
   courseName: string;
-  totalRecords: number;
-  uniqueTrainees: number;
-  uniqueEvents: number;
-  avgGrade: number;
-  atRiskCount: number;
-  exceedingCount: number;
-  passRate: number;
-  bottleneckEvents: string[];
-  overServicedEvents: string[];
-  skillHeatmap: Record<string, number>;
-  narrative: string;
+  totalTrainees: number;
+  totalPt051s: number;
+  bottleneckEvents: any;
+  bottleneckSkillFamilies: any;
+  atRiskTrainees: any;
+  exceedingTrainees: any;
+  overServicedEvents: any;
+  skillHeatmap: any;
+  narrativeSummary: string;
   completedAt: string;
   recordsProcessed: number;
   triggeredBy: string;
@@ -44,36 +37,43 @@ interface TIECourseSummary {
 
 interface TIETraineeSummary {
   id: string;
-  traineeName: string;
-  courseFilter: string;
-  totalAssessments: number;
-  avgGrade: number;
-  gradeMin: number;
-  gradeMax: number;
-  trendDirection: string;
-  trendStrength: number;
+  traineeFullName: string;
+  courseName: string;
+  overallTrend: string;
   riskLevel: string;
-  confidenceLevel: string;
-  confidenceScore: number;
-  skillFamilyScores: Record<string, number>;
-  weakElements: string[];
-  strongElements: string[];
-  narrative: string;
+  strongestSkillFamilies: any;
+  weakestSkillFamilies: any;
+  recurringWeakElements: any;
+  positiveCommentThemes: any;
+  negativeCommentThemes: any;
+  totalPt051Count: number;
+  avgOverallGrade: number;
+  recentAvgGrade: number;
+  gradeProgression: any;
+  narrativeSummary: string;
+  atRiskReasons: any;
+  skillFamilyScores?: any;
 }
 
 interface TIEEventSummary {
   id: string;
-  eventName: string;
+  eventCode: string;
   courseName: string;
   totalAttempts: number;
-  avgGrade: number;
+  avgOverallGrade: number;
+  gradeVariance: number;
   passRate: number;
-  trendDirection: string;
-  bottleneckFlag: boolean;
-  overServiceFlag: boolean;
-  skillFamilyScores: Record<string, number>;
-  weakElements: string[];
-  narrative: string;
+  weakElementsByAvg: any;
+  strongElementsByAvg: any;
+  dominantNegativeTags: any;
+  dominantPositiveTags: any;
+  difficultyScore: number;
+  bottleneckScore: number;
+  overServiceIndicator: boolean;
+  differentiationScore: number;
+  syllabusPosition: number;
+  narrativeSummary: string;
+  skillFamilyScores?: any;
 }
 
 interface TIEFinding {
@@ -89,7 +89,7 @@ interface TIEFinding {
   evidenceCount: number;
 }
 
-// ── Helper Functions ──────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
 const gradeColor = (g: number): string => {
   if (g >= 4.5) return 'text-emerald-400';
@@ -115,9 +115,9 @@ const riskBadge = (risk: string): string => {
 };
 
 const trendIcon = (dir: string): string => {
-  if (dir === 'improving') return '↑';
-  if (dir === 'worsening') return '↓';
-  return '→';
+  if (dir === 'improving') return '\u2191';
+  if (dir === 'worsening') return '\u2193';
+  return '\u2192';
 };
 
 const trendColor = (dir: string): string => {
@@ -126,80 +126,136 @@ const trendColor = (dir: string): string => {
   return 'text-gray-400';
 };
 
-const findingTypeIcon: Record<string, string> = {
-  bottleneck: '🚧',
-  recurring_weakness: '⚠️',
-  over_service: '✅',
-  at_risk: '🔴',
-  exceeding: '🌟',
-  consistent_strength: '💪',
-};
-
-const confidenceColor = (c: string): string => {
-  if (c === 'high') return 'text-emerald-400';
-  if (c === 'medium') return 'text-yellow-400';
-  return 'text-gray-400';
-};
-
 const formatDate = (iso: string | null): string => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  if (!iso) return '\u2014';
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
 };
 
-const gradeBar = (score: number, max = 5): JSX.Element => {
-  const pct = Math.min(100, (score / max) * 100);
-  const color = score >= 4 ? 'bg-emerald-500' : score >= 3 ? 'bg-yellow-500' : 'bg-red-500';
+const safe = (n: number | undefined | null, d = 2): string => {
+  if (n === undefined || n === null || isNaN(Number(n))) return '\u2014';
+  return Number(n).toFixed(d);
+};
+
+const safeN = (n: number | undefined | null): number => {
+  if (n === undefined || n === null || isNaN(Number(n))) return 0;
+  return Number(n);
+};
+
+const parseJ = (raw: any, fallback: any) => {
+  if (!raw) return fallback;
+  if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return fallback; } }
+  return raw;
+};
+
+const parseProgression = (raw: any): number[] => {
+  const arr = parseJ(raw, []);
+  if (!Array.isArray(arr)) return [];
+  return arr.map((item: any) => {
+    if (typeof item === 'number') return item;
+    if (item && typeof item === 'object') return item.grade ?? item.score ?? item.avgGrade ?? 0;
+    return 0;
+  }).filter((v: number) => v > 0);
+};
+
+// ── SparkBar ───────────────────────────────────────────────────────────────────
+
+const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> = ({ value, max = 5, colorClass }) => {
+  const pct = Math.min(100, (safeN(value) / max) * 100);
+  const c = colorClass || (value >= 4 ? 'bg-emerald-500' : value >= 3 ? 'bg-yellow-500' : 'bg-red-500');
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-700 rounded-full h-2">
-        <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
+      <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+        <div className={`${c} h-1.5 rounded-full`} style={{ width: `${pct}%` }} />
       </div>
-      <span className={`text-xs font-mono w-8 text-right ${gradeColor(score)}`}>{score.toFixed(1)}</span>
+      <span className={`text-xs font-mono w-8 text-right ${gradeColor(value)}`}>{safe(value, 1)}</span>
     </div>
   );
 };
 
-// ── Sub-Components ─────────────────────────────────────────────────────────────
+// ── SparkLine (SVG) ────────────────────────────────────────────────────────────
 
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  sub?: string;
-  color?: string;
-  icon?: string;
-}
-const StatCard: React.FC<StatCardProps> = ({ label, value, sub, color = 'text-white', icon }) => (
-  <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-    <div className="flex items-start justify-between">
-      <div>
-        <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
-      </div>
-      {icon && <span className="text-2xl">{icon}</span>}
-    </div>
-  </div>
-);
-
-interface SkillHeatmapProps {
-  data: Record<string, number>;
-  title?: string;
-}
-const SkillHeatmap: React.FC<SkillHeatmapProps> = ({ data, title }) => {
-  const entries = Object.entries(data).sort((a, b) => a[1] - b[1]);
-  if (!entries.length) return <p className="text-gray-500 text-sm">No skill data available</p>;
+const SparkLine: React.FC<{ data: number[]; width?: number; height?: number; color?: string }> = ({
+  data, width = 100, height = 32, color = '#60a5fa'
+}) => {
+  if (!data || data.length < 2) return <span className="text-gray-600 text-xs">\u2014</span>;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const rng = max - min || 1;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - 4 - ((v - min) / rng) * (height - 8);
+    return `${x},${y}`;
+  }).join(' ');
   return (
-    <div>
-      {title && <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">{title}</p>}
-      <div className="space-y-1.5">
-        {entries.map(([skill, score]) => (
-          <div key={skill}>
+    <svg width={width} height={height} className="overflow-visible">
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      {data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - 4 - ((v - min) / rng) * (height - 8);
+        return <circle key={i} cx={x} cy={y} r="2" fill={color} />;
+      })}
+    </svg>
+  );
+};
+
+// ── HBarChart ──────────────────────────────────────────────────────────────────
+
+const HBarChart: React.FC<{ data: Array<{ label: string; value: number; color?: string }>; max?: number }> = ({ data, max = 5 }) => {
+  if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
+  return (
+    <div className="space-y-2">
+      {data.map(item => {
+        const pct = Math.min(100, (safeN(item.value) / max) * 100);
+        const c = item.color || (item.value >= 4 ? 'bg-emerald-500' : item.value >= 3 ? 'bg-yellow-500' : 'bg-red-500');
+        return (
+          <div key={item.label}>
             <div className="flex justify-between text-xs mb-0.5">
-              <span className="text-gray-300 truncate max-w-[140px]">{skill}</span>
-              <span className={gradeColor(score)}>{score.toFixed(1)}</span>
+              <span className="text-gray-300 truncate max-w-[160px]" title={item.label}>{item.label}</span>
+              <span className={gradeColor(item.value)}>{safe(item.value, 1)}</span>
             </div>
-            {gradeBar(score)}
+            <div className="bg-gray-700 rounded-full h-1.5">
+              <div className={`${c} h-1.5 rounded-full`} style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ── DonutChart (SVG) ───────────────────────────────────────────────────────────
+
+const DonutChart: React.FC<{ segments: Array<{ label: string; value: number; color: string }>; size?: number }> = ({ segments, size = 110 }) => {
+  const total = segments.reduce((s, seg) => s + safeN(seg.value), 0);
+  if (total === 0) return <p className="text-gray-500 text-sm">No data</p>;
+  const r = (size - 24) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  let off = 0;
+  const arcs = segments.map(seg => {
+    const pct = safeN(seg.value) / total;
+    const arc = { ...seg, dash: pct * circ, dashOff: -off * circ };
+    off += pct;
+    return arc;
+  });
+  return (
+    <div className="flex items-center gap-4">
+      <svg width={size} height={size}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#374151" strokeWidth="18" />
+        {arcs.map((a, i) => (
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={a.color} strokeWidth="18"
+            strokeDasharray={`${a.dash} ${circ}`} strokeDashoffset={a.dashOff}
+            transform={`rotate(-90 ${cx} ${cy})`} />
+        ))}
+        <text x={cx} y={cy + 4} textAnchor="middle" fontSize="12" fill="#9ca3af">{total}</text>
+      </svg>
+      <div className="space-y-1.5">
+        {segments.map(seg => (
+          <div key={seg.label} className="flex items-center gap-1.5 text-xs">
+            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
+            <span className="text-gray-400">{seg.label}</span>
+            <span className="text-gray-200 font-semibold ml-1">{seg.value}</span>
           </div>
         ))}
       </div>
@@ -207,52 +263,811 @@ const SkillHeatmap: React.FC<SkillHeatmapProps> = ({ data, title }) => {
   );
 };
 
-// ── Main Component ─────────────────────────────────────────────────────────────
+// ── RadarChart (SVG) ───────────────────────────────────────────────────────────
+
+const RadarChart: React.FC<{ data: Record<string, number>; size?: number }> = ({ data, size = 180 }) => {
+  const entries = Object.entries(data).filter(([, v]) => safeN(v) > 0);
+  if (entries.length < 3) return <HBarChart data={entries.map(([l, v]) => ({ label: l, value: v }))} />;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 22, n = entries.length, max = 5;
+  const angle = (i: number) => -Math.PI / 2 + i * (2 * Math.PI / n);
+  const pt = (i: number, val: number) => ({
+    x: cx + r * (safeN(val) / max) * Math.cos(angle(i)),
+    y: cy + r * (safeN(val) / max) * Math.sin(angle(i)),
+  });
+  const axisPt = (i: number) => ({ x: cx + r * Math.cos(angle(i)), y: cy + r * Math.sin(angle(i)) });
+  const poly = entries.map(([, v], i) => pt(i, v));
+  const polyStr = poly.map(p => `${p.x},${p.y}`).join(' ');
+  return (
+    <svg width={size} height={size} className="overflow-visible">
+      {[0.25, 0.5, 0.75, 1].map(lv => (
+        <polygon key={lv}
+          points={entries.map((_, i) => `${cx + r * lv * Math.cos(angle(i))},${cy + r * lv * Math.sin(angle(i))}`).join(' ')}
+          fill="none" stroke="#374151" strokeWidth="1" />
+      ))}
+      {entries.map((_, i) => { const p = axisPt(i); return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#4b5563" strokeWidth="1" />; })}
+      <polygon points={polyStr} fill="#3b82f630" stroke="#3b82f6" strokeWidth="2" />
+      {poly.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#3b82f6" />)}
+      {entries.map(([lbl], i) => {
+        const lx = cx + (r + 16) * Math.cos(angle(i));
+        const ly = cy + (r + 16) * Math.sin(angle(i));
+        const anchor = lx < cx - 5 ? 'end' : lx > cx + 5 ? 'start' : 'middle';
+        return <text key={i} x={lx} y={ly + 4} textAnchor={anchor} fontSize="8" fill="#9ca3af">{lbl.length > 13 ? lbl.slice(0, 13) + '\u2026' : lbl}</text>;
+      })}
+    </svg>
+  );
+};
+
+// ── ColChart (SVG) ─────────────────────────────────────────────────────────────
+
+const ColChart: React.FC<{ data: Array<{ label: string; value: number; color?: string }>; max?: number; height?: number }> = ({
+  data, max = 5, height = 120
+}) => {
+  if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
+  const bw = Math.max(10, Math.min(30, 220 / data.length));
+  const gap = Math.max(3, bw * 0.35);
+  const tw = data.length * (bw + gap) + gap;
+  const tp = 10, bp = 26, ch = height - tp - bp;
+  return (
+    <svg width={tw} height={height} className="overflow-visible" style={{ maxWidth: '100%' }}>
+      {[0, 0.5, 1].map(pct => {
+        const y = tp + ch * (1 - pct);
+        return <line key={pct} x1={0} y1={y} x2={tw} y2={y} stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />;
+      })}
+      {data.map((item, i) => {
+        const pct = Math.min(1, safeN(item.value) / max);
+        const bh = Math.max(2, pct * ch);
+        const x = gap + i * (bw + gap);
+        const y = tp + ch - bh;
+        const color = item.color || (item.value >= 4 ? '#10b981' : item.value >= 3 ? '#eab308' : '#ef4444');
+        const lbl = item.label.length > 7 ? item.label.slice(0, 7) + '\u2026' : item.label;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={bw} height={bh} fill={color} fillOpacity={0.85} rx="2" />
+            <text x={x + bw / 2} y={y - 2} textAnchor="middle" fontSize="7.5" fill="#9ca3af">{safe(item.value, 1)}</text>
+            <text x={x + bw / 2} y={height - 4} textAnchor="middle" fontSize="7" fill="#6b7280"
+              transform={`rotate(-35,${x + bw / 2},${height - 4})`}>{lbl}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ── StatCard ───────────────────────────────────────────────────────────────────
+
+const StatCard: React.FC<{ label: string; value: string | number; sub?: string; color?: string; icon?: string }> = ({
+  label, value, sub, color = 'text-white', icon
+}) => (
+  <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+    <div className="flex items-start justify-between">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+        <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
+        {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+      </div>
+      {icon && <span className="text-2xl flex-shrink-0 ml-2">{icon}</span>}
+    </div>
+  </div>
+);
+
+// ── SectionCard ────────────────────────────────────────────────────────────────
+
+const SCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
+  <div className={`bg-gray-800 border border-gray-700 rounded-lg p-4 ${className || ''}`}>
+    <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
+    {children}
+  </div>
+);
+
+// ── Tag ────────────────────────────────────────────────────────────────────────
+
+const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' | 'gray' }> = ({ text, type = 'gray' }) => {
+  const m: Record<string, string> = {
+    red: 'bg-red-900/40 border-red-800 text-red-300',
+    green: 'bg-emerald-900/40 border-emerald-800 text-emerald-300',
+    yellow: 'bg-yellow-900/40 border-yellow-800 text-yellow-300',
+    blue: 'bg-blue-900/40 border-blue-800 text-blue-300',
+    gray: 'bg-gray-700 border-gray-600 text-gray-300',
+  };
+  return <span className={`border text-xs px-2 py-0.5 rounded ${m[type]}`}>{text}</span>;
+};
+
+// ── COURSE TAB ─────────────────────────────────────────────────────────────────
+
+const CourseTab: React.FC<{
+  summary: TIECourseSummary;
+  trainees: TIETraineeSummary[];
+  events: TIEEventSummary[];
+}> = ({ summary, trainees, events }) => {
+  const atRisk = trainees.filter(t => t.riskLevel === 'at_risk').length;
+  const exceeding = trainees.filter(t => t.riskLevel === 'exceeding').length;
+  const monitor = trainees.filter(t => t.riskLevel === 'monitor').length;
+  const normal = trainees.length - atRisk - exceeding - monitor;
+  const avgGrade = trainees.length > 0 ? trainees.reduce((s, t) => s + safeN(t.avgOverallGrade), 0) / trainees.length : 0;
+  const passRate = trainees.length > 0 ? (trainees.filter(t => safeN(t.avgOverallGrade) >= 3.0).length / trainees.length) * 100 : 0;
+  const skillHeatmap = parseJ(summary.skillHeatmap, {}) as Record<string, number>;
+  const skillEntries = Object.entries(skillHeatmap).sort((a, b) => a[1] - b[1]);
+  const bottleneckEvents = parseJ(summary.bottleneckEvents, []) as string[];
+  const overServicedEvents = parseJ(summary.overServicedEvents, []) as string[];
+
+  const scoreDist = [
+    { label: '1\u20131.9', value: trainees.filter(t => safeN(t.avgOverallGrade) < 2).length, color: '#ef4444' },
+    { label: '2\u20132.9', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 2 && safeN(t.avgOverallGrade) < 3).length, color: '#f97316' },
+    { label: '3\u20133.9', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 3 && safeN(t.avgOverallGrade) < 4).length, color: '#eab308' },
+    { label: '4\u20134.9', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 4 && safeN(t.avgOverallGrade) < 5).length, color: '#22c55e' },
+    { label: '5.0', value: trainees.filter(t => safeN(t.avgOverallGrade) >= 5).length, color: '#10b981' },
+  ].filter(d => d.value > 0);
+
+  const eventsByDiff = [...events].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade));
+  const topByAttempts = [...events].sort((a, b) => safeN(b.totalAttempts) - safeN(a.totalAttempts)).slice(0, 12);
+
+  const allSkills = Array.from(new Set(events.flatMap(ev => Object.keys(parseJ(ev.skillFamilyScores, {})))));
+
+  return (
+    <div className="space-y-5">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <StatCard label="Avg Score" value={safe(avgGrade, 2)} icon="\u2B50" color={gradeColor(avgGrade)} sub="course average" />
+        <StatCard label="Pass Rate" value={`${passRate.toFixed(0)}%`} icon="\u2705"
+          color={passRate >= 80 ? 'text-emerald-400' : passRate >= 60 ? 'text-yellow-400' : 'text-red-400'}
+          sub="trainees \u2265 3.0 avg" />
+        <StatCard label="At-Risk" value={atRisk} icon="\uD83D\uDD34"
+          color={atRisk > 0 ? 'text-red-400' : 'text-gray-400'} sub={`of ${trainees.length} trainees`} />
+        <StatCard label="PT-051 Records" value={summary.totalPt051s} icon="\uD83D\uDCCB" sub={`${trainees.length} trainees`} />
+        <StatCard label="Events" value={events.length} icon="\u2708\uFE0F"
+          sub={`${bottleneckEvents.length} bottleneck`}
+          color={bottleneckEvents.length > 0 ? 'text-orange-400' : 'text-white'} />
+      </div>
+
+      {/* Row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SCard title="Trainee Status Distribution">
+          <DonutChart size={120} segments={[
+            { label: 'At Risk', value: atRisk, color: '#ef4444' },
+            { label: 'Monitor', value: monitor, color: '#eab308' },
+            { label: 'Normal', value: normal, color: '#3b82f6' },
+            { label: 'Exceeding', value: exceeding, color: '#10b981' },
+          ].filter(s => s.value > 0)} />
+        </SCard>
+        <SCard title="Skill Family Performance">
+          {skillEntries.length > 0
+            ? <HBarChart data={skillEntries.map(([l, v]) => ({ label: l, value: v }))} />
+            : <p className="text-gray-500 text-sm">Run analytics to generate skill data</p>}
+        </SCard>
+      </div>
+
+      {/* Row 2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SCard title="Score Distribution (Trainee Avg Grades)">
+          <ColChart data={scoreDist} max={Math.max(1, ...scoreDist.map(d => d.value))} height={100} />
+        </SCard>
+        <SCard title="Event Difficulty Ranking (lowest avg first)">
+          {eventsByDiff.length > 0 ? (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {eventsByDiff.map((ev, i) => (
+                <div key={ev.id} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 w-4 flex-shrink-0">{i + 1}</span>
+                  <span className="text-xs text-gray-300 flex-1 truncate" title={ev.eventCode}>{ev.eventCode}</span>
+                  <SparkBar value={safeN(ev.avgOverallGrade)} />
+                  {safeN(ev.bottleneckScore) > 0.5 && <span title="Bottleneck">\uD83D\uDEA7</span>}
+                  {ev.overServiceIndicator && <span title="Over-serviced">\u2705</span>}
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-gray-500 text-sm">No event data</p>}
+        </SCard>
+      </div>
+
+      {/* Row 3: Event avg bar chart */}
+      {topByAttempts.length > 0 && (
+        <SCard title="Event Average Scores (Top 12 by Attempts)">
+          <div className="overflow-x-auto">
+            <ColChart data={topByAttempts.map(ev => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) }))} max={5} height={130} />
+          </div>
+        </SCard>
+      )}
+
+      {/* Row 4: Bottleneck + Over-Service */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <SCard title="\uD83D\uDEA7 Bottleneck Events">
+          {bottleneckEvents.length === 0
+            ? <p className="text-gray-500 text-sm">No bottlenecks detected</p>
+            : <div className="flex flex-wrap gap-2">{bottleneckEvents.map(e => <Tag key={e} text={e} type="red" />)}</div>}
+        </SCard>
+        <SCard title="\u2705 Over-Serviced Events">
+          {overServicedEvents.length === 0
+            ? <p className="text-gray-500 text-sm">No over-serviced events</p>
+            : <div className="flex flex-wrap gap-2">{overServicedEvents.map(e => <Tag key={e} text={e} type="green" />)}</div>}
+        </SCard>
+      </div>
+
+      {/* Row 5: Skill heatmap matrix */}
+      {events.length > 0 && allSkills.length > 0 && (
+        <SCard title="Skill Weakness Heatmap (Event \u00D7 Skill Family)">
+          <div className="overflow-x-auto">
+            <table className="text-xs">
+              <thead>
+                <tr>
+                  <th className="text-left text-gray-400 pr-4 py-1 whitespace-nowrap">Event</th>
+                  {allSkills.map(sk => <th key={sk} className="text-gray-400 px-2 py-1 text-center whitespace-nowrap">{sk}</th>)}
+                  <th className="text-gray-400 px-2 py-1 text-center whitespace-nowrap">Overall</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map(ev => {
+                  const sf = parseJ(ev.skillFamilyScores, {}) as Record<string, number>;
+                  return (
+                    <tr key={ev.id} className="border-t border-gray-700/50 hover:bg-gray-700/20">
+                      <td className="text-gray-300 pr-4 py-1.5 whitespace-nowrap font-medium">{ev.eventCode}</td>
+                      {allSkills.map(sk => {
+                        const v = sf[sk];
+                        return (
+                          <td key={sk} className="px-2 py-1.5 text-center">
+                            {v !== undefined
+                              ? <span className={`font-mono font-bold ${gradeColor(v)}`}>{safe(v, 1)}</span>
+                              : <span className="text-gray-700">\u2014</span>}
+                          </td>
+                        );
+                      })}
+                      <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>
+                        {safe(ev.avgOverallGrade, 2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </SCard>
+      )}
+
+      {/* Narrative */}
+      {summary.narrativeSummary && (
+        <SCard title="\uD83D\uDCDD Course Analysis Narrative">
+          <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{summary.narrativeSummary}</p>
+          <p className="text-gray-600 text-xs mt-3">Last analysed: {formatDate(summary.completedAt)} \u00B7 {summary.recordsProcessed} records processed</p>
+        </SCard>
+      )}
+    </div>
+  );
+};
+
+// ── TRAINEE TAB ────────────────────────────────────────────────────────────────
+
+const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) => {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
+  const [selected, setSelected] = useState<TIETraineeSummary | null>(null);
+
+  const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
+  const monitorCount = trainees.filter(t => t.riskLevel === 'monitor').length;
+  const exceedingCount = trainees.filter(t => t.riskLevel === 'exceeding').length;
+
+  const filtered = trainees.filter(t => {
+    if (filter !== 'all' && t.riskLevel !== filter) return false;
+    if (search && !t.traineeFullName.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const courseAvg = trainees.length > 0 ? trainees.reduce((s, t) => s + safeN(t.avgOverallGrade), 0) / trainees.length : 0;
+
+  const selProgression = selected ? parseProgression(selected.gradeProgression) : [];
+  const selSkills = selected ? parseJ(selected.skillFamilyScores ?? selected.strongestSkillFamilies, {}) as Record<string, number> : {};
+  const hasSkillScores = Object.values(selSkills).some(v => typeof v === 'number' && v > 0);
+  const weakEls = selected ? parseJ(selected.recurringWeakElements, []) as string[] : [];
+  const strongFams = selected ? parseJ(selected.strongestSkillFamilies, []) as string[] : [];
+  const atRiskReasons = selected ? parseJ(selected.atRiskReasons, []) as string[] : [];
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <input type="text" placeholder="Search trainee..." value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 w-56 focus:outline-none focus:border-blue-500" />
+        <div className="flex gap-1 flex-wrap">
+          {([
+            { k: 'all', label: `All (${trainees.length})` },
+            { k: 'at_risk', label: `\uD83D\uDD34 At Risk (${atRiskCount})` },
+            { k: 'monitor', label: `\u26A0\uFE0F Monitor (${monitorCount})` },
+            { k: 'exceeding', label: `\uD83C\uDF1F Exceeding (${exceedingCount})` },
+          ] as const).map(({ k, label }) => (
+            <button key={k} onClick={() => setFilter(k as any)}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${filter === k ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="text-gray-500 text-xs ml-auto">{filtered.length} shown</span>
+      </div>
+
+      <div className="flex gap-4">
+        {/* List */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left text-gray-400 font-medium px-4 py-2.5 text-xs uppercase">Trainee</th>
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Avg</th>
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Recent</th>
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Trend</th>
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">PT-051s</th>
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Risk</th>
+                  <th className="text-left text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Prog.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={7} className="text-center text-gray-500 py-8 text-sm">No trainees match the filter</td></tr>
+                )}
+                {filtered.map(t => {
+                  const prog = parseProgression(t.gradeProgression);
+                  return (
+                    <tr key={t.id} onClick={() => setSelected(selected?.id === t.id ? null : t)}
+                      className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === t.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
+                      <td className="px-4 py-2.5 text-gray-200 font-medium">{t.traineeFullName}</td>
+                      <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade))}`}>{safe(t.avgOverallGrade, 2)}</td>
+                      <td className={`px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade))}`}>{safe(t.recentAvgGrade, 2)}</td>
+                      <td className={`px-3 py-2.5 text-center font-bold ${trendColor(t.overallTrend)}`}>{trendIcon(t.overallTrend)}</td>
+                      <td className="px-3 py-2.5 text-center text-gray-400">{t.totalPt051Count}</td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(t.riskLevel)}`}>
+                          {t.riskLevel === 'at_risk' ? 'At Risk' : t.riskLevel === 'monitor' ? 'Monitor' : t.riskLevel === 'exceeding' ? 'Exceeding' : 'Normal'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {prog.length >= 2
+                          ? <SparkLine data={prog} width={70} height={24} color={t.overallTrend === 'improving' ? '#10b981' : t.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
+                          : <span className="text-gray-600 text-xs">\u2014</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Bottom: distribution + recent vs overall table */}
+          {trainees.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <SCard title="Grade by Trainee (sorted low\u2192high)">
+                <div className="overflow-x-auto">
+                  <ColChart
+                    data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
+                      label: t.traineeFullName.split(' ').pop() || t.traineeFullName,
+                      value: safeN(t.avgOverallGrade),
+                    }))}
+                    max={5} height={110} />
+                </div>
+              </SCard>
+
+              <SCard title="Recent vs Overall Grade Delta">
+                <div className="overflow-y-auto max-h-44">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="text-left text-gray-400 py-1 pr-2">Trainee</th>
+                        <th className="text-center text-gray-400 py-1 px-2">Overall</th>
+                        <th className="text-center text-gray-400 py-1 px-2">Recent</th>
+                        <th className="text-center text-gray-400 py-1 px-2">\u0394</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
+                        const d = safeN(t.recentAvgGrade) - safeN(t.avgOverallGrade);
+                        return (
+                          <tr key={t.id} className="border-b border-gray-700/40 hover:bg-gray-700/20">
+                            <td className="py-1.5 pr-2 text-gray-300 truncate max-w-[90px]">{t.traineeFullName}</td>
+                            <td className={`py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.avgOverallGrade))}`}>{safe(t.avgOverallGrade, 2)}</td>
+                            <td className={`py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.recentAvgGrade))}`}>{safe(t.recentAvgGrade, 2)}</td>
+                            <td className={`py-1.5 px-2 text-center font-mono ${d > 0.1 ? 'text-emerald-400' : d < -0.1 ? 'text-red-400' : 'text-gray-400'}`}>
+                              {d >= 0 ? '+' : ''}{d.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </SCard>
+            </div>
+          )}
+        </div>
+
+        {/* Detail Panel */}
+        {selected && (
+          <div className="w-72 flex-shrink-0 space-y-3">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-white font-bold text-sm">{selected.traineeFullName}</h3>
+                  <p className="text-gray-400 text-xs">{selected.courseName}</p>
+                </div>
+                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">\u00D7</button>
+              </div>
+              <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300 text-xs">Average Grade</span>
+                  <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`}>{safe(selected.avgOverallGrade, 2)}</span>
+                </div>
+                <div className="flex gap-3 mt-1.5 text-xs text-gray-400">
+                  <span>Recent: <span className={gradeColor(safeN(selected.recentAvgGrade))}>{safe(selected.recentAvgGrade, 2)}</span></span>
+                  <span>Trend: <span className={trendColor(selected.overallTrend)}>{trendIcon(selected.overallTrend)} {selected.overallTrend || 'stable'}</span></span>
+                </div>
+                <div className="mt-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${riskBadge(selected.riskLevel)}`}>
+                    {selected.riskLevel === 'at_risk' ? '\uD83D\uDD34 At Risk' : selected.riskLevel === 'monitor' ? '\u26A0\uFE0F Monitor' : selected.riskLevel === 'exceeding' ? '\uD83C\uDF1F Exceeding' : '\u2705 Normal'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* vs Course */}
+            <SCard title="vs Course Average">
+              <div className="space-y-2">
+                <div>
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-gray-400">This Trainee</span>
+                    <span className={gradeColor(safeN(selected.avgOverallGrade))}>{safe(selected.avgOverallGrade, 2)}</span>
+                  </div>
+                  <SparkBar value={safeN(selected.avgOverallGrade)} />
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-gray-400">Course Avg</span>
+                    <span className={gradeColor(courseAvg)}>{safe(courseAvg, 2)}</span>
+                  </div>
+                  <SparkBar value={courseAvg} colorClass="bg-blue-500" />
+                </div>
+              </div>
+            </SCard>
+
+            {/* Progression sparkline */}
+            {selProgression.length >= 2 && (
+              <SCard title="Grade Progression">
+                <div className="flex justify-center py-1">
+                  <SparkLine data={selProgression} width={210} height={55}
+                    color={selected.overallTrend === 'improving' ? '#10b981' : selected.overallTrend === 'worsening' ? '#ef4444' : '#60a5fa'} />
+                </div>
+                <div className="flex justify-between text-xs text-gray-600 mt-0.5">
+                  <span>Earliest</span><span>Latest</span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">{selProgression.length} assessments</p>
+              </SCard>
+            )}
+
+            {/* Skill radar (if enough skills) */}
+            {hasSkillScores && Object.keys(selSkills).length >= 3 && (
+              <SCard title="Skill Family Radar">
+                <div className="flex justify-center">
+                  <RadarChart data={selSkills} size={175} />
+                </div>
+              </SCard>
+            )}
+
+            {/* Skill bars (if fewer than 3) */}
+            {hasSkillScores && Object.keys(selSkills).length < 3 && (
+              <SCard title="Skill Families">
+                <HBarChart data={Object.entries(selSkills).map(([l, v]) => ({ label: l, value: v }))} />
+              </SCard>
+            )}
+
+            {/* Weak elements */}
+            {weakEls.length > 0 && (
+              <SCard title="Recurring Weak Elements">
+                <div className="flex flex-wrap gap-1.5">{weakEls.map(e => <Tag key={e} text={e} type="red" />)}</div>
+              </SCard>
+            )}
+
+            {/* Strong families */}
+            {strongFams.length > 0 && (
+              <SCard title="Strongest Skill Families">
+                <div className="flex flex-wrap gap-1.5">{strongFams.map(e => <Tag key={e} text={e} type="green" />)}</div>
+              </SCard>
+            )}
+
+            {/* At-risk reasons */}
+            {selected.riskLevel === 'at_risk' && atRiskReasons.length > 0 && (
+              <SCard title="\u26A0\uFE0F At-Risk Reasons">
+                <ul className="space-y-1">
+                  {atRiskReasons.map((r, i) => (
+                    <li key={i} className="text-xs text-red-300 flex items-start gap-1">
+                      <span className="text-red-500 flex-shrink-0">\u2022</span>{r}
+                    </li>
+                  ))}
+                </ul>
+              </SCard>
+            )}
+
+            {/* Narrative */}
+            {selected.narrativeSummary && (
+              <SCard title="Analysis">
+                <p className="text-gray-300 text-xs leading-relaxed">{selected.narrativeSummary}</p>
+              </SCard>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── EVENTS TAB ─────────────────────────────────────────────────────────────────
+
+const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
+  const [selected, setSelected] = useState<TIEEventSummary | null>(null);
+  const [sortKey, setSortKey] = useState<keyof TIEEventSummary>('avgOverallGrade');
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const handleSort = (k: keyof TIEEventSummary) => {
+    if (sortKey === k) setSortAsc(p => !p);
+    else { setSortKey(k); setSortAsc(true); }
+  };
+
+  const sorted = [...events].sort((a, b) => {
+    const av = safeN(a[sortKey] as any);
+    const bv = safeN(b[sortKey] as any);
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  const SortTh: React.FC<{ field: keyof TIEEventSummary; label: string }> = ({ field, label }) => (
+    <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase cursor-pointer hover:text-gray-200 select-none"
+      onClick={() => handleSort(field)}>
+      {label}{sortKey === field ? (sortAsc ? ' \u2191' : ' \u2193') : ''}
+    </th>
+  );
+
+  // KPI tiles from events
+  if (events.length === 0) return (
+    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 text-center">
+      <p className="text-gray-500">No event data available for this course</p>
+    </div>
+  );
+
+  const hardest = events.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, events[0]);
+  const easiest = events.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, events[0]);
+  const mostAttempts = events.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events[0]);
+  const mostVariable = events.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events[0]);
+
+  const allSkills = Array.from(new Set(events.flatMap(ev => Object.keys(parseJ(ev.skillFamilyScores, {})))));
+  const selSkills = selected ? parseJ(selected.skillFamilyScores, {}) as Record<string, number> : {};
+  const selWeak = selected ? parseJ(selected.weakElementsByAvg, []) as any[] : [];
+  const selStrong = selected ? parseJ(selected.strongElementsByAvg, []) as any[] : [];
+
+  const normaliseElement = (e: any): string => typeof e === 'string' ? e : e?.element || JSON.stringify(e);
+
+  return (
+    <div className="space-y-5">
+      {/* KPI Tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Hardest Event" value={hardest.eventCode} icon="\uD83D\uDEA7"
+          color="text-red-400" sub={`Avg: ${safe(hardest.avgOverallGrade, 2)}`} />
+        <StatCard label="Easiest Event" value={easiest.eventCode} icon="\uD83C\uDF1F"
+          color="text-emerald-400" sub={`Avg: ${safe(easiest.avgOverallGrade, 2)}`} />
+        <StatCard label="Most Attempted" value={mostAttempts.eventCode} icon="\uD83D\uDCCA"
+          color="text-blue-400" sub={`${mostAttempts.totalAttempts} attempts`} />
+        <StatCard label="Most Variable" value={mostVariable.eventCode} icon="\uD83D\uDCC8"
+          color="text-yellow-400" sub={`Variance: ${safe(mostVariable.gradeVariance, 2)}`} />
+      </div>
+
+      <div className="flex gap-4">
+        {/* Table */}
+        <div className="flex-1 min-w-0">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left text-gray-400 font-medium px-4 py-2.5 text-xs uppercase">Event</th>
+                  <SortTh field="avgOverallGrade" label="Avg" />
+                  <SortTh field="passRate" label="Pass%" />
+                  <SortTh field="totalAttempts" label="Attempts" />
+                  <SortTh field="gradeVariance" label="Variance" />
+                  <SortTh field="difficultyScore" label="Difficulty" />
+                  <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Flags</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(ev => (
+                  <tr key={ev.id} onClick={() => setSelected(selected?.id === ev.id ? null : ev)}
+                    className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === ev.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
+                    <td className="px-4 py-2.5 text-gray-200 font-medium">{ev.eventCode}</td>
+                    <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</td>
+                    <td className={`px-3 py-2.5 text-center text-xs font-medium ${safeN(ev.passRate) >= 80 ? 'text-emerald-400' : safeN(ev.passRate) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {safe(ev.passRate, 0)}%
+                    </td>
+                    <td className="px-3 py-2.5 text-center text-gray-400">{ev.totalAttempts}</td>
+                    <td className={`px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > 1 ? 'text-orange-400' : 'text-gray-400'}`}>{safe(ev.gradeVariance, 2)}</td>
+                    <td className="px-3 py-2.5 text-center">
+                      <SparkBar value={safeN(ev.difficultyScore)} max={1} />
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      {safeN(ev.bottleneckScore) > 0.5 && <span className="mr-1" title="Bottleneck">\uD83D\uDEA7</span>}
+                      {ev.overServiceIndicator && <span title="Over-serviced">\u2705</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Bottom charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* Pass rate column chart */}
+            <SCard title="Pass Rate by Event (%)">
+              <div className="overflow-x-auto">
+                <ColChart
+                  data={[...events].sort((a, b) => safeN(a.passRate) - safeN(b.passRate)).map(ev => ({
+                    label: ev.eventCode,
+                    value: safeN(ev.passRate),
+                    color: safeN(ev.passRate) >= 80 ? '#10b981' : safeN(ev.passRate) >= 60 ? '#eab308' : '#ef4444',
+                  }))}
+                  max={100} height={120} />
+              </div>
+            </SCard>
+
+            {/* Grade variance chart */}
+            <SCard title="Grade Variance by Event (spread indicator)">
+              <div className="overflow-x-auto">
+                <ColChart
+                  data={[...events].sort((a, b) => safeN(b.gradeVariance) - safeN(a.gradeVariance)).map(ev => ({
+                    label: ev.eventCode,
+                    value: safeN(ev.gradeVariance),
+                    color: safeN(ev.gradeVariance) > 1.5 ? '#ef4444' : safeN(ev.gradeVariance) > 0.8 ? '#eab308' : '#3b82f6',
+                  }))}
+                  max={Math.max(1, ...events.map(e => safeN(e.gradeVariance)))} height={120} />
+              </div>
+            </SCard>
+          </div>
+
+          {/* Skill weakness stacked view */}
+          {allSkills.length > 0 && (
+            <div className="mt-4">
+              <SCard title="Skill Weakness by Event (sorted by avg grade)">
+                <div className="overflow-x-auto">
+                  <table className="text-xs">
+                    <thead>
+                      <tr>
+                        <th className="text-left text-gray-400 pr-4 py-1 whitespace-nowrap">Event</th>
+                        {allSkills.map(sk => <th key={sk} className="text-gray-400 px-2 py-1 text-center whitespace-nowrap">{sk}</th>)}
+                        <th className="text-gray-400 px-2 py-1 text-center whitespace-nowrap">Ovrl</th>
+                        <th className="text-gray-400 px-2 py-1 text-center whitespace-nowrap">Pass%</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...events].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(ev => {
+                        const sf = parseJ(ev.skillFamilyScores, {}) as Record<string, number>;
+                        return (
+                          <tr key={ev.id} className={`border-t border-gray-700/50 hover:bg-gray-700/20 cursor-pointer ${selected?.id === ev.id ? 'bg-blue-900/20' : ''}`}
+                            onClick={() => setSelected(selected?.id === ev.id ? null : ev)}>
+                            <td className="text-gray-300 pr-4 py-1.5 font-medium whitespace-nowrap">{ev.eventCode}</td>
+                            {allSkills.map(sk => {
+                              const v = sf[sk];
+                              return (
+                                <td key={sk} className="px-2 py-1.5 text-center">
+                                  {v !== undefined
+                                    ? <span className={`font-mono font-bold ${gradeColor(v)}`}>{safe(v, 1)}</span>
+                                    : <span className="text-gray-700">\u2014</span>}
+                                </td>
+                              );
+                            })}
+                            <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</td>
+                            <td className={`px-2 py-1.5 text-center text-xs ${safeN(ev.passRate) >= 80 ? 'text-emerald-400' : safeN(ev.passRate) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {safe(ev.passRate, 0)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </SCard>
+            </div>
+          )}
+        </div>
+
+        {/* Event Detail Panel */}
+        {selected && (
+          <div className="w-72 flex-shrink-0 space-y-3">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="text-white font-bold text-sm">{selected.eventCode}</h3>
+                  <p className="text-gray-400 text-xs">{selected.courseName}</p>
+                </div>
+                <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-200 text-lg leading-none">\u00D7</button>
+              </div>
+              <div className={`rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300 text-xs">Average Grade</span>
+                  <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`}>{safe(selected.avgOverallGrade, 2)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 mt-2 text-xs text-gray-400">
+                  <span>Pass Rate: <span className={safeN(selected.passRate) >= 80 ? 'text-emerald-400' : 'text-yellow-400'}>{safe(selected.passRate, 0)}%</span></span>
+                  <span>Attempts: <span className="text-gray-300">{selected.totalAttempts}</span></span>
+                  <span>Variance: <span className={safeN(selected.gradeVariance) > 1 ? 'text-orange-400' : 'text-gray-300'}>{safe(selected.gradeVariance, 2)}</span></span>
+                  <span>Difficulty: <span className="text-gray-300">{safe(selected.difficultyScore, 2)}</span></span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {safeN(selected.bottleneckScore) > 0.5 && <Tag text="\uD83D\uDEA7 Bottleneck" type="red" />}
+                {selected.overServiceIndicator && <Tag text="\u2705 Over-Serviced" type="green" />}
+              </div>
+            </div>
+
+            {/* Skill families */}
+            {Object.keys(selSkills).length > 0 && (
+              <SCard title="Skill Family Scores">
+                <HBarChart data={Object.entries(selSkills).sort((a, b) => a[1] - b[1]).map(([l, v]) => ({ label: l, value: v }))} />
+              </SCard>
+            )}
+
+            {/* Weak elements */}
+            {selWeak.length > 0 && (
+              <SCard title="Weak Elements (by avg)">
+                <div className="flex flex-wrap gap-1.5">{selWeak.map(e => <Tag key={normaliseElement(e)} text={normaliseElement(e)} type="red" />)}</div>
+              </SCard>
+            )}
+
+            {/* Strong elements */}
+            {selStrong.length > 0 && (
+              <SCard title="Strong Elements">
+                <div className="flex flex-wrap gap-1.5">{selStrong.map(e => <Tag key={normaliseElement(e)} text={normaliseElement(e)} type="green" />)}</div>
+              </SCard>
+            )}
+
+            {/* Narrative */}
+            {selected.narrativeSummary && (
+              <SCard title="Analysis">
+                <p className="text-gray-300 text-xs leading-relaxed">{selected.narrativeSummary}</p>
+              </SCard>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
 const TrainingIntelligenceTab: React.FC = () => {
-  // State
   const [courses, setCourses] = useState<TIECourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [recentRuns, setRecentRuns] = useState<TIERun[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [runProgress, setRunProgress] = useState<string>('');
-  const [activePanel, setActivePanel] = useState<'overview' | 'trainees' | 'events' | 'findings' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'course' | 'trainee' | 'events'>('course');
 
   const [summary, setSummary] = useState<TIECourseSummary | null>(null);
   const [trainees, setTrainees] = useState<TIETraineeSummary[]>([]);
   const [events, setEvents] = useState<TIEEventSummary[]>([]);
   const [findings, setFindings] = useState<TIEFinding[]>([]);
-  const [settings, setSettings] = useState<Record<string, string>>({});
 
-  const [traineeSearch, setTraineeSearch] = useState('');
-  const [traineeFilter, setTraineeFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
-  const [selectedTrainee, setSelectedTrainee] = useState<TIETraineeSummary | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<TIEEventSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load courses on mount
+  // Polling for run status
+  const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     fetchCourses();
     fetchRecentRuns();
-    fetchSettings();
   }, []);
 
-  // Load data when course changes
   useEffect(() => {
-    if (!selectedCourse) return;
-    loadCourseData(selectedCourse);
+    if (selectedCourse) loadCourseData(selectedCourse);
   }, [selectedCourse]);
 
   const fetchCourses = async () => {
     try {
       const r = await fetch('/api/tie/courses');
       const data = await r.json();
-      setCourses(data);
-      if (data.length > 0 && !selectedCourse) {
+      setCourses(Array.isArray(data) ? data : []);
+      if (Array.isArray(data) && data.length > 0 && !selectedCourse) {
         setSelectedCourse(data[0].name);
       }
-    } catch (e) { setError('Failed to load courses'); }
+    } catch { setError('Failed to load courses'); }
   };
 
   const fetchRecentRuns = async () => {
@@ -260,65 +1075,84 @@ const TrainingIntelligenceTab: React.FC = () => {
       const r = await fetch('/api/tie/runs?limit=5');
       const data = await r.json();
       setRecentRuns(Array.isArray(data) ? data : []);
-    } catch (e) { /* non-fatal */ }
-  };
-
-  const fetchSettings = async () => {
-    try {
-      const r = await fetch('/api/tie/settings');
-      const data = await r.json();
-      setSettings(data);
-    } catch (e) { /* non-fatal */ }
+    } catch { /* non-fatal */ }
   };
 
   const loadCourseData = async (course: string) => {
     setLoading(true);
     setError(null);
     try {
-      const [sumRes, traineeRes, eventRes, findRes] = await Promise.all([
+      const [sumRes, trRes, evRes, fiRes] = await Promise.all([
         fetch(`/api/tie/summary/${encodeURIComponent(course)}`),
         fetch(`/api/tie/trainees/${encodeURIComponent(course)}`),
         fetch(`/api/tie/events/${encodeURIComponent(course)}`),
         fetch(`/api/tie/findings/${encodeURIComponent(course)}`),
       ]);
-      const [sum, tr, ev, fi] = await Promise.all([sumRes.json(), traineeRes.json(), eventRes.json(), findRes.json()]);
+      const [sum, tr, ev, fi] = await Promise.all([sumRes.json(), trRes.json(), evRes.json(), fiRes.json()]);
       setSummary(sum);
       setTrainees(Array.isArray(tr) ? tr : []);
       setEvents(Array.isArray(ev) ? ev : []);
       setFindings(Array.isArray(fi) ? fi : []);
-      setSelectedTrainee(null);
-      setSelectedEvent(null);
-    } catch (e) {
-      setError('Failed to load course analytics');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('Failed to load course analytics'); }
+    finally { setLoading(false); }
+  };
+
+  const startPolling = () => {
+    if (pollRef.current) return;
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/tie/status${selectedCourse ? `?course=${encodeURIComponent(selectedCourse)}` : ''}`);
+        const data = await r.json();
+        if (data.status === 'complete') {
+          setRunProgress(`\u2705 Complete \u2014 ${data.recordsProcessed ?? '?'} records processed`);
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setTimeout(() => {
+            setRunProgress('');
+            setIsRunning(false);
+            fetchRecentRuns();
+            fetchCourses();
+            if (selectedCourse) loadCourseData(selectedCourse);
+          }, 2500);
+        } else if (data.status === 'failed') {
+          setError(`Run failed: ${data.errorMessage || 'unknown error'}`);
+          setRunProgress('');
+          setIsRunning(false);
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+        } else if (data.status === 'running') {
+          setRunProgress('Processing PT-051 records\u2026');
+        }
+      } catch { /* poll silently */ }
+    }, 2000);
   };
 
   const handleRunAnalytics = async () => {
     if (isRunning) return;
     setIsRunning(true);
-    setRunProgress('Initialising analytics engine...');
+    setRunProgress('Initialising analytics engine\u2026');
     setError(null);
     try {
-      setRunProgress('Processing PT-051 records...');
       const r = await fetch('/api/tie/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseFilter: selectedCourse || null, triggeredBy: 'manual-ui' })
+        body: JSON.stringify({ courseFilter: selectedCourse || null, triggeredBy: 'manual-ui' }),
       });
       const result = await r.json();
-      if (result.success) {
-        setRunProgress(`✅ Complete — ${result.recordsProcessed} records, ${result.trainees} trainees, ${result.events} events`);
+      if (result.started) {
+        setRunProgress('Analytics run started \u2014 processing in background\u2026');
+        startPolling();
+      } else if (result.success) {
+        setRunProgress(`\u2705 Complete \u2014 ${result.recordsProcessed} records`);
         setTimeout(() => {
           setRunProgress('');
           setIsRunning(false);
           fetchRecentRuns();
-          if (selectedCourse) loadCourseData(selectedCourse);
           fetchCourses();
+          if (selectedCourse) loadCourseData(selectedCourse);
         }, 2500);
       } else {
-        setError(`Run failed: ${result.error}`);
+        setError(`Run failed: ${result.error || 'unknown error'}`);
         setRunProgress('');
         setIsRunning(false);
       }
@@ -329,114 +1163,54 @@ const TrainingIntelligenceTab: React.FC = () => {
     }
   };
 
-  const handleSaveSetting = async (key: string, value: string) => {
-    try {
-      await fetch('/api/tie/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value })
-      });
-      setSettings(prev => ({ ...prev, [key]: value }));
-    } catch (e) { setError('Failed to save setting'); }
-  };
+  // cleanup poll on unmount
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  // Filtered trainees
-  const filteredTrainees = trainees.filter(t => {
-    if (traineeFilter !== 'all' && t.riskLevel !== traineeFilter) return false;
-    if (traineeSearch && !t.traineeName.toLowerCase().includes(traineeSearch.toLowerCase())) return false;
-    return true;
-  });
-
-  const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
-  const monitorCount = trainees.filter(t => t.riskLevel === 'monitor').length;
-  const exceedingCount = trainees.filter(t => t.riskLevel === 'exceeding').length;
-  const bottleneckCount = events.filter(e => e.bottleneckFlag).length;
-
-  const panelTabs = [
-    { id: 'overview' as const, label: 'Overview', icon: '📊' },
-    { id: 'trainees' as const, label: 'Trainees', icon: '👤', badge: atRiskCount > 0 ? atRiskCount : undefined },
-    { id: 'events' as const, label: 'Events', icon: '✈️', badge: bottleneckCount > 0 ? bottleneckCount : undefined },
-    { id: 'findings' as const, label: 'Findings', icon: '🔍', badge: findings.length > 0 ? findings.length : undefined },
-    { id: 'settings' as const, label: 'Settings', icon: '⚙️' },
+  const tabs = [
+    { id: 'course' as const, label: 'Course', icon: '\uD83D\uDCCA' },
+    { id: 'trainee' as const, label: 'Trainee', icon: '\uD83D\uDC64', badge: trainees.filter(t => t.riskLevel === 'at_risk').length || undefined },
+    { id: 'events' as const, label: 'Events', icon: '\u2708\uFE0F', badge: events.filter(e => safeN(e.bottleneckScore) > 0.5).length || undefined },
   ];
-
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
-
       {/* ── Header Controls ── */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Title */}
           <div className="flex-shrink-0">
             <h2 className="text-white font-bold text-lg leading-tight">Training Intelligence Engine</h2>
-            <p className="text-gray-400 text-xs">Offline PT-051 analytics · all data stored in database</p>
+            <p className="text-gray-400 text-xs">Offline PT-051 analytics \u00B7 all data stored in database</p>
           </div>
-
           <div className="flex-1 min-w-0" />
-
-          {/* Course selector */}
           <div className="flex items-center gap-2">
             <label className="text-gray-400 text-sm whitespace-nowrap">Course:</label>
-            <select
-              value={selectedCourse}
-              onChange={e => setSelectedCourse(e.target.value)}
-              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-500"
-              disabled={isRunning}
-            >
-              <option value="">— All Courses —</option>
-              {courses.map(c => (
-                <option key={c.name} value={c.name}>
-                  {c.name} ({c.recordCount} records)
-                </option>
-              ))}
+            <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} disabled={isRunning}
+              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-500">
+              <option value="">\u2014 All Courses \u2014</option>
+              {courses.map(c => <option key={c.name} value={c.name}>{c.name} ({c.recordCount} records)</option>)}
             </select>
           </div>
-
-          {/* Run button */}
-          <button
-            onClick={handleRunAnalytics}
-            disabled={isRunning}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${
-              isRunning
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'
-            }`}
-          >
-            {isRunning ? (
-              <>
-                <span className="animate-spin">⟳</span>
-                Running...
-              </>
-            ) : (
-              <>
-                ▶ Run Analytics
-              </>
-            )}
+          <button onClick={handleRunAnalytics} disabled={isRunning}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'}`}>
+            {isRunning ? <><span className="animate-spin">\u27F3</span>Running...</> : <>\u25B6 Run Analytics</>}
           </button>
         </div>
 
-        {/* Progress / status */}
         {runProgress && (
-          <div className="mt-3 bg-blue-900/30 border border-blue-700 rounded px-3 py-2 text-blue-300 text-sm">
-            {runProgress}
-          </div>
+          <div className="mt-3 bg-blue-900/30 border border-blue-700 rounded px-3 py-2 text-blue-300 text-sm">{runProgress}</div>
         )}
         {error && (
           <div className="mt-3 bg-red-900/30 border border-red-700 rounded px-3 py-2 text-red-300 text-sm flex items-center justify-between">
-            <span>⚠ {error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-3">✕</button>
+            <span>\u26A0 {error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-3">\u00D7</button>
           </div>
         )}
-
-        {/* Last run info */}
         {recentRuns.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
             {recentRuns.slice(0, 3).map(run => (
               <span key={run.id} className="flex items-center gap-1">
-                <span className={run.status === 'complete' ? 'text-emerald-500' : run.status === 'failed' ? 'text-red-500' : 'text-yellow-500'}>●</span>
-                {run.courseFilter || 'All'} · {formatDate(run.completedAt)} · {run.recordsProcessed ?? '—'} records
+                <span className={run.status === 'complete' ? 'text-emerald-500' : run.status === 'failed' ? 'text-red-500' : 'text-yellow-500'}>\u25CF</span>
+                {run.courseFilter || 'All'} \u00B7 {formatDate(run.completedAt)} \u00B7 {run.recordsProcessed ?? '\u2014'} records
               </span>
             ))}
           </div>
@@ -446,14 +1220,11 @@ const TrainingIntelligenceTab: React.FC = () => {
       {/* ── No Data State ── */}
       {!loading && !summary && !isRunning && (
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-10 text-center">
-          <p className="text-4xl mb-3">🧠</p>
+          <p className="text-4xl mb-3">\uD83E\uDDE0</p>
           <p className="text-white font-semibold text-lg">No analytics data yet</p>
           <p className="text-gray-400 text-sm mt-1 mb-4">Select a course and click <strong>Run Analytics</strong> to process PT-051 data.</p>
-          <button
-            onClick={handleRunAnalytics}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold"
-          >
-            ▶ Run Analytics Now
+          <button onClick={handleRunAnalytics} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold">
+            \u25B6 Run Analytics Now
           </button>
         </div>
       )}
@@ -465,21 +1236,18 @@ const TrainingIntelligenceTab: React.FC = () => {
         </div>
       )}
 
-      {/* ── Main content (when data available) ── */}
+      {/* ── Main content ── */}
       {!loading && summary && (
         <>
-          {/* Panel tab nav */}
-          <div className="flex items-center gap-1 border-b border-gray-700 pb-0">
-            {panelTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActivePanel(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t-md transition-all relative ${
-                  activePanel === tab.id
+          {/* Tab nav */}
+          <div className="flex items-center gap-1 border-b border-gray-700">
+            {tabs.map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-t-md transition-all relative ${
+                  activeTab === tab.id
                     ? 'bg-gray-800 text-white border border-b-0 border-gray-600'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                }`}
-              >
+                }`}>
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
                 {tab.badge !== undefined && (
@@ -491,565 +1259,15 @@ const TrainingIntelligenceTab: React.FC = () => {
             ))}
           </div>
 
-          {/* ─── OVERVIEW PANEL ─── */}
-          {activePanel === 'overview' && (
-            <div className="space-y-5">
-              {/* Stat cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                <StatCard label="Total Records" value={summary.totalRecords} icon="📋" />
-                <StatCard label="Trainees" value={summary.uniqueTrainees} icon="👥" />
-                <StatCard label="Events" value={summary.uniqueEvents} icon="✈️" />
-                <StatCard
-                  label="Avg Grade"
-                  value={summary.avgGrade.toFixed(2)}
-                  icon="⭐"
-                  color={gradeColor(summary.avgGrade)}
-                />
-                <StatCard
-                  label="At Risk"
-                  value={summary.atRiskCount}
-                  sub={`of ${summary.uniqueTrainees}`}
-                  icon="🔴"
-                  color={summary.atRiskCount > 0 ? 'text-red-400' : 'text-gray-400'}
-                />
-                <StatCard
-                  label="Pass Rate"
-                  value={`${summary.passRate.toFixed(0)}%`}
-                  icon="✅"
-                  color={summary.passRate >= 80 ? 'text-emerald-400' : summary.passRate >= 60 ? 'text-yellow-400' : 'text-red-400'}
-                />
-              </div>
-
-              {/* Trainee Risk Distribution + Skill Heatmap */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Risk Distribution */}
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Trainee Risk Distribution</h3>
-                  <div className="space-y-2">
-                    {[
-                      { label: 'At Risk', count: atRiskCount, color: 'bg-red-500', textColor: 'text-red-400' },
-                      { label: 'Monitor', count: monitorCount, color: 'bg-yellow-500', textColor: 'text-yellow-400' },
-                      { label: 'Normal', count: trainees.length - atRiskCount - monitorCount - exceedingCount, color: 'bg-blue-500', textColor: 'text-blue-400' },
-                      { label: 'Exceeding', count: exceedingCount, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
-                    ].map(item => {
-                      const pct = trainees.length > 0 ? (item.count / trainees.length) * 100 : 0;
-                      return (
-                        <div key={item.label}>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className={item.textColor}>{item.label}</span>
-                            <span className="text-gray-400">{item.count} ({pct.toFixed(0)}%)</span>
-                          </div>
-                          <div className="bg-gray-700 rounded-full h-2">
-                            <div className={`${item.color} h-2 rounded-full`} style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Skill Family Heatmap */}
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 col-span-2">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Skill Family Performance</h3>
-                  <SkillHeatmap data={summary.skillHeatmap} />
-                </div>
-              </div>
-
-              {/* Bottleneck & Over-Service Events */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">🚧 Bottleneck Events</h3>
-                  {summary.bottleneckEvents.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No bottlenecks detected</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {summary.bottleneckEvents.map(e => (
-                        <span key={e} className="bg-red-900/40 border border-red-700 text-red-300 text-xs px-2 py-1 rounded">
-                          {e}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">✅ Over-Serviced Events</h3>
-                  {summary.overServicedEvents.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No over-serviced events</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {summary.overServicedEvents.map(e => (
-                        <span key={e} className="bg-emerald-900/40 border border-emerald-700 text-emerald-300 text-xs px-2 py-1 rounded">
-                          {e}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Course Narrative */}
-              {summary.narrative && (
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-2">📝 Course Analysis Narrative</h3>
-                  <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{summary.narrative}</p>
-                  <p className="text-gray-600 text-xs mt-3">
-                    Last analysed: {formatDate(summary.completedAt)} · {summary.recordsProcessed} records processed
-                  </p>
-                </div>
-              )}
-            </div>
+          {/* Tab panels */}
+          {activeTab === 'course' && (
+            <CourseTab summary={summary} trainees={trainees} events={events} findings={findings} />
           )}
-
-          {/* ─── TRAINEES PANEL ─── */}
-          {activePanel === 'trainees' && (
-            <div className="space-y-4">
-              {/* Search + Filter */}
-              <div className="flex flex-wrap gap-3 items-center">
-                <input
-                  type="text"
-                  placeholder="Search trainee..."
-                  value={traineeSearch}
-                  onChange={e => setTraineeSearch(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 w-56 focus:outline-none focus:border-blue-500"
-                />
-                <div className="flex gap-1">
-                  {(['all', 'at_risk', 'monitor', 'exceeding'] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setTraineeFilter(f)}
-                      className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-                        traineeFilter === f
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                      }`}
-                    >
-                      {f === 'all' ? 'All' : f === 'at_risk' ? '🔴 At Risk' : f === 'monitor' ? '⚠️ Monitor' : '🌟 Exceeding'}
-                      {f !== 'all' && (
-                        <span className="ml-1 text-gray-400">
-                          ({f === 'at_risk' ? atRiskCount : f === 'monitor' ? monitorCount : exceedingCount})
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <span className="text-gray-500 text-xs ml-auto">{filteredTrainees.length} trainees</span>
-              </div>
-
-              {/* Two-panel layout: list + detail */}
-              <div className="flex gap-4">
-                {/* Trainee list */}
-                <div className="flex-1 min-w-0">
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-700">
-                          <th className="text-left text-gray-400 font-medium px-4 py-2.5 text-xs uppercase">Trainee</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Avg</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Trend</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Assessments</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Risk</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Confidence</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredTrainees.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="text-center text-gray-500 py-6 text-sm">
-                              No trainees match the current filter
-                            </td>
-                          </tr>
-                        )}
-                        {filteredTrainees.map(t => (
-                          <tr
-                            key={t.id}
-                            onClick={() => setSelectedTrainee(t)}
-                            className={`border-b border-gray-700/50 cursor-pointer transition-colors ${
-                              selectedTrainee?.id === t.id
-                                ? 'bg-blue-900/30'
-                                : 'hover:bg-gray-700/40'
-                            }`}
-                          >
-                            <td className="px-4 py-2.5 text-gray-200 font-medium">{t.traineeName}</td>
-                            <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(t.avgGrade)}`}>
-                              {t.avgGrade.toFixed(2)}
-                            </td>
-                            <td className={`px-3 py-2.5 text-center font-bold ${trendColor(t.trendDirection)}`}>
-                              {trendIcon(t.trendDirection)}
-                            </td>
-                            <td className="px-3 py-2.5 text-center text-gray-400">{t.totalAssessments}</td>
-                            <td className="px-3 py-2.5 text-center">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(t.riskLevel)}`}>
-                                {t.riskLevel === 'at_risk' ? 'At Risk' : t.riskLevel === 'monitor' ? 'Monitor' : t.riskLevel === 'exceeding' ? 'Exceeding' : 'Normal'}
-                              </span>
-                            </td>
-                            <td className={`px-3 py-2.5 text-center text-xs ${confidenceColor(t.confidenceLevel)}`}>
-                              {t.confidenceLevel}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Trainee Detail Panel */}
-                {selectedTrainee && (
-                  <div className="w-80 flex-shrink-0">
-                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-white font-bold text-base">{selectedTrainee.traineeName}</h3>
-                          <p className="text-gray-400 text-xs">{selectedTrainee.courseFilter}</p>
-                        </div>
-                        <button onClick={() => setSelectedTrainee(null)} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
-                      </div>
-
-                      {/* Grade summary */}
-                      <div className={`rounded-lg border p-3 ${gradeBg(selectedTrainee.avgGrade)}`}>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-300 text-xs">Average Grade</span>
-                          <span className={`text-2xl font-bold font-mono ${gradeColor(selectedTrainee.avgGrade)}`}>
-                            {selectedTrainee.avgGrade.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                          <span>Min: <span className={gradeColor(selectedTrainee.gradeMin)}>{selectedTrainee.gradeMin.toFixed(1)}</span></span>
-                          <span>Max: <span className={gradeColor(selectedTrainee.gradeMax)}>{selectedTrainee.gradeMax.toFixed(1)}</span></span>
-                          <span>Trend: <span className={trendColor(selectedTrainee.trendDirection)}>{trendIcon(selectedTrainee.trendDirection)} {selectedTrainee.trendDirection}</span></span>
-                        </div>
-                      </div>
-
-                      {/* Skill family scores */}
-                      {Object.keys(selectedTrainee.skillFamilyScores).length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Skill Families</p>
-                          <SkillHeatmap data={selectedTrainee.skillFamilyScores} />
-                        </div>
-                      )}
-
-                      {/* Weak / strong elements */}
-                      {selectedTrainee.weakElements.length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Weak Elements</p>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedTrainee.weakElements.map(e => (
-                              <span key={e} className="bg-red-900/40 border border-red-800 text-red-300 text-xs px-2 py-0.5 rounded">{e}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {selectedTrainee.strongElements.length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Strong Elements</p>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedTrainee.strongElements.map(e => (
-                              <span key={e} className="bg-emerald-900/40 border border-emerald-800 text-emerald-300 text-xs px-2 py-0.5 rounded">{e}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Narrative */}
-                      {selectedTrainee.narrative && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Analysis</p>
-                          <p className="text-gray-300 text-xs leading-relaxed">{selectedTrainee.narrative}</p>
-                        </div>
-                      )}
-
-                      {/* Risk + Confidence */}
-                      <div className="flex gap-2">
-                        <span className={`text-xs px-2 py-1 rounded-full ${riskBadge(selectedTrainee.riskLevel)}`}>
-                          {selectedTrainee.riskLevel === 'at_risk' ? '🔴 At Risk' :
-                           selectedTrainee.riskLevel === 'monitor' ? '⚠️ Monitor' :
-                           selectedTrainee.riskLevel === 'exceeding' ? '🌟 Exceeding' : '✅ Normal'}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded-full bg-gray-700 border border-gray-600 ${confidenceColor(selectedTrainee.confidenceLevel)}`}>
-                          {selectedTrainee.confidenceLevel} confidence ({(selectedTrainee.confidenceScore * 100).toFixed(0)}%)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          {activeTab === 'trainee' && (
+            <TraineeTab trainees={trainees} />
           )}
-
-          {/* ─── EVENTS PANEL ─── */}
-          {activePanel === 'events' && (
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                {/* Event list */}
-                <div className="flex-1 min-w-0">
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-700">
-                          <th className="text-left text-gray-400 font-medium px-4 py-2.5 text-xs uppercase">Event</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Avg</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Pass%</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Attempts</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Trend</th>
-                          <th className="text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase">Flags</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {events.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="text-center text-gray-500 py-6 text-sm">No event data available</td>
-                          </tr>
-                        )}
-                        {events.map(ev => (
-                          <tr
-                            key={ev.id}
-                            onClick={() => setSelectedEvent(ev)}
-                            className={`border-b border-gray-700/50 cursor-pointer transition-colors ${
-                              selectedEvent?.id === ev.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'
-                            }`}
-                          >
-                            <td className="px-4 py-2.5 text-gray-200 font-medium">{ev.eventName}</td>
-                            <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(ev.avgGrade)}`}>
-                              {ev.avgGrade.toFixed(2)}
-                            </td>
-                            <td className={`px-3 py-2.5 text-center text-xs font-medium ${ev.passRate >= 80 ? 'text-emerald-400' : ev.passRate >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {ev.passRate.toFixed(0)}%
-                            </td>
-                            <td className="px-3 py-2.5 text-center text-gray-400">{ev.totalAttempts}</td>
-                            <td className={`px-3 py-2.5 text-center font-bold ${trendColor(ev.trendDirection)}`}>
-                              {trendIcon(ev.trendDirection)}
-                            </td>
-                            <td className="px-3 py-2.5 text-center">
-                              {ev.bottleneckFlag && <span className="mr-1" title="Bottleneck">🚧</span>}
-                              {ev.overServiceFlag && <span title="Over-serviced">✅</span>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Event Detail Panel */}
-                {selectedEvent && (
-                  <div className="w-80 flex-shrink-0">
-                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-white font-bold text-base">{selectedEvent.eventName}</h3>
-                          <p className="text-gray-400 text-xs">{selectedEvent.courseName}</p>
-                        </div>
-                        <button onClick={() => setSelectedEvent(null)} className="text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
-                      </div>
-
-                      <div className={`rounded-lg border p-3 ${gradeBg(selectedEvent.avgGrade)}`}>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-300 text-xs">Average Grade</span>
-                          <span className={`text-2xl font-bold font-mono ${gradeColor(selectedEvent.avgGrade)}`}>
-                            {selectedEvent.avgGrade.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex gap-4 mt-2 text-xs text-gray-400">
-                          <span>Pass Rate: <span className={selectedEvent.passRate >= 80 ? 'text-emerald-400' : 'text-yellow-400'}>{selectedEvent.passRate.toFixed(0)}%</span></span>
-                          <span>Attempts: {selectedEvent.totalAttempts}</span>
-                        </div>
-                      </div>
-
-                      {Object.keys(selectedEvent.skillFamilyScores).length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Skill Families</p>
-                          <SkillHeatmap data={selectedEvent.skillFamilyScores} />
-                        </div>
-                      )}
-
-                      {selectedEvent.weakElements.length > 0 && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Weak Elements</p>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedEvent.weakElements.map(e => (
-                              <span key={e} className="bg-red-900/40 border border-red-800 text-red-300 text-xs px-2 py-0.5 rounded">{e}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap gap-2">
-                        {selectedEvent.bottleneckFlag && (
-                          <span className="bg-red-900/40 border border-red-700 text-red-300 text-xs px-2 py-1 rounded">🚧 Bottleneck</span>
-                        )}
-                        {selectedEvent.overServiceFlag && (
-                          <span className="bg-emerald-900/40 border border-emerald-700 text-emerald-300 text-xs px-2 py-1 rounded">✅ Over-Serviced</span>
-                        )}
-                      </div>
-
-                      {selectedEvent.narrative && (
-                        <div>
-                          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Analysis</p>
-                          <p className="text-gray-300 text-xs leading-relaxed">{selectedEvent.narrative}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Event skill heatmap grid */}
-              {events.length > 0 && (
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Event × Skill Family Grade Matrix</h3>
-                  <div className="overflow-x-auto">
-                    <table className="text-xs">
-                      <thead>
-                        <tr>
-                          <th className="text-left text-gray-400 pr-4 py-1 whitespace-nowrap">Event</th>
-                          {Array.from(new Set(events.flatMap(e => Object.keys(e.skillFamilyScores)))).map(skill => (
-                            <th key={skill} className="text-gray-400 px-2 py-1 text-center whitespace-nowrap">{skill}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {events.map(ev => {
-                          const skills = Array.from(new Set(events.flatMap(e => Object.keys(e.skillFamilyScores))));
-                          return (
-                            <tr key={ev.id} className="border-t border-gray-700/50">
-                              <td className="text-gray-300 pr-4 py-1 whitespace-nowrap font-medium">{ev.eventName}</td>
-                              {skills.map(skill => {
-                                const s = ev.skillFamilyScores[skill];
-                                return (
-                                  <td key={skill} className="px-2 py-1 text-center">
-                                    {s !== undefined ? (
-                                      <span className={`font-mono font-bold ${gradeColor(s)}`}>{s.toFixed(1)}</span>
-                                    ) : (
-                                      <span className="text-gray-700">—</span>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── FINDINGS PANEL ─── */}
-          {activePanel === 'findings' && (
-            <div className="space-y-3">
-              {findings.length === 0 ? (
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 text-center">
-                  <p className="text-gray-500">No findings available for this course</p>
-                </div>
-              ) : (
-                <>
-                  {/* Finding type summary */}
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {Array.from(new Set(findings.map(f => f.findingType))).map(type => {
-                      const count = findings.filter(f => f.findingType === type).length;
-                      return (
-                        <span key={type} className="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-2 py-1 rounded">
-                          {findingTypeIcon[type] || '•'} {type} ({count})
-                        </span>
-                      );
-                    })}
-                  </div>
-
-                  {/* Finding cards */}
-                  {findings.map(f => (
-                    <div key={f.id} className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{findingTypeIcon[f.findingType] || '•'}</span>
-                          <div>
-                            <span className="text-white text-sm font-medium">{f.descriptiveFinding}</span>
-                            <div className="flex gap-2 mt-0.5">
-                              <span className="text-gray-500 text-xs">{f.level} · {f.subjectKey}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <span className={`text-xs px-2 py-0.5 rounded bg-gray-700 border border-gray-600 ${confidenceColor(f.confidenceLevel)}`}>
-                            {f.confidenceLevel}
-                          </span>
-                          <span className="text-xs px-2 py-0.5 rounded bg-gray-700 border border-gray-600 text-gray-400">
-                            {f.evidenceCount} records
-                          </span>
-                        </div>
-                      </div>
-
-                      {f.interpretedInsight && (
-                        <p className="text-gray-400 text-xs pl-7">{f.interpretedInsight}</p>
-                      )}
-
-                      {f.recommendation && (
-                        <div className="bg-blue-900/20 border border-blue-800/50 rounded px-3 py-2 ml-7">
-                          <p className="text-blue-300 text-xs"><span className="font-semibold">Recommendation:</span> {f.recommendation}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ─── SETTINGS PANEL ─── */}
-          {activePanel === 'settings' && (
-            <div className="space-y-4">
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-                <h3 className="text-white font-semibold mb-4">TIE Configuration</h3>
-                <div className="space-y-4 max-w-lg">
-                  {Object.entries({
-                    at_risk_threshold: { label: 'At-Risk Grade Threshold', desc: 'Average grade below this value flags trainee as at-risk (scale 1–5)' },
-                    weak_element_threshold: { label: 'Weak Element Threshold', desc: 'Element average below this value is classified as weak' },
-                    bottleneck_threshold: { label: 'Bottleneck Pass Rate %', desc: 'Events with pass rate below this % are marked as bottlenecks' },
-                    over_service_threshold: { label: 'Over-Service Pass Rate %', desc: 'Events with pass rate above this % are marked as over-serviced' },
-                    recency_weight_factor: { label: 'Recency Weight Factor', desc: 'Multiplier applied to the most recent 30% of assessments' },
-                    min_confidence_records: { label: 'Minimum Records for Confidence', desc: 'Minimum assessment count for high-confidence findings' },
-                  }).map(([key, meta]) => (
-                    <div key={key} className="flex items-start gap-4">
-                      <div className="flex-1">
-                        <label className="text-gray-300 text-sm font-medium block">{meta.label}</label>
-                        <p className="text-gray-500 text-xs mt-0.5">{meta.desc}</p>
-                      </div>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={settings[key] ?? ''}
-                        onChange={e => setSettings(prev => ({ ...prev, [key]: e.target.value }))}
-                        onBlur={e => handleSaveSetting(key, e.target.value)}
-                        className="bg-gray-700 border border-gray-600 text-white text-sm rounded px-3 py-1.5 w-24 text-right focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-                <p className="text-gray-600 text-xs mt-5">Settings are saved to the database and take effect on the next analytics run.</p>
-              </div>
-
-              {/* Recent runs */}
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-5">
-                <h3 className="text-white font-semibold mb-3">Recent Analytics Runs</h3>
-                {recentRuns.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No runs yet</p>
-                ) : (
-                  <div className="space-y-2">
-                    {recentRuns.map(run => (
-                      <div key={run.id} className="flex items-center gap-3 py-2 border-b border-gray-700/50 last:border-0 text-sm">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${run.status === 'complete' ? 'bg-emerald-500' : run.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'}`} />
-                        <span className="text-gray-300 flex-1">{run.courseFilter || 'All Courses'}</span>
-                        <span className="text-gray-500 text-xs">{run.recordsProcessed ?? '—'} records</span>
-                        <span className="text-gray-500 text-xs">{formatDate(run.completedAt)}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${run.status === 'complete' ? 'bg-emerald-900/40 text-emerald-400' : run.status === 'failed' ? 'bg-red-900/40 text-red-400' : 'bg-yellow-900/40 text-yellow-400'}`}>
-                          {run.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+          {activeTab === 'events' && (
+            <EventsTab events={events} />
           )}
         </>
       )}
