@@ -285,53 +285,56 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       }
     });
     
-    // Get all personnel for reference
-    const allPersonnel = await prisma.personnel.findMany({
-      select: {
-        id: true,
-        name: true,
-        role: true
-      }
-    });
-    
-    // Get distinct roles for debugging
-    const roles = [...new Set(allPersonnel.map(p => p.role).filter(Boolean))];
-    console.log('Distinct roles in Personnel table:', roles);
-    console.log('Total personnel records:', allPersonnel.length);
+    // Log sample trainee data for debugging
+    console.log('Sample trainees:', trainees.slice(0, 5));
     
     // Count primary trainees per instructor (by name)
     const primaryCounts = {};
+    let nullPrimaryCount = 0;
+    let emptyPrimaryCount = 0;
+    
     trainees.forEach(t => {
-      if (t.primaryInstructor) {
+      if (t.primaryInstructor === null || t.primaryInstructor === undefined) {
+        nullPrimaryCount++;
+      } else if (t.primaryInstructor === '' || t.primaryInstructor.trim() === '') {
+        emptyPrimaryCount++;
+      } else {
         primaryCounts[t.primaryInstructor] = (primaryCounts[t.primaryInstructor] || 0) + 1;
       }
     });
     
     // Count secondary trainees per instructor (by name)
     const secondaryCounts = {};
+    let nullSecondaryCount = 0;
+    let emptySecondaryCount = 0;
+    
     trainees.forEach(t => {
-      if (t.secondaryInstructor) {
+      if (t.secondaryInstructor === null || t.secondaryInstructor === undefined) {
+        nullSecondaryCount++;
+      } else if (t.secondaryInstructor === '' || t.secondaryInstructor.trim() === '') {
+        emptySecondaryCount++;
+      } else {
         secondaryCounts[t.secondaryInstructor] = (secondaryCounts[t.secondaryInstructor] || 0) + 1;
       }
     });
     
     // Get unique instructor names from trainee assignments
+    const primaryInstructorNames = Object.keys(primaryCounts);
+    const secondaryInstructorNames = Object.keys(secondaryCounts);
     const instructorNames = new Set([
-      ...Object.keys(primaryCounts),
-      ...Object.keys(secondaryCounts)
+      ...primaryInstructorNames,
+      ...secondaryInstructorNames
     ]);
     
     const totalStaff = instructorNames.size;
     
-    // Initialize counts for instructors with 0 trainees (shouldn't happen but handle it)
-    instructorNames.forEach(name => {
-      if (!primaryCounts[name]) {
-        primaryCounts[name] = 0;
-      }
-      if (!secondaryCounts[name]) {
-        secondaryCounts[name] = 0;
-      }
-    });
+    console.log('Primary instructor names found:', primaryInstructorNames);
+    console.log('Secondary instructor names found:', secondaryInstructorNames);
+    console.log('Total unique instructors:', totalStaff);
+    console.log('Trainees with null primary:', nullPrimaryCount);
+    console.log('Trainees with empty primary:', emptyPrimaryCount);
+    console.log('Trainees with null secondary:', nullSecondaryCount);
+    console.log('Trainees with empty secondary:', emptySecondaryCount);
     
     // Build distribution for primary trainees
     const primaryDistributionCounts = {};
@@ -381,7 +384,14 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       data: {
         totalStaff,
         totalTrainees: trainees.length,
-        distinctRoles: roles,
+        debug: {
+          nullPrimaryCount,
+          emptyPrimaryCount,
+          nullSecondaryCount,
+          emptySecondaryCount,
+          primaryInstructorNames,
+          secondaryInstructorNames
+        },
         summary: {
           averagePrimaryTrainees: avgPrimary,
           averageSecondaryTrainees: avgSecondary,
@@ -390,7 +400,6 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
         },
         primaryDistribution,
         secondaryDistribution,
-        // Include detailed instructor assignments for debugging
         instructorBreakdown: {
           primary: primaryCounts,
           secondary: secondaryCounts
@@ -405,8 +414,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       error: error.message
     });
   }
-});
-
+});\n
 // TRAINEE API ROUTES
 // ============================================================
 
