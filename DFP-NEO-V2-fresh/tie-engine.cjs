@@ -4,11 +4,47 @@
 // ============================================================
 
 // ============================================================
+// DIAGNOSTIC WRAPPER - logs exact query+params on 42P18 error
+// ============================================================
+async function safeExec(db, sql, ...params) {
+  try {
+    return await db.$executeRawUnsafe(sql, ...params);
+  } catch (err) {
+    if (err.message && err.message.includes('42P18')) {
+      // Find which $N is uncast by checking each param
+      const paramInfo = params.map((p, i) => {
+        const type = p === null ? 'NULL' : typeof p;
+        const val = p === null ? 'NULL' : String(p).substring(0, 50);
+        return `  $${i+1}: [${type}] ${val}`;
+      }).join('\n');
+      console.error(`\n🔴 42P18 ERROR - EXACT QUERY:\n${sql}\nPARAMS (${params.length} total):\n${paramInfo}\n`);
+    }
+    throw err;
+  }
+}
+
+async function safeQuery(db, sql, ...params) {
+  try {
+    return await db.$queryRawUnsafe(sql, ...params);
+  } catch (err) {
+    if (err.message && err.message.includes('42P18')) {
+      const paramInfo = params.map((p, i) => {
+        const type = p === null ? 'NULL' : typeof p;
+        const val = p === null ? 'NULL' : String(p).substring(0, 50);
+        return `  $${i+1}: [${type}] ${val}`;
+      }).join('\n');
+      console.error(`\n🔴 42P18 ERROR - EXACT QUERY:\n${sql}\nPARAMS (${params.length} total):\n${paramInfo}\n`);
+    }
+    throw err;
+  }
+}
+
+// ============================================================
 // SECTION 1: DB MIGRATION - Create TIE tables if not present
 // ============================================================
 async function ensureTIETables(db) {
   try {
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIESettings" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "key" TEXT NOT NULL UNIQUE,
@@ -17,7 +53,7 @@ async function ensureTIETables(db) {
         "updatedAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIECommentDictionary" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "phrase" TEXT NOT NULL,
@@ -28,7 +64,7 @@ async function ensureTIETables(db) {
         "createdAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIESkillMapping" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "element" TEXT NOT NULL,
@@ -37,7 +73,7 @@ async function ensureTIETables(db) {
         "isActive" BOOLEAN DEFAULT TRUE
       )
     `);
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIEEventRelationship" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "fromEvent" TEXT NOT NULL,
@@ -48,7 +84,7 @@ async function ensureTIETables(db) {
         "isActive" BOOLEAN DEFAULT TRUE
       )
     `);
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIEAnalyticsRun" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runType" TEXT NOT NULL,
@@ -63,7 +99,7 @@ async function ensureTIETables(db) {
         "triggeredBy" TEXT
       )
     `);
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIENormalisedInput" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -87,11 +123,11 @@ async function ensureTIETables(db) {
         "createdAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_norm_course ON "TIENormalisedInput"("courseName")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_norm_trainee ON "TIENormalisedInput"("traineeFullName")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_norm_event ON "TIENormalisedInput"("eventCode")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_norm_course ON "TIENormalisedInput"("courseName")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_norm_trainee ON "TIENormalisedInput"("traineeFullName")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_norm_event ON "TIENormalisedInput"("eventCode")`);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIECommentTag" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -105,9 +141,9 @@ async function ensureTIETables(db) {
         "confidence" FLOAT DEFAULT 1.0
       )
     `);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_tag_trainee ON "TIECommentTag"("traineeFullName")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_tag_trainee ON "TIECommentTag"("traineeFullName")`);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIEFinding" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -130,10 +166,10 @@ async function ensureTIETables(db) {
         "createdAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_finding_level ON "TIEFinding"("level","subjectKey")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_finding_run ON "TIEFinding"("runId")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_finding_level ON "TIEFinding"("level","subjectKey")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_finding_run ON "TIEFinding"("runId")`);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIETraineeSummary" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -155,10 +191,10 @@ async function ensureTIETables(db) {
         "createdAt" TIMESTAMPTZ DEFAULT NOW()
       )
     `);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_trainee_name ON "TIETraineeSummary"("traineeFullName")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_tie_trainee_risk ON "TIETraineeSummary"("riskLevel")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_trainee_name ON "TIETraineeSummary"("traineeFullName")`);
+    await safeExec(db, `CREATE INDEX IF NOT EXISTS idx_tie_trainee_risk ON "TIETraineeSummary"("riskLevel")`);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIEEventSummary" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -182,7 +218,7 @@ async function ensureTIETables(db) {
       )
     `);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIECourseSummary" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -201,7 +237,7 @@ async function ensureTIETables(db) {
       )
     `);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIEUnitSummary" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -217,7 +253,7 @@ async function ensureTIETables(db) {
       )
     `);
 
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       CREATE TABLE IF NOT EXISTS "TIERootCause" (
         "id" TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
         "runId" TEXT NOT NULL,
@@ -258,9 +294,9 @@ async function seedTIEDefaults(db) {
   ];
 
   for (const d of defaults) {
-    const existing = await db.$queryRawUnsafe(`SELECT id FROM "TIESettings" WHERE key = $1`, d.key);
+    const existing = await safeQuery(db, `SELECT id FROM "TIESettings" WHERE key = $1`, d.key);
     if (!existing || existing.length === 0) {
-      await db.$executeRawUnsafe(
+      await safeExec(db, 
         `INSERT INTO "TIESettings"("id","key","value","description") VALUES(gen_random_uuid()::text,$1,$2::jsonb,$3)`,
         d.key, JSON.stringify(d.value), d.description
       );
@@ -268,7 +304,7 @@ async function seedTIEDefaults(db) {
   }
 
   // Comment dictionaries
-  const dictionaryCount = await db.$queryRawUnsafe(`SELECT COUNT(*) as cnt FROM "TIECommentDictionary"`);
+  const dictionaryCount = await safeQuery(db, `SELECT COUNT(*) as cnt FROM "TIECommentDictionary"`);
   if (dictionaryCount[0].cnt == 0) {
     const phrases = [
       // POSITIVE
@@ -350,7 +386,7 @@ async function seedTIEDefaults(db) {
       { phrase: 'adequate', category: 'neutral', weight: 0.9 },
     ];
     for (const p of phrases) {
-      await db.$executeRawUnsafe(
+      await safeExec(db, 
         `INSERT INTO "TIECommentDictionary"("id","phrase","category","weight","matchType") VALUES(gen_random_uuid()::text,$1,$2,$3,'contains')`,
         p.phrase, p.category, p.weight
       );
@@ -359,7 +395,7 @@ async function seedTIEDefaults(db) {
   }
 
   // Skill mappings
-  const mappingCount = await db.$queryRawUnsafe(`SELECT COUNT(*) as cnt FROM "TIESkillMapping"`);
+  const mappingCount = await safeQuery(db, `SELECT COUNT(*) as cnt FROM "TIESkillMapping"`);
   if (mappingCount[0].cnt == 0) {
     const mappings = [
       { element: 'Lookout', skillFamily: 'Situational Awareness' },
@@ -402,7 +438,7 @@ async function seedTIEDefaults(db) {
       { element: 'Strap-in', skillFamily: 'Procedural Discipline' },
     ];
     for (const m of mappings) {
-      await db.$executeRawUnsafe(
+      await safeExec(db, 
         `INSERT INTO "TIESkillMapping"("id","element","skillFamily") VALUES(gen_random_uuid()::text,$1,$2)`,
         m.element, m.skillFamily
       );
@@ -411,7 +447,7 @@ async function seedTIEDefaults(db) {
   }
 
   // Event relationships (syllabus sequence)
-  const relCount = await db.$queryRawUnsafe(`SELECT COUNT(*) as cnt FROM "TIEEventRelationship"`);
+  const relCount = await safeQuery(db, `SELECT COUNT(*) as cnt FROM "TIEEventRelationship"`);
   if (relCount[0].cnt == 0) {
     const relationships = [
       // BGF sequence
@@ -433,7 +469,7 @@ async function seedTIEDefaults(db) {
       ).filter(Boolean),
     ];
     for (const r of relationships) {
-      await db.$executeRawUnsafe(
+      await safeExec(db, 
         `INSERT INTO "TIEEventRelationship"("id","fromEvent","toEvent","relationshipType","sequenceOrder") VALUES(gen_random_uuid()::text,$1,$2,$3,$4)`,
         r.from, r.to, r.type, r.order || 0
       );
@@ -748,7 +784,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
   console.log(`🧠 TIE: Starting analytics run for course: ${courseFilter || 'ALL'}`);
 
   // Create analytics run record
-  const runRows = await db.$queryRawUnsafe(`
+  const runRows = await safeQuery(db, `
     INSERT INTO "TIEAnalyticsRun"("id","runType","courseFilter","status","logicVersion","triggeredBy")
     VALUES(gen_random_uuid()::text,$1::text,$2::text,'running','1.0',$3::text)
     RETURNING id
@@ -757,7 +793,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
   try {
     // ── Load settings ──────────────────────────────────────────
-    const settingsRows = await db.$queryRawUnsafe(`SELECT key, value FROM "TIESettings"`);
+    const settingsRows = await safeQuery(db, `SELECT key, value FROM "TIESettings"`);
     const settings = {};
     for (const row of settingsRows) {
       settings[row.key] = typeof row.value === 'object' ? row.value : JSON.parse(row.value);
@@ -771,10 +807,10 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     const EXCEEDING_AVG = Number(settings.exceeding_avg_grade) || 4.2;
 
     // ── Load comment dictionary ────────────────────────────────
-    const dictionary = await db.$queryRawUnsafe(`SELECT * FROM "TIECommentDictionary" WHERE "isActive" = TRUE`);
+    const dictionary = await safeQuery(db, `SELECT * FROM "TIECommentDictionary" WHERE "isActive" = TRUE`);
 
     // ── Load skill mappings ────────────────────────────────────
-    const skillMappings = await db.$queryRawUnsafe(`SELECT * FROM "TIESkillMapping" WHERE "isActive" = TRUE`);
+    const skillMappings = await safeQuery(db, `SELECT * FROM "TIESkillMapping" WHERE "isActive" = TRUE`);
 
     // ── Load PT-051 data from DataBackup ──────────────────────
     const pt051Backup = await db.dataBackup.findFirst({
@@ -782,7 +818,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       orderBy: { createdAt: 'desc' }
     });
     if (!pt051Backup || !pt051Backup.data) {
-      await db.$executeRawUnsafe(`UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
+      await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
         'No PT-051 data found in database', runId);
       return { success: false, error: 'No PT-051 data found', runId };
     }
@@ -810,28 +846,28 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     }
 
     if (pt051Records.length === 0) {
-      await db.$executeRawUnsafe(`UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
+      await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
         'No PT-051 records found for selected course', runId);
       return { success: false, error: 'No records for course', runId };
     }
 
     // ── Delete previous results for this course/scope ─────────
     if (courseFilter) {
-      await db.$executeRawUnsafe(`DELETE FROM "TIENormalisedInput" WHERE "courseName" = $1`, courseFilter);
-      await db.$executeRawUnsafe(`DELETE FROM "TIECommentTag" WHERE "traineeFullName" LIKE $1`, `%${courseFilter}%`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIEFinding" WHERE "subjectKey" LIKE $1`, `%${courseFilter}%`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIETraineeSummary" WHERE "courseName" = $1`, courseFilter);
-      await db.$executeRawUnsafe(`DELETE FROM "TIEEventSummary" WHERE "courseName" = $1`, courseFilter);
-      await db.$executeRawUnsafe(`DELETE FROM "TIECourseSummary" WHERE "courseName" = $1`, courseFilter);
-      await db.$executeRawUnsafe(`DELETE FROM "TIERootCause" WHERE "subjectKey" LIKE $1`, `%${courseFilter}%`);
+      await safeExec(db, `DELETE FROM "TIENormalisedInput" WHERE "courseName" = $1`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIECommentTag" WHERE "traineeFullName" LIKE $1`, `%${courseFilter}%`);
+      await safeExec(db, `DELETE FROM "TIEFinding" WHERE "subjectKey" LIKE $1`, `%${courseFilter}%`);
+      await safeExec(db, `DELETE FROM "TIETraineeSummary" WHERE "courseName" = $1`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIEEventSummary" WHERE "courseName" = $1`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIECourseSummary" WHERE "courseName" = $1`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIERootCause" WHERE "subjectKey" LIKE $1`, `%${courseFilter}%`);
     } else {
-      await db.$executeRawUnsafe(`DELETE FROM "TIENormalisedInput" WHERE TRUE`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIECommentTag" WHERE TRUE`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIEFinding" WHERE TRUE`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIETraineeSummary" WHERE TRUE`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIEEventSummary" WHERE TRUE`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIECourseSummary" WHERE TRUE`);
-      await db.$executeRawUnsafe(`DELETE FROM "TIERootCause" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIENormalisedInput" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIECommentTag" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIEFinding" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIETraineeSummary" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIEEventSummary" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIECourseSummary" WHERE TRUE`);
+      await safeExec(db, `DELETE FROM "TIERootCause" WHERE TRUE`);
     }
 
     // ── LAYER 1+2: Ingest and normalise PT-051 data ───────────
@@ -863,7 +899,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       const recencyWeight = calculateRecencyWeight(rec.date, allDates, RECENCY_FACTOR);
 
       const normId = `norm-${runId}-${rec.id}`.substring(0, 200);
-      await db.$executeRawUnsafe(`
+      await safeExec(db, `
         INSERT INTO "TIENormalisedInput"
           ("id","runId","sourcePt051Id","traineeFullName","courseName","instructorName",
            "eventCode","eventDate","overallGrade","overallResult",
@@ -884,7 +920,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         const tags = classifyComment(comment, dictionary);
         for (const tag of tags) {
           const tagId = `tag-${runId}-${rec.id}-${element}-${tag.tag}`.substring(0, 200);
-          await db.$executeRawUnsafe(`
+          await safeExec(db, `
             INSERT INTO "TIECommentTag"
               ("id","runId","sourcePt051Id","traineeFullName","eventCode","element","tag","tagCategory","matchedPhrase","confidence")
             VALUES($1::text,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8::text,$9::text,$10::numeric)
@@ -901,7 +937,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         const tags = classifyComment(rec.overallComments, dictionary);
         for (const tag of tags) {
           const tagId = `tag-${runId}-${rec.id}-OVERALL-${tag.tag}`.substring(0, 200);
-          await db.$executeRawUnsafe(`
+          await safeExec(db, `
             INSERT INTO "TIECommentTag"
               ("id","runId","sourcePt051Id","traineeFullName","eventCode","element","tag","tagCategory","matchedPhrase","confidence")
             VALUES($1::text,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text,$8::text,$9::text,$10::numeric)
@@ -995,7 +1031,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         .map(([k]) => k);
 
       // Comment tag aggregation
-      const tagRows = await db.$queryRawUnsafe(`
+      const tagRows = await safeQuery(db, `
         SELECT "tag","tagCategory",COUNT(*) as cnt
         FROM "TIECommentTag"
         WHERE "traineeFullName"=$1 AND "runId"=$2
@@ -1038,7 +1074,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
       // Insert trainee summary
       const sumId = `tsum-${runId}-${traineeFullName}`.substring(0, 200);
-      await db.$executeRawUnsafe(`
+      await safeExec(db, `
         INSERT INTO "TIETraineeSummary"
           ("id","runId","traineeFullName","courseName","overallTrend","riskLevel",
            "strongestSkillFamilies","weakestSkillFamilies","recurringWeakElements",
@@ -1063,7 +1099,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           commentSupport: negTags.length > 2 ? 1 : 0
         });
         const fid = `f-trainee-weak-${runId}-${traineeFullName}`.substring(0, 200);
-        await db.$executeRawUnsafe(`
+        await safeExec(db, `
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount","sourcePt051Ids",
@@ -1085,7 +1121,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         const causes = inferRootCauses(weakSkillFamilies, negTags, weakElements);
         for (const cause of causes) {
           const rcId = `rc-${runId}-${traineeFullName}-${cause.causeCategory}`.substring(0, 200);
-          await db.$executeRawUnsafe(`
+          await safeExec(db, `
             INSERT INTO "TIERootCause"
               ("id","runId","level","subjectKey","likelyCause","causeCategory","confidenceScore","confidenceLevel")
             VALUES($1::text,$2::text,'trainee',$3::text,$4::text,$5::text,$6::numeric,$7::text)
@@ -1145,7 +1181,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
       const courseName = records[0]?.courseName || courseFilter || 'Unknown';
 
-      const tagRows = await db.$queryRawUnsafe(`
+      const tagRows = await safeQuery(db, `
         SELECT "tag","tagCategory",COUNT(*) as cnt
         FROM "TIECommentTag" WHERE "eventCode"=$1 AND "runId"=$2
         GROUP BY "tag","tagCategory" ORDER BY cnt DESC LIMIT 10
@@ -1162,7 +1198,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       });
 
       const evtSumId = `esum-${runId}-${eventCode}-${courseName}`.substring(0, 200);
-      await db.$executeRawUnsafe(`
+      await safeExec(db, `
         INSERT INTO "TIEEventSummary"
           ("id","runId","eventCode","courseName","totalAttempts","avgOverallGrade","gradeVariance",
            "weakElementsByAvg","strongElementsByAvg","dominantNegativeTags","dominantPositiveTags",
@@ -1185,7 +1221,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
           commentSupport: negTagsEvt.length > 2 ? 1 : 0
         });
         const fid = `f-evt-bottleneck-${runId}-${eventCode}`.substring(0, 200);
-        await db.$executeRawUnsafe(`
+        await safeExec(db, `
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
@@ -1201,7 +1237,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
       if (isOverService && grades.length >= MIN_OBS) {
         const fid = `f-evt-overservice-${runId}-${eventCode}`.substring(0, 200);
-        await db.$executeRawUnsafe(`
+        await safeExec(db, `
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight","recommendation",
              "confidenceLevel","confidenceScore","evidenceCount","trendDirection")
@@ -1222,7 +1258,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       const trainees = [...new Set(records.map(r => r.traineeFullName))];
 
       // Bottleneck events for this course
-      const courseEventSummaries = await db.$queryRawUnsafe(`
+      const courseEventSummaries = await safeQuery(db, `
         SELECT "eventCode","avgOverallGrade","bottleneckScore","overServiceIndicator","totalAttempts"
         FROM "TIEEventSummary" WHERE "runId"=$1 AND "courseName"=$2
         ORDER BY "bottleneckScore" DESC
@@ -1268,7 +1304,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       });
 
       const csumId = `csum-${runId}-${courseName}`.substring(0, 200);
-      await db.$executeRawUnsafe(`
+      await safeExec(db, `
         INSERT INTO "TIECourseSummary"
           ("id","runId","courseName","totalTrainees","totalPt051s","bottleneckEvents",
            "bottleneckSkillFamilies","atRiskTrainees","exceedingTrainees",
@@ -1286,7 +1322,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       // Course-level findings
       if (bottleneckEvents.length > 0) {
         const fid = `f-course-bottleneck-${runId}-${courseName}`.substring(0, 200);
-        await db.$executeRawUnsafe(`
+        await safeExec(db, `
           INSERT INTO "TIEFinding"
             ("id","runId","level","subjectKey","findingType","descriptiveFinding","interpretedInsight",
              "recommendation","confidenceLevel","confidenceScore","evidenceCount")
@@ -1302,7 +1338,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     }
 
     // Mark run complete
-    await db.$executeRawUnsafe(`
+    await safeExec(db, `
       UPDATE "TIEAnalyticsRun"
       SET status='complete', "completedAt"=NOW(), "recordsProcessed"=$1
       WHERE id=$2
@@ -1322,7 +1358,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
   } catch (err) {
     console.error('❌ TIE analytics error:', err);
-    await db.$executeRawUnsafe(`UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
+    await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
       err.message, runId);
     return { success: false, error: err.message, runId };
   }
