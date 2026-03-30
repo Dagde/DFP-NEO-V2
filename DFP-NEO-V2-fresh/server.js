@@ -3016,7 +3016,7 @@ function buildReallocation(trainees, personnel) {
   const units = ['1FTS', '2FTS', 'CFS'];
   const allResults = [];
 
-  // Seeded deterministic shuffle
+  // Seeded deterministic shuffle for reproducibility
   const seededRandom = (seed) => {
     let s = seed;
     return () => {
@@ -3029,8 +3029,6 @@ function buildReallocation(trainees, personnel) {
     const unitTrainees = trainees.filter(t => t.unit === unit);
     const unitStaff = personnel.filter(p => p.unit === unit);
 
-    const MAX_PRIMARY_PER_INSTRUCTOR = 3;
-    const MAX_SECONDARY_PER_INSTRUCTOR = 4;
     const MIN_SECONDARY_PER_TRAINEE = 2;
 
     const randFn = seededRandom(42);
@@ -3046,60 +3044,102 @@ function buildReallocation(trainees, personnel) {
     const shuffledTrainees = shuffle(unitTrainees);
     const shuffledStaff = shuffle(unitStaff);
 
-    // Track loads
+    const nTrainees = shuffledTrainees.length;
+    const nStaff = shuffledStaff.length;
+
+    // PRIMARY ALLOCATION
+    // Distribute nTrainees primary assignments across nStaff as evenly as possible.
+    // base = floor(n/s), remainder staff get (base+1), rest get base.
     const primaryLoad = {};
-    const secondaryLoad = {};
-    shuffledStaff.forEach(s => { primaryLoad[s.name] = 0; secondaryLoad[s.name] = 0; });
+    shuffledStaff.forEach(s => { primaryLoad[s.name] = 0; });
 
-    // Helper: get candidates sorted by load ascending
-    const getCandidates = (loadMap, maxLoad, exclude = new Set()) => {
-      return shuffledStaff
-        .filter(s => !exclude.has(s.name) && (loadMap[s.name] ?? 0) < maxLoad)
-        .sort((a, b) => (loadMap[a.name] ?? 0) - (loadMap[b.name] ?? 0));
-    };
-
-    // PRIMARY: exactly 1 per trainee, max 3 per instructor
     const primaryMap = {};
     shuffledTrainees.forEach(t => { primaryMap[t.id] = null; });
 
+    const primaryBase = Math.floor(nTrainees / nStaff);
+    const primaryRemainder = nTrainees % nStaff;
+
+    // Assign using strict round-robin: cycle through staff in order
+    let staffIdx = 0;
     for (const trainee of shuffledTrainees) {
-      const candidates = getCandidates(primaryLoad, MAX_PRIMARY_PER_INSTRUCTOR);
-      if (candidates.length === 0) {
-        console.log(`⚠️ No primary available for ${trainee.name} (${unit})`);
-        continue;
+      let attempts = 0;
+      while (attempts < nStaff) {
+        const instructor = shuffledStaff[staffIdx % nStaff];
+        staffIdx++;
+        attempts++;
+        const instructorIdx = shuffledStaff.indexOf(instructor);
+        const cap = instructorIdx < primaryRemainder ? primaryBase + 1 : primaryBase;
+        if (primaryLoad[instructor.name] < cap) {
+          primaryMap[trainee.id] = instructor.name;
+          primaryLoad[instructor.name]++;
+          break;
+        }
       }
-      primaryMap[trainee.id] = candidates[0].name;
-      primaryLoad[candidates[0].name]++;
+      if (!primaryMap[trainee.id]) {
+        // Fallback: assign to whoever has the lowest load
+        const fallback = shuffledStaff.slice().sort((a,b) => primaryLoad[a.name] - primaryLoad[b.name])[0];
+        primaryMap[trainee.id] = fallback.name;
+        primaryLoad[fallback.name]++;
+        console.log(`Warning: Primary fallback used for ${trainee.name} (${unit})`);
+      }
     }
 
-    // SECONDARY: min 2 per trainee, max 4 per instructor, must differ from primary
+    // SECONDARY ALLOCATION
+    // Distribute (nTrainees * MIN_SECONDARY_PER_TRAINEE) secondary assignments
+    // across nStaff as evenly as possible.
+    const totalSecondary = nTrainees * MIN_SECONDARY_PER_TRAINEE;
+    const secondaryBase = Math.floor(totalSecondary / nStaff);
+    const secondaryRemainder = totalSecondary % nStaff;
+
+    const secondaryLoad = {};
+    shuffledStaff.forEach(s => { secondaryLoad[s.name] = 0; });
+
     const secondaryMap = {};
     shuffledTrainees.forEach(t => { secondaryMap[t.id] = []; });
+
+    // Helper: pick best secondary candidate (lowest load, excluding given set)
+    const pickSecondary = (excludeSet) => {
+      const candidates = shuffledStaff
+        .filter(s => !excludeSet.has(s.name))
+        .sort((a, b) => {
+          const loadDiff = secondaryLoad[a.name] - secondaryLoad[b.name];
+          if (loadDiff !== 0) return loadDiff;
+          return shuffledStaff.indexOf(a) - shuffledStaff.indexOf(b);
+        });
+      return candidates.length > 0 ? candidates[0] : null;
+    };
 
     for (let round = 0; round < MIN_SECONDARY_PER_TRAINEE; round++) {
       for (const trainee of shuffledTrainees) {
         const primaryName = primaryMap[trainee.id];
-        const alreadySecondary = new Set(secondaryMap[trainee.id]);
+        const alreadyAssigned = new Set(secondaryMap[trainee.id]);
 
-        // Exclude primary and already-assigned secondaries
-        const excluded = new Set([...alreadySecondary]);
-        if (primaryName) excluded.add(primaryName);
+        // Exclude already-assigned secondaries and prefer to exclude primary
+        const excludeWithPrimary = new Set([...alreadyAssigned, primaryName].filter(Boolean));
+        let pick = pickSecondary(excludeWithPrimary);
 
-        let candidates = getCandidates(secondaryLoad, MAX_SECONDARY_PER_INSTRUCTOR, excluded);
-
-        // Fallback: if no candidates excluding primary, allow primary overlap
-        if (candidates.length === 0) {
-          candidates = getCandidates(secondaryLoad, MAX_SECONDARY_PER_INSTRUCTOR, alreadySecondary);
+        // Fallback: allow primary overlap if no other option
+        if (!pick) {
+          pick = pickSecondary(alreadyAssigned);
         }
 
-        if (candidates.length === 0) {
-          console.log(`⚠️ No secondary available for ${trainee.name} (${unit}) round ${round + 1}`);
+        if (!pick) {
+          console.log(`Warning: No secondary available for ${trainee.name} (${unit}) round ${round + 1}`);
           continue;
         }
-        secondaryMap[trainee.id].push(candidates[0].name);
-        secondaryLoad[candidates[0].name]++;
+
+        secondaryMap[trainee.id].push(pick.name);
+        secondaryLoad[pick.name]++;
       }
     }
+
+    // Log distribution for this unit
+    const pDist = {};
+    const sDist = {};
+    Object.values(primaryLoad).forEach(v => { pDist[v] = (pDist[v]||0)+1; });
+    Object.values(secondaryLoad).forEach(v => { sDist[v] = (sDist[v]||0)+1; });
+    console.log(`${unit} primary dist:`, JSON.stringify(pDist));
+    console.log(`${unit} secondary dist:`, JSON.stringify(sDist));
 
     for (const trainee of shuffledTrainees) {
       allResults.push({
