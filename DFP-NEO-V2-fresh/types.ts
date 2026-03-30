@@ -251,8 +251,8 @@ export interface Trainee {
   location?: string;
   phoneNumber?: string;
   email?: string;
-  primaryInstructor?: string;
-  secondaryInstructor?: string;
+  primaryInstructor?: string | string[];
+  secondaryInstructor?: string | string[];
   lmpType?: string;
   
      traineeCallsign?: string;

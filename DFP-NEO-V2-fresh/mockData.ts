@@ -1911,159 +1911,58 @@ const allocateInstructors = (trainees: Trainee[], instructors: Instructor[]): Tr
 
     if (!eligibleTrainees.length) return traineesWithAssignments;
 
-    const workload = new Map<string, { primary: Trainee[], secondary: Trainee[] }>();
-    allocatableInstructors.forEach(i => workload.set(i.name, { primary: [], secondary: [] }));
+    // Normalize all instructor fields to arrays
+    traineesWithAssignments.forEach(t => {
+        if (!Array.isArray(t.primaryInstructor)) {
+            t.primaryInstructor = t.primaryInstructor ? [t.primaryInstructor as string] : [];
+        }
+        if (!Array.isArray(t.secondaryInstructor)) {
+            t.secondaryInstructor = t.secondaryInstructor ? [t.secondaryInstructor as string] : [];
+        }
+    });
 
-    const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+    const MAX_PER_INSTRUCTOR = 3;
+    const primaryLoad = new Map<string, number>();
+    const secondaryLoad = new Map<string, number>();
+    allocatableInstructors.forEach(i => { primaryLoad.set(i.name, 0); secondaryLoad.set(i.name, 0); });
 
-    // Helper: Get instructors from the same unit as the trainee
-    const getInstructorsByUnit = (traineeUnit: string): Instructor[] => {
-        if (!traineeUnit) return [];
-        return allocatableInstructors.filter(i => i.unit === traineeUnit);
+    // Helper: Get unit instructors sorted by load
+    const getInstructorsByUnit = (unit: string, loadMap: Map<string, number>): Instructor[] => {
+        if (!unit) return [];
+        return allocatableInstructors
+            .filter(i => i.unit === unit && (loadMap.get(i.name) ?? 0) < MAX_PER_INSTRUCTOR)
+            .sort((a, b) => (loadMap.get(a.name) ?? 0) - (loadMap.get(b.name) ?? 0));
     };
 
-    // Helper: Check if instructor needs more assignments
-    const needsMorePrimaries = (instructor: Instructor): boolean => {
-        const load = workload.get(instructor.name);
-        return load ? load.primary.length < 2 : true;
-    };
-
-    const needsMoreSecondaries = (instructor: Instructor): boolean => {
-        const load = workload.get(instructor.name);
-        return load ? load.secondary.length < 2 : true;
-    };
-
-    // Phase 1: Assign each instructor minimum 2 primary trainees from their own unit
-    for (const instructor of allocatableInstructors) {
-        if (!instructor.unit) continue;
-
-        const unitTrainees = eligibleTrainees.filter(t => 
-            t.unit === instructor.unit && 
-            !workload.get(instructor.name)?.primary.includes(t)
-        );
-
-        // Assign up to 2 primary trainees from same unit
-        for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
-            const trainee = unitTrainees[i];
-            if (!trainee.primaryInstructor) {
-                trainee.primaryInstructor = instructor.name;
-                workload.get(instructor.name)!.primary.push(trainee);
-            }
+    // Round 1 and 2: Assign minimum 2 primary instructors per trainee
+    for (let round = 0; round < 2; round++) {
+        for (const trainee of eligibleTrainees) {
+            const primaries = trainee.primaryInstructor as string[];
+            if (primaries.length > round) continue;
+            if (!trainee.unit) continue;
+            const candidates = getInstructorsByUnit(trainee.unit, primaryLoad)
+                .filter(i => !primaries.includes(i.name));
+            if (!candidates.length) continue;
+            primaries.push(candidates[0].name);
+            primaryLoad.set(candidates[0].name, (primaryLoad.get(candidates[0].name) ?? 0) + 1);
         }
     }
 
-    // Phase 2: Assign each instructor minimum 2 secondary trainees from their own unit
-    for (const instructor of allocatableInstructors) {
-        if (!instructor.unit) continue;
-
-        const unitTrainees = eligibleTrainees.filter(t => 
-            t.unit === instructor.unit && 
-            t.primaryInstructor !== instructor.name &&
-            !workload.get(instructor.name)?.secondary.includes(t)
-        );
-
-        // Assign up to 2 secondary trainees from same unit
-        for (let i = 0; i < Math.min(2, unitTrainees.length); i++) {
-            const trainee = unitTrainees[i];
-            if (!trainee.secondaryInstructor) {
-                trainee.secondaryInstructor = instructor.name;
-                workload.get(instructor.name)!.secondary.push(trainee);
-            }
-        }
-    }
-
-    // Phase 3: Ensure all trainees have at least one primary and one secondary
-    for (const trainee of eligibleTrainees) {
-        // Assign primary if missing
-        if (!trainee.primaryInstructor && trainee.unit) {
-            const unitInstructors = getInstructorsByUnit(trainee.unit);
-            const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
-                const loadA = workload.get(a.name)?.primary.length || 0;
-                const loadB = workload.get(b.name)?.primary.length || 0;
-                return loadA - loadB;
-            });
-
-            if (sortedInstructors.length > 0) {
-                const instructor = sortedInstructors[0];
-                trainee.primaryInstructor = instructor.name;
-                workload.get(instructor.name)!.primary.push(trainee);
-            }
-        }
-
-        // Assign secondary if missing
-        if (!trainee.secondaryInstructor && trainee.unit) {
-            const unitInstructors = getInstructorsByUnit(trainee.unit);
-            const sortedInstructors = shuffle(unitInstructors).sort((a, b) => {
-                const loadA = workload.get(a.name)?.secondary.length || 0;
-                const loadB = workload.get(b.name)?.secondary.length || 0;
-                return loadA - loadB;
-            });
-
-            // Try to find an instructor different from primary
-            const differentInstructors = sortedInstructors.filter(i => i.name !== trainee.primaryInstructor);
-            const instructorToUse = differentInstructors.length > 0 ? differentInstructors[0] : sortedInstructors[0];
-
-            if (instructorToUse) {
-                trainee.secondaryInstructor = instructorToUse.name;
-                workload.get(instructorToUse.name)!.secondary.push(trainee);
-            }
-        }
-    }
-
-    // Phase 4: Add third trainees to instructors who still need more (round-robin distribution)
-    for (const instructor of allocatableInstructors) {
-        if (!instructor.unit) continue;
-
-        let progressMade = true;
-        let maxIterations = 10; // Prevent infinite loops
-
-        while ((needsMorePrimaries(instructor) || needsMoreSecondaries(instructor)) && progressMade && maxIterations > 0) {
-            progressMade = false;
-            maxIterations--;
-
-            // Assign as primary if needed
-            if (needsMorePrimaries(instructor)) {
-                const unitTrainees = eligibleTrainees.filter(t => 
-                    t.unit === instructor.unit &&
-                    t.primaryInstructor !== instructor.name &&
-                    t.secondaryInstructor !== instructor.name &&
-                    !workload.get(instructor.name)?.primary.includes(t)
-                );
-
-                if (unitTrainees.length > 0) {
-                    const trainee = unitTrainees[0];
-                    // Allow multiple primaries - just add this instructor as another primary
-                    // Note: Current data model only supports one primary, so we're limited
-                    // If the trainee already has a primary, we skip
-                    if (!trainee.primaryInstructor) {
-                        trainee.primaryInstructor = instructor.name;
-                        workload.get(instructor.name)!.primary.push(trainee);
-                        progressMade = true;
-                    }
-                }
-            }
-
-            // Assign as secondary if needed
-            if (needsMoreSecondaries(instructor)) {
-                const availableForSecondary = eligibleTrainees.filter(t => 
-                    t.unit === instructor.unit &&
-                    t.secondaryInstructor !== instructor.name &&
-                    t.primaryInstructor !== instructor.name &&
-                    !workload.get(instructor.name)?.secondary.includes(t)
-                );
-
-                if (availableForSecondary.length > 0) {
-                    const trainee = availableForSecondary[0];
-                    // Allow multiple secondaries - just add this instructor as another secondary
-                    // Note: Current data model only supports one secondary, so we're limited
-                    // If the trainee already has a secondary, we skip
-                    if (!trainee.secondaryInstructor) {
-                        trainee.secondaryInstructor = instructor.name;
-                        workload.get(instructor.name)!.secondary.push(trainee);
-                        progressMade = true;
-                    }
-                }
-            }
+    // Round 1 and 2: Assign minimum 2 secondary instructors per trainee
+    for (let round = 0; round < 2; round++) {
+        for (const trainee of eligibleTrainees) {
+            const primaries = trainee.primaryInstructor as string[];
+            const secondaries = trainee.secondaryInstructor as string[];
+            if (secondaries.length > round) continue;
+            if (!trainee.unit) continue;
+            const candidates = getInstructorsByUnit(trainee.unit, secondaryLoad)
+                .filter(i => !secondaries.includes(i.name) && !primaries.includes(i.name));
+            const fallback = candidates.length > 0
+                ? candidates
+                : getInstructorsByUnit(trainee.unit, secondaryLoad).filter(i => !secondaries.includes(i.name));
+            if (!fallback.length) continue;
+            secondaries.push(fallback[0].name);
+            secondaryLoad.set(fallback[0].name, (secondaryLoad.get(fallback[0].name) ?? 0) + 1);
         }
     }
 

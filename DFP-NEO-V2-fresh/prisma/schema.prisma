@@ -178,8 +178,8 @@ model Trainee {
   location            String?
   phoneNumber         String?
   email               String?
-  primaryInstructor   String?
-  secondaryInstructor String?
+  primaryInstructor   String[]  @default([])
+  secondaryInstructor String[]  @default([])
   lastEventDate       DateTime?
   lastFlightDate      DateTime?
   currencyStatus      Json?

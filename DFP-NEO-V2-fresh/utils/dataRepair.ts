@@ -31,10 +31,21 @@ export function repairTraineeData(trainees: any[]): Trainee[] {
     }
 
     // Repair other critical string fields
-    const stringFields = ['class', 'squadron', 'rank', 'primaryInstructor', 'secondaryInstructor'];
+    const stringFields = ['class', 'squadron', 'rank'];
     stringFields.forEach(field => {
       if (!trainee[field] || trainee[field] === 'undefined' || trainee[field] === 'null') {
-        repaired[field] = field.includes('instructor') ? 'Unassigned' : 'Unknown';
+        repaired[field] = 'Unknown';
+      }
+    });
+    // Repair instructor fields - normalize to arrays
+    ['primaryInstructor', 'secondaryInstructor'].forEach(field => {
+      const val = trainee[field];
+      if (!val || val === 'undefined' || val === 'null' || val === 'Unassigned') {
+        repaired[field] = [];
+      } else if (Array.isArray(val)) {
+        repaired[field] = val.filter(Boolean);
+      } else {
+        repaired[field] = [val];
       }
     });
 

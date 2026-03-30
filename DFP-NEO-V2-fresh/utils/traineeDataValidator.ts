@@ -39,8 +39,14 @@ export function validateTraineeRecord(trainee: any, index: number): { isValid: b
   cleanedTrainee.squadron = trainee.squadron ?? 'No Squadron';
   cleanedTrainee.status = trainee.status ?? 'Active';
   cleanedTrainee.rank = trainee.rank ?? 'Trainee';
-  cleanedTrainee.primaryInstructor = trainee.primaryInstructor ?? 'Unassigned';
-  cleanedTrainee.secondaryInstructor = trainee.secondaryInstructor ?? 'Unassigned';
+  // Normalize instructor fields to arrays
+  const normInstr = (val: any): string[] => {
+    if (!val || val === 'Unassigned') return [];
+    if (Array.isArray(val)) return val.filter(Boolean);
+    return [val];
+  };
+  cleanedTrainee.primaryInstructor = normInstr(trainee.primaryInstructor);
+  cleanedTrainee.secondaryInstructor = normInstr(trainee.secondaryInstructor);
   cleanedTrainee.lastEventDate = trainee.lastEventDate ?? null;
   cleanedTrainee.lastFlightDate = trainee.lastFlightDate ?? null;
 
@@ -78,7 +84,8 @@ export function validateTraineeData(trainees: any[]): ValidationResult {
     if (result.cleanedTrainee.course === 'No Course') {
       warnings.push(`Trainee ${result.cleanedTrainee.name} has no course assigned`);
     }
-    if (result.cleanedTrainee.primaryInstructor === 'Unassigned') {
+    const primArr = Array.isArray(result.cleanedTrainee.primaryInstructor) ? result.cleanedTrainee.primaryInstructor : result.cleanedTrainee.primaryInstructor ? [result.cleanedTrainee.primaryInstructor] : [];
+    if (primArr.length === 0) {
       warnings.push(`Trainee ${result.cleanedTrainee.name} has no primary instructor`);
     }
   });

@@ -1366,11 +1366,13 @@ function generateDfpInternal(
 
         // Staff sharing ON — primary/secondary from ANY shared unit are eligible when priority is on
         if (priorityEnabled) {
-            if (softGroups.primary && instructor.name === trainee.primaryInstructor) return true;
-            if (softGroups.secondary && instructor.name === trainee.secondaryInstructor) return true;
+            const primaryArr = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+            const secondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+            if (softGroups.primary && primaryArr.includes(instructor.name)) return true;
+            if (softGroups.secondary && secondaryArr.includes(instructor.name)) return true;
             // Hard mode groups also grant eligibility
-            if (hardGroups.primary && instructor.name === trainee.primaryInstructor) return true;
-            if (hardGroups.secondary && instructor.name === trainee.secondaryInstructor) return true;
+            if (hardGroups.primary && primaryArr.includes(instructor.name)) return true;
+            if (hardGroups.secondary && secondaryArr.includes(instructor.name)) return true;
         }
 
         // Staff sharing ON — standard group check
@@ -2432,14 +2434,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // ── Priority ordering: Primary → Secondary → Same-flight → Other same-unit → Other ──
                 // "Same-flight" means same base unit AND same flight letter (e.g. unit="CFS", flight="A" for both)
                 // All buckets sorted by workload ascending so least-loaded instructor is tried first.
-                const primaryName    = traineeForCheck.primaryInstructor;
-                const secondaryName  = traineeForCheck.secondaryInstructor;
+                const primaryNames   = Array.isArray(traineeForCheck.primaryInstructor) ? traineeForCheck.primaryInstructor : traineeForCheck.primaryInstructor ? [traineeForCheck.primaryInstructor] : [];
+                const secondaryNames = Array.isArray(traineeForCheck.secondaryInstructor) ? traineeForCheck.secondaryInstructor : traineeForCheck.secondaryInstructor ? [traineeForCheck.secondaryInstructor] : [];
                 const traineeFull    = fullUnit(traineeForCheck.unit || '');   // e.g. "CFS/A" or "CFS"
                 const traineeBase    = normalizeUnit(traineeForCheck.unit || ''); // e.g. "CFS"
                 const traineeFlight  = (traineeForCheck.flight || '').trim();   // e.g. "A", "B", "C", "D"
 
-                const isPrimary    = (i: Instructor) => i.name === primaryName;
-                const isSecondary  = (i: Instructor) => i.name === secondaryName;
+                const isPrimary    = (i: Instructor) => primaryNames.includes(i.name);
+                const isSecondary  = (i: Instructor) => secondaryNames.includes(i.name);
                 // Same-flight: instructor and trainee share the same base unit AND the same flight letter
                 const isSameFlight = (i: Instructor) => {
                     const instrFlight = (i.flight || '').trim();
@@ -2714,9 +2716,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (anyHardGroup && (type === 'flight' || type === 'ftd') && !isNightPass && !primaryPreferOnly) {
                 const traineeFlight  = (trainee.flight || '').trim();
                 const traineeBase    = normalizeUnit(trainee.unit || '');
+                const traineePrimaryArr   = Array.isArray(trainee.primaryInstructor)   ? trainee.primaryInstructor   : trainee.primaryInstructor   ? [trainee.primaryInstructor]   : [];
+                const traineeSecondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
                 const instructorInHardGroup =
-                    (hardGroups.primary    && instructor.name === trainee.primaryInstructor) ||
-                    (hardGroups.secondary  && instructor.name === trainee.secondaryInstructor) ||
+                    (hardGroups.primary    && traineePrimaryArr.includes(instructor.name)) ||
+                    (hardGroups.secondary  && traineeSecondaryArr.includes(instructor.name)) ||
                     (hardGroups.sameFlight && ((): boolean => {
                         const instrFlight = (instructor.flight || '').trim();
                         const instrBase   = normalizeUnit(instructor.unit || '');

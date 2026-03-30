@@ -43,6 +43,8 @@ async function getPrisma() {
     await ensureIndividualLMPTable(prisma);
     // Ensure DailySnapshot table exists (create if missing)
     await ensureDailySnapshotTable(prisma);
+    // Ensure instructor fields are TEXT[] arrays (migrate from String if needed)
+    await ensureInstructorArrayColumns(prisma);
   }
   return prisma;
 }
@@ -2943,6 +2945,332 @@ async function ensureDailySnapshotTable(db) {
     console.error('❌ Failed to ensure DailySnapshot table:', err.message);
   }
 }
+
+// ============================================================
+// INSTRUCTOR ARRAY COLUMN MIGRATION
+// ============================================================
+
+async function ensureInstructorArrayColumns(db) {
+  try {
+    // Check current column types for primaryInstructor and secondaryInstructor
+    const colInfo = await db.$queryRawUnsafe(`
+      SELECT column_name, data_type, udt_name
+      FROM information_schema.columns
+      WHERE table_name = 'Trainee'
+        AND column_name IN ('primaryInstructor', 'secondaryInstructor');
+    `);
+
+    for (const col of colInfo) {
+      if (col.data_type !== 'ARRAY') {
+        console.log(`🔄 Migrating Trainee."${col.column_name}" from TEXT to TEXT[]...`);
+        // Step 1: Add new array column
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "${col.column_name}_new" TEXT[] DEFAULT ARRAY[]::TEXT[];
+        `);
+        // Step 2: Copy existing data - wrap single value in array if not null
+        await db.$executeRawUnsafe(`
+          UPDATE "Trainee"
+          SET "${col.column_name}_new" = CASE
+            WHEN "${col.column_name}" IS NOT NULL AND "${col.column_name}" != ''
+            THEN ARRAY["${col.column_name}"]
+            ELSE ARRAY[]::TEXT[]
+          END;
+        `);
+        // Step 3: Drop old column
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "Trainee" DROP COLUMN "${col.column_name}";
+        `);
+        // Step 4: Rename new column
+        await db.$executeRawUnsafe(`
+          ALTER TABLE "Trainee" RENAME COLUMN "${col.column_name}_new" TO "${col.column_name}";
+        `);
+        console.log(`✅ Migrated "${col.column_name}" to TEXT[]`);
+      } else {
+        console.log(`✅ "${col.column_name}" is already TEXT[] - no migration needed`);
+      }
+    }
+  } catch (err) {
+    console.error('❌ Failed to ensure instructor array columns:', err.message);
+  }
+}
+
+// ============================================================
+// TRAINEE REALLOCATION ENDPOINT
+// ============================================================
+
+// POST /api/trainee-reallocation/preview - Preview reallocation without saving
+app.get('/api/trainee-reallocation/preview', async (req, res) => {
+  try {
+    const prisma = await getPrisma();
+
+    // Get all active trainees with unit
+    const trainees = await prisma.trainee.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, unit: true }
+    });
+
+    // Get all personnel with unit and name
+    const personnel = await prisma.personnel.findMany({
+      select: { id: true, name: true, unit: true, role: true }
+    });
+
+    const units = ['1FTS', '2FTS', 'CFS'];
+    const allResults = [];
+
+    for (const unit of units) {
+      const unitTrainees = trainees.filter(t => t.unit === unit);
+      const unitStaff = personnel.filter(p => p.unit === unit);
+      const maxPerStaff = 3;
+
+      // Seeded shuffle for reproducibility
+      const seededRandom = (seed) => {
+        let s = seed;
+        return () => {
+          s = (s * 1664525 + 1013904223) & 0xffffffff;
+          return (s >>> 0) / 0xffffffff;
+        };
+      };
+      const randFn = seededRandom(42);
+      const shuffle = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(randFn() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+
+      const shuffledTrainees = shuffle(unitTrainees);
+      const shuffledStaff = shuffle(unitStaff);
+
+      const allocate = (tList, sList, max) => {
+        const staffLoad = {};
+        sList.forEach(s => { staffLoad[s.name] = 0; });
+        const traineeMap = {};
+        tList.forEach(t => { traineeMap[t.id] = []; });
+
+        for (let round = 1; round <= 2; round++) {
+          for (const trainee of tList) {
+            if (traineeMap[trainee.id].length >= round) continue;
+            const alreadyAssigned = new Set(traineeMap[trainee.id]);
+            const candidates = sList
+              .filter(s => !alreadyAssigned.has(s.name) && staffLoad[s.name] < max)
+              .sort((a, b) => staffLoad[a.name] - staffLoad[b.name]);
+            if (candidates.length === 0) continue;
+            traineeMap[trainee.id].push(candidates[0].name);
+            staffLoad[candidates[0].name]++;
+          }
+        }
+        return { traineeMap, staffLoad };
+      };
+
+      const { traineeMap: primaryMap, staffLoad: primaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
+      const { traineeMap: secondaryMap, staffLoad: secondaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
+
+      // Resolve primary/secondary overlaps
+      for (const trainee of shuffledTrainees) {
+        const primary = new Set(primaryMap[trainee.id]);
+        const secondary = secondaryMap[trainee.id];
+        const newSecondary = [];
+        for (const secInst of secondary) {
+          if (primary.has(secInst)) {
+            const available = shuffledStaff
+              .filter(s => !primary.has(s.name) && !newSecondary.includes(s.name) && secondaryLoad[s.name] < maxPerStaff)
+              .sort((a, b) => secondaryLoad[a.name] - secondaryLoad[b.name]);
+            if (available.length > 0) {
+              secondaryLoad[secInst]--;
+              secondaryLoad[available[0].name]++;
+              newSecondary.push(available[0].name);
+            } else {
+              newSecondary.push(secInst);
+            }
+          } else {
+            newSecondary.push(secInst);
+          }
+        }
+        secondaryMap[trainee.id] = newSecondary;
+      }
+
+      for (const trainee of shuffledTrainees) {
+        allResults.push({
+          id: trainee.id,
+          name: trainee.name,
+          unit: trainee.unit,
+          primaryInstructors: primaryMap[trainee.id],
+          secondaryInstructors: secondaryMap[trainee.id]
+        });
+      }
+    }
+
+    // Summary stats
+    const summary = {
+      total: allResults.length,
+      primary: {
+        with2Plus: allResults.filter(r => r.primaryInstructors.length >= 2).length,
+        with1: allResults.filter(r => r.primaryInstructors.length === 1).length,
+        with0: allResults.filter(r => r.primaryInstructors.length === 0).length,
+      },
+      secondary: {
+        with2Plus: allResults.filter(r => r.secondaryInstructors.length >= 2).length,
+        with1: allResults.filter(r => r.secondaryInstructors.length === 1).length,
+        with0: allResults.filter(r => r.secondaryInstructors.length === 0).length,
+      }
+    };
+
+    res.json({ success: true, summary, allocations: allResults });
+  } catch (error) {
+    console.error('Error in trainee-reallocation preview:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/trainee-reallocation/apply - Apply reallocation to database
+app.post('/api/trainee-reallocation/apply', async (req, res) => {
+  try {
+    const prisma = await getPrisma();
+
+    // Get all active trainees with unit
+    const trainees = await prisma.trainee.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, unit: true }
+    });
+
+    // Get all personnel with unit and name
+    const personnel = await prisma.personnel.findMany({
+      select: { id: true, name: true, unit: true, role: true }
+    });
+
+    const units = ['1FTS', '2FTS', 'CFS'];
+    const allResults = [];
+
+    for (const unit of units) {
+      const unitTrainees = trainees.filter(t => t.unit === unit);
+      const unitStaff = personnel.filter(p => p.unit === unit);
+      const maxPerStaff = 3;
+
+      const seededRandom = (seed) => {
+        let s = seed;
+        return () => {
+          s = (s * 1664525 + 1013904223) & 0xffffffff;
+          return (s >>> 0) / 0xffffffff;
+        };
+      };
+      const randFn = seededRandom(42);
+      const shuffle = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(randFn() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+
+      const shuffledTrainees = shuffle(unitTrainees);
+      const shuffledStaff = shuffle(unitStaff);
+
+      const allocate = (tList, sList, max) => {
+        const staffLoad = {};
+        sList.forEach(s => { staffLoad[s.name] = 0; });
+        const traineeMap = {};
+        tList.forEach(t => { traineeMap[t.id] = []; });
+
+        for (let round = 1; round <= 2; round++) {
+          for (const trainee of tList) {
+            if (traineeMap[trainee.id].length >= round) continue;
+            const alreadyAssigned = new Set(traineeMap[trainee.id]);
+            const candidates = sList
+              .filter(s => !alreadyAssigned.has(s.name) && staffLoad[s.name] < max)
+              .sort((a, b) => staffLoad[a.name] - staffLoad[b.name]);
+            if (candidates.length === 0) continue;
+            traineeMap[trainee.id].push(candidates[0].name);
+            staffLoad[candidates[0].name]++;
+          }
+        }
+        return { traineeMap, staffLoad };
+      };
+
+      const { traineeMap: primaryMap, staffLoad: primaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
+      const { traineeMap: secondaryMap, staffLoad: secondaryLoad } = allocate(shuffledTrainees, shuffledStaff, maxPerStaff);
+
+      // Resolve primary/secondary overlaps
+      for (const trainee of shuffledTrainees) {
+        const primary = new Set(primaryMap[trainee.id]);
+        const secondary = secondaryMap[trainee.id];
+        const newSecondary = [];
+        for (const secInst of secondary) {
+          if (primary.has(secInst)) {
+            const available = shuffledStaff
+              .filter(s => !primary.has(s.name) && !newSecondary.includes(s.name) && secondaryLoad[s.name] < maxPerStaff)
+              .sort((a, b) => secondaryLoad[a.name] - secondaryLoad[b.name]);
+            if (available.length > 0) {
+              secondaryLoad[secInst]--;
+              secondaryLoad[available[0].name]++;
+              newSecondary.push(available[0].name);
+            } else {
+              newSecondary.push(secInst);
+            }
+          } else {
+            newSecondary.push(secInst);
+          }
+        }
+        secondaryMap[trainee.id] = newSecondary;
+      }
+
+      for (const trainee of shuffledTrainees) {
+        allResults.push({
+          id: trainee.id,
+          name: trainee.name,
+          unit: trainee.unit,
+          primaryInstructors: primaryMap[trainee.id],
+          secondaryInstructors: secondaryMap[trainee.id]
+        });
+      }
+    }
+
+    // Apply updates to database in batches
+    console.log(`🔄 Applying reallocation for ${allResults.length} trainees...`);
+    let updated = 0;
+    const errors = [];
+
+    for (const result of allResults) {
+      try {
+        await prisma.$executeRawUnsafe(`
+          UPDATE "Trainee"
+          SET "primaryInstructor" = $1::TEXT[],
+              "secondaryInstructor" = $2::TEXT[],
+              "updatedAt" = NOW()
+          WHERE id = $3
+        `, result.primaryInstructors, result.secondaryInstructors, result.id);
+        updated++;
+      } catch (err) {
+        errors.push({ traineeId: result.id, name: result.name, error: err.message });
+      }
+    }
+
+    console.log(`✅ Reallocation complete: ${updated} updated, ${errors.length} errors`);
+
+    const summary = {
+      total: allResults.length,
+      updated,
+      errors: errors.length,
+      primary: {
+        with2Plus: allResults.filter(r => r.primaryInstructors.length >= 2).length,
+        with1: allResults.filter(r => r.primaryInstructors.length === 1).length,
+        with0: allResults.filter(r => r.primaryInstructors.length === 0).length,
+      },
+      secondary: {
+        with2Plus: allResults.filter(r => r.secondaryInstructors.length >= 2).length,
+        with1: allResults.filter(r => r.secondaryInstructors.length === 1).length,
+        with0: allResults.filter(r => r.secondaryInstructors.length === 0).length,
+      }
+    };
+
+    res.json({ success: true, summary, errorDetails: errors });
+  } catch (error) {
+    console.error('Error in trainee-reallocation apply:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // POST /api/daily-snapshot/save - Save a full daily snapshot when schedule is published
 app.post('/api/daily-snapshot/save', async (req, res) => {

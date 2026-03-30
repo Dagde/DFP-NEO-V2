@@ -1044,65 +1044,83 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className={card3d + " p-3"} style={card3dStyle}>
                           <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
                           <div className="grid grid-cols-2 gap-3">
-                            {/* Primary Instructor */}
+                            {/* Primary Instructors */}
                             <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                               <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
-                              {trainee.primaryInstructor ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                    {trainee.primaryInstructor.toLowerCase().includes('burns') ? (
-                                      <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.primaryInstructor} className="w-full h-full object-cover object-top" />
-                                    ) : (
-                                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                    )}
+                              {(() => {
+                                const primaries = Array.isArray(trainee.primaryInstructor)
+                                  ? trainee.primaryInstructor
+                                  : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+                                return primaries.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    {primaries.map((name, idx) => (
+                                      <div key={idx} className="flex items-center gap-2">
+                                        <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                          {name.toLowerCase().includes('burns') ? (
+                                            <img src="https://dfp-neo.com/burns-profile.png" alt={name} className="w-full h-full object-cover object-top" />
+                                          ) : (
+                                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                          )}
+                                        </div>
+                                        {onOpenInstructorProfile ? (
+                                          <button
+                                            onClick={() => { onOpenInstructorProfile(name); onClose(); }}
+                                            className="text-sky-300 hover:text-sky-100 hover:underline text-[10px] font-medium leading-tight text-left"
+                                          >{name}</button>
+                                        ) : (
+                                          <span className="text-white text-[10px] font-medium leading-tight">{name}</span>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
-                                  {onOpenInstructorProfile ? (
-                                    <button
-                                      onClick={() => { onOpenInstructorProfile(trainee.primaryInstructor!); onClose(); }}
-                                      className="text-sky-300 hover:text-sky-100 hover:underline text-[10px] font-medium leading-tight text-left"
-                                    >{trainee.primaryInstructor}</button>
-                                  ) : (
-                                    <span className="text-white text-[10px] font-medium leading-tight">{trainee.primaryInstructor}</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    </div>
+                                    <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                                   </div>
-                                  <span className="text-gray-600 text-[10px] italic">Not assigned</span>
-                                </div>
-                              )}
+                                );
+                              })()}
                             </div>
-                            {/* Secondary Instructor */}
+                            {/* Secondary Instructors */}
                             <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
                               <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
-                              {trainee.secondaryInstructor ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-9 h-9 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                    {trainee.secondaryInstructor.toLowerCase().includes('burns') ? (
-                                      <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.secondaryInstructor} className="w-full h-full object-cover object-top" />
-                                    ) : (
-                                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                    )}
+                              {(() => {
+                                const secondaries = Array.isArray(trainee.secondaryInstructor)
+                                  ? trainee.secondaryInstructor
+                                  : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+                                return secondaries.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    {secondaries.map((name, idx) => (
+                                      <div key={idx} className="flex items-center gap-2">
+                                        <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                          {name.toLowerCase().includes('burns') ? (
+                                            <img src="https://dfp-neo.com/burns-profile.png" alt={name} className="w-full h-full object-cover object-top" />
+                                          ) : (
+                                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                          )}
+                                        </div>
+                                        {onOpenInstructorProfile ? (
+                                          <button
+                                            onClick={() => { onOpenInstructorProfile(name); onClose(); }}
+                                            className="text-amber-300 hover:text-amber-100 hover:underline text-[10px] font-medium leading-tight text-left"
+                                          >{name}</button>
+                                        ) : (
+                                          <span className="text-white text-[10px] font-medium leading-tight">{name}</span>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
-                                  {onOpenInstructorProfile ? (
-                                    <button
-                                      onClick={() => { onOpenInstructorProfile(trainee.secondaryInstructor!); onClose(); }}
-                                      className="text-amber-300 hover:text-amber-100 hover:underline text-[10px] font-medium leading-tight text-left"
-                                    >{trainee.secondaryInstructor}</button>
-                                  ) : (
-                                    <span className="text-white text-[10px] font-medium leading-tight">{trainee.secondaryInstructor}</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-9 h-9 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    </div>
+                                    <span className="text-gray-600 text-[10px] italic">Not assigned</span>
                                   </div>
-                                  <span className="text-gray-600 text-[10px] italic">Not assigned</span>
-                                </div>
-                              )}
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

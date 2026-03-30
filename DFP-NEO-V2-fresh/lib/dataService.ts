@@ -121,13 +121,20 @@ function assignTraineesToBurns(instructors: any[], trainees: any[]): void {
   console.log('👨‍✈️  Assigning trainees to Burns:', burns.name);
   
   // Find unassigned trainees (no primary instructor)
-  const unassignedTrainees = trainees.filter(t => !t.primaryInstructor);
+  const unassignedTrainees = trainees.filter(t => {
+    const p = t.primaryInstructor;
+    return !p || (Array.isArray(p) && p.length === 0);
+  });
   console.log('  Found', unassignedTrainees.length, 'unassigned trainees');
   
   // Assign 2 primary trainees to Burns
   const primaryAssignments = unassignedTrainees.slice(0, 2);
   primaryAssignments.forEach(trainee => {
-    trainee.primaryInstructor = burns.name;
+    if (Array.isArray(trainee.primaryInstructor)) {
+      if (!trainee.primaryInstructor.includes(burns.name)) trainee.primaryInstructor.push(burns.name);
+    } else {
+      trainee.primaryInstructor = [burns.name];
+    }
     console.log('  Assigned primary:', trainee.name, '→', burns.name);
   });
   
@@ -135,7 +142,11 @@ function assignTraineesToBurns(instructors: any[], trainees: any[]): void {
   const remainingTrainees = unassignedTrainees.slice(2);
   const secondaryAssignments = remainingTrainees.slice(0, 2);
   secondaryAssignments.forEach(trainee => {
-    trainee.secondaryInstructor = burns.name;
+    if (Array.isArray(trainee.secondaryInstructor)) {
+      if (!trainee.secondaryInstructor.includes(burns.name)) trainee.secondaryInstructor.push(burns.name);
+    } else {
+      trainee.secondaryInstructor = [burns.name];
+    }
     console.log('  Assigned secondary:', trainee.name, '→', burns.name);
   });
 }

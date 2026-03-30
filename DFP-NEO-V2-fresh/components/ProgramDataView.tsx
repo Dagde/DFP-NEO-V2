@@ -279,9 +279,11 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
         const instructorName = event.instructor;
         const instructor = instructorMap.get(instructorName);
 
-        if (trainee.primaryInstructor === instructorName) {
+        const primaryArr = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+        const secondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+        if (primaryArr.includes(instructorName)) {
             traineesWithPrimary.add(traineeName);
-        } else if (trainee.secondaryInstructor === instructorName) {
+        } else if (secondaryArr.includes(instructorName)) {
             traineesWithSecondary.add(traineeName);
         } else if (instructor && trainee.flight && instructor.flight === trainee.flight) {
             // Not primary or secondary, but from same flight

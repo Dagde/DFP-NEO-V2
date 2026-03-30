@@ -26,8 +26,8 @@ interface DatabaseTrainee {
   location?: string;
   phoneNumber?: string;
   email?: string;
-  primaryInstructor?: string;
-  secondaryInstructor?: string;
+  primaryInstructor?: string | string[];
+  secondaryInstructor?: string | string[];
   isActive?: boolean;
   userId?: string;
   createdAt: string;
@@ -194,8 +194,8 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
           bValue = b.idNumber || 0;
           break;
         case 'primaryInstructor':
-          aValue = a.primaryInstructor?.toLowerCase() || '';
-          bValue = b.primaryInstructor?.toLowerCase() || '';
+          aValue = (Array.isArray(a.primaryInstructor) ? a.primaryInstructor[0] : a.primaryInstructor)?.toLowerCase() || '';
+          bValue = (Array.isArray(b.primaryInstructor) ? b.primaryInstructor[0] : b.primaryInstructor)?.toLowerCase() || '';
           break;
         case 'status':
           aValue = a.isPaused ? 'paused' : 'active';
@@ -361,7 +361,10 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
                     {trainee.idNumber || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
-                    {trainee.primaryInstructor || <span className="text-gray-500 italic">Unassigned</span>}
+                    {(() => {
+                      const p = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+                      return p.length > 0 ? p.join(', ') : <span className="text-gray-500 italic">Unassigned</span>;
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {trainee.isPaused ? (

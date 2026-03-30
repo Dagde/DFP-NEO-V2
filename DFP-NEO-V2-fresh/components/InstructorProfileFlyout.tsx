@@ -158,8 +158,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const { primaryTrainees, secondaryTrainees } = useMemo(() => {
     if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
-    const primary = traineesData.filter(t => t.primaryInstructor === instructor.name).sort((a, b) => a.name.localeCompare(b.name));
-    const secondary = traineesData.filter(t => t.secondaryInstructor === instructor.name).sort((a, b) => a.name.localeCompare(b.name));
+    const primary = traineesData.filter(t => {
+      const p = t.primaryInstructor;
+      return Array.isArray(p) ? p.includes(instructor.name) : p === instructor.name;
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    const secondary = traineesData.filter(t => {
+      const s = t.secondaryInstructor;
+      return Array.isArray(s) ? s.includes(instructor.name) : s === instructor.name;
+    }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
 

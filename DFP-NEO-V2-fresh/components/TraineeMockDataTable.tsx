@@ -113,10 +113,10 @@ const TraineeMockDataTable: React.FC<TraineeMockDataTableProps> = ({ traineesDat
                                         {trainee.traineeCallsign || '-'}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-gray-300 text-xs">
-                                        {trainee.primaryInstructor || <span className="text-gray-600">-</span>}
+                                        {(() => { const p = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : []; return p.length > 0 ? p.join(', ') : <span className="text-gray-600">-</span>; })()}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-gray-300 text-xs">
-                                        {trainee.secondaryInstructor || <span className="text-gray-600">-</span>}
+                                        {(() => { const s = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : []; return s.length > 0 ? s.join(', ') : <span className="text-gray-600">-</span>; })()}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-center">
                                         {trainee.isPaused ? (

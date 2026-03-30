@@ -1172,10 +1172,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const email = getStr(row, ['Email']); if (email) parsed.email = email;
         
         // Primary/Secondary Instructor - only set if provided in file
+        // Support comma-separated list of instructors (stored as array)
         const primary = getStr(row, ['Primary Instructor', 'primaryInstructor']); 
-        if (primary) parsed.primaryInstructor = primary;
+        if (primary) parsed.primaryInstructor = primary.split(',').map((s: string) => s.trim()).filter(Boolean);
         const secondary = getStr(row, ['Secondary Instructor', 'secondaryInstructor']); 
-        if (secondary) parsed.secondaryInstructor = secondary;
+        if (secondary) parsed.secondaryInstructor = secondary.split(',').map((s: string) => s.trim()).filter(Boolean);
         
         // Permissions - parse newline-separated list
         const permissionsStr = getStr(row, ['Permissions', 'permissions']);
