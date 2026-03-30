@@ -3474,7 +3474,13 @@ app.post('/api/tie/run', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('❌ POST /api/tie/run error:', error);
-    res.status(500).json({ error: 'TIE run failed', details: error.message });
+    res.status(500).json({ 
+      error: 'TIE run failed', 
+      details: error.message,
+      diagnostic: error.tieDiag || null,
+      sql: error.tieSql || null,
+      params: error.tieParams || null
+    });
   }
 });
 

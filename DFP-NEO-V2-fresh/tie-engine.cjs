@@ -5,19 +5,25 @@
 
 // ============================================================
 // DIAGNOSTIC WRAPPER - logs exact query+params on 42P18 error
+// AND attaches diagnostic info to the thrown error for API response
 // ============================================================
 async function safeExec(db, sql, ...params) {
   try {
     return await db.$executeRawUnsafe(sql, ...params);
   } catch (err) {
-    if (err.message && err.message.includes('42P18')) {
-      // Find which $N is uncast by checking each param
+    if (err.message && (err.message.includes('42P18') || err.message.includes('could not determine data type'))) {
       const paramInfo = params.map((p, i) => {
         const type = p === null ? 'NULL' : typeof p;
-        const val = p === null ? 'NULL' : String(p).substring(0, 50);
-        return `  $${i+1}: [${type}] ${val}`;
-      }).join('\n');
-      console.error(`\n🔴 42P18 ERROR - EXACT QUERY:\n${sql}\nPARAMS (${params.length} total):\n${paramInfo}\n`);
+        const val = p === null ? 'NULL' : String(p).substring(0, 80);
+        return `$${i+1}=[${type}] ${val}`;
+      }).join(' | ');
+      // Extract which $N has no cast from SQL
+      const sqlCasts = (sql.match(/\$\d+(?:::[a-z]+)?/gi) || []).join(', ');
+      const diagMsg = `QUERY: ${sql.trim().substring(0, 300)} | CAST_MAP: ${sqlCasts} | PARAMS: ${paramInfo}`;
+      console.error(`\n🔴 TIE 42P18 safeExec:\n${diagMsg}\n`);
+      err.tieDiag = diagMsg;
+      err.tieSql = sql.trim().substring(0, 500);
+      err.tieParams = params.map((p, i) => ({ pos: i+1, type: p === null ? 'NULL' : typeof p, val: String(p).substring(0, 80) }));
     }
     throw err;
   }
@@ -27,13 +33,18 @@ async function safeQuery(db, sql, ...params) {
   try {
     return await db.$queryRawUnsafe(sql, ...params);
   } catch (err) {
-    if (err.message && err.message.includes('42P18')) {
+    if (err.message && (err.message.includes('42P18') || err.message.includes('could not determine data type'))) {
       const paramInfo = params.map((p, i) => {
         const type = p === null ? 'NULL' : typeof p;
-        const val = p === null ? 'NULL' : String(p).substring(0, 50);
-        return `  $${i+1}: [${type}] ${val}`;
-      }).join('\n');
-      console.error(`\n🔴 42P18 ERROR - EXACT QUERY:\n${sql}\nPARAMS (${params.length} total):\n${paramInfo}\n`);
+        const val = p === null ? 'NULL' : String(p).substring(0, 80);
+        return `$${i+1}=[${type}] ${val}`;
+      }).join(' | ');
+      const sqlCasts = (sql.match(/\$\d+(?:::[a-z]+)?/gi) || []).join(', ');
+      const diagMsg = `QUERY: ${sql.trim().substring(0, 300)} | CAST_MAP: ${sqlCasts} | PARAMS: ${paramInfo}`;
+      console.error(`\n🔴 TIE 42P18 safeQuery:\n${diagMsg}\n`);
+      err.tieDiag = diagMsg;
+      err.tieSql = sql.trim().substring(0, 500);
+      err.tieParams = params.map((p, i) => ({ pos: i+1, type: p === null ? 'NULL' : typeof p, val: String(p).substring(0, 80) }));
     }
     throw err;
   }
@@ -870,12 +881,15 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       await safeExec(db, `DELETE FROM "TIERootCause" WHERE TRUE`);
     }
 
+  console.log("🔵 TIE CHECKPOINT 1: Starting Layer 1+2 ingest");
     // ── LAYER 1+2: Ingest and normalise PT-051 data ───────────
     const allDates = pt051Records.map(r => r.date).filter(Boolean).sort();
     const normInputs = [];
     const allCommentTags = [];
+    console.log(`🔵 TIE: Processing ${pt051Records.length} records for course: ${courseFilter || "ALL"}`);
 
     for (const rec of pt051Records) {
+      console.log(`🔵 TIE RECORD: Processing rec ${rec.id} (${rec.traineeFullName})`);
       const elementScores = {};
       const commentsByElement = {};
 
@@ -915,6 +929,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
          true, false, false, Number(recencyWeight)
       );
 
+      console.log("🔵 TIE CHECKPOINT 2: Starting Layer 3 comment tagging for record " + rec.id);
       // ── LAYER 3: Comment tagging ───────────────────────────
       for (const [element, comment] of Object.entries(commentsByElement)) {
         const tags = classifyComment(comment, dictionary);
@@ -952,6 +967,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       normInputs.push({ ...rec, elementScores, commentsByElement, courseName, recencyWeight });
     }
 
+    console.log("🔵 TIE CHECKPOINT 3: Starting Layer 4+5 pattern detection");
     // ── LAYER 4+5: Pattern Detection - Group by trainee ──────
     const byTrainee = {};
     for (const rec of normInputs) {
@@ -1133,6 +1149,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       }
     }
 
+    console.log("🔵 TIE CHECKPOINT 4: Starting event-type analysis");
     // ─── EVENT-TYPE ANALYSIS ──────────────────────────────────
     for (const [eventCode, records] of Object.entries(byEvent)) {
       const grades = records.map(r => r.overallGrade).filter(g => g != null);
@@ -1252,6 +1269,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       }
     }
 
+    console.log("🔵 TIE CHECKPOINT 5: Starting course-level analysis");
     // ─── COURSE-LEVEL ANALYSIS ────────────────────────────────
     for (const [courseName, records] of Object.entries(byCourse)) {
       const grades = records.map(r => r.overallGrade).filter(g => g != null);
@@ -1337,6 +1355,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       }
     }
 
+    console.log("🔵 TIE CHECKPOINT 6: Marking run complete");
     // Mark run complete
     await safeExec(db, `
       UPDATE "TIEAnalyticsRun"
