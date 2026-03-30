@@ -172,7 +172,7 @@ const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> =
   );
 };
 
-// ── SparkLine (SVG) — with optional hover tooltip ───────────────────────────────
+// ── SparkLine (SVG) — fixed 0-5 Y scale + floating div tooltip ─────────────────
 
 const SparkLine: React.FC<{
   data: number[];
@@ -182,81 +182,100 @@ const SparkLine: React.FC<{
   color?: string;
   interactive?: boolean;
 }> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false }) => {
-  const [hovered, setHovered] = React.useState<{ i: number; x: number; y: number } | null>(null);
+  const [tooltip, setTooltip] = React.useState<{ i: number; svgX: number; svgY: number } | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
 
   if (!data || data.length < 2) return <span className="text-gray-600 text-xs">&mdash;</span>;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const rng = max - min || 1;
 
-  const getX = (i: number) => (i / (data.length - 1)) * width;
-  const getY = (v: number) => height - 4 - ((v - min) / rng) * (height - 8);
+  // Fixed scale: always 0 → 5 on Y axis so labels align correctly
+  const YMIN = 0, YMAX = 5;
+  const PAD_TOP = 8, PAD_BOT = 8;
+  const usableH = height - PAD_TOP - PAD_BOT;
+
+  const getX = (i: number) => (data.length === 1 ? width / 2 : (i / (data.length - 1)) * width);
+  const getY = (v: number) => PAD_TOP + usableH * (1 - Math.max(0, Math.min(1, (v - YMIN) / (YMAX - YMIN))));
 
   const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
 
-  const TW = 110, TH = 38, PAD = 6;
+  const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
+  const gc = (v: number) => v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
+
+  // Fixed Y-axis reference lines at 0,1,2,3,4,5
+  const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
 
   return (
-    <svg
-      width={width}
-      height={height}
-      className="overflow-visible"
-      style={{ cursor: interactive ? 'crosshair' : 'default' }}
-    >
-      {interactive && [0, 0.25, 0.5, 0.75, 1].map(pct => {
-        const y = getY(min + pct * rng);
+    <div className="relative" style={{ display: 'inline-block' }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        className="overflow-visible"
+        style={{ cursor: interactive ? 'crosshair' : 'default', display: 'block' }}
+      >
+        {gridLines.map(v => {
+          const y = getY(v);
+          return (
+            <line key={v} x1={0} y1={y} x2={width} y2={y}
+              stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
+          );
+        })}
+
+        <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 2 : 1.5} strokeLinejoin="round" />
+
+        {interactive && (
+          <polygon
+            points={`0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`}
+            fill={color} fillOpacity={0.07}
+          />
+        )}
+
+        {data.map((v, i) => {
+          const x = getX(i);
+          const y = getY(v);
+          const isHov = tooltip?.i === i;
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={interactive ? (isHov ? 6 : 4) : 2} fill={color}
+                stroke={isHov ? '#fff' : 'none'} strokeWidth={1.5} />
+              {interactive && (
+                <circle
+                  cx={x} cy={y} r={14} fill="transparent"
+                  onMouseEnter={() => setTooltip({ i, svgX: x, svgY: y })}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Floating tooltip — positioned relative to SVG container, never clipped */}
+      {interactive && tooltip !== null && hoveredVal !== null && (() => {
+        const label = labels?.[tooltip.i] ?? `Assessment #${tooltip.i + 1}`;
+        const ttW = 130, ttH = 44;
+        // Position: right of point, flip left if near right edge
+        const leftPos = tooltip.svgX + ttW + 10 > width ? tooltip.svgX - ttW - 6 : tooltip.svgX + 10;
+        const topPos = Math.max(0, tooltip.svgY - ttH / 2);
         return (
-          <line key={pct} x1={0} y1={y} x2={width} y2={y}
-            stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
-        );
-      })}
-
-      <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 2 : 1.5} strokeLinejoin="round" />
-
-      {interactive && (
-        <polygon
-          points={`0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`}
-          fill={color} fillOpacity={0.08}
-        />
-      )}
-
-      {data.map((v, i) => {
-        const x = getX(i);
-        const y = getY(v);
-        const isHovered = hovered?.i === i;
-        return (
-          <g key={i}>
-            <circle cx={x} cy={y} r={interactive ? (isHovered ? 5 : 3.5) : 2} fill={color}
-              stroke={isHovered ? '#fff' : 'none'} strokeWidth={1.5}
-              style={{ transition: 'r 0.1s' }} />
-            {interactive && (
-              <circle cx={x} cy={y} r={12} fill="transparent"
-                onMouseEnter={() => setHovered({ i, x, y })}
-                onMouseLeave={() => setHovered(null)} />
-            )}
-          </g>
-        );
-      })}
-
-      {interactive && hovered !== null && (() => {
-        const { i, x, y } = hovered;
-        const v = data[i];
-        const label = labels?.[i] ?? `Assessment #${i + 1}`;
-        const tx = x + TW + PAD > width ? x - TW - PAD : x + PAD;
-        const ty = Math.max(0, y - TH / 2);
-        const gc = v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
-        return (
-          <g style={{ pointerEvents: 'none' }}>
-            <rect x={tx} y={ty} width={TW} height={TH} rx={5} ry={5}
-              fill="#1f2937" stroke="#374151" strokeWidth={1} />
-            <text x={tx + 8} y={ty + 13} fontSize="9" fill="#9ca3af">{label}</text>
-            <text x={tx + 8} y={ty + 28} fontSize="12" fontWeight="bold" fill={gc}>
-              Grade: {v.toFixed(2)}
-            </text>
-          </g>
+          <div
+            style={{
+              position: 'absolute',
+              left: leftPos,
+              top: topPos,
+              width: ttW,
+              pointerEvents: 'none',
+              zIndex: 100,
+            }}
+            className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 shadow-xl"
+          >
+            <p className="text-xs text-gray-400 leading-tight">{label}</p>
+            <p className="text-sm font-bold leading-tight" style={{ color: gc(hoveredVal) }}>
+              Grade: {hoveredVal.toFixed(2)}
+            </p>
+          </div>
         );
       })()}
-    </svg>
+    </div>
   );
 };
 
@@ -454,7 +473,7 @@ const ProgressionModal: React.FC<{ data: number[]; name: string; trend: string; 
         <div className="bg-gray-800 rounded-xl p-5">
           <div className="flex gap-3">
             <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
-              <span>5.0</span><span>3.75</span><span>2.5</span><span>1.25</span><span>0</span>
+              <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span>
             </div>
             <div className="flex-1 overflow-x-auto">
               <SparkLine
@@ -553,7 +572,7 @@ const GradeByTraineeModal: React.FC<{
 }> = ({ trainees, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4" style={{ maxWidth: '900px' }} onClick={e => e.stopPropagation()}>
+      <div className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-2" style={{ maxWidth: '1100px' }} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-white font-bold text-lg">Grade by Trainee (sorted low to high)</h3>
@@ -562,7 +581,7 @@ const GradeByTraineeModal: React.FC<{
           <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
         </div>
         <div className="bg-gray-800 rounded-xl p-5 overflow-x-auto">
-          <ColChartExpanded data={trainees} max={5} height={260} />
+          <ColChartExpanded data={trainees} max={5} height={300} />
         </div>
         <div className="flex flex-wrap gap-4 mt-4 justify-center text-xs">
           {[
@@ -806,10 +825,14 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
 
       {gradeByTraineeModal && (
         <GradeByTraineeModal
-          trainees={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
-            label: t.traineeFullName.split(' ').pop() || t.traineeFullName,
-            value: safeN(t.avgOverallGrade),
-          }))}
+          trainees={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
+            // Use surname if name has spaces, otherwise truncate the full string
+            const parts = t.traineeFullName.trim().split(/\s+/);
+            const label = parts.length >= 2
+              ? parts[parts.length - 1]  // surname (last word)
+              : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
+            return { label, value: safeN(t.avgOverallGrade) };
+          })}
           onClose={() => setGradeByTraineeModal(false)}
         />
       )}
@@ -899,10 +922,13 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                 >
                   <div className="overflow-x-auto">
                     <ColChart
-                      data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => ({
-                        label: t.traineeFullName.split(' ').pop() || t.traineeFullName,
-                        value: safeN(t.avgOverallGrade),
-                      }))}
+                      data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
+                        const parts = t.traineeFullName.trim().split(/\s+/);
+                        const label = parts.length >= 2
+                          ? parts[parts.length - 1]
+                          : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
+                        return { label, value: safeN(t.avgOverallGrade) };
+                      })}
                       max={5} height={130} />
                   </div>
                 </button>
