@@ -3058,29 +3058,31 @@ function buildReallocation(trainees, personnel) {
 
     const primaryBase = Math.floor(nTrainees / nStaff);
     const primaryRemainder = nTrainees % nStaff;
+    // primaryRemainder staff get (primaryBase+1), the rest get primaryBase
+    // Staff are assigned caps in shuffledStaff order
+    const primaryCap = {};
+    shuffledStaff.forEach((s, i) => {
+      primaryCap[s.name] = i < primaryRemainder ? primaryBase + 1 : primaryBase;
+    });
 
-    // Assign using strict round-robin: cycle through staff in order
-    let staffIdx = 0;
+    // Assign using lowest-load-first: always pick the staff member with
+    // fewest assignments who still has capacity. This guarantees perfect balance.
     for (const trainee of shuffledTrainees) {
-      let attempts = 0;
-      while (attempts < nStaff) {
-        const instructor = shuffledStaff[staffIdx % nStaff];
-        staffIdx++;
-        attempts++;
-        const instructorIdx = shuffledStaff.indexOf(instructor);
-        const cap = instructorIdx < primaryRemainder ? primaryBase + 1 : primaryBase;
-        if (primaryLoad[instructor.name] < cap) {
-          primaryMap[trainee.id] = instructor.name;
-          primaryLoad[instructor.name]++;
-          break;
-        }
-      }
-      if (!primaryMap[trainee.id]) {
-        // Fallback: assign to whoever has the lowest load
+      const eligible = shuffledStaff
+        .filter(s => primaryLoad[s.name] < primaryCap[s.name])
+        .sort((a, b) => {
+          const diff = primaryLoad[a.name] - primaryLoad[b.name];
+          return diff !== 0 ? diff : shuffledStaff.indexOf(a) - shuffledStaff.indexOf(b);
+        });
+      if (eligible.length > 0) {
+        primaryMap[trainee.id] = eligible[0].name;
+        primaryLoad[eligible[0].name]++;
+      } else {
+        // Should never happen if math is correct, but fallback gracefully
         const fallback = shuffledStaff.slice().sort((a,b) => primaryLoad[a.name] - primaryLoad[b.name])[0];
         primaryMap[trainee.id] = fallback.name;
         primaryLoad[fallback.name]++;
-        console.log(`Warning: Primary fallback used for ${trainee.name} (${unit})`);
+        console.log(`Warning: Primary cap overflow for ${trainee.name} (${unit})`);
       }
     }
 
