@@ -5,21 +5,32 @@ Examine staff profiles in the database and report:
 - How many staff have 1, 2, 3, or 0 primary trainees
 - How many staff have 1, 2, 3, or 0 secondary trainees
 
-## Challenge
-The local development environment has an empty SQLite database. The actual data is in Railway's PostgreSQL database, which is not accessible directly from this environment.
-
 ## Solution Implemented
-Created an API endpoint that can be queried to get the analysis from the production database:
+Created an API endpoint that queries the Trainee model to count trainee assignments by instructor.
 
-### 1. New API Endpoint
-**Endpoint:** `GET /api/staff-trainee-analysis`
+### API Endpoint
+**`GET /api/staff-trainee-analysis`**
 
-**Returns JSON with:**
+### How It Works
+1. Queries all active trainees from the Trainee model
+2. Groups trainees by their `primaryInstructor` and `secondaryInstructor` fields
+3. Counts how many trainees each instructor has
+4. Calculates distribution (0, 1, 2, 3+ trainees per staff)
+5. Returns percentages and averages
+
+### Database Schema
+- **Trainee model** has:
+  - `primaryInstructor` (String) - Name of primary instructor
+  - `secondaryInstructor` (String) - Name of secondary instructor
+- **Personnel model** has instructor records but no trainee assignment fields
+
+### Response Format
 ```json
 {
   "success": true,
   "data": {
     "totalStaff": 194,
+    "totalTrainees": 99,
     "summary": {
       "averagePrimaryTrainees": "2.15",
       "averageSecondaryTrainees": "2.08",
@@ -42,54 +53,51 @@ Created an API endpoint that can be queried to get the analysis from the product
 }
 ```
 
-### 2. Standalone Script
-**File:** `analyze-staff-trainees.js`
-- Can be run directly in an environment with database access
-- Provides the same analysis with detailed console output
-
-### 3. Test Script
-**File:** `test-staff-trainee-analysis.sh`
-- Simple curl script to test the API endpoint
-- Usage: `./test-staff-trainee-analysis.sh [URL]`
-
 ## Deployment
-- ✅ API endpoint added to server.js
+- ✅ Fixed endpoint to query Trainee model instead of Personnel
 - ✅ Built successfully
-- ✅ Committed (commit 4aec2267)
+- ✅ Committed (commit 63231709)
 - ✅ Pushed to GitHub
+- ⏳ Railway will automatically deploy
 
-## How to Get the Data
-After Railway deploys this update, you can:
+## How to Get Your Data
 
-### Option 1: Via Web Browser
+**After Railway deployment completes**, use one of these methods:
+
+### Option 1: Web Browser
 ```
-https://your-railway-app-url.com/api/staff-trainee-analysis
+https://dfp-neo-v2-production.up.railway.app/api/staff-trainee-analysis
 ```
 
-### Option 2: Via curl
+### Option 2: curl Command
 ```bash
-curl https://your-railway-app-url.com/api/staff-trainee-analysis | python3 -m json.tool
+curl https://dfp-neo-v2-production.up.railway.app/api/staff-trainee-analysis | python3 -m json.tool
 ```
 
-### Option 3: Via Test Script
+### Option 3: Test Script
 ```bash
-./test-staff-trainee-analysis.sh https://your-railway-app-url.com/api/staff-trainee-analysis
+cd /workspace/DFP-NEO-V2-fresh
+./test-staff-trainee-analysis.sh https://dfp-neo-v2-production.up.railway.app/api/staff-trainee-analysis
 ```
 
-## What the Endpoint Returns
-The endpoint will provide:
-1. **Total staff count**
-2. **Average primary trainees per staff**
-3. **Average secondary trainees per staff**
-4. **Distribution of primary trainees:**
-   - Staff with 0 primary trainees (count and percentage)
-   - Staff with 1 primary trainee (count and percentage)
-   - Staff with 2 primary trainees (count and percentage)
-   - Staff with 3+ primary trainees (count and percentage)
-5. **Distribution of secondary trainees:**
-   - Staff with 0 secondary trainees (count and percentage)
-   - Staff with 1 secondary trainee (count and percentage)
-   - Staff with 2 secondary trainees (count and percentage)
-   - Staff with 3+ secondary trainees (count and percentage)
+## What You'll Get
+The endpoint returns:
+- Total staff count
+- Total trainees count
+- Average primary trainees per staff
+- Average secondary trainees per staff
+- Distribution of primary trainees (0, 1, 2, 3+)
+- Distribution of secondary trainees (0, 1, 2, 3+)
+- Percentages for each category
 
-Wait for Railway deployment to complete, then query the endpoint to get the actual numbers from your production database.
+## Previous Issue Fixed
+**Error:** "Unknown field `primaryTrainees` for select statement on model `Personnel`"
+
+**Root Cause:** The Personnel model doesn't have trainee assignment fields. Trainee assignments are stored on the Trainee model.
+
+**Fix:** Changed the endpoint to:
+1. Query trainees instead of personnel
+2. Count trainees by instructor name
+3. Initialize counts for all staff (including those with 0 trainees)
+
+Wait for Railway to deploy commit 63231709, then query the endpoint to get your actual numbers!

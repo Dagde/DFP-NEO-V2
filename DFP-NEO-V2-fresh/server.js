@@ -285,20 +285,21 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       }
     });
     
-    // Get all staff/instructors
-    const staff = await prisma.personnel.findMany({
-      where: {
-        role: { in: ['INSTRUCTOR', 'STAFF'] }
-      },
+    // Get all personnel for reference
+    const allPersonnel = await prisma.personnel.findMany({
       select: {
         id: true,
-        name: true
+        name: true,
+        role: true
       }
     });
     
-    const totalStaff = staff.length;
+    // Get distinct roles for debugging
+    const roles = [...new Set(allPersonnel.map(p => p.role).filter(Boolean))];
+    console.log('Distinct roles in Personnel table:', roles);
+    console.log('Total personnel records:', allPersonnel.length);
     
-    // Count primary trainees per instructor
+    // Count primary trainees per instructor (by name)
     const primaryCounts = {};
     trainees.forEach(t => {
       if (t.primaryInstructor) {
@@ -306,7 +307,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       }
     });
     
-    // Count secondary trainees per instructor
+    // Count secondary trainees per instructor (by name)
     const secondaryCounts = {};
     trainees.forEach(t => {
       if (t.secondaryInstructor) {
@@ -314,13 +315,21 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       }
     });
     
-    // Initialize counts for all staff (those with 0 trainees)
-    staff.forEach(s => {
-      if (!primaryCounts[s.name]) {
-        primaryCounts[s.name] = 0;
+    // Get unique instructor names from trainee assignments
+    const instructorNames = new Set([
+      ...Object.keys(primaryCounts),
+      ...Object.keys(secondaryCounts)
+    ]);
+    
+    const totalStaff = instructorNames.size;
+    
+    // Initialize counts for instructors with 0 trainees (shouldn't happen but handle it)
+    instructorNames.forEach(name => {
+      if (!primaryCounts[name]) {
+        primaryCounts[name] = 0;
       }
-      if (!secondaryCounts[s.name]) {
-        secondaryCounts[s.name] = 0;
+      if (!secondaryCounts[name]) {
+        secondaryCounts[name] = 0;
       }
     });
     
@@ -340,8 +349,8 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
     const totalPrimaryTrainees = Object.values(primaryCounts).reduce((sum, count) => sum + count, 0);
     const totalSecondaryTrainees = Object.values(secondaryCounts).reduce((sum, count) => sum + count, 0);
     
-    const avgPrimary = (totalPrimaryTrainees / totalStaff).toFixed(2);
-    const avgSecondary = (totalSecondaryTrainees / totalStaff).toFixed(2);
+    const avgPrimary = totalStaff > 0 ? (totalPrimaryTrainees / totalStaff).toFixed(2) : '0';
+    const avgSecondary = totalStaff > 0 ? (totalSecondaryTrainees / totalStaff).toFixed(2) : '0';
     
     // Build distribution arrays
     const maxPrimary = Math.max(...Object.keys(primaryDistributionCounts).map(Number), 0);
@@ -353,7 +362,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       primaryDistribution.push({
         traineeCount: i,
         staffCount: count,
-        percentage: ((count / totalStaff) * 100).toFixed(1)
+        percentage: totalStaff > 0 ? ((count / totalStaff) * 100).toFixed(1) : '0'
       });
     }
     
@@ -363,7 +372,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       secondaryDistribution.push({
         traineeCount: i,
         staffCount: count,
-        percentage: ((count / totalStaff) * 100).toFixed(1)
+        percentage: totalStaff > 0 ? ((count / totalStaff) * 100).toFixed(1) : '0'
       });
     }
     
@@ -372,6 +381,7 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
       data: {
         totalStaff,
         totalTrainees: trainees.length,
+        distinctRoles: roles,
         summary: {
           averagePrimaryTrainees: avgPrimary,
           averageSecondaryTrainees: avgSecondary,
@@ -379,7 +389,12 @@ app.get('/api/staff-trainee-analysis', async (req, res) => {
           totalSecondaryAssignments: totalSecondaryTrainees
         },
         primaryDistribution,
-        secondaryDistribution
+        secondaryDistribution,
+        // Include detailed instructor assignments for debugging
+        instructorBreakdown: {
+          primary: primaryCounts,
+          secondary: secondaryCounts
+        }
       }
     });
     
