@@ -294,10 +294,10 @@ async function seedTIEDefaults(db) {
   ];
 
   for (const d of defaults) {
-    const existing = await safeQuery(db, `SELECT id FROM "TIESettings" WHERE key = $1`, d.key);
+    const existing = await safeQuery(db, `SELECT id FROM "TIESettings" WHERE key = $1::text`, d.key);
     if (!existing || existing.length === 0) {
       await safeExec(db, 
-        `INSERT INTO "TIESettings"("id","key","value","description") VALUES(gen_random_uuid()::text,$1,$2::jsonb,$3)`,
+        `INSERT INTO "TIESettings"("id","key","value","description") VALUES(gen_random_uuid()::text,$1::text,$2::jsonb,$3::text)`,
         d.key, JSON.stringify(d.value), d.description
       );
     }
@@ -387,7 +387,7 @@ async function seedTIEDefaults(db) {
     ];
     for (const p of phrases) {
       await safeExec(db, 
-        `INSERT INTO "TIECommentDictionary"("id","phrase","category","weight","matchType") VALUES(gen_random_uuid()::text,$1,$2,$3,'contains')`,
+        `INSERT INTO "TIECommentDictionary"("id","phrase","category","weight","matchType") VALUES(gen_random_uuid()::text,$1::text,$2::text,$3::numeric,'contains')`,
         p.phrase, p.category, p.weight
       );
     }
@@ -439,7 +439,7 @@ async function seedTIEDefaults(db) {
     ];
     for (const m of mappings) {
       await safeExec(db, 
-        `INSERT INTO "TIESkillMapping"("id","element","skillFamily") VALUES(gen_random_uuid()::text,$1,$2)`,
+        `INSERT INTO "TIESkillMapping"("id","element","skillFamily") VALUES(gen_random_uuid()::text,$1::text,$2::text)`,
         m.element, m.skillFamily
       );
     }
@@ -470,7 +470,7 @@ async function seedTIEDefaults(db) {
     ];
     for (const r of relationships) {
       await safeExec(db, 
-        `INSERT INTO "TIEEventRelationship"("id","fromEvent","toEvent","relationshipType","sequenceOrder") VALUES(gen_random_uuid()::text,$1,$2,$3,$4)`,
+        `INSERT INTO "TIEEventRelationship"("id","fromEvent","toEvent","relationshipType","sequenceOrder") VALUES(gen_random_uuid()::text,$1::text,$2::text,$3::text,$4::int)`,
         r.from, r.to, r.type, r.order || 0
       );
     }
@@ -818,7 +818,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       orderBy: { createdAt: 'desc' }
     });
     if (!pt051Backup || !pt051Backup.data) {
-      await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
+      await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1::text WHERE id=$2::text`,
         'No PT-051 data found in database', runId);
       return { success: false, error: 'No PT-051 data found', runId };
     }
@@ -846,20 +846,20 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     }
 
     if (pt051Records.length === 0) {
-      await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
+      await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1::text WHERE id=$2::text`,
         'No PT-051 records found for selected course', runId);
       return { success: false, error: 'No records for course', runId };
     }
 
     // ── Delete previous results for this course/scope ─────────
     if (courseFilter) {
-      await safeExec(db, `DELETE FROM "TIENormalisedInput" WHERE "courseName" = $1`, courseFilter);
-      await safeExec(db, `DELETE FROM "TIECommentTag" WHERE "traineeFullName" LIKE $1`, `%${courseFilter}%`);
-      await safeExec(db, `DELETE FROM "TIEFinding" WHERE "subjectKey" LIKE $1`, `%${courseFilter}%`);
-      await safeExec(db, `DELETE FROM "TIETraineeSummary" WHERE "courseName" = $1`, courseFilter);
-      await safeExec(db, `DELETE FROM "TIEEventSummary" WHERE "courseName" = $1`, courseFilter);
-      await safeExec(db, `DELETE FROM "TIECourseSummary" WHERE "courseName" = $1`, courseFilter);
-      await safeExec(db, `DELETE FROM "TIERootCause" WHERE "subjectKey" LIKE $1`, `%${courseFilter}%`);
+      await safeExec(db, `DELETE FROM "TIENormalisedInput" WHERE "courseName" = $1::text`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIECommentTag" WHERE "traineeFullName" LIKE $1::text`, `%${courseFilter}%`);
+      await safeExec(db, `DELETE FROM "TIEFinding" WHERE "subjectKey" LIKE $1::text`, `%${courseFilter}%`);
+      await safeExec(db, `DELETE FROM "TIETraineeSummary" WHERE "courseName" = $1::text`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIEEventSummary" WHERE "courseName" = $1::text`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIECourseSummary" WHERE "courseName" = $1::text`, courseFilter);
+      await safeExec(db, `DELETE FROM "TIERootCause" WHERE "subjectKey" LIKE $1::text`, `%${courseFilter}%`);
     } else {
       await safeExec(db, `DELETE FROM "TIENormalisedInput" WHERE TRUE`);
       await safeExec(db, `DELETE FROM "TIECommentTag" WHERE TRUE`);
@@ -1034,7 +1034,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       const tagRows = await safeQuery(db, `
         SELECT "tag","tagCategory",COUNT(*) as cnt
         FROM "TIECommentTag"
-        WHERE "traineeFullName"=$1 AND "runId"=$2
+        WHERE "traineeFullName"=$1::text AND "runId"=$2::text
         GROUP BY "tag","tagCategory"
         ORDER BY cnt DESC
       `, traineeFullName, runId);
@@ -1183,7 +1183,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
       const tagRows = await safeQuery(db, `
         SELECT "tag","tagCategory",COUNT(*) as cnt
-        FROM "TIECommentTag" WHERE "eventCode"=$1 AND "runId"=$2
+        FROM "TIECommentTag" WHERE "eventCode"=$1::text AND "runId"=$2::text
         GROUP BY "tag","tagCategory" ORDER BY cnt DESC LIMIT 10
       `, eventCode, runId);
 
@@ -1260,7 +1260,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
       // Bottleneck events for this course
       const courseEventSummaries = await safeQuery(db, `
         SELECT "eventCode","avgOverallGrade","bottleneckScore","overServiceIndicator","totalAttempts"
-        FROM "TIEEventSummary" WHERE "runId"=$1 AND "courseName"=$2
+        FROM "TIEEventSummary" WHERE "runId"=$1::text AND "courseName"=$2::text
         ORDER BY "bottleneckScore" DESC
       `, runId, courseName);
 
@@ -1340,8 +1340,8 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
     // Mark run complete
     await safeExec(db, `
       UPDATE "TIEAnalyticsRun"
-      SET status='complete', "completedAt"=NOW(), "recordsProcessed"=$1
-      WHERE id=$2
+      SET status='complete', "completedAt"=NOW(), "recordsProcessed"=$1::int
+      WHERE id=$2::text
     `, pt051Records.length, runId);
 
     console.log(`✅ TIE analytics run complete: ${runId}, processed ${pt051Records.length} records`);
@@ -1358,7 +1358,7 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
 
   } catch (err) {
     console.error('❌ TIE analytics error:', err);
-    await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1 WHERE id=$2`,
+    await safeExec(db, `UPDATE "TIEAnalyticsRun" SET status='failed', "completedAt"=NOW(), "errorMessage"=$1::text WHERE id=$2::text`,
       err.message, runId);
     return { success: false, error: err.message, runId };
   }
