@@ -480,6 +480,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [tempSctEvents, setTempSctEvents] = useState<string[]>([]);
     const [newSctEvent, setNewSctEvent] = useState('');
     
+    // Currency Details Panel State
+    const [selectedCurrency, setSelectedCurrency] = useState<MasterCurrency | null>(null);
+    
     // Event Limits State
     const [isEditingLimits, setIsEditingLimits] = useState(false);
     const [tempLimits, setTempLimits] = useState<EventLimits>(eventLimits);
@@ -1817,33 +1820,115 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    )}
                     {/* Currencies Window */}
                    {shouldShowSection('currencies') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col">
-                        <div className="p-4 flex justify-between items-center shrink-0">
-                            <h2 className="text-lg font-semibold text-gray-200">Currencies</h2>
-                        </div>
-                         <div className="flex-1 overflow-y-auto max-h-[400px]">
-                            <table className="w-full text-left text-sm">
-                                <thead className="sticky top-0 bg-gray-800">
-                                    <tr>
-                                        <th className="font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700">Currency</th>
-                                        <th className="font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700">Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {visibleCurrencies.map((c, i) => (
-                                        <tr key={c.id} className="border-t border-gray-700">
-                                            <td className="py-2 px-4 text-gray-200">{c.name}</td>
-                                            <td className="py-2 px-4 text-gray-300 capitalize">{c.type}</td>
+                    <div className="flex gap-4">
+                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col">
+                            <div className="p-4 flex justify-between items-center shrink-0">
+                                <h2 className="text-lg font-semibold text-gray-200">Currencies</h2>
+                            </div>
+                             <div className="flex-1 overflow-y-auto max-h-[400px]">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="sticky top-0 bg-gray-800">
+                                        <tr>
+                                            <th className="font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700">Currency</th>
+                                            <th className="font-medium text-gray-400 px-4 pt-0 pb-2 border-b border-gray-700">Type</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {visibleCurrencies.map((c, i) => (
+                                            <tr 
+                                                key={c.id} 
+                                                className={`border-t border-gray-700 cursor-pointer transition-colors ${
+                                                    selectedCurrency?.id === c.id ? 'bg-sky-900/30' : 'hover:bg-gray-700'
+                                                }`}
+                                                onClick={() => setSelectedCurrency(c)}
+                                                onMouseEnter={() => setSelectedCurrency(c)}
+                                            >
+                                                <td className="py-2 px-4 text-gray-200">{c.name}</td>
+                                                <td className="py-2 px-4 text-gray-300 capitalize">{c.type}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="p-4 border-t border-gray-700 shrink-0">
+                                <button onClick={() => onNavigate('CurrencyBuilder')} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">
+                                    Currency Builder
+                                </button>
+                            </div>
                         </div>
-                        <div className="p-4 border-t border-gray-700 shrink-0">
-                            <button onClick={() => onNavigate('CurrencyBuilder')} className="w-full px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">
-                                Currency Builder
-                            </button>
-                        </div>
+                        
+                        {/* Currency Details Panel */}
+                        {selectedCurrency && (
+                            <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-[40rem] h-fit flex flex-col">
+                                <div className="p-4 flex justify-between items-center shrink-0 border-b border-gray-700">
+                                    <h2 className="text-lg font-semibold text-gray-200">Currency Details</h2>
+                                    <button 
+                                        onClick={() => setSelectedCurrency(null)}
+                                        className="text-gray-400 hover:text-white transition-colors"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-400 block mb-1">Name</label>
+                                        <p className="text-gray-200">{selectedCurrency.name}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-400 block mb-1">Type</label>
+                                        <p className="text-gray-200 capitalize">{selectedCurrency.type}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-400 block mb-1">Description</label>
+                                        <p className="text-gray-300 whitespace-pre-wrap">{selectedCurrency.description || 'No description'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-400 block mb-1">Visible</label>
+                                        <p className="text-gray-200">{selectedCurrency.isVisible ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    {selectedCurrency.type === 'primitive' && (
+                                        <>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Validity Days</label>
+                                                <p className="text-gray-200">{(selectedCurrency as CurrencyRequirement).validityDays} days</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Required Count</label>
+                                                <p className="text-gray-200">{(selectedCurrency as CurrencyRequirement).requiredCount}</p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Event Codes</label>
+                                                <p className="text-gray-300">
+                                                    {(selectedCurrency as CurrencyRequirement).eventCodes.length > 0 
+                                                        ? (selectedCurrency as CurrencyRequirement).eventCodes.join(', ') 
+                                                        : 'None'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Expiry Rule</label>
+                                                <p className="text-gray-200 capitalize">{(selectedCurrency as CurrencyRequirement).expiryRule}</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {selectedCurrency.type === 'composite' && (
+                                        <>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Logic Tree</label>
+                                                <pre className="bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">
+                                                    {JSON.stringify((selectedCurrency as MasterCurrency).logicTree, null, 2)}
+                                                </pre>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-400 block mb-1">Expiry Calculation</label>
+                                                <pre className="bg-gray-900 p-3 rounded text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">
+                                                    {JSON.stringify((selectedCurrency as MasterCurrency).expiryCalculation, null, 2)}
+                                                </pre>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                    )}
