@@ -644,8 +644,8 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
               <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">
                 {/* Top Section */}
                 <div className="flex items-start gap-6">
-                    {/* Result (Left) */}
-                    <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg">
+                    {/* Result (Left) — subtle blue hue outline */}
+                    <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg border border-sky-500/40 ring-1 ring-sky-500/20">
                         <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
                         <div className="flex flex-col space-y-3">
                             <ResultRadio value="DCO" />
@@ -655,76 +655,83 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     </div>
 
                     {/* Currency Updates Panel (Right of Result) */}
-                    {postFlightCurrencies.length > 0 && (
-                        <div className="flex-1 bg-gray-700/50 px-3 py-2 rounded border border-amber-600/30 min-w-[180px]">
-                            <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wide mb-1 leading-none">Currencies</p>
-                            <div className="flex flex-col gap-0.5">
-                                {postFlightCurrencies.map(c => {
-                                    const inputTypes = getEffectiveInputTypes(c);
-                                    const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
-                                    return (
-                                        <div key={c.id} className="flex flex-col gap-0.5">
-                                            {inputTypes.map(inputType => {
-                                                const fieldKey = inputTypes.length > 1 ? `${c.id}__${inputType}` : c.id;
-                                                const val = currencyValues[fieldKey] ?? '';
-
-                                                if (inputType === 'checkbox') {
-                                                    const isChecked = val !== '' && val !== 'false';
-                                                    return (
-                                                        <label key={inputType} className="flex items-center gap-1.5 cursor-pointer group">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={isChecked}
-                                                                onChange={e => handleCurrencyChange(fieldKey, e.target.checked ? flightDate : '')}
-                                                                className="h-3.5 w-3.5 flex-shrink-0 rounded accent-amber-500 cursor-pointer"
-                                                                title={isChecked ? `Recorded: ${val}` : 'Flight date recorded on tick'}
-                                                            />
-                                                            <span className="text-[11px] text-gray-200 leading-none truncate" title={c.name}>{c.name}</span>
-                                                        </label>
-                                                    );
-                                                }
-
-                                                if (inputType === 'date') {
-                                                    return (
-                                                        <label key={inputType} className="flex items-center gap-1.5">
-                                                            <span className="text-[11px] text-gray-300 leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
-                                                            <input
-                                                                type="date"
-                                                                value={val}
-                                                                onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
-                                                                className="w-[120px] flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1.5 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                                                style={{ colorScheme: 'dark' }}
-                                                                title="Date last completed"
-                                                            />
-                                                        </label>
-                                                    );
-                                                }
-
-                                                if (inputType === 'count') {
-                                                    return (
-                                                        <label key={inputType} className="flex items-center gap-1.5">
-                                                            <span className="text-[11px] text-gray-300 leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                value={val}
-                                                                onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
-                                                                placeholder="0"
-                                                                className="w-10 flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1 text-white text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                                                title="Count completed today"
-                                                            />
-                                                        </label>
-                                                    );
-                                                }
-
-                                                return null;
-                                            })}
-                                        </div>
-                                    );
-                                })}
+                    {postFlightCurrencies.length > 0 && (() => {
+                        const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
+                        const rows: { c: CurrencyDefinition; inputType: PostFlightInputType; fieldKey: string }[] = [];
+                        postFlightCurrencies.forEach(c => {
+                            const inputTypes = getEffectiveInputTypes(c);
+                            inputTypes.forEach(inputType => {
+                                const fieldKey = inputTypes.length > 1 ? `${c.id}__${inputType}` : c.id;
+                                rows.push({ c, inputType, fieldKey });
+                            });
+                        });
+                        const ROWS_PER_COL = 4;
+                        const numCols = Math.ceil(rows.length / ROWS_PER_COL);
+                        return (
+                            <div className="flex-1 bg-gray-700/50 px-3 py-2 rounded border border-gray-600/50 min-w-0">
+                                <p className="text-sm font-medium text-sky-400 mb-1.5 leading-none">Currencies</p>
+                                <div
+                                    className="grid gap-x-4 gap-y-0.5"
+                                    style={{
+                                        gridTemplateRows: `repeat(${ROWS_PER_COL}, auto)`,
+                                        gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
+                                        gridAutoFlow: 'column',
+                                    }}
+                                >
+                                    {rows.map(({ c, inputType, fieldKey }) => {
+                                        const val = currencyValues[fieldKey] ?? '';
+                                        if (inputType === 'checkbox') {
+                                            const isChecked = val !== '' && val !== 'false';
+                                            return (
+                                                <label key={fieldKey} className="flex items-center gap-1.5 cursor-pointer min-w-0 h-[22px]">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={e => handleCurrencyChange(fieldKey, e.target.checked ? flightDate : '')}
+                                                        className="h-3.5 w-3.5 flex-shrink-0 rounded accent-sky-500 cursor-pointer"
+                                                        title={isChecked ? `Recorded: ${val}` : 'Flight date recorded on tick'}
+                                                    />
+                                                    <span className="text-sm text-white leading-none truncate" title={c.name}>{c.name}</span>
+                                                </label>
+                                            );
+                                        }
+                                        if (inputType === 'date') {
+                                            return (
+                                                <label key={fieldKey} className="flex items-center gap-1.5 min-w-0 h-[22px]">
+                                                    <span className="text-sm text-white leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
+                                                    <input
+                                                        type="date"
+                                                        value={val}
+                                                        onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
+                                                        className="w-[112px] flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                                                        style={{ colorScheme: 'dark' }}
+                                                        title="Date last completed"
+                                                    />
+                                                </label>
+                                            );
+                                        }
+                                        if (inputType === 'count') {
+                                            return (
+                                                <label key={fieldKey} className="flex items-center gap-1.5 min-w-0 h-[22px]">
+                                                    <span className="text-sm text-white leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={val}
+                                                        onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-10 flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1 text-white text-sm text-center focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                                                        title="Count completed today"
+                                                    />
+                                                </label>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* Main "Times" Window */}
