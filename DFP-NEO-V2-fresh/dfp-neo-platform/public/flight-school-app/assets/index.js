@@ -78048,13 +78048,13 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       lineNumber: 640,
       columnNumber: 13
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex", style: { gap: "0px" }, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex", style: { gap: "2px" }, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "button",
         {
           onClick: handleManualSave,
           className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
-          style: { borderRadius: "6px 0 0 6px", borderRightWidth: "1px", borderRightColor: "#6b7280" },
+          style: { borderRadius: "6px" },
           children: "Save"
         },
         void 0,
@@ -78071,7 +78071,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         {
           onClick: handleAttemptReturn,
           className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
-          style: { borderRadius: "0", borderLeftWidth: "0", borderRightWidth: "1px", borderRightColor: "#6b7280" },
+          style: { borderRadius: "6px" },
           children: "Back"
         },
         void 0,
@@ -78087,7 +78087,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         AuditButton,
         {
           pageName: "Post-Flight",
-          style: { borderRadius: "0 6px 6px 0", borderLeftWidth: "0" }
+          style: { borderRadius: "6px" }
         },
         void 0,
         false,
