@@ -198,6 +198,11 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
     const handleChange = (field: keyof CurrencyRequirement, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
+
+    // Auto-suggest input type based on expiry rule
+    const suggestedInputType = currency.expiryRule === 'ROLLING_WINDOW' ? 'count' : 'date';
+    const effectiveInputType = currency.postFlightInputType ?? suggestedInputType;
+
     return (
         <div className="space-y-4">
             <h2 className="text-2xl font-bold text-green-400">Edit Primitive Currency</h2>
@@ -211,6 +216,43 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
                 <option value="ROLLING_WINDOW">Rolling Window</option>
             </DropdownField>
             <InputField label="Event Codes (comma-separated)" value={currency.eventCodes.join(', ')} onChange={v => handleChange('eventCodes', v.split(',').map((s: string) => s.trim()).filter(Boolean))} />
+
+            {/* Post-Flight Integration */}
+            <div className="p-4 border border-amber-600/40 rounded-lg bg-amber-900/10 space-y-3">
+                <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wide">Post-Flight Page</h3>
+                <CheckboxField
+                    label="Show in Post-Flight entry page"
+                    checked={currency.showInPostFlight ?? false}
+                    onChange={v => handleChange('showInPostFlight', v)}
+                />
+                {currency.showInPostFlight && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Input Type in Post-Flight</label>
+                        <div className="flex flex-col space-y-2 mt-1">
+                            {(['date', 'count', 'checkbox'] as const).map(type => (
+                                <label key={type} className="flex items-center space-x-3 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name={`pfInputType-${currency.id}`}
+                                        value={type}
+                                        checked={effectiveInputType === type}
+                                        onChange={() => handleChange('postFlightInputType', type)}
+                                        className="h-4 w-4 accent-amber-500"
+                                    />
+                                    <span className="text-sm text-gray-300">
+                                        {type === 'date' && '\ud83d\udcc5 Date picker \u2014 "When did you last complete this?" (for annual/periodic currencies)'}
+                                        {type === 'count' && '\ud83d\udd22 Number input \u2014 "How many times today?" (for rolling-window count currencies)'}
+                                        {type === 'checkbox' && '\u2705 Checkbox \u2014 "Is this current? Yes/No" (for simple go/no-go currencies)'}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                        <p className="text-xs text-amber-500/70 mt-2">
+                            Auto-suggested: <span className="font-semibold">{suggestedInputType}</span> based on expiry rule ({currency.expiryRule === 'ROLLING_WINDOW' ? 'rolling count' : 'last event date'})
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -233,6 +275,40 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
                 <option value="LATEST_CHILD">Use Latest Expiry</option>
             </DropdownField>
             <LogicNodeEditor node={currency.logicTree} path={[]} onUpdate={handleLogicTreeChange} allCurrencies={allCurrencies} />
+
+            {/* Post-Flight Integration */}
+            <div className="p-4 border border-purple-600/40 rounded-lg bg-purple-900/10 space-y-3">
+                <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wide">Post-Flight Page</h3>
+                <CheckboxField
+                    label="Show in Post-Flight entry page"
+                    checked={currency.showInPostFlight ?? false}
+                    onChange={v => handleChange('showInPostFlight', v)}
+                />
+                {currency.showInPostFlight && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">Input Type in Post-Flight</label>
+                        <div className="flex flex-col space-y-2 mt-1">
+                            {(['checkbox', 'date', 'count'] as const).map(type => (
+                                <label key={type} className="flex items-center space-x-3 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name={`pfInputType-${currency.id}`}
+                                        value={type}
+                                        checked={(currency.postFlightInputType ?? 'checkbox') === type}
+                                        onChange={() => handleChange('postFlightInputType', type)}
+                                        className="h-4 w-4 accent-purple-500"
+                                    />
+                                    <span className="text-sm text-gray-300">
+                                        {type === 'checkbox' && '\u2705 Checkbox \u2014 "Is this GO/NO-GO?" (recommended for composite currencies)'}
+                                        {type === 'date' && '\ud83d\udcc5 Date picker \u2014 "When was this last satisfied?"'}
+                                        {type === 'count' && '\ud83d\udd22 Number input \u2014 "Count of completions today"'}
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

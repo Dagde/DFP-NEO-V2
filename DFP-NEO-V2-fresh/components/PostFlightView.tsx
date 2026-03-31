@@ -1,7 +1,7 @@
 import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ScheduleEvent, Trainee, Instructor } from '../types';
+import { ScheduleEvent, Trainee, Instructor, CurrencyRequirement, MasterCurrency, CurrencyDefinition, PostFlightInputType } from '../types';
 import AuditButton from './AuditButton';
 import UnsavedChangesWarning from './UnsavedChangesWarning';
 import { addFile } from '../utils/db';
@@ -16,16 +16,39 @@ interface PostFlightViewProps {
   school: 'ESL' | 'PEA';
   traineesData: Trainee[];
   instructorsData: Instructor[];
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
 }
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [] }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
         const personName = event.student || event.pilot;
         return traineesData.find(t => t.fullName === personName);
     }, [event, traineesData]);
+
+    // --- POST-FLIGHT CURRENCY STATE ---
+    // All currencies flagged showInPostFlight=true, sorted: composites first, then primitives
+    const postFlightCurrencies = useMemo<CurrencyDefinition[]>(() => {
+        const composites = masterCurrencies.filter(c => c.showInPostFlight);
+        const primitives = currencyRequirements.filter(c => c.showInPostFlight);
+        return [...composites, ...primitives];
+    }, [masterCurrencies, currencyRequirements]);
+
+    // Map: currencyId → value (string for date/count, 'true'/'false' for checkbox)
+    const [currencyValues, setCurrencyValues] = useState<Record<string, string>>({});
+
+    const handleCurrencyChange = (id: string, value: string) => {
+        setCurrencyValues(prev => ({ ...prev, [id]: value }));
+    };
+
+    const getEffectiveInputType = (c: CurrencyDefinition): PostFlightInputType => {
+        if (c.postFlightInputType) return c.postFlightInputType;
+        if (c.type === 'composite') return 'checkbox';
+        return (c as CurrencyRequirement).expiryRule === 'ROLLING_WINDOW' ? 'count' : 'date';
+    };
 
     // State
     const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
@@ -340,7 +363,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 rnp: rnpChecked ? rnpCount : 0,
                 tacan: tacanChecked ? tacanCount : 0,
                 vor: vorChecked ? vorCount : 0,
-            }
+            },
+            // Currency updates from post-flight panel
+            currencyUpdates: Object.keys(currencyValues).length > 0 ? currencyValues : undefined,
         };
         
         // Flush any pending debounced logs before saving
@@ -619,8 +644,8 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
               <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">
                 {/* Top Section */}
                 <div className="flex items-start gap-6">
-                    {/* Result (Top Left) */}
-                    <div className="bg-gray-700/50 p-4 rounded-lg">
+                    {/* Result (Left) */}
+                    <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg">
                         <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
                         <div className="flex flex-col space-y-3">
                             <ResultRadio value="DCO" />
@@ -628,6 +653,83 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             <ResultRadio value="DNCO" />
                         </div>
                     </div>
+
+                    {/* Currency Updates Panel (Right of Result) */}
+                    {postFlightCurrencies.length > 0 && (
+                        <div className="flex-1 bg-gray-700/50 p-4 rounded-lg border border-amber-600/30">
+                            <label className="block text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                                </svg>
+                                Currency Updates
+                            </label>
+                            <div className="flex flex-wrap gap-4">
+                                {postFlightCurrencies.map(c => {
+                                    const inputType = getEffectiveInputType(c);
+                                    const val = currencyValues[c.id] ?? '';
+                                    const isComposite = c.type === 'composite';
+                                    return (
+                                        <div key={c.id} className={`flex flex-col gap-1 min-w-[140px] ${isComposite ? 'border-l-2 border-purple-500/50 pl-2' : 'border-l-2 border-green-500/50 pl-2'}`}>
+                                            <label className="text-xs font-medium text-gray-300 leading-tight">{c.name}</label>
+                                            {inputType === 'date' && (
+                                                <input
+                                                    type="date"
+                                                    value={val}
+                                                    onChange={e => handleCurrencyChange(c.id, e.target.value)}
+                                                    className="block w-full bg-gray-700 border border-gray-600 rounded-md h-[34px] py-1 px-2 text-white text-xs focus:outline-none focus:ring-amber-500 focus:border-amber-500"
+                                                    style={{ colorScheme: 'dark' }}
+                                                    title="Date last completed"
+                                                />
+                                            )}
+                                            {inputType === 'count' && (
+                                                <div className="flex items-center gap-1">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={val}
+                                                        onChange={e => handleCurrencyChange(c.id, e.target.value)}
+                                                        placeholder="0"
+                                                        className="block w-16 bg-gray-700 border border-gray-600 rounded-md h-[34px] py-1 px-2 text-white text-xs text-center focus:outline-none focus:ring-amber-500 focus:border-amber-500"
+                                                        title="Count completed today"
+                                                    />
+                                                    <span className="text-xs text-gray-400">today</span>
+                                                </div>
+                                            )}
+                                            {inputType === 'checkbox' && (
+                                                <div className="flex items-center gap-2 h-[34px]">
+                                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name={`pf-cur-${c.id}`}
+                                                            value="true"
+                                                            checked={val === 'true'}
+                                                            onChange={() => handleCurrencyChange(c.id, 'true')}
+                                                            className="h-3.5 w-3.5 accent-green-500"
+                                                        />
+                                                        <span className="text-xs text-green-400 font-semibold">GO</span>
+                                                    </label>
+                                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name={`pf-cur-${c.id}`}
+                                                            value="false"
+                                                            checked={val === 'false'}
+                                                            onChange={() => handleCurrencyChange(c.id, 'false')}
+                                                            className="h-3.5 w-3.5 accent-red-500"
+                                                        />
+                                                        <span className="text-xs text-red-400 font-semibold">NO GO</span>
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-3">
+                                Currency updates are saved with post-flight data and will update pilot records.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Main "Times" Window */}

@@ -6,6 +6,14 @@ export type ExpiryRuleType = 'ROLLING_WINDOW' | 'LAST_EVENT_PLUS_PERIOD';
 export type ExpiryCalculation = 'EARLIEST_CHILD' | 'LATEST_CHILD';
 export type LogicOperator = 'AND' | 'OR';
 
+/**
+ * How a currency is entered in the Post-Flight page:
+ * - 'date'     → date picker (for LAST_EVENT_PLUS_PERIOD currencies — "when did you last do this?")
+ * - 'count'    → number input (for ROLLING_WINDOW currencies — "how many did you complete?")
+ * - 'checkbox' → boolean toggle (for composite/go-no-go currencies — "is this current?")
+ */
+export type PostFlightInputType = 'date' | 'count' | 'checkbox';
+
 export interface LogicNode {
   operator: LogicOperator;
   children: (string | LogicNode)[]; // Array of currency IDs or nested LogicNodes
@@ -21,6 +29,9 @@ export interface CurrencyRequirement {
   eventCodes: string[]; // syllabus codes that satisfy this
   requiredCount: number; // e.g., 3 for "3 approaches in 90 days"
   expiryRule: ExpiryRuleType;
+  // Post-flight integration
+  showInPostFlight?: boolean;        // Whether this currency appears on the post-flight page
+  postFlightInputType?: PostFlightInputType; // How it is entered (auto-inferred if not set)
 }
 
 export interface MasterCurrency {
@@ -31,6 +42,9 @@ export interface MasterCurrency {
   isVisible: boolean;
   logicTree: LogicNode;
   expiryCalculation: ExpiryCalculation;
+  // Post-flight integration
+  showInPostFlight?: boolean;        // Whether this currency appears on the post-flight page
+  postFlightInputType?: PostFlightInputType; // Always 'checkbox' for composites, but stored for override
 }
 
 export type CurrencyDefinition = MasterCurrency | CurrencyRequirement;

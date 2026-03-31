@@ -119,7 +119,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
 import { initializeData } from './lib/dataService';
-import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
+import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
 // --- PT-051 STRUCTURE ---
@@ -5494,8 +5494,14 @@ useEffect(() => {
                 if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
-                if (saved.masterCurrencies?.length) setMasterCurrencies(saved.masterCurrencies);
-                if (saved.currencyRequirements?.length) setCurrencyRequirements(saved.currencyRequirements);
+                // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
+                {
+                    const dbReqs = saved.currencyRequirements ?? [];
+                    const dbMasters = saved.masterCurrencies ?? [];
+                    const merged = mergeWithInitialCurrencies(dbReqs, dbMasters);
+                    setMasterCurrencies(merged.masters);
+                    setCurrencyRequirements(merged.requirements);
+                }
                 if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
                 if (saved.organisationSettings) {
                     console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
@@ -11818,6 +11824,8 @@ updates.forEach(update => {
                                 school={school}
                                 traineesData={traineesData}
                                 instructorsData={instructorsData}
+                                masterCurrencies={masterCurrencies}
+                                currencyRequirements={currencyRequirements}
                            />;
                 }
                 return null;
