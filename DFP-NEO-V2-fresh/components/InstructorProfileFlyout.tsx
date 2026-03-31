@@ -26,6 +26,8 @@ interface InstructorProfileFlyoutProps {
   onNavigateToTrainee?: (trainee: Trainee) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
+  profileInitialTab?: 'currency' | null;
+  onProfileTabConsumed?: () => void;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -124,6 +126,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
   locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
+  profileInitialTab, onProfileTabConsumed,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -283,6 +286,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   // Tab state — null means no tab open (profile only)
   const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'sct' | null>(null);
+
+  // Open to a specific tab if requested (e.g. from "My Currency" in MyDashboard)
+  useEffect(() => {
+    if (profileInitialTab) {
+      setActiveTab(profileInitialTab);
+      onProfileTabConsumed?.();
+    }
+  }, [profileInitialTab]);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
   const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
   // Toggle: clicking active tab closes it; clicking another opens it

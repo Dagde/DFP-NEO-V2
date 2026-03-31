@@ -5396,6 +5396,7 @@ useEffect(() => {
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
+    const [profileInitialTab, setProfileInitialTab] = useState<'currency' | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showAddGroundEvent, setShowAddGroundEvent] = useState(false);
     const [cptConflict, setCptConflict] = useState<Conflict | null>(null);
@@ -10119,7 +10120,9 @@ updates.forEach(update => {
     const handleSelectMyCurrency = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
-            handleNavigateToCurrency(user);
+            setSelectedPersonForProfile(user);
+            setProfileInitialTab('currency');
+            handleNavigation('Instructors');
         }
     };
 
@@ -11515,6 +11518,8 @@ updates.forEach(update => {
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Instructor | null}
                             onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            profileInitialTab={profileInitialTab}
+                            onProfileTabConsumed={() => setProfileInitialTab(null)}
                             onViewLogbook={handleViewLogbook}
                             onRequestSct={(instructor) => {
                                 setInstructorForSct(instructor);

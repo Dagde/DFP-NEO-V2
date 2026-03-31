@@ -9,23 +9,10 @@ interface CurrencyPanelProps {
   currencyRequirements: CurrencyRequirement[];
   initialCurrencyStatus?: PersonCurrencyStatus[];
   onCurrencyStatusChange?: (newStatus: PersonCurrencyStatus[]) => void;
+  initialTab?: 'currency' | null;
 }
 
-// How many days before expiry is "approaching" (amber)
 const AMBER_THRESHOLD_DAYS = 30;
-
-type StatusBucket = 'expired' | 'approaching' | 'current' | 'unassigned';
-
-interface CurrencyRowData {
-  id: string;
-  name: string;
-  validityDays: number;
-  lastRenewalDate: string;   // empty if unassigned
-  expiryDate: string;        // empty if unassigned
-  daysRemaining: number | null;  // null if unassigned
-  bucket: StatusBucket;
-  isActive: boolean;
-}
 
 function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null;
@@ -35,13 +22,13 @@ function parseDate(dateStr: string): Date | null {
 }
 
 function formatDateDisplay(dateStr: string): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '---';
   const d = parseDate(dateStr);
   if (!d) return dateStr;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', timeZone: 'UTC' });
 }
 
-function addDays(dateStr: string, days: number): string {
+function addDaysToDate(dateStr: string, days: number): string {
   const d = parseDate(dateStr);
   if (!d) return '';
   d.setDate(d.getDate() + days);
@@ -57,28 +44,36 @@ function getDaysRemaining(expiryDateStr: string): number {
   return Math.ceil((expiry.getTime() - today.getTime()) / 86400000);
 }
 
+function getStatusDotColor(daysRemaining: number | null): string {
+  if (daysRemaining === null) return 'bg-gray-600';
+  if (daysRemaining <= 0) return 'bg-red-500';
+  if (daysRemaining <= 7) return 'bg-amber-400';
+  return 'bg-green-500';
+}
+
+function getDaysColor(days: number): string {
+  if (days <= 0) return 'text-red-400';
+  if (days < 30) return 'text-red-400';
+  if (days < 61) return 'text-amber-400';
+  return 'text-green-400';
+}
+
+function getPeriodText(validityDays: number | null): string {
+  if (validityDays === null) return 'Complex';
+  if (validityDays === 365) return '12 Months';
+  return `${validityDays} Days`;
+}
+
+type StatusBucket = 'expired' | 'approaching' | 'current' | 'unassigned';
+
 const BUCKET_ORDER: StatusBucket[] = ['expired', 'approaching', 'current', 'unassigned'];
 
-const bucketColor: Record<StatusBucket, string> = {
-  expired: 'text-red-400',
-  approaching: 'text-amber-400',
-  current: 'text-green-400',
-  unassigned: 'text-gray-500',
-};
-
-const bucketBadgeBg: Record<StatusBucket, string> = {
-  expired: 'bg-red-600/30 border border-red-500/60',
-  approaching: 'bg-amber-600/30 border border-amber-500/60',
-  current: 'bg-green-600/30 border border-green-500/60',
-  unassigned: 'bg-gray-700/40 border border-gray-600/40',
-};
-
-const bucketDotColor: Record<StatusBucket, string> = {
-  expired: 'bg-red-500',
-  approaching: 'bg-amber-400',
-  current: 'bg-green-500',
-  unassigned: 'bg-gray-500',
-};
+function getBucket(daysRemaining: number | null): StatusBucket {
+  if (daysRemaining === null) return 'unassigned';
+  if (daysRemaining <= 0) return 'expired';
+  if (daysRemaining <= AMBER_THRESHOLD_DAYS) return 'approaching';
+  return 'current';
+}
 
 const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   personId,
@@ -90,8 +85,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   onCurrencyStatusChange,
 }) => {
   const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(initialCurrencyStatus || []);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editValues, setEditValues] = useState<Record<string, string>>({}); // id → lastRenewalDate
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -118,91 +113,77 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   }, [personId, personType]);
 
   // All visible currency definitions (masters + primitives), sorted by name
-  const allCurrencies = useMemo(() => {
+  const visibleCurrencyDefinitions = useMemo(() => {
     return [...masterCurrencies.filter(c => c.isVisible), ...currencyRequirements.filter(c => c.isVisible)]
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [masterCurrencies, currencyRequirements]);
 
-  // Build row data with computed status
-  const rows: CurrencyRowData[] = useMemo(() => {
-    return allCurrencies.map(def => {
-      // currencyStatus uses currencyName which maps to the def.name (per CurrencyView.tsx)
-      const record = currencyStatus.find(c => c.currencyName === def.name || c.currencyName === def.id);
-      const lastRenewal = record?.lastEventDate || '';
+  const getCurrencyStatus = (currencyName: string): PersonCurrencyStatus | undefined => {
+    return currencyStatus.find(c => c.currencyName === currencyName);
+  };
+
+  // Summary counts for the header badges
+  const summaryCount = useMemo(() => {
+    const counts = { expired: 0, approaching: 0, current: 0, unassigned: 0 };
+    visibleCurrencyDefinitions.forEach(def => {
+      const record = getCurrencyStatus(def.name);
+      const lastEventDate = record?.lastEventDate || '';
       const validityDays = 'validityDays' in def ? def.validityDays : 365;
-      const expiryDate = lastRenewal ? (record?.calculatedExpiry || addDays(lastRenewal, validityDays)) : '';
-      const daysRemaining = expiryDate ? getDaysRemaining(expiryDate) : null;
-
-      let bucket: StatusBucket = 'unassigned';
-      if (daysRemaining !== null) {
-        if (daysRemaining <= 0) bucket = 'expired';
-        else if (daysRemaining <= AMBER_THRESHOLD_DAYS) bucket = 'approaching';
-        else bucket = 'current';
-      }
-
-      return {
-        id: def.id,
-        name: def.name,
-        validityDays,
-        lastRenewalDate: lastRenewal,
-        expiryDate,
-        daysRemaining,
-        bucket,
-        isActive: !!lastRenewal,
-      };
+      const expiryDate = lastEventDate ? addDaysToDate(lastEventDate, validityDays) : '';
+      const days = expiryDate ? getDaysRemaining(expiryDate) : null;
+      counts[getBucket(days)]++;
     });
-  }, [allCurrencies, currencyStatus]);
-
-  // Sort rows by bucket order
-  const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const ai = BUCKET_ORDER.indexOf(a.bucket);
-      const bi = BUCKET_ORDER.indexOf(b.bucket);
-      if (ai !== bi) return ai - bi;
-      // Within same bucket, sort expired/approaching by days remaining asc, others by name
-      if (a.bucket === 'expired' || a.bucket === 'approaching') {
-        return (a.daysRemaining ?? 0) - (b.daysRemaining ?? 0);
-      }
-      return a.name.localeCompare(b.name);
-    });
-  }, [rows]);
+    return counts;
+  }, [visibleCurrencyDefinitions, currencyStatus]);
 
   const handleEditClick = () => {
-    // Populate edit values
-    const vals: Record<string, string> = {};
-    sortedRows.forEach(r => {
-      vals[r.id] = r.lastRenewalDate;
+    const initialMap = new Map<string, string>();
+    visibleCurrencyDefinitions.forEach(def => {
+      const status = getCurrencyStatus(def.name);
+      initialMap.set(def.name, status?.lastEventDate || '');
     });
-    setEditValues(vals);
-    setIsEditMode(true);
+    setEditedStatuses(initialMap);
+    setIsEditing(true);
     setSaveError(null);
   };
 
-  const handleCancelEdit = () => {
-    setIsEditMode(false);
-    setEditValues({});
+  const handleCancelClick = () => {
+    setIsEditing(false);
+    setEditedStatuses(new Map());
     setSaveError(null);
   };
 
-  const handleSave = useCallback(async () => {
+  const handleDateChange = (currencyName: string, date: string) => {
+    setEditedStatuses(prev => new Map(prev).set(currencyName, date));
+  };
+
+  const handleSaveClick = useCallback(async () => {
     if (!personId) return;
     setIsSaving(true);
     setSaveError(null);
 
-    // Build new PersonCurrencyStatus array
     const newStatus: PersonCurrencyStatus[] = [];
-    allCurrencies.forEach(def => {
-      const date = editValues[def.id];
-      if (date) {
+    visibleCurrencyDefinitions.forEach(def => {
+      const editedDate = editedStatuses.get(def.name);
+      if (editedDate) {
         const validityDays = 'validityDays' in def ? def.validityDays : 365;
-        const expiryDate = addDays(date, validityDays);
+        const expiryDate = addDaysToDate(editedDate, validityDays);
         const daysRem = getDaysRemaining(expiryDate);
         newStatus.push({
-          currencyName: def.name,  // match what CurrencyView uses
-          lastEventDate: date,
+          currencyName: def.name,
+          lastEventDate: editedDate,
           calculatedExpiry: expiryDate,
-          isCurrent: daysRem !== null && daysRem > 0,
+          isCurrent: daysRem > 0,
         });
+      }
+    });
+
+    // Preserve statuses for currencies not in visible list
+    currencyStatus.forEach(status => {
+      if (!visibleCurrencyDefinitions.some(def => def.name === status.currencyName)) {
+        if (!editedStatuses.has(status.currencyName)) {
+          newStatus.push(status);
+        }
       }
     });
 
@@ -219,24 +200,18 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
+        throw new Error((err as any).error || `HTTP ${res.status}`);
       }
       setCurrencyStatus(newStatus);
-      setIsEditMode(false);
-      setEditValues({});
+      setIsEditing(false);
+      setEditedStatuses(new Map());
       onCurrencyStatusChange?.(newStatus);
     } catch (err: any) {
       setSaveError(err.message || 'Save failed');
     } finally {
       setIsSaving(false);
     }
-  }, [personId, personType, allCurrencies, editValues, onCurrencyStatusChange]);
-
-  const summaryCount = useMemo(() => {
-    const counts = { expired: 0, approaching: 0, current: 0, unassigned: 0 };
-    sortedRows.forEach(r => counts[r.bucket]++);
-    return counts;
-  }, [sortedRows]);
+  }, [personId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange]);
 
   if (isLoading) {
     return (
@@ -246,7 +221,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     );
   }
 
-  if (allCurrencies.length === 0) {
+  if (visibleCurrencyDefinitions.length === 0) {
     return (
       <div className="text-gray-500 text-xs italic text-center py-6">
         No currency definitions configured. Set up currencies in the Currency Builder.
@@ -256,7 +231,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Header row: summary badges + EDIT button */}
+      {/* Header: summary badges + Edit/Save/Cancel */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 flex-wrap">
           {summaryCount.expired > 0 && (
@@ -280,12 +255,12 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
           {summaryCount.unassigned > 0 && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-600/40 text-gray-400">
               <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" />
-              {summaryCount.unassigned} Unassigned
+              {summaryCount.unassigned} Unset
             </span>
           )}
         </div>
         <div className="flex gap-1">
-          {!isEditMode ? (
+          {!isEditing ? (
             <button
               onClick={handleEditClick}
               className="w-[56px] h-[30px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
@@ -296,14 +271,14 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
           ) : (
             <>
               <button
-                onClick={handleCancelEdit}
+                onClick={handleCancelClick}
                 className="h-[30px] px-2 py-1 text-[10px] font-semibold rounded bg-gray-600 hover:bg-gray-500 text-white"
                 disabled={isSaving}
               >
                 Cancel
               </button>
               <button
-                onClick={handleSave}
+                onClick={handleSaveClick}
                 className="h-[30px] px-2 py-1 text-[10px] font-semibold rounded bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-50"
                 disabled={isSaving}
               >
@@ -320,96 +295,82 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         </div>
       )}
 
-      {/* Currency grid - compact multi-column layout */}
-      <div
-        className="grid gap-x-2 gap-y-0.5"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-        }}
-      >
-        {sortedRows.map(row => (
-          <CurrencyRowItem
-            key={row.id}
-            row={row}
-            isEditMode={isEditMode}
-            editValue={editValues[row.id] ?? ''}
-            onEditChange={(val) => setEditValues(prev => ({ ...prev, [row.id]: val }))}
-          />
-        ))}
+      {/* Currency Table — matches CurrencyView layout, compressed */}
+      <div className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700">
+        <table className="min-w-full divide-y divide-gray-700 text-[11px]">
+          <thead className="bg-gray-700/50">
+            <tr>
+              <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider w-8"></th>
+              <th scope="col" className="px-2 py-1.5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider">Currency</th>
+              <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Period</th>
+              <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Last Event</th>
+              <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Expires</th>
+              <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Days Rem.</th>
+            </tr>
+          </thead>
+          <tbody className="bg-gray-800 divide-y divide-gray-700/60">
+            {visibleCurrencyDefinitions.map(def => {
+              const periodInDays = 'validityDays' in def ? def.validityDays : null;
+              const periodText = getPeriodText(periodInDays);
+              const validityDays = periodInDays ?? 365;
+
+              // In edit mode, use editedStatuses; otherwise use saved currencyStatus
+              const statusDateStr = isEditing
+                ? editedStatuses.get(def.name)
+                : getCurrencyStatus(def.name)?.lastEventDate;
+
+              const lastEventDate = statusDateStr ? parseDate(statusDateStr) : null;
+              const expiryDateStr = statusDateStr ? addDaysToDate(statusDateStr, validityDays) : '';
+              const expiryDate = expiryDateStr ? parseDate(expiryDateStr) : null;
+              const daysRemaining = expiryDateStr ? getDaysRemaining(expiryDateStr) : null;
+
+              const dotColor = getStatusDotColor(daysRemaining);
+              const daysColor = daysRemaining !== null ? getDaysColor(daysRemaining) : 'text-gray-500';
+
+              return (
+                <tr key={def.name} className="hover:bg-gray-700/40 transition-colors">
+                  {/* Status dot */}
+                  <td className="px-2 py-1.5 text-center">
+                    <div className={`w-2.5 h-2.5 rounded-sm mx-auto ${dotColor}`} />
+                  </td>
+                  {/* Currency name */}
+                  <td className="px-2 py-1.5 font-medium text-gray-200 max-w-[160px]">
+                    <span className="block truncate" title={def.name}>{def.name}</span>
+                  </td>
+                  {/* Period */}
+                  <td className="px-2 py-1.5 text-center text-gray-400 whitespace-nowrap">{periodText}</td>
+                  {/* Last Event — date input in edit mode */}
+                  <td className="px-2 py-1.5 text-center text-gray-300 font-mono">
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editedStatuses.get(def.name) || ''}
+                        onChange={(e) => handleDateChange(def.name, e.target.value)}
+                        className="h-[20px] text-[10px] bg-gray-700 border border-gray-600 rounded px-1 text-white focus:outline-none focus:ring-1 focus:ring-sky-500 w-[110px]"
+                        style={{ colorScheme: 'dark' }}
+                      />
+                    ) : (
+                      lastEventDate
+                        ? lastEventDate.toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                        : '---'
+                    )}
+                  </td>
+                  {/* Expires */}
+                  <td className="px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap">
+                    {expiryDate
+                      ? expiryDate.toLocaleDateString('en-GB', { timeZone: 'UTC' })
+                      : '---'}
+                  </td>
+                  {/* Days Remaining */}
+                  <td className={`px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`}>
+                    {daysRemaining !== null ? daysRemaining : '---'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-    </div>
-  );
-};
-
-// ─── Single currency row item ─────────────────────────────────────────────────
-
-interface CurrencyRowItemProps {
-  row: CurrencyRowData;
-  isEditMode: boolean;
-  editValue: string;
-  onEditChange: (val: string) => void;
-}
-
-const CurrencyRowItem: React.FC<CurrencyRowItemProps> = ({ row, isEditMode, editValue, onEditChange }) => {
-  const isActivated = isEditMode ? !!editValue : row.isActive;
-  const bucket = isEditMode && editValue ? (() => {
-    const expiry = addDays(editValue, row.validityDays);
-    const days = getDaysRemaining(expiry);
-    if (days <= 0) return 'expired' as StatusBucket;
-    if (days <= AMBER_THRESHOLD_DAYS) return 'approaching' as StatusBucket;
-    return 'current' as StatusBucket;
-  })() : row.bucket;
-
-  const displayExpiry = isEditMode && editValue
-    ? formatDateDisplay(addDays(editValue, row.validityDays))
-    : formatDateDisplay(row.expiryDate);
-
-  const displayRenewal = isEditMode ? editValue : row.lastRenewalDate;
-
-  return (
-    <div className={`flex flex-col rounded px-1.5 py-1 ${bucketBadgeBg[isActivated ? bucket : 'unassigned']}`}>
-      {/* Name + status dot */}
-      <div className="flex items-center gap-1 min-w-0">
-        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${bucketDotColor[isActivated ? bucket : 'unassigned']}`} />
-        <span className={`text-[10px] font-medium truncate leading-tight ${bucketColor[isActivated ? bucket : 'unassigned']}`}
-          title={row.name}>
-          {row.name}
-        </span>
-      </div>
-
-      {/* Dates row */}
-      {isEditMode ? (
-        <div className="flex items-center gap-1 mt-0.5 ml-2.5">
-          <span className="text-[9px] text-gray-500 flex-shrink-0">Renewed:</span>
-          <input
-            type="date"
-            value={editValue}
-            onChange={e => onEditChange(e.target.value)}
-            className="h-[18px] text-[9px] bg-gray-700 border border-gray-500 rounded px-1 text-white focus:outline-none focus:ring-1 focus:ring-sky-500 flex-1 min-w-0"
-          />
-          {editValue && (
-            <span className="text-[9px] text-gray-400 flex-shrink-0">→ {displayExpiry}</span>
-          )}
-        </div>
-      ) : (
-        isActivated ? (
-          <div className="flex items-center gap-1.5 mt-0.5 ml-2.5 flex-wrap">
-            <span className="text-[9px] text-gray-500">Renewed: <span className="text-gray-300">{formatDateDisplay(displayRenewal)}</span></span>
-            <span className="text-[9px] text-gray-500">Exp: <span className={`font-medium ${bucketColor[bucket]}`}>{displayExpiry}</span></span>
-            {row.daysRemaining !== null && (
-              <span className={`text-[9px] font-semibold ${bucketColor[bucket]}`}>
-                {row.daysRemaining <= 0
-                  ? `${Math.abs(row.daysRemaining)}d overdue`
-                  : `${row.daysRemaining}d left`}
-              </span>
-            )}
-          </div>
-        ) : (
-          <div className="ml-2.5 mt-0.5">
-            <span className="text-[9px] text-gray-600 italic">Not set</span>
-          </div>
-        )
-      )}
     </div>
   );
 };
