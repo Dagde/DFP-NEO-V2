@@ -2753,14 +2753,15 @@ const AuditFlyout = ({
     document.body
   );
 };
-const AuditButton = ({ pageName, className = "" }) => {
+const AuditButton = ({ pageName, className = "", style }) => {
   const [showFlyout, setShowFlyout] = reactExports.useState(false);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "button",
       {
         onClick: () => setShowFlyout(true),
-        className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${className}`,
+        className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed ${className}`,
+        style,
         title: "View Audit Log",
         children: "Audit"
       },
@@ -2768,7 +2769,7 @@ const AuditButton = ({ pageName, className = "" }) => {
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/AuditButton.tsx",
-        lineNumber: 16,
+        lineNumber: 17,
         columnNumber: 7
       },
       void 0
@@ -2783,14 +2784,14 @@ const AuditButton = ({ pageName, className = "" }) => {
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/AuditButton.tsx",
-        lineNumber: 25,
+        lineNumber: 27,
         columnNumber: 9
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/AuditButton.tsx",
-    lineNumber: 15,
+    lineNumber: 16,
     columnNumber: 5
   }, void 0);
 };
@@ -2889,22 +2890,61 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
         lineNumber: 111,
         columnNumber: 17
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-4", children: [
-        isDirty && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Save" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 117,
-          columnNumber: 25
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Back" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 121,
-          columnNumber: 21
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Currency Builder" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 124,
-          columnNumber: 21
-        }, void 0)
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", style: { gap: "1px" }, children: [
+        isDirty && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            onClick: handleSave,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+            style: { borderRadius: "6px 0 0 6px", borderRightWidth: "1px", borderRightColor: "#6b7280" },
+            children: "Save"
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+            lineNumber: 117,
+            columnNumber: 25
+          },
+          void 0
+        ),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            onClick: onBack,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+            style: {
+              borderRadius: isDirty ? "0" : "6px 0 0 6px",
+              borderLeftWidth: isDirty ? "0" : void 0,
+              borderRightWidth: "1px",
+              borderRightColor: "#6b7280"
+            },
+            children: "Back"
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+            lineNumber: 125,
+            columnNumber: 21
+          },
+          void 0
+        ),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          AuditButton,
+          {
+            pageName: "Currency Builder",
+            style: { borderRadius: "0 6px 6px 0", borderLeftWidth: "0" }
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+            lineNumber: 137,
+            columnNumber: 21
+          },
+          void 0
+        )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
         lineNumber: 115,
@@ -2931,7 +2971,7 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 132,
+              lineNumber: 148,
               columnNumber: 25
             },
             void 0
@@ -2939,22 +2979,22 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex mt-2 space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleAddCurrency("primitive"), className: "flex-1 text-center py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-xs font-semibold", children: "+ Primitive" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 140,
+              lineNumber: 156,
               columnNumber: 29
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleAddCurrency("composite"), className: "flex-1 text-center py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-xs font-semibold", children: "+ Composite" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 141,
+              lineNumber: 157,
               columnNumber: 29
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 139,
+            lineNumber: 155,
             columnNumber: 26
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 131,
+          lineNumber: 147,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: filteredCurrencies.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -2970,12 +3010,12 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: `font-semibold ${c.type === "composite" ? "text-purple-300" : "text-green-300"}`, children: c.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-                lineNumber: 158,
+                lineNumber: 174,
                 columnNumber: 33
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400", children: c.description || "No description" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-                lineNumber: 159,
+                lineNumber: 175,
                 columnNumber: 33
               }, void 0)
             ]
@@ -2984,60 +3024,60 @@ const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, o
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 146,
+            lineNumber: 162,
             columnNumber: 29
           },
           void 0
         )) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 144,
+          lineNumber: 160,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 130,
+        lineNumber: 146,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2/3 overflow-y-auto p-6", children: selectedCurrency ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-6", children: [
         selectedCurrency.type === "primitive" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PrimitiveEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 170,
+          lineNumber: 186,
           columnNumber: 35
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CompositeEditor, { currency: selectedCurrency, onUpdate: handleUpdateCurrency, allCurrencies }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 171,
+          lineNumber: 187,
           columnNumber: 35
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UsedInSection, { currencyId: selectedCurrency.id, allCurrencies }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 175,
+          lineNumber: 191,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "pt-6 border-t border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleDeleteCurrency, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold", children: "Delete Currency" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 178,
+          lineNumber: 194,
           columnNumber: 33
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 177,
+          lineNumber: 193,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 168,
+        lineNumber: 184,
         columnNumber: 25
       }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center h-full text-gray-500 italic", children: "Select a currency to edit, or add a new one." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 184,
+        lineNumber: 200,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 166,
+        lineNumber: 182,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 128,
+      lineNumber: 144,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
@@ -3060,59 +3100,59 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-green-400", children: "Edit Primitive Currency" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 217,
+      lineNumber: 233,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Name", value: currency.name, onChange: (v) => handleChange("name", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 218,
+      lineNumber: 234,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Description", value: currency.description, onChange: (v) => handleChange("description", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 219,
+      lineNumber: 235,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckboxField, { label: "Visible in Main List", checked: currency.isVisible, onChange: (v) => handleChange("isVisible", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 220,
+      lineNumber: 236,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Validity (Days)", type: "number", value: currency.validityDays, onChange: (v) => handleChange("validityDays", Number(v)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 221,
+      lineNumber: 237,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Required Count", type: "number", value: currency.requiredCount, onChange: (v) => handleChange("requiredCount", Number(v)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 222,
+      lineNumber: 238,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DropdownField, { label: "Expiry Rule", value: currency.expiryRule, onChange: (v) => handleChange("expiryRule", v), children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "LAST_EVENT_PLUS_PERIOD", children: "Last Event + Period" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 224,
+        lineNumber: 240,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "ROLLING_WINDOW", children: "Rolling Window" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 225,
+        lineNumber: 241,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 223,
+      lineNumber: 239,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Event Codes (comma-separated)", value: currency.eventCodes.join(", "), onChange: (v) => handleChange("eventCodes", v.split(",").map((s) => s.trim()).filter(Boolean)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 227,
+      lineNumber: 243,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-amber-600/40 rounded-lg bg-amber-900/10 space-y-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-bold text-amber-400 uppercase tracking-wide", children: "Post-Flight Page" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 231,
+        lineNumber: 247,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -3126,7 +3166,7 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 232,
+          lineNumber: 248,
           columnNumber: 17
         },
         void 0
@@ -3136,12 +3176,12 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
           "Input Type(s) in Post-Flight",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs text-gray-500", children: "(select all that apply)" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 241,
+            lineNumber: 257,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 239,
+          lineNumber: 255,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col space-y-2 mt-1", children: [
@@ -3161,7 +3201,7 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 250,
+              lineNumber: 266,
               columnNumber: 37
             },
             void 0
@@ -3169,12 +3209,12 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300 leading-tight", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "mr-1", children: icon }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 257,
+              lineNumber: 273,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-medium", children: label }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 258,
+              lineNumber: 274,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 ml-1", children: [
@@ -3182,28 +3222,28 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
               desc
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 259,
+              lineNumber: 275,
               columnNumber: 41
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 256,
+            lineNumber: 272,
             columnNumber: 37
           }, void 0)
         ] }, type, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 249,
+          lineNumber: 265,
           columnNumber: 33
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 243,
+          lineNumber: 259,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-amber-500/70 mt-2", children: [
           "Auto-suggested: ",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: suggestedTypes.join(", ") }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 265,
+            lineNumber: 281,
             columnNumber: 45
           }, void 0),
           " based on expiry rule (",
@@ -3211,22 +3251,22 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
           ")"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 264,
+          lineNumber: 280,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 238,
+        lineNumber: 254,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 230,
+      lineNumber: 246,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 216,
+    lineNumber: 232,
     columnNumber: 9
   }, void 0);
 };
@@ -3247,49 +3287,49 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-purple-400", children: "Edit Composite Currency" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 298,
+      lineNumber: 314,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Name", value: currency.name, onChange: (v) => handleChange("name", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 299,
+      lineNumber: 315,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Description", value: currency.description, onChange: (v) => handleChange("description", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 300,
+      lineNumber: 316,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckboxField, { label: "Visible in Main List", checked: currency.isVisible, onChange: (v) => handleChange("isVisible", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 301,
+      lineNumber: 317,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DropdownField, { label: "Expiry Calculation", value: currency.expiryCalculation, onChange: (v) => handleChange("expiryCalculation", v), children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "EARLIEST_CHILD", children: "Use Earliest Expiry" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 303,
+        lineNumber: 319,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "LATEST_CHILD", children: "Use Latest Expiry" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 304,
+        lineNumber: 320,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 302,
+      lineNumber: 318,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LogicNodeEditor, { node: currency.logicTree, path: [], onUpdate: handleLogicTreeChange, allCurrencies }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 306,
+      lineNumber: 322,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-purple-600/40 rounded-lg bg-purple-900/10 space-y-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-bold text-purple-400 uppercase tracking-wide", children: "Post-Flight Page" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 310,
+        lineNumber: 326,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -3303,7 +3343,7 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 311,
+          lineNumber: 327,
           columnNumber: 17
         },
         void 0
@@ -3313,12 +3353,12 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
           "Input Type(s) in Post-Flight",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs text-gray-500", children: "(select all that apply)" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 320,
+            lineNumber: 336,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 318,
+          lineNumber: 334,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col space-y-2 mt-1", children: [
@@ -3338,7 +3378,7 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 329,
+              lineNumber: 345,
               columnNumber: 37
             },
             void 0
@@ -3346,12 +3386,12 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300 leading-tight", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "mr-1", children: icon }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 336,
+              lineNumber: 352,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-medium", children: label }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 337,
+              lineNumber: 353,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 ml-1", children: [
@@ -3359,49 +3399,49 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
               desc
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 338,
+              lineNumber: 354,
               columnNumber: 41
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 335,
+            lineNumber: 351,
             columnNumber: 37
           }, void 0)
         ] }, type, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 328,
+          lineNumber: 344,
           columnNumber: 33
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 322,
+          lineNumber: 338,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-purple-500/70 mt-2", children: [
           "Recommended for composite currencies: ",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: "Checkbox" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 344,
+            lineNumber: 360,
             columnNumber: 67
           }, void 0),
           " (flight date is recorded automatically)"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 343,
+          lineNumber: 359,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 317,
+        lineNumber: 333,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 309,
+      lineNumber: 325,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 297,
+    lineNumber: 313,
     columnNumber: 9
   }, void 0);
 };
@@ -3444,79 +3484,79 @@ const LogicNodeEditor = ({ node, path: path2, onUpdate, allCurrencies }) => {
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setOperator("AND"), className: `px-3 py-1 text-xs font-bold rounded ${node.operator === "AND" ? "bg-sky-600 text-white" : "bg-gray-600 text-gray-300"}`, children: "ALL of these (AND)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 404,
+          lineNumber: 420,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setOperator("OR"), className: `px-3 py-1 text-xs font-bold rounded ${node.operator === "OR" ? "bg-purple-600 text-white" : "bg-gray-600 text-gray-300"}`, children: "ANY of these (OR)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 405,
+          lineNumber: 421,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 403,
+        lineNumber: 419,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: addCondition, className: "px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded", children: "+ Condition" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 408,
+          lineNumber: 424,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: addGroup, className: "px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded", children: "+ Group" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 409,
+          lineNumber: 425,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 407,
+        lineNumber: 423,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 402,
+      lineNumber: 418,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2 pl-4 border-l-2 border-gray-500", children: node.children.length > 0 ? node.children.map((child, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center group", children: [
       typeof child === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 p-2 bg-gray-800 rounded text-sm text-gray-300", children: allCurrencies.find((c) => c.id === child)?.name || "Unlinked Condition" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 416,
+        lineNumber: 432,
         columnNumber: 29
       }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LogicNodeEditor, { node: child, path: [...path2, "children", index], onUpdate: (newNode, subPath) => handleChildUpdate(newNode, index), allCurrencies }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 420,
+        lineNumber: 436,
         columnNumber: 29
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => removeChild(index), className: "ml-2 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 423,
+        lineNumber: 439,
         columnNumber: 129
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 423,
+        lineNumber: 439,
         columnNumber: 29
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 422,
+        lineNumber: 438,
         columnNumber: 25
       }, void 0)
     ] }, index, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 414,
+      lineNumber: 430,
       columnNumber: 21
     }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-gray-500 italic p-4 text-center", children: "Drag currencies here or add conditions/groups." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 426,
+      lineNumber: 442,
       columnNumber: 22
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 412,
+      lineNumber: 428,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 401,
+    lineNumber: 417,
     columnNumber: 9
   }, void 0);
 };
@@ -3543,70 +3583,70 @@ const UsedInSection = ({ currencyId, allCurrencies }) => {
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-gray-600 rounded-lg bg-gray-700/30", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Used In:" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 457,
+      lineNumber: 473,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-2", children: dependencies.map((name) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-2 py-1 bg-purple-800 text-purple-200 text-xs font-medium rounded-full", children: name }, name, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 460,
+      lineNumber: 476,
       columnNumber: 21
     }, void 0)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 458,
+      lineNumber: 474,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 456,
+    lineNumber: 472,
     columnNumber: 9
   }, void 0);
 };
 const InputField$2 = ({ label, value, onChange, type = "text" }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 472,
+    lineNumber: 488,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type, value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 473,
+    lineNumber: 489,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-  lineNumber: 471,
+  lineNumber: 487,
   columnNumber: 5
 }, void 0);
 const CheckboxField = ({ label, checked, onChange }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3", children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked, onChange: (e) => onChange(e.target.checked), className: "h-4 w-4 bg-gray-600 border-gray-500 rounded accent-sky-500" }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 479,
+    lineNumber: 495,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: label }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 480,
+    lineNumber: 496,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-  lineNumber: 478,
+  lineNumber: 494,
   columnNumber: 5
 }, void 0);
 const DropdownField = ({ label, value, onChange, children }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 486,
+    lineNumber: 502,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 487,
+    lineNumber: 503,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-  lineNumber: 485,
+  lineNumber: 501,
   columnNumber: 5
 }, void 0);
 const DarkMessageModal = ({
@@ -78008,23 +78048,61 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       lineNumber: 640,
       columnNumber: 13
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleManualSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Save" }, void 0, false, {
-        fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 963,
-        columnNumber: 17
-      }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleAttemptReturn, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Back" }, void 0, false, {
-        fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 964,
-        columnNumber: 17
-      }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Post-Flight" }, void 0, false, {
-        fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 965,
-        columnNumber: 17
-      }, void 0)
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex", style: { gap: "0px" }, children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        "button",
+        {
+          onClick: handleManualSave,
+          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+          style: { borderRadius: "6px 0 0 6px", borderRightWidth: "1px", borderRightColor: "#6b7280" },
+          children: "Save"
+        },
+        void 0,
+        false,
+        {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+          lineNumber: 964,
+          columnNumber: 21
+        },
+        void 0
+      ),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        "button",
+        {
+          onClick: handleAttemptReturn,
+          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+          style: { borderRadius: "0", borderLeftWidth: "0", borderRightWidth: "1px", borderRightColor: "#6b7280" },
+          children: "Back"
+        },
+        void 0,
+        false,
+        {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+          lineNumber: 969,
+          columnNumber: 21
+        },
+        void 0
+      ),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        AuditButton,
+        {
+          pageName: "Post-Flight",
+          style: { borderRadius: "0 6px 6px 0", borderLeftWidth: "0" }
+        },
+        void 0,
+        false,
+        {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+          lineNumber: 974,
+          columnNumber: 21
+        },
+        void 0
+      )
     ] }, void 0, true, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+      lineNumber: 963,
+      columnNumber: 17
+    }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
       lineNumber: 962,
       columnNumber: 13
@@ -78047,7 +78125,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 968,
+        lineNumber: 981,
         columnNumber: 17
       },
       void 0
