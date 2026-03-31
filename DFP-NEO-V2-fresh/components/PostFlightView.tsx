@@ -645,7 +645,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 {/* Top Section */}
                 <div className="flex items-start gap-6">
                     {/* Result (Left) — subtle blue hue outline */}
-                    <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg border border-sky-500/40 ring-1 ring-sky-500/20">
+                    <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg border border-sky-500/40 ring-1 ring-sky-500/20 self-stretch flex flex-col justify-center">
                         <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
                         <div className="flex flex-col space-y-3">
                             <ResultRadio value="DCO" />
@@ -668,10 +668,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         const ROWS_PER_COL = 4;
                         const numCols = Math.ceil(rows.length / ROWS_PER_COL);
                         return (
-                            <div className="flex-1 bg-gray-700/50 px-3 py-2 rounded border border-gray-600/50 min-w-0">
-                                <p className="text-sm font-medium text-sky-400 mb-1.5 leading-none">Currencies</p>
+                            <div className="flex-1 bg-gray-700/50 px-3 py-2 rounded border border-gray-600/50 min-w-0 self-stretch flex flex-col">
+                                <p className="text-sm font-medium text-sky-400 mb-3 leading-none">Currencies</p>
                                 <div
-                                    className="grid gap-x-4 gap-y-0.5"
+                                    className="grid gap-x-4 gap-y-2"
                                     style={{
                                         gridTemplateRows: `repeat(${ROWS_PER_COL}, auto)`,
                                         gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
@@ -960,9 +960,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
             {/* Footer */}
             <div className="flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
-                <button onClick={handleManualSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">Save & Return</button>
-                <button onClick={handleAttemptReturn} className="px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm">Return</button>
-                   <AuditButton pageName="Post-Flight" />
+                <button onClick={handleManualSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Save</button>
+                <button onClick={handleAttemptReturn} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Back</button>
+                <AuditButton pageName="Post-Flight" />
             </div>
             {showUnsavedWarning && (
                 <UnsavedChangesWarning 

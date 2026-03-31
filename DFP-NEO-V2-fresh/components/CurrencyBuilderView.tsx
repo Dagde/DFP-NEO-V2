@@ -114,15 +114,14 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({ onBack, maste
                 </div>
                 <div className="flex items-center space-x-4">
                     {isDirty && (
-                         <button onClick={handleSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md flex items-center space-x-2">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586L7.707 10.293z" /><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                             <span>Save Changes</span>
-                         </button>
+                        <button onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                            Save
+                        </button>
                     )}
-                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md">
-                        &larr; Back to Settings
+                    <button onClick={onBack} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                        Back
                     </button>
-                       <AuditButton pageName="Currency Builder" />
+                    <AuditButton pageName="Currency Builder" />
                 </div>
             </header>
 
