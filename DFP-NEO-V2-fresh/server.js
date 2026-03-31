@@ -3845,36 +3845,39 @@ app.get('/api/tie/trainee/:name', async (req, res) => {
     const name = decodeURIComponent(req.params.name);
     let rows = [];
     try {
+      // traineeFullName in DB may include course suffix e.g. "Edwards, Luna – ADF302"
+      // Match by exact name OR name that starts with the given name followed by space/dash
       rows = await db.$queryRawUnsafe(`
         SELECT ts.*
         FROM "TIETraineeSummary" ts
         JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
-        WHERE ts."traineeName" = $1::text AND r.status = 'complete'
+        WHERE (
+          ts."traineeFullName" = $1::text
+          OR ts."traineeFullName" LIKE $2::text
+          OR ts."traineeFullName" ILIKE $3::text
+        )
+        AND r.status = 'complete'
         ORDER BY r."completedAt" DESC
         LIMIT 5
-      `, name);
-    } catch (e) { /* no data */ }
+      `, name, `${name} –%`, `${name} -%`);
+    } catch (e) {
+      console.error('[TIE] trainee query error:', e.message);
+    }
 
     for (const row of rows) {
       try { row.skillFamilyScores = JSON.parse(row.skillFamilyScores || '{}'); } catch(e) {}
       try { row.weakElements = JSON.parse(row.weakElements || '[]'); } catch(e) {}
       try { row.strongElements = JSON.parse(row.strongElements || '[]'); } catch(e) {}
+      // Parse gradeProgression if it's a string
+      if (typeof row.gradeProgression === 'string') {
+        try { row.gradeProgression = JSON.parse(row.gradeProgression); } catch(e) {}
+      }
     }
 
-    // Also fetch findings for this trainee
-    let findings = [];
-    try {
-      findings = await db.$queryRawUnsafe(`
-        SELECT f.*
-        FROM "TIEFinding" f
-        JOIN "TIEAnalyticsRun" r ON r.id = f."runId"
-        WHERE f."subjectKey" = $1::text AND f.level = 'trainee' AND r.status = 'complete'
-        ORDER BY r."completedAt" DESC
-        LIMIT 20
-      `, name);
-    } catch (e) { /* no findings */ }
+    console.log(`[TIE] GET /api/tie/trainee/${name} -> ${rows.length} rows found`);
 
-    res.json({ summaries: rows, findings });
+    // Return array directly (frontend expects array)
+    res.json(rows);
   } catch (error) {
     console.error('❌ GET /api/tie/trainee error:', error);
     res.status(500).json({ error: 'Failed to fetch trainee detail', details: error.message });

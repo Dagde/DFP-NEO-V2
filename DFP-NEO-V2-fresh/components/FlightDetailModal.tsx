@@ -170,15 +170,44 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
       try {
         setLoading(true);
         setError(null);
-        const encodedName = encodeURIComponent(traineeNameOnly);
-        const res = await fetch(`/api/tie/trainee/${encodedName}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const rows = await res.json();
-        if (rows && rows.length > 0) {
-          setTieData(rows[0]);
-        } else {
-          setTieData(null);
+
+        let found: any = null;
+
+        // Strategy 1: Use course-based endpoint (same as Build Intelligence) if course is known
+        if (trainee.course) {
+          try {
+            const courseRes = await fetch(`/api/tie/trainees/${encodeURIComponent(trainee.course)}`);
+            if (courseRes.ok) {
+              const courseRows = await courseRes.json();
+              if (Array.isArray(courseRows)) {
+                // Match by traineeFullName - stored as "Edwards, Luna – ADF302"
+                found = courseRows.find((r: any) => {
+                  const namePart = (r.traineeFullName || '').split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+                  return namePart.toLowerCase() === traineeNameOnly.toLowerCase();
+                }) || null;
+              }
+            }
+          } catch (e) { /* fall through to strategy 2 */ }
         }
+
+        // Strategy 2: Use single trainee endpoint with LIKE matching
+        if (!found) {
+          const encodedName = encodeURIComponent(traineeNameOnly);
+          const res = await fetch(`/api/tie/trainee/${encodedName}`);
+          if (res.ok) {
+            const rows = await res.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              found = rows[0];
+            }
+          }
+        }
+
+        // Parse gradeProgression if it's a string (JSONB might come back as string)
+        if (found && typeof found.gradeProgression === 'string') {
+          try { found.gradeProgression = JSON.parse(found.gradeProgression); } catch (e) {}
+        }
+
+        setTieData(found);
       } catch (e: any) {
         setError(e.message || 'Failed to load data');
       } finally {
@@ -186,7 +215,7 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
       }
     };
     fetchData();
-  }, [traineeNameOnly]);
+  }, [traineeNameOnly, trainee.course]);
 
   const progression = tieData ? parseProgressionFull(tieData.gradeProgression) : { grades: [], labels: [] };
   const { grades, labels } = progression;
