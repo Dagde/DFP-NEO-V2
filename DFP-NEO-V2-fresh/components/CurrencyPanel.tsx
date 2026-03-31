@@ -12,6 +12,10 @@ interface CurrencyPanelProps {
   onCurrencyStatusChange?: (newStatus: PersonCurrencyStatus[]) => void;
   /** Called whenever edit/saving state changes so parent can render its own Edit/Save/Cancel buttons */
   onEditStateChange?: (state: { isEditing: boolean; isSaving: boolean; onEdit: () => void; onSave: () => void; onCancel: () => void }) => void;
+  /** Auth user ID (AuthUser.id) for audit logging */
+  currentUserId?: string;
+  /** Display name of current user for audit logging */
+  currentUserName?: string;
 }
 
 const AMBER_THRESHOLD_DAYS = 30;
@@ -87,6 +91,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   initialCurrencyStatus,
   onCurrencyStatusChange,
   onEditStateChange,
+  currentUserId,
+  currentUserName,
 }) => {
   // Use UUID if available, otherwise fall back to numeric idNumber
   const resolvedId = personId || (idNumber !== undefined ? String(idNumber) : undefined);
@@ -214,12 +220,47 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       setIsEditing(false);
       setEditedStatuses(new Map());
       onCurrencyStatusChange?.(newStatus);
+
+      // Write audit entry to DB (fire-and-forget)
+      try {
+        const changes: { currencyName: string; oldDate: string; newDate: string }[] = [];
+        editedStatuses.forEach((newDate, currencyName) => {
+          const oldRecord = currencyStatus.find(c => c.currencyName === currencyName);
+          const oldDate = oldRecord?.lastEventDate || '';
+          if (newDate !== oldDate) {
+            changes.push({ currencyName, oldDate, newDate });
+          }
+        });
+        currencyStatus.forEach(s => {
+          if (!editedStatuses.has(s.currencyName) &&
+              visibleCurrencyDefinitions.some(d => d.name === s.currencyName)) {
+            changes.push({ currencyName: s.currencyName, oldDate: s.lastEventDate, newDate: '' });
+          }
+        });
+        if (changes.length > 0) {
+          fetch('/api/audit/currency', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              personId: resolvedId,
+              personName,
+              personType,
+              userId: currentUserId,
+              userName: currentUserName || 'Unknown',
+              changes,
+            }),
+          }).catch(e => console.warn('[CurrencyPanel] Audit log failed:', e));
+        }
+      } catch (auditErr) {
+        console.warn('[CurrencyPanel] Audit log error:', auditErr);
+      }
     } catch (err: any) {
       setSaveError(err.message || 'Save failed');
     } finally {
       setIsSaving(false);
     }
-  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange]);
+  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName]);
 
   // Notify parent of current edit state and control handlers
   useEffect(() => {

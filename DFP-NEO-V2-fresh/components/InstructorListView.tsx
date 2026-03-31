@@ -58,6 +58,8 @@ interface InstructorListViewProps {
   currencyRequirements?: CurrencyRequirement[];
   profileInitialTab?: 'currency' | null;
   onProfileTabConsumed?: () => void;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -84,6 +86,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     currencyRequirements = [],
     profileInitialTab,
     onProfileTabConsumed,
+    currentUserId,
+    currentUserName,
 }) => {
   console.log(`🏫 [INSTRUCTORLISTVIEW RENDER] school=${school}, instructorsData.length=${instructorsData.length}`);
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
@@ -586,6 +590,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     currencyRequirements={currencyRequirements}
                     profileInitialTab={profileInitialTab}
                     onProfileTabConsumed={onProfileTabConsumed}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
                 />
         )}
       

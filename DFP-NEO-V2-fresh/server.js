@@ -416,6 +416,112 @@ app.patch('/api/trainees/:id/currencies', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CURRENCY AUDIT ENDPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /api/audit/currency - Write a currency audit entry to the DB AuditLog table
+// Body: { personId, personName, personType, userId, userName, changes: [{currencyName, oldDate, newDate}] }
+app.post('/api/audit/currency', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { personId, personName, personType, userId, userName, changes } = req.body;
+
+    if (!changes || changes.length === 0) {
+      return res.status(400).json({ error: 'No changes provided' });
+    }
+
+    // Build a human-readable summary
+    const summary = changes.map(c => {
+      if (!c.oldDate && c.newDate) return `${c.currencyName}: set to ${c.newDate}`;
+      if (c.oldDate && !c.newDate) return `${c.currencyName}: cleared (was ${c.oldDate})`;
+      return `${c.currencyName}: ${c.oldDate} → ${c.newDate}`;
+    }).join('; ');
+
+    // Resolve the DB User for the audit entry
+    // Try to find by userId (the AuthUser.userId / PMKEYS number)
+    let dbUserId = null;
+    if (userId) {
+      const user = await db.user.findFirst({ where: { id: userId } });
+      if (user) dbUserId = user.id;
+    }
+    // If no auth user found, try to find by userName (fallback)
+    if (!dbUserId && userName) {
+      const user = await db.user.findFirst({ where: { OR: [
+        { firstName: { contains: userName.split(' ')[0] || '', mode: 'insensitive' } },
+        { username: { contains: userName, mode: 'insensitive' } },
+      ]}});
+      if (user) dbUserId = user.id;
+    }
+    // If still no user, use a system user or skip audit
+    if (!dbUserId) {
+      // Create a system audit entry with a placeholder - store in changes JSON without FK
+      // Return success with a warning
+      console.warn(`[Audit] No DB user found for userId=${userId}, userName=${userName}. Audit entry skipped.`);
+      return res.json({ success: true, warning: 'Audit entry skipped: user not found in DB', summary });
+    }
+
+    const auditEntry = await db.auditLog.create({
+      data: {
+        userId: dbUserId,
+        action: 'UPDATE',
+        entityType: 'currency',
+        entityId: String(personId),
+        changes: {
+          personName,
+          personType,
+          userName,
+          summary,
+          details: changes,
+        },
+      }
+    });
+
+    console.log(`✅ POST /api/audit/currency - logged currency change for ${personName} by ${userName}`);
+    res.json({ success: true, auditId: auditEntry.id, summary });
+  } catch (error) {
+    console.error('❌ POST /api/audit/currency error:', error);
+    res.status(500).json({ error: 'Failed to log currency audit', details: error.message });
+  }
+});
+
+// GET /api/audit/currency/:personId - Get currency audit history for a person
+// personId can be UUID or numeric idNumber
+app.get('/api/audit/currency/:personId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { personId } = req.params;
+
+    const entries = await db.auditLog.findMany({
+      where: {
+        entityType: 'currency',
+        entityId: String(personId),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        User: {
+          select: { firstName: true, lastName: true, username: true, userId: true }
+        }
+      }
+    });
+
+    const result = entries.map(e => ({
+      id: e.id,
+      createdAt: e.createdAt,
+      userName: e.changes?.userName || (e.User ? `${e.User.firstName || ''} ${e.User.lastName || ''}`.trim() || e.User.username : 'Unknown'),
+      summary: e.changes?.summary || '',
+      details: e.changes?.details || [],
+      personName: e.changes?.personName || '',
+    }));
+
+    res.json({ auditEntries: result });
+  } catch (error) {
+    console.error('❌ GET /api/audit/currency error:', error);
+    res.status(500).json({ error: 'Failed to fetch currency audit', details: error.message });
+  }
+});
+
 // DELETE /api/personnel/:id - Delete a personnel record
 app.delete('/api/personnel/:id', async (req, res) => {
   try {

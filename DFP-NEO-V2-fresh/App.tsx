@@ -10731,6 +10731,8 @@ updates.forEach(update => {
                             }}
                             masterCurrencies={masterCurrencies}
                             currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {
@@ -11530,6 +11532,8 @@ updates.forEach(update => {
                             }}
                             masterCurrencies={masterCurrencies}
                             currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
                 case 'Trainees':
                     return <TraineeListView 

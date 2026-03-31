@@ -7,6 +7,7 @@ import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
+import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -28,6 +29,8 @@ interface InstructorProfileFlyoutProps {
   currencyRequirements?: CurrencyRequirement[];
   profileInitialTab?: 'currency' | null;
   onProfileTabConsumed?: () => void;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -127,6 +130,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee,
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
+  currentUserId, currentUserName,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -293,6 +297,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     onEdit: () => void; onSave: () => void; onCancel: () => void;
   } | null>(null);
 
+  // Local currency status override — updated after successful save without triggering full onUpdateInstructor
+  const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+  // Audit flyout visibility
+  const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
+
   // Open to a specific tab if requested (e.g. from "My Currency" in MyDashboard)
   useEffect(() => {
     if (profileInitialTab) {
@@ -353,7 +362,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <div className={card3d + " p-3"} style={card3dStyle}>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-xs font-bold text-white">Currency &mdash; {instructor.name}</h4>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-[1px]">
                       {currencyEditState && !currencyEditState.isEditing && (
                         <button
                           onClick={currencyEditState.onEdit}
@@ -383,7 +392,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           </button>
                         </>
                       )}
-                      <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs ml-1">&#x2715; Close</button>
+                      <button
+                        onClick={() => setActiveTab(null)}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                        title="Close currency panel"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={() => setShowCurrencyAudit(true)}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                        title="View currency audit log"
+                      >
+                        Audit
+                      </button>
                     </div>
                   </div>
                   <CurrencyPanel
@@ -393,13 +415,23 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     personName={instructor.name}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
-                    initialCurrencyStatus={instructor.currencyStatus}
+                    initialCurrencyStatus={localCurrencyStatus ?? instructor.currencyStatus}
                     onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
-                      onUpdateInstructor({ ...instructor, currencyStatus: newStatus });
+                      setLocalCurrencyStatus(newStatus);
                     }}
                     onEditStateChange={setCurrencyEditState}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
                   />
                 </div>
+              )}
+
+              {showCurrencyAudit && (
+                <CurrencyAuditFlyout
+                  personId={String((instructor as any).id || instructor.idNumber)}
+                  personName={instructor.name}
+                  onClose={() => setShowCurrencyAudit(false)}
+                />
               )}
 
               {activeTab === 'logbook' && (

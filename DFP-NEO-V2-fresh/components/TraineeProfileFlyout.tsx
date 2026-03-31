@@ -10,6 +10,7 @@ import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
+import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
@@ -37,6 +38,8 @@ interface TraineeProfileFlyoutProps {
   onOpenInstructorProfile?: (instructorName: string) => void;
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -251,6 +254,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onOpenInstructorProfile,
   masterCurrencies = [],
   currencyRequirements = [],
+  currentUserId,
+  currentUserName,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -267,6 +272,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
       isEditing: boolean; isSaving: boolean;
       onEdit: () => void; onSave: () => void; onCancel: () => void;
     } | null>(null);
+    // Local currency status override — updated after successful save without triggering full onUpdateTrainee
+    const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+    // Audit flyout visibility
+    const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
     const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
@@ -840,7 +849,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       <div className={card3d + " p-3"} style={card3dStyle}>
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-bold text-white">Currency &mdash; {trainee.name}</h4>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-[1px]">
                             {currencyEditState && !currencyEditState.isEditing && (
                               <button
                                 onClick={currencyEditState.onEdit}
@@ -870,7 +879,20 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 </button>
                               </>
                             )}
-                            <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs ml-1">&#x2715; Close</button>
+                            <button
+                              onClick={() => setActiveTab(null)}
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                              title="Close currency panel"
+                            >
+                              Close
+                            </button>
+                            <button
+                              onClick={() => setShowCurrencyAudit(true)}
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                              title="View currency audit log"
+                            >
+                              Audit
+                            </button>
                           </div>
                         </div>
                         <CurrencyPanel
@@ -880,13 +902,23 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           personName={trainee.name}
                           masterCurrencies={masterCurrencies}
                           currencyRequirements={currencyRequirements}
-                          initialCurrencyStatus={trainee.currencyStatus}
+                          initialCurrencyStatus={localCurrencyStatus ?? trainee.currencyStatus}
                           onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
-                            onUpdateTrainee({ ...trainee, currencyStatus: newStatus });
+                            setLocalCurrencyStatus(newStatus);
                           }}
                           onEditStateChange={setCurrencyEditState}
+                          currentUserId={currentUserId}
+                          currentUserName={currentUserName}
                         />
                       </div>
+                    )}
+
+                    {showCurrencyAudit && (
+                      <CurrencyAuditFlyout
+                        personId={String((trainee as any).id || trainee.idNumber)}
+                        personName={trainee.name}
+                        onClose={() => setShowCurrencyAudit(false)}
+                      />
                     )}
 
                     {activeTab === 'unavailable' && (
