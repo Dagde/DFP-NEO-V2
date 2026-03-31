@@ -162,12 +162,15 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
   const [tieData, setTieData] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Strip course suffix from fullName (format: "Evans, Linda – ADF302" -> "Evans, Linda")
+  const traineeNameOnly = trainee.fullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+
   React.useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const encodedName = encodeURIComponent(trainee.fullName);
+        const encodedName = encodeURIComponent(traineeNameOnly);
         const res = await fetch(`/api/tie/trainee/${encodedName}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const rows = await res.json();
@@ -183,7 +186,7 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
       }
     };
     fetchData();
-  }, [trainee.fullName]);
+  }, [traineeNameOnly]);
 
   const progression = tieData ? parseProgressionFull(tieData.gradeProgression) : { grades: [], labels: [] };
   const { grades, labels } = progression;
@@ -202,7 +205,7 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
       >
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-white font-bold text-lg">{trainee.fullName} \u2014 Grade Progression</h3>
+            <h3 className="text-white font-bold text-lg">{traineeNameOnly} &mdash; Grade Progression</h3>
             {tieData && (
               <p className="text-gray-400 text-sm mt-0.5">
                 {grades.length} assessments &middot; Course: {tieData.courseName || 'N/A'} &middot; hover over a point to see details
@@ -226,7 +229,7 @@ const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClos
 
         {!loading && !error && !tieData && (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
-            <div className="text-gray-400 text-sm">No TIE analytics data found for {trainee.fullName}</div>
+            <div className="text-gray-400 text-sm">No TIE analytics data found for {traineeNameOnly}</div>
             <div className="text-gray-600 text-xs">Run Build Intelligence analytics to generate grade progression data</div>
           </div>
         )}

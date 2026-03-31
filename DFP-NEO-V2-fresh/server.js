@@ -118,6 +118,71 @@ app.post('/api/settings', async (req, res) => {
   }
 });
 
+// GET /api/currencies - Load currency settings (dedicated endpoint for reliability)
+app.get('/api/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const orgId = req.query.orgId || 'default';
+    // Try dedicated currency storage first (most recent)
+    const rows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+    if (!rows || rows.length === 0) {
+      return res.json({ masterCurrencies: [], currencyRequirements: [] });
+    }
+    const data = rows[0].data;
+    return res.json({
+      masterCurrencies: data.masterCurrencies || [],
+      currencyRequirements: data.currencyRequirements || [],
+    });
+  } catch (error) {
+    console.error('[Currencies] GET error:', error);
+    res.status(500).json({ error: 'Failed to load currencies', details: error.message });
+  }
+});
+
+// POST /api/currencies - Save currency settings (dedicated endpoint for reliability)
+app.post('/api/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { orgId = 'default', masterCurrencies, currencyRequirements, updatedBy } = req.body;
+    if (!masterCurrencies && !currencyRequirements) {
+      return res.status(400).json({ error: 'Missing currency data' });
+    }
+    const now = new Date().toISOString();
+    // Load existing settings first to merge
+    let existingData = {};
+    try {
+      const rows = await db.$queryRawUnsafe(
+        `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+        orgId
+      );
+      if (rows && rows.length > 0) existingData = rows[0].data || {};
+    } catch (e) {}
+    // Merge currencies into existing settings
+    const updatedData = {
+      ...existingData,
+      masterCurrencies: masterCurrencies || existingData.masterCurrencies || [],
+      currencyRequirements: currencyRequirements || existingData.currencyRequirements || [],
+    };
+    const settingsJson = JSON.stringify(updatedData);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
+      VALUES (gen_random_uuid()::text, $1, $2::jsonb, $3, $4::timestamp, $4::timestamp)
+      ON CONFLICT ("orgId") DO UPDATE SET
+        "data" = $2::jsonb,
+        "updatedBy" = $3,
+        "updatedAt" = $4::timestamp
+    `, orgId, settingsJson, updatedBy || null, now);
+    console.log(`[Currencies] ✅ Saved currencies for orgId=${orgId} — masters: ${(masterCurrencies||[]).length}, reqs: ${(currencyRequirements||[]).length}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Currencies] POST error:', error);
+    res.status(500).json({ error: 'Failed to save currencies', details: error.message });
+  }
+});
+
 // GET /api/personnel
 app.get('/api/personnel', async (req, res) => {
   try {

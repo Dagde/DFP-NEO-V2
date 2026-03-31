@@ -11,7 +11,7 @@ import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
-import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData } from './utils/settingsService';
+import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -9809,6 +9809,8 @@ updates.forEach(update => {
         const newReqs = allCurrencies.filter(c => c.type === 'primitive') as CurrencyRequirement[];
         setMasterCurrencies(newMasters);
         setCurrencyRequirements(newReqs);
+        // Save directly to dedicated /api/currencies endpoint for reliable persistence
+        saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
         setSuccessMessage('Currency rules saved!');
     };
     
