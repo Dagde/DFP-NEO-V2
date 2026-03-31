@@ -749,6 +749,7 @@ const CourseTab: React.FC<{
   trainees: TIETraineeSummary[];
   events: TIEEventSummary[];
 }> = ({ summary, trainees, events }) => {
+  const [eventAvgExpanded, setEventAvgExpanded] = useState(false);
   const atRisk = trainees.filter(t => t.riskLevel === 'at_risk').length;
   const exceeding = trainees.filter(t => t.riskLevel === 'exceeding').length;
   const monitor = trainees.filter(t => t.riskLevel === 'monitor').length;
@@ -835,13 +836,41 @@ const CourseTab: React.FC<{
         )}
       </SCard>
 
-      {/* Row 3: Event avg bar chart */}
+      {/* Row 3: Event avg bar chart — click to expand */}
       {topByAttempts.length > 0 && (
-        <SCard title="Event Average Scores (Top 12 by Attempts)">
-          <div className="overflow-x-auto">
-            <ColChart data={topByAttempts.map(ev => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) }))} max={5} height={130} />
+        <>
+          {/* Expanded modal */}
+          {eventAvgExpanded && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4" onClick={() => setEventAvgExpanded(false)}>
+              <div className="bg-gray-900 border border-gray-600 rounded-xl shadow-2xl w-full max-w-6xl p-6" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h3 className="text-white font-bold text-xl">Event Average Scores (Top 12 by Attempts)</h3>
+                    <p className="text-gray-400 text-sm mt-0.5">{topByAttempts.length} events &mdash; click outside to close</p>
+                  </div>
+                  <button onClick={() => setEventAvgExpanded(false)} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+                </div>
+                <div className="bg-gray-800 rounded-xl p-4 overflow-x-auto mt-3">
+                  <ColChartExpanded
+                    data={topByAttempts.map(ev => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) }))}
+                    max={5} height={420} />
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="cursor-pointer group" title="Click to expand" onClick={() => setEventAvgExpanded(true)}>
+            <SCard title={
+              <span className="flex items-center gap-2">
+                Event Average Scores (Top 12 by Attempts)
+                <span className="text-gray-500 group-hover:text-blue-400 transition-colors text-xs font-normal ml-1">⤢ expand</span>
+              </span>
+            }>
+              <div className="overflow-x-auto">
+                <ColChart data={topByAttempts.map(ev => ({ label: ev.eventCode, value: safeN(ev.avgOverallGrade) }))} max={5} height={130} />
+              </div>
+            </SCard>
           </div>
-        </SCard>
+        </>
       )}
 
       {/* Row 4: Bottleneck + Over-Service */}
@@ -1256,6 +1285,20 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   const [excelSelected, setExcelSelected] = useState<TIEEventSummary | null>(null);
   const [chartModal, setChartModal] = useState<{ title: string; data: { label: string; value: number; color: string }[]; max: number } | null>(null);
 
+  // Derive passRate from bottleneckScore when DB value is null/0
+  // bottleneckScore = fraction of attempts AT or BELOW concern threshold (fail)
+  // so passRate = (1 - bottleneckScore) * 100
+  const getPassRate = (ev: TIEEventSummary): number => {
+    const stored = safeN(ev.passRate);
+    if (stored > 0) return stored;
+    // Fallback: derive from bottleneckScore
+    const bs = safeN(ev.bottleneckScore);
+    if (safeN(ev.totalAttempts) > 0) {
+      return Math.round((1 - bs) * 100);
+    }
+    return 0;
+  };
+
   const handleSort = (k: keyof TIEEventSummary) => {
     if (sortKey === k) setSortAsc(p => !p);
     else { setSortKey(k); setSortAsc(true); }
@@ -1585,8 +1628,8 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                     className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === ev.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
                     <td className="px-4 py-2.5 text-gray-200 font-medium">{ev.eventCode}</td>
                     <td className={`px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</td>
-                    <td className={`px-3 py-2.5 text-center text-xs font-medium ${safeN(ev.passRate) >= 80 ? 'text-emerald-400' : safeN(ev.passRate) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                      {safe(ev.passRate, 0)}%
+                    <td className={`px-3 py-2.5 text-center text-xs font-medium ${getPassRate(ev) >= 80 ? 'text-emerald-400' : getPassRate(ev) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {getPassRate(ev).toFixed(0)}%
                     </td>
                     <td className="px-3 py-2.5 text-center text-gray-400">{ev.totalAttempts}</td>
                     <td className={`px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > 1 ? 'text-orange-400' : 'text-gray-400'}`}>{safe(ev.gradeVariance, 2)}</td>
@@ -1629,10 +1672,10 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               className="cursor-pointer group"
               title="Click to expand"
               onClick={() => {
-                const data = [...events].sort((a, b) => safeN(a.passRate) - safeN(b.passRate)).map(ev => ({
+                const data = [...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map(ev => ({
                   label: ev.eventCode,
-                  value: safeN(ev.passRate),
-                  color: safeN(ev.passRate) >= 80 ? '#10b981' : safeN(ev.passRate) >= 60 ? '#eab308' : '#ef4444',
+                  value: getPassRate(ev),
+                  color: getPassRate(ev) >= 80 ? '#10b981' : getPassRate(ev) >= 60 ? '#eab308' : '#ef4444',
                 }));
                 setChartModal({ title: 'Pass Rate by Event (%)', data, max: 100 });
               }}>
@@ -1644,10 +1687,10 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
               }>
                 <div className="overflow-x-auto">
                   <ColChart
-                    data={[...events].sort((a, b) => safeN(a.passRate) - safeN(b.passRate)).map(ev => ({
+                    data={[...events].sort((a, b) => getPassRate(a) - getPassRate(b)).map(ev => ({
                       label: ev.eventCode,
-                      value: safeN(ev.passRate),
-                      color: safeN(ev.passRate) >= 80 ? '#10b981' : safeN(ev.passRate) >= 60 ? '#eab308' : '#ef4444',
+                      value: getPassRate(ev),
+                      color: getPassRate(ev) >= 80 ? '#10b981' : getPassRate(ev) >= 60 ? '#eab308' : '#ef4444',
                     }))}
                     max={100} height={120} />
                 </div>
@@ -1718,7 +1761,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                             })}
                             <td className={`px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`}>{safe(ev.avgOverallGrade, 2)}</td>
                             <td className={`px-2 py-1.5 text-center text-xs ${safeN(ev.passRate) >= 80 ? 'text-emerald-400' : safeN(ev.passRate) >= 60 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {safe(ev.passRate, 0)}%
+                              {getPassRate(ev).toFixed(0)}%
                             </td>
                           </tr>
                         );
@@ -1748,7 +1791,7 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
                   <span className={`text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`}>{safe(selected.avgOverallGrade, 2)}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-x-3 mt-2 text-xs text-gray-400">
-                  <span>Pass Rate: <span className={safeN(selected.passRate) >= 80 ? 'text-emerald-400' : 'text-yellow-400'}>{safe(selected.passRate, 0)}%</span></span>
+                  <span>Pass Rate: <span className={getPassRate(selected) >= 80 ? 'text-emerald-400' : 'text-yellow-400'}>{getPassRate(selected).toFixed(0)}%</span></span>
                   <span>Attempts: <span className="text-gray-300">{selected.totalAttempts}</span></span>
                   <span>Variance: <span className={safeN(selected.gradeVariance) > 1 ? 'text-orange-400' : 'text-gray-300'}>{safe(selected.gradeVariance, 2)}</span></span>
                   <span>Difficulty: <span className="text-gray-300">{safe(selected.difficultyScore, 2)}</span></span>

@@ -1226,7 +1226,20 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
            "difficultyScore","bottleneckScore","overServiceIndicator","differentiationScore",
            "narrativeSummary","passRate")
         VALUES($1::text,$2::text,$3::text,$4::text,$5::int,$6::numeric,$7::numeric,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::numeric,$13::numeric,$14::boolean,$15::numeric,$16::text,$17::numeric)
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (id) DO UPDATE SET
+          "avgOverallGrade" = EXCLUDED."avgOverallGrade",
+          "gradeVariance" = EXCLUDED."gradeVariance",
+          "totalAttempts" = EXCLUDED."totalAttempts",
+          "passRate" = EXCLUDED."passRate",
+          "weakElementsByAvg" = EXCLUDED."weakElementsByAvg",
+          "strongElementsByAvg" = EXCLUDED."strongElementsByAvg",
+          "dominantNegativeTags" = EXCLUDED."dominantNegativeTags",
+          "dominantPositiveTags" = EXCLUDED."dominantPositiveTags",
+          "difficultyScore" = EXCLUDED."difficultyScore",
+          "bottleneckScore" = EXCLUDED."bottleneckScore",
+          "overServiceIndicator" = EXCLUDED."overServiceIndicator",
+          "differentiationScore" = EXCLUDED."differentiationScore",
+          "narrativeSummary" = EXCLUDED."narrativeSummary"
       `, evtSumId, runId, eventCode, courseName, grades.length,
          Number(avgGrade), Number(variance),
          JSON.stringify(weakEls), JSON.stringify(strongEls),
