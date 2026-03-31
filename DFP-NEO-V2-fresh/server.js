@@ -1418,9 +1418,24 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
 // regardless of which URL the app is accessed from.
 const staticPath = path.join(__dirname, 'dfp-neo-platform/public/flight-school-app');
 if (fs.existsSync(staticPath)) {
+  // Force no-cache for JS/CSS assets so browsers always fetch the latest build
+  app.use('/assets', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
   app.use(express.static(staticPath));
+  app.use('/flight-school-app', (req, res, next) => {
+    if (req.path.startsWith('/assets')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
   app.use('/flight-school-app', express.static(staticPath));
-  console.log(`✅ Serving static files from: ${staticPath} (at / and /flight-school-app/)`);
+  console.log(`✅ Serving static files from: ${staticPath} (at / and /flight-school-app/) with no-cache headers for assets`);
 }
 
 // ============================================================

@@ -35,10 +35,26 @@ function updateCSS(content) {
   return content;
 }
 
+function addCacheBust(content) {
+  // Add a build timestamp query string to index.js so browsers never serve stale cache
+  const ts = Date.now();
+  content = content.replace(
+    /(<script[^>]+src="\.\/assets\/index\.js)(")/,
+    `$1?v=${ts}$2`
+  );
+  // Also bust already-stamped versions (replace existing ?v=xxxxx)
+  content = content.replace(
+    /(<script[^>]+src="\.\/assets\/index\.js\?v=)\d+(")/,
+    `$1${ts}$2`
+  );
+  return content;
+}
+
 try {
   if (fs.existsSync(indexPath)) {
     let content = fs.readFileSync(indexPath, 'utf8');
     content = updateCSS(content);
+    content = addCacheBust(content);
     fs.writeFileSync(indexPath, content);
     console.log('✅ Updated index.html successfully!');
   }
@@ -46,6 +62,7 @@ try {
   if (fs.existsSync(indexV2Path)) {
     let content = fs.readFileSync(indexV2Path, 'utf8');
     content = updateCSS(content);
+    content = addCacheBust(content);
     fs.writeFileSync(indexV2Path, content);
     console.log('✅ Updated index-v2.html successfully!');
   }
