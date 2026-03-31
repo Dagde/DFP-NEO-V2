@@ -3755,7 +3755,7 @@ app.get('/api/tie/events/:course', async (req, res) => {
           SELECT MAX(r2."completedAt") FROM "TIEAnalyticsRun" r2
           WHERE r2.status = 'complete'
         )
-        ORDER BY es."avgGrade" ASC
+        ORDER BY es."avgOverallGrade" ASC
       `, course);
     } catch (e) { /* no data */ }
 
