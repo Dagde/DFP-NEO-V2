@@ -1337,10 +1337,16 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
     </div>
   );
 
-  // Exclude CPT, TUT, MB events from hardest/easiest analysis — only Flights and FTD count
+  // Exclude CPT, TUT, MB events — only Flights and FTD count
+  // Event codes are prefixed e.g. "BGF TUT1B", "BGF CPT1", "BGF MB1"
+  // so we must split on spaces and check each token, not just startsWith on the whole code
   const isFlightOrFTD = (code: string) => {
-    const c = code.toUpperCase();
-    return !c.startsWith('CPT') && !c.startsWith('TUT') && !c.includes('MB') && !c.startsWith('MB');
+    const tokens = code.toUpperCase().split(/[\s_\-]+/);
+    return !tokens.some(t =>
+      t === 'TUT' || t.startsWith('TUT') ||
+      t === 'CPT' || t.startsWith('CPT') ||
+      t === 'MB'  || t.startsWith('MB')
+    );
   };
 
   const flightFtdEvents = events.filter(ev => isFlightOrFTD(ev.eventCode) && safeN(ev.avgOverallGrade) > 0);
