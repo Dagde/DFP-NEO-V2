@@ -262,6 +262,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     // Tab state — null means no tab open
     const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | null>(null);
+    // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
+    const [currencyEditState, setCurrencyEditState] = useState<{
+      isEditing: boolean; isSaving: boolean;
+      onEdit: () => void; onSave: () => void; onCancel: () => void;
+    } | null>(null);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
     const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
@@ -835,10 +840,42 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       <div className={card3d + " p-3"} style={card3dStyle}>
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="text-xs font-bold text-white">Currency &mdash; {trainee.name}</h4>
-                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">&#x2715; Close</button>
+                          <div className="flex items-center gap-1">
+                            {currencyEditState && !currencyEditState.isEditing && (
+                              <button
+                                onClick={currencyEditState.onEdit}
+                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                                title="Edit currency dates"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {currencyEditState && currencyEditState.isEditing && (
+                              <>
+                                <button
+                                  onClick={currencyEditState.onCancel}
+                                  disabled={currencyEditState.isSaving}
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                                  title="Cancel editing"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={currencyEditState.onSave}
+                                  disabled={currencyEditState.isSaving}
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:opacity-50"
+                                  title="Save currency dates"
+                                >
+                                  {currencyEditState.isSaving ? 'Saving\u2026' : 'Save'}
+                                </button>
+                              </>
+                            )}
+                            <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs ml-1">&#x2715; Close</button>
+                          </div>
                         </div>
                         <CurrencyPanel
                           personId={(trainee as any).id}
+                          idNumber={trainee.idNumber}
                           personType="trainee"
                           personName={trainee.name}
                           masterCurrencies={masterCurrencies}
@@ -847,6 +884,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
                             onUpdateTrainee({ ...trainee, currencyStatus: newStatus });
                           }}
+                          onEditStateChange={setCurrencyEditState}
                         />
                       </div>
                     )}

@@ -287,6 +287,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   // Tab state — null means no tab open (profile only)
   const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'sct' | null>(null);
 
+  // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
+  const [currencyEditState, setCurrencyEditState] = useState<{
+    isEditing: boolean; isSaving: boolean;
+    onEdit: () => void; onSave: () => void; onCancel: () => void;
+  } | null>(null);
+
   // Open to a specific tab if requested (e.g. from "My Currency" in MyDashboard)
   useEffect(() => {
     if (profileInitialTab) {
@@ -347,10 +353,42 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <div className={card3d + " p-3"} style={card3dStyle}>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-xs font-bold text-white">Currency &mdash; {instructor.name}</h4>
-                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">&#x2715; Close</button>
+                    <div className="flex items-center gap-1">
+                      {currencyEditState && !currencyEditState.isEditing && (
+                        <button
+                          onClick={currencyEditState.onEdit}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                          title="Edit currency dates"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {currencyEditState && currencyEditState.isEditing && (
+                        <>
+                          <button
+                            onClick={currencyEditState.onCancel}
+                            disabled={currencyEditState.isSaving}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                            title="Cancel editing"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={currencyEditState.onSave}
+                            disabled={currencyEditState.isSaving}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:opacity-50"
+                            title="Save currency dates"
+                          >
+                            {currencyEditState.isSaving ? 'Saving\u2026' : 'Save'}
+                          </button>
+                        </>
+                      )}
+                      <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs ml-1">&#x2715; Close</button>
+                    </div>
                   </div>
                   <CurrencyPanel
                     personId={(instructor as any).id}
+                    idNumber={instructor.idNumber}
                     personType="instructor"
                     personName={instructor.name}
                     masterCurrencies={masterCurrencies}
@@ -359,6 +397,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
                       onUpdateInstructor({ ...instructor, currencyStatus: newStatus });
                     }}
+                    onEditStateChange={setCurrencyEditState}
                   />
                 </div>
               )}

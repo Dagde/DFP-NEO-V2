@@ -297,11 +297,19 @@ app.patch('/api/personnel/:id', async (req, res) => {
 });
 
 // GET /api/personnel/:id/currencies - Get currency status for an instructor
+// :id can be a UUID string (DB id) or a numeric idNumber
 app.get('/api/personnel/:id/currencies', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    const record = await db.personnel.findUnique({ where: { id } });
+    // Try numeric idNumber first, then fall back to UUID
+    let record = null;
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      record = await db.personnel.findFirst({ where: { idNumber: numericId } });
+    } else {
+      record = await db.personnel.findUnique({ where: { id } });
+    }
     if (!record) return res.status(404).json({ error: 'Personnel not found' });
     const currencies = record.qualifications ? (record.qualifications.currencyStatus || []) : [];
     res.json({ currencyStatus: currencies });
@@ -312,6 +320,7 @@ app.get('/api/personnel/:id/currencies', async (req, res) => {
 });
 
 // PATCH /api/personnel/:id/currencies - Update currency status for an instructor
+// :id can be a UUID string (DB id) or a numeric idNumber
 app.patch('/api/personnel/:id/currencies', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -320,13 +329,20 @@ app.patch('/api/personnel/:id/currencies', async (req, res) => {
 
     if (!id) return res.status(400).json({ error: 'Personnel ID is required' });
 
-    const existing = await db.personnel.findUnique({ where: { id } });
+    // Try numeric idNumber first, then fall back to UUID
+    let existing = null;
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      existing = await db.personnel.findFirst({ where: { idNumber: numericId } });
+    } else {
+      existing = await db.personnel.findUnique({ where: { id } });
+    }
     if (!existing) return res.status(404).json({ error: 'Personnel not found' });
 
     // Store currency status inside qualifications JSON (no schema migration needed)
     const currentQual = existing.qualifications || {};
     const updated = await db.personnel.update({
-      where: { id },
+      where: { id: existing.id },   // always use the DB UUID
       data: {
         qualifications: {
           ...(typeof currentQual === 'object' ? currentQual : {}),
@@ -344,11 +360,18 @@ app.patch('/api/personnel/:id/currencies', async (req, res) => {
 });
 
 // GET /api/trainees/:id/currencies - Get currency status for a trainee
+// :id can be a UUID/cuid string (DB id) or a numeric idNumber
 app.get('/api/trainees/:id/currencies', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    const record = await db.trainee.findUnique({ where: { id } });
+    let record = null;
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      record = await db.trainee.findFirst({ where: { idNumber: numericId } });
+    } else {
+      record = await db.trainee.findUnique({ where: { id } });
+    }
     if (!record) return res.status(404).json({ error: 'Trainee not found' });
     let currencies = [];
     if (record.currencyStatus) {
@@ -362,6 +385,7 @@ app.get('/api/trainees/:id/currencies', async (req, res) => {
 });
 
 // PATCH /api/trainees/:id/currencies - Update currency status for a trainee
+// :id can be a UUID/cuid string (DB id) or a numeric idNumber
 app.patch('/api/trainees/:id/currencies', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -370,11 +394,17 @@ app.patch('/api/trainees/:id/currencies', async (req, res) => {
 
     if (!id) return res.status(400).json({ error: 'Trainee ID is required' });
 
-    const existing = await db.trainee.findUnique({ where: { id } });
+    let existing = null;
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      existing = await db.trainee.findFirst({ where: { idNumber: numericId } });
+    } else {
+      existing = await db.trainee.findUnique({ where: { id } });
+    }
     if (!existing) return res.status(404).json({ error: 'Trainee not found' });
 
     const updated = await db.trainee.update({
-      where: { id },
+      where: { id: existing.id },
       data: { currencyStatus: currencyStatus || [] }
     });
 

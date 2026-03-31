@@ -2,14 +2,16 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 
 interface CurrencyPanelProps {
-  personId: string | undefined;        // DB string id (Personnel.id or Trainee.id)
+  personId: string | undefined;        // DB string UUID (Personnel.id or Trainee.id) — falls back to idNumber
+  idNumber?: number;                   // Numeric idNumber — used as fallback when personId is undefined
   personType: 'instructor' | 'trainee';
   personName: string;
   masterCurrencies: MasterCurrency[];
   currencyRequirements: CurrencyRequirement[];
   initialCurrencyStatus?: PersonCurrencyStatus[];
   onCurrencyStatusChange?: (newStatus: PersonCurrencyStatus[]) => void;
-  initialTab?: 'currency' | null;
+  /** Called whenever edit/saving state changes so parent can render its own Edit/Save/Cancel buttons */
+  onEditStateChange?: (state: { isEditing: boolean; isSaving: boolean; onEdit: () => void; onSave: () => void; onCancel: () => void }) => void;
 }
 
 const AMBER_THRESHOLD_DAYS = 30;
@@ -77,13 +79,17 @@ function getBucket(daysRemaining: number | null): StatusBucket {
 
 const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   personId,
+  idNumber,
   personType,
   personName,
   masterCurrencies,
   currencyRequirements,
   initialCurrencyStatus,
   onCurrencyStatusChange,
+  onEditStateChange,
 }) => {
+  // Use UUID if available, otherwise fall back to numeric idNumber
+  const resolvedId = personId || (idNumber !== undefined ? String(idNumber) : undefined);
   const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(initialCurrencyStatus || []);
   const [isEditing, setIsEditing] = useState(false);
   const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
@@ -91,13 +97,15 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  
+
   // Load currency status from API on mount
   useEffect(() => {
-    if (!personId) return;
+    if (!resolvedId) return;
     setIsLoading(true);
     const endpoint = personType === 'instructor'
-      ? `/api/personnel/${personId}/currencies`
-      : `/api/trainees/${personId}/currencies`;
+      ? `/api/personnel/${resolvedId}/currencies`
+      : `/api/trainees/${resolvedId}/currencies`;
 
     fetch(endpoint, { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
@@ -110,7 +118,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         if (initialCurrencyStatus) setCurrencyStatus(initialCurrencyStatus);
       })
       .finally(() => setIsLoading(false));
-  }, [personId, personType]);
+  }, [resolvedId, personType]);
 
   // All visible currency definitions (masters + primitives), sorted by name
   const visibleCurrencyDefinitions = useMemo(() => {
@@ -158,7 +166,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   };
 
   const handleSaveClick = useCallback(async () => {
-    if (!personId) return;
+    if (!resolvedId) return;
     setIsSaving(true);
     setSaveError(null);
 
@@ -188,8 +196,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     });
 
     const endpoint = personType === 'instructor'
-      ? `/api/personnel/${personId}/currencies`
-      : `/api/trainees/${personId}/currencies`;
+      ? `/api/personnel/${resolvedId}/currencies`
+      : `/api/trainees/${resolvedId}/currencies`;
 
     try {
       const res = await fetch(endpoint, {
@@ -211,7 +219,18 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [personId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange]);
+  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange]);
+
+  // Notify parent of current edit state and control handlers
+  useEffect(() => {
+    onEditStateChange?.({
+      isEditing,
+      isSaving,
+      onEdit: handleEditClick,
+      onSave: handleSaveClick,
+      onCancel: handleCancelClick,
+    });
+  }, [isEditing, isSaving]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
@@ -231,62 +250,32 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Header: summary badges + Edit/Save/Cancel */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {summaryCount.expired > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/40 text-red-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-              {summaryCount.expired} Expired
-            </span>
-          )}
-          {summaryCount.approaching > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-600/40 text-amber-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-              {summaryCount.approaching} Expiring
-            </span>
-          )}
-          {summaryCount.current > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-600/40 text-green-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-              {summaryCount.current} Current
-            </span>
-          )}
-          {summaryCount.unassigned > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-600/40 text-gray-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" />
-              {summaryCount.unassigned} Unset
-            </span>
-          )}
-        </div>
-        <div className="flex gap-1">
-          {!isEditing ? (
-            <button
-              onClick={handleEditClick}
-              className="w-[56px] h-[30px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
-              title="Edit currency dates"
-            >
-              Edit
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={handleCancelClick}
-                className="h-[30px] px-2 py-1 text-[10px] font-semibold rounded bg-gray-600 hover:bg-gray-500 text-white"
-                disabled={isSaving}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveClick}
-                className="h-[30px] px-2 py-1 text-[10px] font-semibold rounded bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-50"
-                disabled={isSaving}
-              >
-                {isSaving ? 'Saving…' : 'Save'}
-              </button>
-            </>
-          )}
-        </div>
+      {/* Summary badges row */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {summaryCount.expired > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/40 text-red-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+            {summaryCount.expired} Expired
+          </span>
+        )}
+        {summaryCount.approaching > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-600/40 text-amber-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+            {summaryCount.approaching} Expiring
+          </span>
+        )}
+        {summaryCount.current > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-600/40 text-green-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+            {summaryCount.current} Current
+          </span>
+        )}
+        {summaryCount.unassigned > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-600/40 text-gray-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" />
+            {summaryCount.unassigned} Unset
+          </span>
+        )}
       </div>
 
       {saveError && (
