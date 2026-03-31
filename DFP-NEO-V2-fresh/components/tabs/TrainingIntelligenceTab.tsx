@@ -549,7 +549,7 @@ const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>
   const gap = Math.max(5, bw * 0.4);
   const leftPad = 36;
   const tw = leftPad + data.length * (bw + gap) + gap;
-  const tp = 16, bp = 56, ch = height - tp - bp;
+  const tp = 16, bp = 80, ch = height - tp - bp;
   // Dynamic Y scale: zoom in on actual data range to exaggerate differences
   const vals = data.map(d => safeN(d.value)).filter(v => v > 0);
   const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
@@ -591,12 +591,12 @@ const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>
             </text>
             <text
               x={x + bw / 2}
-              y={height - 6}
+              y={height - bp + 14}
               textAnchor="end"
               fontSize="13"
               fill="#e5e7eb"
               fontWeight="500"
-              transform={`rotate(-45,${x + bw / 2},${height - 6})`}
+              transform={`rotate(-45,${x + bw / 2},${height - bp + 14})`}
             >
               {item.label}
             </text>
@@ -859,6 +859,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
       {progressionModal && (
         <ProgressionModal
           data={progressionModal.data}
+          labels={progressionModal.labels}
           name={progressionModal.name}
           trend={progressionModal.trend}
           onClose={() => setProgressionModal(null)}

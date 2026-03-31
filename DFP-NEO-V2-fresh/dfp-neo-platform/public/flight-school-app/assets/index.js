@@ -27504,7 +27504,7 @@ const ColChartExpanded = ({
   const gap = Math.max(5, bw * 0.4);
   const leftPad = 36;
   const tw = leftPad + data.length * (bw + gap) + gap;
-  const tp = 16, bp = 56, ch = height - tp - bp;
+  const tp = 16, bp = 80, ch = height - tp - bp;
   const vals = data.map((d) => safeN(d.value)).filter((v) => v > 0);
   const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
   const dataMax = vals.length > 0 ? Math.max(...vals) : max;
@@ -27560,12 +27560,12 @@ const ColChartExpanded = ({
           "text",
           {
             x: x + bw / 2,
-            y: height - 6,
+            y: height - bp + 14,
             textAnchor: "end",
             fontSize: "13",
             fill: "#e5e7eb",
             fontWeight: "500",
-            transform: `rotate(-45,${x + bw / 2},${height - 6})`,
+            transform: `rotate(-45,${x + bw / 2},${height - bp + 14})`,
             children: item.label
           },
           void 0,
@@ -28062,6 +28062,7 @@ const TraineeTab = ({ trainees }) => {
       ProgressionModal,
       {
         data: progressionModal.data,
+        labels: progressionModal.labels,
         name: progressionModal.name,
         trend: progressionModal.trend,
         onClose: () => setProgressionModal(null)
@@ -28089,7 +28090,7 @@ const TraineeTab = ({ trainees }) => {
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 869,
+        lineNumber: 870,
         columnNumber: 9
       },
       void 0
@@ -28108,7 +28109,7 @@ const TraineeTab = ({ trainees }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 885,
+          lineNumber: 886,
           columnNumber: 9
         },
         void 0
@@ -28124,13 +28125,13 @@ const TraineeTab = ({ trainees }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 890,
+          lineNumber: 891,
           columnNumber: 13
         },
         void 0
       )) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 888,
+        lineNumber: 889,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 text-xs ml-auto", children: [
@@ -28138,12 +28139,12 @@ const TraineeTab = ({ trainees }) => {
         " shown"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 896,
+        lineNumber: 897,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 884,
+      lineNumber: 885,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-4", children: [
@@ -28152,56 +28153,56 @@ const TraineeTab = ({ trainees }) => {
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b border-gray-700", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left text-gray-400 font-medium px-4 py-2.5 text-xs uppercase", children: "Trainee" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 906,
+              lineNumber: 907,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Avg" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 907,
+              lineNumber: 908,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Recent" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 908,
+              lineNumber: 909,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Trend" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 909,
+              lineNumber: 910,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "PT-051s" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 910,
+              lineNumber: 911,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Risk" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 911,
+              lineNumber: 912,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Prog." }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 912,
+              lineNumber: 913,
               columnNumber: 19
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 905,
+            lineNumber: 906,
             columnNumber: 17
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 904,
+            lineNumber: 905,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: [
             filtered.length === 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { colSpan: 7, className: "text-center text-gray-500 py-8 text-sm", children: "No trainees match the filter" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 917,
+              lineNumber: 918,
               columnNumber: 23
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 917,
+              lineNumber: 918,
               columnNumber: 19
             }, void 0),
             filtered.map((t) => {
@@ -28216,36 +28217,36 @@ const TraineeTab = ({ trainees }) => {
                   children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-2.5 text-gray-200 font-medium", children: t.traineeFullName }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 926,
+                      lineNumber: 927,
                       columnNumber: 23
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(t.avgOverallGrade))}`, children: safe(t.avgOverallGrade, 2) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 927,
+                      lineNumber: 928,
                       columnNumber: 23
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono text-xs ${gradeColor(safeN(t.recentAvgGrade))}`, children: safe(t.recentAvgGrade, 2) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 928,
+                      lineNumber: 929,
                       columnNumber: 23
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-bold ${trendColor(t.overallTrend)}`, children: trendIcon(t.overallTrend) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 929,
+                      lineNumber: 930,
                       columnNumber: 23
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-3 py-2.5 text-center text-gray-400", children: t.totalPt051Count }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 930,
+                      lineNumber: 931,
                       columnNumber: 23
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-xs px-2 py-0.5 rounded-full font-medium ${riskBadge(t.riskLevel)}`, children: t.riskLevel === "at_risk" ? "At Risk" : t.riskLevel === "monitor" ? "Monitor" : t.riskLevel === "exceeding" ? "Exceeding" : "Normal" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 932,
+                      lineNumber: 933,
                       columnNumber: 25
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 931,
+                      lineNumber: 932,
                       columnNumber: 23
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-3 py-2.5", children: prog.length >= 2 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -28259,7 +28260,7 @@ const TraineeTab = ({ trainees }) => {
                         className: "hover:opacity-80 transition-opacity cursor-zoom-in",
                         children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SparkLine, { data: prog, width: 70, height: 24, color: t.overallTrend === "improving" ? "#10b981" : t.overallTrend === "worsening" ? "#ef4444" : "#60a5fa" }, void 0, false, {
                           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                          lineNumber: 947,
+                          lineNumber: 948,
                           columnNumber: 31
                         }, void 0)
                       },
@@ -28267,17 +28268,17 @@ const TraineeTab = ({ trainees }) => {
                       false,
                       {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                        lineNumber: 939,
+                        lineNumber: 940,
                         columnNumber: 29
                       },
                       void 0
                     ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 text-xs", children: "—" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 950,
+                      lineNumber: 951,
                       columnNumber: 29
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 936,
+                      lineNumber: 937,
                       columnNumber: 23
                     }, void 0)
                   ]
@@ -28286,7 +28287,7 @@ const TraineeTab = ({ trainees }) => {
                 true,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 924,
+                  lineNumber: 925,
                   columnNumber: 21
                 },
                 void 0
@@ -28294,16 +28295,16 @@ const TraineeTab = ({ trainees }) => {
             })
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 915,
+            lineNumber: 916,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 903,
+          lineNumber: 904,
           columnNumber: 13
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 902,
+          lineNumber: 903,
           columnNumber: 11
         }, void 0),
         trainees.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mt-4", children: [
@@ -28329,13 +28330,13 @@ const TraineeTab = ({ trainees }) => {
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                    lineNumber: 969,
+                    lineNumber: 970,
                     columnNumber: 21
                   },
                   void 0
                 ) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 968,
+                  lineNumber: 969,
                   columnNumber: 19
                 }, void 0)
               },
@@ -28343,50 +28344,50 @@ const TraineeTab = ({ trainees }) => {
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 963,
+                lineNumber: 964,
                 columnNumber: 17
               },
               void 0
             ),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-600 mt-1 text-center", children: "click to enlarge" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 981,
+              lineNumber: 982,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 962,
+            lineNumber: 963,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Recent vs Overall Grade Delta", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-y-auto max-h-44", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "w-full text-xs", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b border-gray-700", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left text-gray-400 py-1 pr-2", children: "Trainee" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 989,
+                lineNumber: 990,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 py-1 px-2", children: "Overall" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 990,
+                lineNumber: 991,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 py-1 px-2", children: "Recent" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 991,
+                lineNumber: 992,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 py-1 px-2", children: "Delta" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 992,
+                lineNumber: 993,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 988,
+              lineNumber: 989,
               columnNumber: 23
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 987,
+              lineNumber: 988,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: [...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map((t) => {
@@ -28394,17 +28395,17 @@ const TraineeTab = ({ trainees }) => {
               return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b border-gray-700/40 hover:bg-gray-700/20", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-1.5 pr-2 text-gray-300 truncate max-w-[90px]", children: t.traineeFullName }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1e3,
+                  lineNumber: 1001,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.avgOverallGrade))}`, children: safe(t.avgOverallGrade, 2) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1001,
+                  lineNumber: 1002,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `py-1.5 px-2 text-center font-mono ${gradeColor(safeN(t.recentAvgGrade))}`, children: safe(t.recentAvgGrade, 2) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1002,
+                  lineNumber: 1003,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `py-1.5 px-2 text-center font-mono ${d > 0.1 ? "text-emerald-400" : d < -0.1 ? "text-red-400" : "text-gray-400"}`, children: [
@@ -28412,40 +28413,40 @@ const TraineeTab = ({ trainees }) => {
                   d.toFixed(2)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1003,
+                  lineNumber: 1004,
                   columnNumber: 29
                 }, void 0)
               ] }, t.id, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 999,
+                lineNumber: 1e3,
                 columnNumber: 27
               }, void 0);
             }) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 995,
+              lineNumber: 996,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 986,
+            lineNumber: 987,
             columnNumber: 19
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 985,
+            lineNumber: 986,
             columnNumber: 17
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 984,
+            lineNumber: 985,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 961,
+          lineNumber: 962,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 901,
+        lineNumber: 902,
         columnNumber: 9
       }, void 0),
       selected && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-72 flex-shrink-0 space-y-3", children: [
@@ -28454,44 +28455,44 @@ const TraineeTab = ({ trainees }) => {
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-white font-bold text-sm", children: selected.traineeFullName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1023,
+                lineNumber: 1024,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs", children: selected.courseName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1024,
+                lineNumber: 1025,
                 columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1022,
+              lineNumber: 1023,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setSelected(null), className: "text-gray-500 hover:text-gray-200 text-lg leading-none", children: "×" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1026,
+              lineNumber: 1027,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1021,
+            lineNumber: 1022,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 text-xs", children: "Average Grade" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1030,
+                lineNumber: 1031,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`, children: safe(selected.avgOverallGrade, 2) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1031,
+                lineNumber: 1032,
                 columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1029,
+              lineNumber: 1030,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-3 mt-1.5 text-xs text-gray-400", children: [
@@ -28499,12 +28500,12 @@ const TraineeTab = ({ trainees }) => {
                 "Recent: ",
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor(safeN(selected.recentAvgGrade)), children: safe(selected.recentAvgGrade, 2) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1034,
+                  lineNumber: 1035,
                   columnNumber: 33
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1034,
+                lineNumber: 1035,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -28515,36 +28516,36 @@ const TraineeTab = ({ trainees }) => {
                   selected.overallTrend || "stable"
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1035,
+                  lineNumber: 1036,
                   columnNumber: 32
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1035,
+                lineNumber: 1036,
                 columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1033,
+              lineNumber: 1034,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-xs px-2 py-0.5 rounded-full ${riskBadge(selected.riskLevel)}`, children: selected.riskLevel === "at_risk" ? "At Risk" : selected.riskLevel === "monitor" ? "Monitor" : selected.riskLevel === "exceeding" ? "Exceeding" : "Normal" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1038,
+              lineNumber: 1039,
               columnNumber: 19
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1037,
+              lineNumber: 1038,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1028,
+            lineNumber: 1029,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1020,
+          lineNumber: 1021,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "vs Course Average", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: [
@@ -28552,63 +28553,63 @@ const TraineeTab = ({ trainees }) => {
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs mb-0.5", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "This Trainee" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1050,
+                lineNumber: 1051,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor(safeN(selected.avgOverallGrade)), children: safe(selected.avgOverallGrade, 2) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1051,
+                lineNumber: 1052,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1049,
+              lineNumber: 1050,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SparkBar, { value: safeN(selected.avgOverallGrade) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1053,
+              lineNumber: 1054,
               columnNumber: 19
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1048,
+            lineNumber: 1049,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs mb-0.5", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Course Avg" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1057,
+                lineNumber: 1058,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: gradeColor(courseAvg), children: safe(courseAvg, 2) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1058,
+                lineNumber: 1059,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1056,
+              lineNumber: 1057,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SparkBar, { value: courseAvg, colorClass: "bg-blue-500" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1060,
+              lineNumber: 1061,
               columnNumber: 19
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1055,
+            lineNumber: 1056,
             columnNumber: 17
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1047,
+          lineNumber: 1048,
           columnNumber: 15
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1046,
+          lineNumber: 1047,
           columnNumber: 13
         }, void 0),
         selProgression.length >= 2 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Grade Progression", children: [
@@ -28626,29 +28627,29 @@ const TraineeTab = ({ trainees }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1069,
+              lineNumber: 1070,
               columnNumber: 19
             },
             void 0
           ) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1068,
+            lineNumber: 1069,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs text-gray-600 mt-1", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Earliest" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1079,
+              lineNumber: 1080,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Latest" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1079,
+              lineNumber: 1080,
               columnNumber: 40
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1078,
+            lineNumber: 1079,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-600 mt-1", children: [
@@ -28656,7 +28657,7 @@ const TraineeTab = ({ trainees }) => {
             " assessments"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1081,
+            lineNumber: 1082,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -28670,101 +28671,101 @@ const TraineeTab = ({ trainees }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1082,
+              lineNumber: 1083,
               columnNumber: 17
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1067,
+          lineNumber: 1068,
           columnNumber: 15
         }, void 0),
         hasSkillScores && Object.keys(selSkills).length >= 3 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Skill Family Radar", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(RadarChart, { data: selSkills, size: 175 }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1095,
+          lineNumber: 1096,
           columnNumber: 19
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1094,
+          lineNumber: 1095,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1093,
+          lineNumber: 1094,
           columnNumber: 15
         }, void 0),
         hasSkillScores && Object.keys(selSkills).length < 3 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Skill Families", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(HBarChart, { data: Object.entries(selSkills).map(([l, v]) => ({ label: l, value: v })) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1103,
+          lineNumber: 1104,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1102,
+          lineNumber: 1103,
           columnNumber: 15
         }, void 0),
         weakEls.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Recurring Weak Elements", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-1.5", children: weakEls.map((e) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Tag, { text: e, type: "red" }, e, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1110,
+          lineNumber: 1111,
           columnNumber: 75
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1110,
+          lineNumber: 1111,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1109,
+          lineNumber: 1110,
           columnNumber: 15
         }, void 0),
         strongFams.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Strongest Skill Families", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-1.5", children: strongFams.map((e) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Tag, { text: e, type: "green" }, e, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1117,
+          lineNumber: 1118,
           columnNumber: 78
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1117,
+          lineNumber: 1118,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1116,
+          lineNumber: 1117,
           columnNumber: 15
         }, void 0),
         selected.riskLevel === "at_risk" && atRiskReasons.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "At-Risk Reasons", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-1", children: atRiskReasons.map((r, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "text-xs text-red-300 flex items-start gap-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-500 flex-shrink-0", children: "•" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1127,
+            lineNumber: 1128,
             columnNumber: 23
           }, void 0),
           r
         ] }, i, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1126,
+          lineNumber: 1127,
           columnNumber: 21
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1124,
+          lineNumber: 1125,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1123,
+          lineNumber: 1124,
           columnNumber: 15
         }, void 0),
         selected.narrativeSummary && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Analysis", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 text-xs leading-relaxed", children: selected.narrativeSummary }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1137,
+          lineNumber: 1138,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1136,
+          lineNumber: 1137,
           columnNumber: 15
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1019,
+        lineNumber: 1020,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 899,
+      lineNumber: 900,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
@@ -28803,18 +28804,18 @@ const EventsTab = ({ events }) => {
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1166,
+      lineNumber: 1167,
       columnNumber: 5
     },
     void 0
   );
   if (events.length === 0) return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-8 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500", children: "No event data available for this course" }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-    lineNumber: 1174,
+    lineNumber: 1175,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-    lineNumber: 1173,
+    lineNumber: 1174,
     columnNumber: 5
   }, void 0);
   const hardest = events.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, events[0]);
@@ -28840,7 +28841,7 @@ const EventsTab = ({ events }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1194,
+          lineNumber: 1195,
           columnNumber: 9
         },
         void 0
@@ -28857,7 +28858,7 @@ const EventsTab = ({ events }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1196,
+          lineNumber: 1197,
           columnNumber: 9
         },
         void 0
@@ -28874,7 +28875,7 @@ const EventsTab = ({ events }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1198,
+          lineNumber: 1199,
           columnNumber: 9
         },
         void 0
@@ -28891,14 +28892,14 @@ const EventsTab = ({ events }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1200,
+          lineNumber: 1201,
           columnNumber: 9
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1193,
+      lineNumber: 1194,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-4", children: [
@@ -28907,46 +28908,46 @@ const EventsTab = ({ events }) => {
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "border-b border-gray-700", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left text-gray-400 font-medium px-4 py-2.5 text-xs uppercase", children: "Event" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1211,
+              lineNumber: 1212,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortTh, { field: "avgOverallGrade", label: "Avg" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1212,
+              lineNumber: 1213,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortTh, { field: "passRate", label: "Pass%" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1213,
+              lineNumber: 1214,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortTh, { field: "totalAttempts", label: "Attempts" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1214,
+              lineNumber: 1215,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortTh, { field: "gradeVariance", label: "Variance" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1215,
+              lineNumber: 1216,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SortTh, { field: "difficultyScore", label: "Difficulty" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1216,
+              lineNumber: 1217,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-center text-gray-400 font-medium px-3 py-2.5 text-xs uppercase", children: "Flags" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1217,
+              lineNumber: 1218,
               columnNumber: 19
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1210,
+            lineNumber: 1211,
             columnNumber: 17
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1209,
+            lineNumber: 1210,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: sorted.map((ev) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -28957,12 +28958,12 @@ const EventsTab = ({ events }) => {
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-2.5 text-gray-200 font-medium", children: ev.eventCode }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1224,
+                  lineNumber: 1225,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1225,
+                  lineNumber: 1226,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center text-xs font-medium ${safeN(ev.passRate) >= 80 ? "text-emerald-400" : safeN(ev.passRate) >= 60 ? "text-yellow-400" : "text-red-400"}`, children: [
@@ -28970,46 +28971,46 @@ const EventsTab = ({ events }) => {
                   "%"
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1226,
+                  lineNumber: 1227,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-3 py-2.5 text-center text-gray-400", children: ev.totalAttempts }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1229,
+                  lineNumber: 1230,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-3 py-2.5 text-center text-xs font-mono ${safeN(ev.gradeVariance) > 1 ? "text-orange-400" : "text-gray-400"}`, children: safe(ev.gradeVariance, 2) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1230,
+                  lineNumber: 1231,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SparkBar, { value: safeN(ev.difficultyScore), max: 1 }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1232,
+                  lineNumber: 1233,
                   columnNumber: 23
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1231,
+                  lineNumber: 1232,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-3 py-2.5 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center gap-1", children: [
                   safeN(ev.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs bg-red-900/50 text-red-300 border border-red-800 px-1 py-0.5 rounded leading-none", children: "BN" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                    lineNumber: 1236,
+                    lineNumber: 1237,
                     columnNumber: 61
                   }, void 0),
                   ev.overServiceIndicator && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs bg-emerald-900/50 text-emerald-300 border border-emerald-800 px-1 py-0.5 rounded leading-none", children: "OS" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                    lineNumber: 1237,
+                    lineNumber: 1238,
                     columnNumber: 53
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1235,
+                  lineNumber: 1236,
                   columnNumber: 23
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1234,
+                  lineNumber: 1235,
                   columnNumber: 21
                 }, void 0)
               ]
@@ -29018,22 +29019,22 @@ const EventsTab = ({ events }) => {
             true,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1222,
+              lineNumber: 1223,
               columnNumber: 19
             },
             void 0
           )) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1220,
+            lineNumber: 1221,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1208,
+          lineNumber: 1209,
           columnNumber: 13
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1207,
+          lineNumber: 1208,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mt-4", children: [
@@ -29052,17 +29053,17 @@ const EventsTab = ({ events }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1250,
+              lineNumber: 1251,
               columnNumber: 17
             },
             void 0
           ) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1249,
+            lineNumber: 1250,
             columnNumber: 15
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1248,
+            lineNumber: 1249,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Grade Variance by Event (spread indicator)", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -29080,53 +29081,53 @@ const EventsTab = ({ events }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1262,
+              lineNumber: 1263,
               columnNumber: 17
             },
             void 0
           ) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1261,
+            lineNumber: 1262,
             columnNumber: 15
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1260,
+            lineNumber: 1261,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1247,
+          lineNumber: 1248,
           columnNumber: 11
         }, void 0),
         allSkills.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Skill Weakness by Event (sorted by avg grade)", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "text-xs", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-left text-gray-400 pr-4 py-1 whitespace-nowrap", children: "Event" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1281,
+              lineNumber: 1282,
               columnNumber: 25
             }, void 0),
             allSkills.map((sk) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: sk }, sk, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1282,
+              lineNumber: 1283,
               columnNumber: 46
             }, void 0)),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Ovrl" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1283,
+              lineNumber: 1284,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "text-gray-400 px-2 py-1 text-center whitespace-nowrap", children: "Pass%" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1284,
+              lineNumber: 1285,
               columnNumber: 25
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1280,
+            lineNumber: 1281,
             columnNumber: 23
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1279,
+            lineNumber: 1280,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { children: [...events].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map((ev) => {
@@ -29139,28 +29140,28 @@ const EventsTab = ({ events }) => {
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "text-gray-300 pr-4 py-1.5 font-medium whitespace-nowrap", children: ev.eventCode }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                    lineNumber: 1293,
+                    lineNumber: 1294,
                     columnNumber: 29
                   }, void 0),
                   allSkills.map((sk) => {
                     const v = sf[sk];
                     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center", children: v !== void 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-mono font-bold ${gradeColor(v)}`, children: safe(v, 1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 1299,
+                      lineNumber: 1300,
                       columnNumber: 39
                     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-700", children: "—" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 1300,
+                      lineNumber: 1301,
                       columnNumber: 39
                     }, void 0) }, sk, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                      lineNumber: 1297,
+                      lineNumber: 1298,
                       columnNumber: 33
                     }, void 0);
                   }),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-2 py-1.5 text-center font-mono font-bold ${gradeColor(safeN(ev.avgOverallGrade))}`, children: safe(ev.avgOverallGrade, 2) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                    lineNumber: 1304,
+                    lineNumber: 1305,
                     columnNumber: 29
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-2 py-1.5 text-center text-xs ${safeN(ev.passRate) >= 80 ? "text-emerald-400" : safeN(ev.passRate) >= 60 ? "text-yellow-400" : "text-red-400"}`, children: [
@@ -29168,7 +29169,7 @@ const EventsTab = ({ events }) => {
                     "%"
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                    lineNumber: 1305,
+                    lineNumber: 1306,
                     columnNumber: 29
                   }, void 0)
                 ]
@@ -29177,36 +29178,36 @@ const EventsTab = ({ events }) => {
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1291,
+                lineNumber: 1292,
                 columnNumber: 27
               },
               void 0
             );
           }) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1287,
+            lineNumber: 1288,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1278,
+          lineNumber: 1279,
           columnNumber: 19
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1277,
+          lineNumber: 1278,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1276,
+          lineNumber: 1277,
           columnNumber: 15
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1275,
+          lineNumber: 1276,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1206,
+        lineNumber: 1207,
         columnNumber: 9
       }, void 0),
       selected && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-72 flex-shrink-0 space-y-3", children: [
@@ -29215,44 +29216,44 @@ const EventsTab = ({ events }) => {
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-white font-bold text-sm", children: selected.eventCode }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1325,
+                lineNumber: 1326,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs", children: selected.courseName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1326,
+                lineNumber: 1327,
                 columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1324,
+              lineNumber: 1325,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setSelected(null), className: "text-gray-500 hover:text-gray-200 text-lg leading-none", children: "×" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1328,
+              lineNumber: 1329,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1323,
+            lineNumber: 1324,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `rounded border p-3 ${gradeBg(safeN(selected.avgOverallGrade))}`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 text-xs", children: "Average Grade" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1332,
+                lineNumber: 1333,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-2xl font-bold font-mono ${gradeColor(safeN(selected.avgOverallGrade))}`, children: safe(selected.avgOverallGrade, 2) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1333,
+                lineNumber: 1334,
                 columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1331,
+              lineNumber: 1332,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-x-3 mt-2 text-xs text-gray-400", children: [
@@ -29263,20 +29264,8 @@ const EventsTab = ({ events }) => {
                   "%"
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1336,
-                  columnNumber: 36
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1336,
-                columnNumber: 19
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
-                "Attempts: ",
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: selected.totalAttempts }, void 0, false, {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 1337,
-                  columnNumber: 35
+                  columnNumber: 36
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
@@ -29284,8 +29273,8 @@ const EventsTab = ({ events }) => {
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
-                "Variance: ",
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: safeN(selected.gradeVariance) > 1 ? "text-orange-400" : "text-gray-300", children: safe(selected.gradeVariance, 2) }, void 0, false, {
+                "Attempts: ",
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: selected.totalAttempts }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 1338,
                   columnNumber: 35
@@ -29296,105 +29285,117 @@ const EventsTab = ({ events }) => {
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
-                "Difficulty: ",
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: safe(selected.difficultyScore, 2) }, void 0, false, {
+                "Variance: ",
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: safeN(selected.gradeVariance) > 1 ? "text-orange-400" : "text-gray-300", children: safe(selected.gradeVariance, 2) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                   lineNumber: 1339,
-                  columnNumber: 37
+                  columnNumber: 35
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
                 lineNumber: 1339,
                 columnNumber: 19
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
+                "Difficulty: ",
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: safe(selected.difficultyScore, 2) }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
+                  lineNumber: 1340,
+                  columnNumber: 37
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
+                lineNumber: 1340,
+                columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1335,
+              lineNumber: 1336,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1330,
+            lineNumber: 1331,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-1.5 mt-3", children: [
             safeN(selected.bottleneckScore) > 0.5 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Tag, { text: "Bottleneck", type: "red" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1343,
+              lineNumber: 1344,
               columnNumber: 59
             }, void 0),
             selected.overServiceIndicator && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Tag, { text: "Over-Serviced", type: "green" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1344,
+              lineNumber: 1345,
               columnNumber: 51
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1342,
+            lineNumber: 1343,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1322,
+          lineNumber: 1323,
           columnNumber: 13
         }, void 0),
         Object.keys(selSkills).length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Skill Family Scores", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(HBarChart, { data: Object.entries(selSkills).sort((a, b) => a[1] - b[1]).map(([l, v]) => ({ label: l, value: v })) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1351,
+          lineNumber: 1352,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1350,
+          lineNumber: 1351,
           columnNumber: 15
         }, void 0),
         selWeak.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Weak Elements (by avg)", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-1.5", children: selWeak.map((e) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Tag, { text: normaliseElement(e), type: "red" }, normaliseElement(e), false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1358,
+          lineNumber: 1359,
           columnNumber: 75
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1358,
+          lineNumber: 1359,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1357,
+          lineNumber: 1358,
           columnNumber: 15
         }, void 0),
         selStrong.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Strong Elements", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-1.5", children: selStrong.map((e) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Tag, { text: normaliseElement(e), type: "green" }, normaliseElement(e), false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1365,
+          lineNumber: 1366,
           columnNumber: 77
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1365,
+          lineNumber: 1366,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1364,
+          lineNumber: 1365,
           columnNumber: 15
         }, void 0),
         selected.narrativeSummary && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SCard, { title: "Analysis", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 text-xs leading-relaxed", children: selected.narrativeSummary }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1372,
+          lineNumber: 1373,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1371,
+          lineNumber: 1372,
           columnNumber: 15
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1321,
+        lineNumber: 1322,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1204,
+      lineNumber: 1205,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-    lineNumber: 1191,
+    lineNumber: 1192,
     columnNumber: 5
   }, void 0);
 };
@@ -29541,28 +29542,28 @@ const TrainingIntelligenceTab = () => {
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-white font-bold text-lg leading-tight", children: "Training Intelligence Engine" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1532,
+            lineNumber: 1533,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs", children: "Offline PT-051 analytics · all data stored in database" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1533,
+            lineNumber: 1534,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1531,
+          lineNumber: 1532,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1535,
+          lineNumber: 1536,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "text-gray-400 text-sm whitespace-nowrap", children: "Course:" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1537,
+            lineNumber: 1538,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -29575,7 +29576,7 @@ const TrainingIntelligenceTab = () => {
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— All Courses —" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1540,
+                  lineNumber: 1541,
                   columnNumber: 15
                 }, void 0),
                 courses.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c.name, children: [
@@ -29585,7 +29586,7 @@ const TrainingIntelligenceTab = () => {
                   " records)"
                 ] }, c.name, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                  lineNumber: 1541,
+                  lineNumber: 1542,
                   columnNumber: 33
                 }, void 0))
               ]
@@ -29594,14 +29595,14 @@ const TrainingIntelligenceTab = () => {
             true,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1538,
+              lineNumber: 1539,
               columnNumber: 13
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1536,
+          lineNumber: 1537,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -29613,13 +29614,13 @@ const TrainingIntelligenceTab = () => {
             children: isRunning ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "animate-spin inline-block", children: "\\u27F3" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-                lineNumber: 1546,
+                lineNumber: 1547,
                 columnNumber: 28
               }, void 0),
               " Running..."
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1546,
+              lineNumber: 1547,
               columnNumber: 26
             }, void 0) : "Run Analytics"
           },
@@ -29627,41 +29628,41 @@ const TrainingIntelligenceTab = () => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-            lineNumber: 1544,
+            lineNumber: 1545,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1530,
+        lineNumber: 1531,
         columnNumber: 9
       }, void 0),
       runProgress && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3 bg-blue-900/30 border border-blue-700 rounded px-3 py-2 text-blue-300 text-sm", children: runProgress }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1551,
+        lineNumber: 1552,
         columnNumber: 11
       }, void 0),
       error && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3 bg-red-900/30 border border-red-700 rounded px-3 py-2 text-red-300 text-sm flex items-center justify-between", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: error }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1555,
+          lineNumber: 1556,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setError(null), className: "text-red-400 hover:text-red-200 ml-3", children: "×" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1556,
+          lineNumber: 1557,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1554,
+        lineNumber: 1555,
         columnNumber: 11
       }, void 0),
       recentRuns.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3 flex flex-wrap gap-3 text-xs text-gray-500", children: recentRuns.slice(0, 3).map((run) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-1", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: run.status === "complete" ? "text-emerald-500" : run.status === "failed" ? "text-red-500" : "text-yellow-500", children: "•" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1563,
+          lineNumber: 1564,
           columnNumber: 17
         }, void 0),
         run.courseFilter || "All",
@@ -29672,54 +29673,54 @@ const TrainingIntelligenceTab = () => {
         " records"
       ] }, run.id, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1562,
+        lineNumber: 1563,
         columnNumber: 15
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1560,
+        lineNumber: 1561,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1529,
+      lineNumber: 1530,
       columnNumber: 7
     }, void 0),
     !loading && !summary && !isRunning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-10 text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white font-semibold text-lg", children: "No analytics data yet" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1574,
+        lineNumber: 1575,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm mt-1 mb-4", children: [
         "Select a course and click ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Run Analytics" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1575,
+          lineNumber: 1576,
           columnNumber: 84
         }, void 0),
         " to process PT-051 data."
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1575,
+        lineNumber: 1576,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleRunAnalytics, className: "bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold", children: "Run Analytics Now" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1576,
+        lineNumber: 1577,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1573,
+      lineNumber: 1574,
       columnNumber: 9
     }, void 0),
     loading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-10 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 animate-pulse", children: "Loading analytics data..." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1585,
+      lineNumber: 1586,
       columnNumber: 11
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1584,
+      lineNumber: 1585,
       columnNumber: 9
     }, void 0),
     !loading && summary && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -29731,12 +29732,12 @@ const TrainingIntelligenceTab = () => {
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: tab.label }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1601,
+              lineNumber: 1602,
               columnNumber: 17
             }, void 0),
             tab.badge !== void 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none", children: tab.badge }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-              lineNumber: 1603,
+              lineNumber: 1604,
               columnNumber: 19
             }, void 0)
           ]
@@ -29745,38 +29746,38 @@ const TrainingIntelligenceTab = () => {
         true,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-          lineNumber: 1595,
+          lineNumber: 1596,
           columnNumber: 15
         },
         void 0
       )) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1593,
+        lineNumber: 1594,
         columnNumber: 11
       }, void 0),
       activeTab === "course" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CourseTab, { summary, trainees, events }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1613,
+        lineNumber: 1614,
         columnNumber: 13
       }, void 0),
       activeTab === "trainee" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TraineeTab, { trainees }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1616,
+        lineNumber: 1617,
         columnNumber: 13
       }, void 0),
       activeTab === "events" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(EventsTab, { events }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-        lineNumber: 1619,
+        lineNumber: 1620,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-      lineNumber: 1591,
+      lineNumber: 1592,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/tabs/TrainingIntelligenceTab.tsx",
-    lineNumber: 1527,
+    lineNumber: 1528,
     columnNumber: 5
   }, void 0);
 };
