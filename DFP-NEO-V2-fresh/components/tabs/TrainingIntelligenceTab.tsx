@@ -157,6 +157,23 @@ const parseProgression = (raw: any): number[] => {
   }).filter((v: number) => v > 0);
 };
 
+const parseProgressionFull = (raw: any): { grades: number[]; labels: string[] } => {
+  const arr = parseJ(raw, []);
+  if (!Array.isArray(arr)) return { grades: [], labels: [] };
+  const filtered = arr
+    .map((item: any, i: number) => {
+      const grade = typeof item === 'number' ? item
+        : (item && typeof item === 'object') ? (item.grade ?? item.score ?? item.avgGrade ?? 0) : 0;
+      const label = (item && typeof item === 'object' && item.event) ? String(item.event) : `#${i + 1}`;
+      return { grade, label };
+    })
+    .filter(x => x.grade > 0);
+  return {
+    grades: filtered.map(x => x.grade),
+    labels: filtered.map(x => x.label),
+  };
+};
+
 // ── SparkBar ────────────────────────────────────────────────────────────────────
 
 const SparkBar: React.FC<{ value: number; max?: number; colorClass?: string }> = ({ value, max = 5, colorClass }) => {
@@ -277,7 +294,7 @@ const SparkLine: React.FC<{
           >
             <p className="text-xs text-gray-400 leading-tight">{label}</p>
             <p className="text-sm font-bold leading-tight" style={{ color: gc(hoveredVal) }}>
-              Grade: {hoveredVal.toFixed(2)}
+              Grade: {Math.round(hoveredVal)}
             </p>
           </div>
         );
@@ -459,12 +476,12 @@ const Tag: React.FC<{ text: string; type?: 'red' | 'green' | 'yellow' | 'blue' |
 
 // ── Grade Progression Modal (interactive, enlarged) ─────────────────────────────
 
-const ProgressionModal: React.FC<{ data: number[]; name: string; trend: string; onClose: () => void }> = ({ data, name, trend, onClose }) => {
+const ProgressionModal: React.FC<{ data: number[]; labels?: string[]; name: string; trend: string; onClose: () => void }> = ({ data, labels: propLabels, name, trend, onClose }) => {
   const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
   const avgVal = data.reduce((s, v) => s + v, 0) / data.length;
   const minVal = Math.min(...data);
   const maxVal = Math.max(...data);
-  const labels = data.map((_, i) => `Assessment #${i + 1}`);
+  const labels = propLabels && propLabels.length === data.length ? propLabels : data.map((_, i) => `#${i + 1}`);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
@@ -530,25 +547,41 @@ const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>
   if (!data || data.length === 0) return <p className="text-gray-500 text-sm">No data</p>;
   const bw = Math.max(20, Math.min(52, 800 / data.length));
   const gap = Math.max(5, bw * 0.4);
-  const leftPad = 32;
+  const leftPad = 36;
   const tw = leftPad + data.length * (bw + gap) + gap;
-  const tp = 16, bp = 44, ch = height - tp - bp;
+  const tp = 16, bp = 56, ch = height - tp - bp;
+  // Dynamic Y scale: zoom in on actual data range to exaggerate differences
+  const vals = data.map(d => safeN(d.value)).filter(v => v > 0);
+  const dataMin = vals.length > 0 ? Math.min(...vals) : 0;
+  const dataMax = vals.length > 0 ? Math.max(...vals) : max;
+  const yPad = Math.max(0.2, (dataMax - dataMin) * 0.15);
+  const yMin = Math.max(0, dataMin - yPad);
+  const yMax = Math.min(max, dataMax + yPad);
+  const yRange = yMax - yMin || 1;
+  // Grid lines at nice intervals within the data range
+  const gridStep = yRange <= 0.5 ? 0.1 : yRange <= 1 ? 0.2 : yRange <= 2 ? 0.5 : 1;
+  const gridLines: number[] = [];
+  for (let v = Math.ceil(yMin / gridStep) * gridStep; v <= yMax + 0.001; v += gridStep) {
+    gridLines.push(Math.round(v * 100) / 100);
+  }
+  const getBarY = (v: number) => tp + ch * (1 - (v - yMin) / yRange);
   return (
     <svg width={tw} height={height} className="overflow-visible" style={{ minWidth: '100%' }}>
-      {[0, 1, 2, 3, 4, 5].map(v => {
-        const y = tp + ch * (1 - v / max);
+      {gridLines.map(v => {
+        const y = getBarY(v);
         return (
           <g key={v}>
             <line x1={leftPad} y1={y} x2={tw} y2={y} stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
-            <text x={leftPad - 5} y={y + 3} textAnchor="end" fontSize="9" fill="#6b7280">{v.toFixed(0)}</text>
+            <text x={leftPad - 5} y={y + 3} textAnchor="end" fontSize="9" fill="#6b7280">{v.toFixed(1)}</text>
           </g>
         );
       })}
       {data.map((item, i) => {
-        const pct = Math.min(1, safeN(item.value) / max);
-        const bh = Math.max(3, pct * ch);
+        const barTop = getBarY(safeN(item.value));
+        const barBot = getBarY(yMin);
+        const bh = Math.max(3, barBot - barTop);
         const x = leftPad + gap + i * (bw + gap);
-        const y = tp + ch - bh;
+        const y = barTop;
         const color = item.value >= 4 ? '#10b981' : item.value >= 3 ? '#eab308' : '#ef4444';
         return (
           <g key={i}>
@@ -560,8 +593,9 @@ const ColChartExpanded: React.FC<{ data: Array<{ label: string; value: number }>
               x={x + bw / 2}
               y={height - 6}
               textAnchor="end"
-              fontSize="10"
-              fill="#9ca3af"
+              fontSize="13"
+              fill="#e5e7eb"
+              fontWeight="500"
               transform={`rotate(-45,${x + bw / 2},${height - 6})`}
             >
               {item.label}
@@ -588,7 +622,7 @@ const GradeByTraineeModal: React.FC<{
           <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
         </div>
         <div className="bg-gray-800 rounded-xl p-5 overflow-x-auto">
-          <ColChartExpanded data={trainees} max={5} height={300} />
+          <ColChartExpanded data={trainees} max={5} height={420} />
         </div>
         <div className="flex flex-wrap gap-4 mt-4 justify-center text-xs">
           {[
@@ -789,7 +823,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'at_risk' | 'monitor' | 'exceeding'>('all');
   const [selected, setSelected] = useState<TIETraineeSummary | null>(null);
-  const [progressionModal, setProgressionModal] = useState<{ data: number[]; name: string; trend: string } | null>(null);
+  const [progressionModal, setProgressionModal] = useState<{ data: number[]; labels: string[]; name: string; trend: string } | null>(null);
   const [gradeByTraineeModal, setGradeByTraineeModal] = useState(false);
 
   const atRiskCount = trainees.filter(t => t.riskLevel === 'at_risk').length;
@@ -805,6 +839,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
   const courseAvg = trainees.length > 0 ? trainees.reduce((s, t) => s + safeN(t.avgOverallGrade), 0) / trainees.length : 0;
 
   const selProgression = selected ? parseProgression(selected.gradeProgression) : [];
+  const selProgressionFull = selected ? parseProgressionFull(selected.gradeProgression) : { grades: [], labels: [] };
   const selSkills = selected ? parseJ(selected.skillFamilyScores ?? selected.strongestSkillFamilies, {}) as Record<string, number> : {};
   const hasSkillScores = Object.values(selSkills).some(v => typeof v === 'number' && v > 0);
   const weakEls = selected ? parseJ(selected.recurringWeakElements, []) as string[] : [];
@@ -882,7 +917,9 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   <tr><td colSpan={7} className="text-center text-gray-500 py-8 text-sm">No trainees match the filter</td></tr>
                 )}
                 {filtered.map(t => {
-                  const prog = parseProgression(t.gradeProgression);
+                  const progFull = parseProgressionFull(t.gradeProgression);
+                  const prog = progFull.grades;
+                  const progLabels = progFull.labels;
                   return (
                     <tr key={t.id} onClick={() => setSelected(selected?.id === t.id ? null : t)}
                       className={`border-b border-gray-700/50 cursor-pointer transition-colors ${selected?.id === t.id ? 'bg-blue-900/30' : 'hover:bg-gray-700/40'}`}>
@@ -903,7 +940,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                               title="Click to enlarge"
                               onClick={e => {
                                 e.stopPropagation();
-                                setProgressionModal({ data: prog, name: t.traineeFullName, trend: t.overallTrend });
+                                setProgressionModal({ data: prog, labels: progLabels, name: t.traineeFullName, trend: t.overallTrend });
                               }}
                               className="hover:opacity-80 transition-opacity cursor-zoom-in"
                             >
@@ -1043,7 +1080,7 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                 </div>
                 <p className="text-xs text-gray-600 mt-1">{selProgression.length} assessments</p>
                 <button
-                  onClick={() => setProgressionModal({ data: selProgression, name: selected.traineeFullName, trend: selected.overallTrend })}
+                  onClick={() => setProgressionModal({ data: selProgressionFull.grades, labels: selProgressionFull.labels, name: selected.traineeFullName, trend: selected.overallTrend })}
                   className="mt-2 w-full text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded py-1 transition-colors border border-blue-900/40"
                 >
                   Expand full view
