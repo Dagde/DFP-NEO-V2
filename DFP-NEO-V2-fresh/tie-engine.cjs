@@ -1214,21 +1214,25 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         bottleneck: isBottleneck, overService: isOverService
       });
 
+      // Pass rate: % of attempts with overall grade > CONCERN_THRESHOLD (i.e. a pass)
+      const passCount = grades.filter(g => g > CONCERN_THRESHOLD).length;
+      const passRate = grades.length > 0 ? (passCount / grades.length) * 100 : 0;
+
       const evtSumId = `esum-${runId}-${eventCode}-${courseName}`.substring(0, 200);
       await safeExec(db, `
         INSERT INTO "TIEEventSummary"
           ("id","runId","eventCode","courseName","totalAttempts","avgOverallGrade","gradeVariance",
            "weakElementsByAvg","strongElementsByAvg","dominantNegativeTags","dominantPositiveTags",
            "difficultyScore","bottleneckScore","overServiceIndicator","differentiationScore",
-           "narrativeSummary")
-        VALUES($1::text,$2::text,$3::text,$4::text,$5::int,$6::numeric,$7::numeric,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::numeric,$13::numeric,$14::boolean,$15::numeric,$16::text)
+           "narrativeSummary","passRate")
+        VALUES($1::text,$2::text,$3::text,$4::text,$5::int,$6::numeric,$7::numeric,$8::jsonb,$9::jsonb,$10::jsonb,$11::jsonb,$12::numeric,$13::numeric,$14::boolean,$15::numeric,$16::text,$17::numeric)
         ON CONFLICT DO NOTHING
       `, evtSumId, runId, eventCode, courseName, grades.length,
          Number(avgGrade), Number(variance),
          JSON.stringify(weakEls), JSON.stringify(strongEls),
          JSON.stringify(negTagsEvt), JSON.stringify(posTagsEvt),
          Number(difficultyScore), Number(bottleneckScore), Boolean(isOverService), Number(differentiationScore),
-         narrative
+         narrative, Number(passRate)
       );
 
       // Event-level findings

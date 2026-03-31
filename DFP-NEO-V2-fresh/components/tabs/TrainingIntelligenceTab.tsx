@@ -1280,16 +1280,21 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
     </div>
   );
 
-  const hardest = events.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, events[0]);
-  const easiest = events.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, events[0]);
-  const mostAttempts = events.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events[0]);
-  const mostVariable = events.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events[0]);
-
   // Exclude CPT, TUT, MB events from hardest/easiest analysis — only Flights and FTD count
   const isFlightOrFTD = (code: string) => {
     const c = code.toUpperCase();
     return !c.startsWith('CPT') && !c.startsWith('TUT') && !c.includes('MB') && !c.startsWith('MB');
   };
+
+  const flightFtdEvents = events.filter(ev => isFlightOrFTD(ev.eventCode) && safeN(ev.avgOverallGrade) > 0);
+  const hardest = flightFtdEvents.length > 0
+    ? flightFtdEvents.reduce((h, ev) => safeN(ev.avgOverallGrade) < safeN(h.avgOverallGrade) ? ev : h, flightFtdEvents[0])
+    : events[0];
+  const easiest = flightFtdEvents.length > 0
+    ? flightFtdEvents.reduce((e, ev) => safeN(ev.avgOverallGrade) > safeN(e.avgOverallGrade) ? ev : e, flightFtdEvents[0])
+    : events[0];
+  const mostAttempts = events.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events[0]);
+  const mostVariable = events.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events[0]);
 
   // Top 5 events trainees struggle with (lowest avg grade, flights/FTD only, min 2 attempts)
   const top5Struggle = [...events]
@@ -1330,7 +1335,6 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
         {/* Top 5 Struggle */}
         <div className="bg-gray-800 border border-red-900/50 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">⚠️</span>
             <div>
               <h3 className="text-white font-bold text-sm">Top 5 Events Trainees Struggle With</h3>
               <p className="text-gray-400 text-xs">Click an event for detailed analysis</p>
@@ -1446,7 +1450,6 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
         {/* Top 5 Excel */}
         <div className="bg-gray-800 border border-emerald-900/50 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">🏆</span>
             <div>
               <h3 className="text-white font-bold text-sm">Top 5 Events Trainees Excel At</h3>
               <p className="text-gray-400 text-xs">Click an event for detailed analysis</p>
