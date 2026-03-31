@@ -10726,6 +10726,8 @@ updates.forEach(update => {
                                     changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
                                 });
                             }}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {
@@ -11521,6 +11523,8 @@ updates.forEach(update => {
                             onNavigateToTrainee={(trainee) => {
                                 setSelectedPersonForProfile(trainee);
                             }}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
                         />;
                 case 'Trainees':
                     return <TraineeListView 
@@ -11817,8 +11821,91 @@ updates.forEach(update => {
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                 }}
-                                onSave={(data) => {
+                                onSave={async (data) => {
                                     console.log('Post flight data saved:', data);
+                                    
+                                    // Persist currency updates to person's currency records
+                                    if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
+                                        const event = eventForPostFlight;
+                                        const targetPersons: Array<{ person: any; personType: 'instructor' | 'trainee' }> = [];
+                                        
+                                        if (event?.student) {
+                                            const trainee = traineesData.find(t => t.name === event.student || t.fullName === event.student);
+                                            if (trainee) targetPersons.push({ person: trainee, personType: 'trainee' });
+                                        }
+                                        if (event?.instructor) {
+                                            const instructor = instructorsData.find(i => i.name === event.instructor);
+                                            if (instructor) targetPersons.push({ person: instructor, personType: 'instructor' });
+                                        }
+                                        
+                                        for (const { person, personType } of targetPersons) {
+                                            const dbId = (person as any).id;
+                                            if (!dbId) continue;
+                                            
+                                            // Build currency updates: currencyId -> date value
+                                            const existingStatus: PersonCurrencyStatus[] = person.currencyStatus || [];
+                                            const allCurrencyDefs = [...masterCurrencies, ...currencyRequirements];
+                                            const updatedStatus = [...existingStatus];
+                                            
+                                            for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                                                if (!value || value === 'false') continue;
+                                                const def = allCurrencyDefs.find(c => c.id === currencyId);
+                                                if (!def) continue;
+                                                
+                                                // value is a date string for date inputs
+                                                const dateValue = typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : null;
+                                                if (!dateValue) continue;
+                                                
+                                                const validityDays = 'validityDays' in def ? def.validityDays : 365;
+                                                const expiryDate = new Date(dateValue + 'T00:00:00Z');
+                                                expiryDate.setDate(expiryDate.getDate() + validityDays);
+                                                const expStr = expiryDate.toISOString().slice(0, 10);
+                                                const today = new Date();
+                                                today.setHours(0,0,0,0);
+                                                const isCurrent = expiryDate > today;
+                                                
+                                                const idx = updatedStatus.findIndex(s => s.currencyName === def.name || s.currencyName === def.id);
+                                                const newRecord: PersonCurrencyStatus = {
+                                                    currencyName: def.name,
+                                                    lastEventDate: dateValue,
+                                                    calculatedExpiry: expStr,
+                                                    isCurrent,
+                                                };
+                                                if (idx >= 0) {
+                                                    updatedStatus[idx] = newRecord;
+                                                } else {
+                                                    updatedStatus.push(newRecord);
+                                                }
+                                            }
+                                            
+                                            const endpoint = personType === 'instructor'
+                                                ? `/api/personnel/${dbId}/currencies`
+                                                : `/api/trainees/${dbId}/currencies`;
+                                            
+                                            try {
+                                                await fetch(endpoint, {
+                                                    method: 'PATCH',
+                                                    credentials: 'include',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ currencyStatus: updatedStatus }),
+                                                });
+                                                // Update local state
+                                                if (personType === 'instructor') {
+                                                    setInstructorsData(prev => prev.map(i => 
+                                                        (i as any).id === dbId ? { ...i, currencyStatus: updatedStatus } : i
+                                                    ));
+                                                } else {
+                                                    setTraineesData(prev => prev.map(t => 
+                                                        (t as any).id === dbId ? { ...t, currencyStatus: updatedStatus } : t
+                                                    ));
+                                                }
+                                                console.log(`[PostFlight] ✅ Currency updated for ${person.name}`);
+                                            } catch (err) {
+                                                console.warn(`[PostFlight] ⚠️ Currency update failed for ${person.name}:`, err);
+                                            }
+                                        }
+                                    }
+                                    
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                     setSuccessMessage('Post-flight data saved!');

@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience } from '../types';
+import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -41,6 +41,8 @@ interface CourseRosterViewProps {
     onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
     onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
     onBackcourseTrainee?: (trainee: Trainee, newCourse: string) => void;
+    masterCurrencies?: MasterCurrency[];
+    currencyRequirements?: CurrencyRequirement[];
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -97,7 +99,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onOpenInstructorProfile,
     onUpdateCourseNumber,
     onUpdateCourseUnit,
-    onBackcourseTrainee
+    onBackcourseTrainee,
+    masterCurrencies = [],
+    currencyRequirements = [],
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -405,6 +409,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onOpenInstructorProfile={onOpenInstructorProfile}
                     isCreating={isCreatingNew}
                     activeCourses={activeCourseNumbers}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (

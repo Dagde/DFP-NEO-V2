@@ -1,11 +1,12 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience } from '../types';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import CurrencyPanel from './CurrencyPanel';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -23,6 +24,8 @@ interface InstructorProfileFlyoutProps {
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
   onNavigateToTrainee?: (trainee: Trainee) => void;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -119,7 +122,8 @@ const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 6
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee
+  locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee,
+  masterCurrencies = [], currencyRequirements = [],
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -329,20 +333,22 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
               {/* ── TAB PANEL (shown inline above profile when a tab is active) ── */}
               {activeTab === 'currency' && (
-                <div className={card3d + " p-4"} style={card3dStyle}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-white">Currency — {instructor.name}</h4>
-                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                <div className={card3d + " p-3"} style={card3dStyle}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-bold text-white">Currency &mdash; {instructor.name}</h4>
+                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">&#x2715; Close</button>
                   </div>
-                  <p className="text-gray-400 text-xs italic mb-4">Currency records for this staff member.</p>
-                  <div className="space-y-2">
-                    {(instructor.currencyStatus || []).length > 0 ? (instructor.currencyStatus || []).map((cs: any) => (
-                      <div key={cs.currencyId} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
-                        <span className="text-white font-medium">{cs.currencyId}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cs.status === 'Current' ? 'bg-green-600 text-white' : cs.status === 'Expiring' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}`}>{cs.status}</span>
-                      </div>
-                    )) : <p className="text-gray-500 text-xs italic text-center py-4">No currency records found.</p>}
-                  </div>
+                  <CurrencyPanel
+                    personId={(instructor as any).id}
+                    personType="instructor"
+                    personName={instructor.name}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
+                    initialCurrencyStatus={instructor.currencyStatus}
+                    onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
+                      onUpdateInstructor({ ...instructor, currencyStatus: newStatus });
+                    }}
+                  />
                 </div>
               )}
 

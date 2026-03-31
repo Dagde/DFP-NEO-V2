@@ -267,6 +267,125 @@ app.post('/api/personnel', async (req, res) => {
   }
 });
 
+// PATCH /api/personnel/:id - Update a personnel (instructor) record
+app.patch('/api/personnel/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Personnel ID is required' });
+    }
+
+    const existing = await db.personnel.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Personnel not found' });
+    }
+
+    const updated = await db.personnel.update({
+      where: { id },
+      data: updates
+    });
+
+    console.log(`✅ PATCH /api/personnel/${id} - updated: ${updated.name}`);
+    res.json({ success: true, personnel: updated });
+  } catch (error) {
+    console.error('❌ PATCH /api/personnel error:', error);
+    res.status(500).json({ error: 'Failed to update personnel', details: error.message });
+  }
+});
+
+// GET /api/personnel/:id/currencies - Get currency status for an instructor
+app.get('/api/personnel/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const record = await db.personnel.findUnique({ where: { id } });
+    if (!record) return res.status(404).json({ error: 'Personnel not found' });
+    const currencies = record.qualifications ? (record.qualifications.currencyStatus || []) : [];
+    res.json({ currencyStatus: currencies });
+  } catch (error) {
+    console.error('❌ GET /api/personnel/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to fetch personnel currencies', details: error.message });
+  }
+});
+
+// PATCH /api/personnel/:id/currencies - Update currency status for an instructor
+app.patch('/api/personnel/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const { currencyStatus } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Personnel ID is required' });
+
+    const existing = await db.personnel.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Personnel not found' });
+
+    // Store currency status inside qualifications JSON (no schema migration needed)
+    const currentQual = existing.qualifications || {};
+    const updated = await db.personnel.update({
+      where: { id },
+      data: {
+        qualifications: {
+          ...(typeof currentQual === 'object' ? currentQual : {}),
+          currencyStatus: currencyStatus || []
+        }
+      }
+    });
+
+    console.log(`✅ PATCH /api/personnel/${id}/currencies - updated currency for: ${updated.name}`);
+    res.json({ success: true, currencyStatus });
+  } catch (error) {
+    console.error('❌ PATCH /api/personnel/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to update personnel currencies', details: error.message });
+  }
+});
+
+// GET /api/trainees/:id/currencies - Get currency status for a trainee
+app.get('/api/trainees/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const record = await db.trainee.findUnique({ where: { id } });
+    if (!record) return res.status(404).json({ error: 'Trainee not found' });
+    let currencies = [];
+    if (record.currencyStatus) {
+      currencies = Array.isArray(record.currencyStatus) ? record.currencyStatus : [];
+    }
+    res.json({ currencyStatus: currencies });
+  } catch (error) {
+    console.error('❌ GET /api/trainees/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to fetch trainee currencies', details: error.message });
+  }
+});
+
+// PATCH /api/trainees/:id/currencies - Update currency status for a trainee
+app.patch('/api/trainees/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const { currencyStatus } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Trainee ID is required' });
+
+    const existing = await db.trainee.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Trainee not found' });
+
+    const updated = await db.trainee.update({
+      where: { id },
+      data: { currencyStatus: currencyStatus || [] }
+    });
+
+    console.log(`✅ PATCH /api/trainees/${id}/currencies - updated currency for: ${updated.name}`);
+    res.json({ success: true, currencyStatus });
+  } catch (error) {
+    console.error('❌ PATCH /api/trainees/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to update trainee currencies', details: error.message });
+  }
+});
+
 // DELETE /api/personnel/:id - Delete a personnel record
 app.delete('/api/personnel/:id', async (req, res) => {
   try {

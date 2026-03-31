@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScheduleEvent, Instructor, Trainee } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -54,6 +54,8 @@ interface InstructorListViewProps {
   onProfileOpened?: () => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -75,7 +77,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onProfileOpened,
     onViewLogbook,
     onRequestSct,
-    onNavigateToTrainee
+    onNavigateToTrainee,
+    masterCurrencies = [],
+    currencyRequirements = [],
 }) => {
   console.log(`🏫 [INSTRUCTORLISTVIEW RENDER] school=${school}, instructorsData.length=${instructorsData.length}`);
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
@@ -574,6 +578,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                         }
                     }}
                     onNavigateToTrainee={onNavigateToTrainee}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
                 />
         )}
       
