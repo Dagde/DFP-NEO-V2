@@ -59,6 +59,8 @@ async function getPrisma() {
     } catch (tieErr) {
       console.error('TIE startup failed (non-fatal):', tieErr.message);
     }
+    // Ensure AppSettings table exists (stores all org-level settings including currencies)
+    await ensureAppSettingsTable(prisma);
   }
   return prisma;
 }
@@ -66,6 +68,55 @@ async function getPrisma() {
 // ============================================================
 // API ROUTES
 // ============================================================
+
+// ============================================================
+// APP SETTINGS (currencies, org config, etc.) — PERSISTENT
+// ============================================================
+
+// GET /api/settings - Load all org settings including currencies
+app.get('/api/settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const orgId = req.query.orgId || 'default';
+    const rows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+    if (!rows || rows.length === 0) {
+      return res.json({ settings: null });
+    }
+    return res.json({ settings: rows[0].data });
+  } catch (error) {
+    console.error('[Settings] GET error:', error);
+    res.status(500).json({ error: 'Failed to load settings', details: error.message });
+  }
+});
+
+// POST /api/settings - Save all org settings including currencies
+app.post('/api/settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { orgId = 'default', settings, updatedBy } = req.body;
+    if (!settings) {
+      return res.status(400).json({ error: 'Missing settings data' });
+    }
+    const settingsJson = JSON.stringify(settings);
+    const now = new Date().toISOString();
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
+      VALUES (gen_random_uuid()::text, $1, $2::jsonb, $3, $4::timestamp, $4::timestamp)
+      ON CONFLICT ("orgId") DO UPDATE SET
+        "data" = $2::jsonb,
+        "updatedBy" = $3,
+        "updatedAt" = $4::timestamp
+    `, orgId, settingsJson, updatedBy || null, now);
+    console.log(`[Settings] ✅ Saved settings for orgId=${orgId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Settings] POST error:', error);
+    res.status(500).json({ error: 'Failed to save settings', details: error.message });
+  }
+});
 
 // GET /api/personnel
 app.get('/api/personnel', async (req, res) => {
@@ -1443,6 +1494,32 @@ if (fs.existsSync(staticPath)) {
 // ============================================================
 
 // Create AircraftAvailabilityHistory table if it doesn't exist
+// ============================================================
+// APP SETTINGS TABLE — CREATE IF NOT EXISTS
+// ============================================================
+async function ensureAppSettingsTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AppSettings" (
+        "id"        TEXT        NOT NULL,
+        "orgId"     TEXT        NOT NULL,
+        "data"      JSONB       NOT NULL DEFAULT '{}',
+        "updatedBy" TEXT,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "AppSettings_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "AppSettings_orgId_key"
+      ON "AppSettings"("orgId");
+    `);
+    console.log('✅ AppSettings table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure AppSettings table:', err.message);
+  }
+}
+
 async function ensureAircraftAvailabilityTable(db) {
   try {
     await db.$executeRawUnsafe(`
