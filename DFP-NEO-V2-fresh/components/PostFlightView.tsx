@@ -656,77 +656,64 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
                     {/* Currency Updates Panel (Right of Result) */}
                     {postFlightCurrencies.length > 0 && (
-                        <div className="flex-1 bg-gray-700/50 p-4 rounded-lg border border-amber-600/30 min-w-[220px]">
-                            <div className="flex items-center gap-2 mb-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                                </svg>
-                                <span className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Currency Updates</span>
-                            </div>
-                            <div className="flex flex-col gap-2">
+                        <div className="flex-1 bg-gray-700/50 px-3 py-2 rounded border border-amber-600/30 min-w-[180px]">
+                            <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wide mb-1 leading-none">Currencies</p>
+                            <div className="flex flex-col gap-0.5">
                                 {postFlightCurrencies.map(c => {
                                     const inputTypes = getEffectiveInputTypes(c);
-                                    const isComposite = c.type === 'composite';
-                                    const accentColor = isComposite ? 'border-purple-500/50' : 'border-green-500/50';
+                                    const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
                                     return (
-                                        <div key={c.id} className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-l-2 ${accentColor} pl-2 py-0.5`}>
-                                            {/* Currency name spans full width as a header */}
-                                            <span className="col-span-2 text-xs font-semibold text-gray-200 leading-tight truncate" title={c.name}>
-                                                {c.name}
-                                            </span>
-
-                                            {/* One row per input type */}
+                                        <div key={c.id} className="flex flex-col gap-0.5">
                                             {inputTypes.map(inputType => {
                                                 const fieldKey = inputTypes.length > 1 ? `${c.id}__${inputType}` : c.id;
                                                 const val = currencyValues[fieldKey] ?? '';
 
                                                 if (inputType === 'checkbox') {
-                                                    // Simple checkbox — ticking it records the flight/FTD date automatically
-                                                    const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
                                                     const isChecked = val !== '' && val !== 'false';
                                                     return (
-                                                        <React.Fragment key={inputType}>
-                                                            <span className="text-xs text-gray-400">Completed</span>
+                                                        <label key={inputType} className="flex items-center gap-1.5 cursor-pointer group">
                                                             <input
                                                                 type="checkbox"
                                                                 checked={isChecked}
                                                                 onChange={e => handleCurrencyChange(fieldKey, e.target.checked ? flightDate : '')}
-                                                                className="h-4 w-4 rounded accent-amber-500 cursor-pointer justify-self-end"
-                                                                title={isChecked ? `Recorded: ${val}` : 'Tick to mark as completed — flight date will be recorded'}
+                                                                className="h-3.5 w-3.5 flex-shrink-0 rounded accent-amber-500 cursor-pointer"
+                                                                title={isChecked ? `Recorded: ${val}` : 'Flight date recorded on tick'}
                                                             />
-                                                        </React.Fragment>
+                                                            <span className="text-[11px] text-gray-200 leading-none truncate" title={c.name}>{c.name}</span>
+                                                        </label>
                                                     );
                                                 }
 
                                                 if (inputType === 'date') {
                                                     return (
-                                                        <React.Fragment key={inputType}>
+                                                        <label key={inputType} className="flex items-center gap-1.5">
+                                                            <span className="text-[11px] text-gray-300 leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
                                                             <input
                                                                 type="date"
                                                                 value={val}
                                                                 onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
-                                                                className="col-span-2 block w-full bg-gray-700 border border-gray-600 rounded h-[28px] py-0.5 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                                                className="w-[120px] flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1.5 text-white text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                                                                 style={{ colorScheme: 'dark' }}
                                                                 title="Date last completed"
                                                             />
-                                                        </React.Fragment>
+                                                        </label>
                                                     );
                                                 }
 
                                                 if (inputType === 'count') {
                                                     return (
-                                                        <React.Fragment key={inputType}>
-                                                            <span className="text-xs text-gray-400">Count today</span>
+                                                        <label key={inputType} className="flex items-center gap-1.5">
+                                                            <span className="text-[11px] text-gray-300 leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
                                                             <input
                                                                 type="number"
                                                                 min={0}
                                                                 value={val}
                                                                 onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
                                                                 placeholder="0"
-                                                                className="w-14 bg-gray-700 border border-gray-600 rounded h-[28px] py-0.5 px-1 text-white text-xs text-center focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 justify-self-end"
+                                                                className="w-10 flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1 text-white text-[11px] text-center focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
                                                                 title="Count completed today"
                                                             />
-                                                        </React.Fragment>
+                                                        </label>
                                                     );
                                                 }
 
