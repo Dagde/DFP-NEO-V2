@@ -1285,18 +1285,32 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   const [excelSelected, setExcelSelected] = useState<TIEEventSummary | null>(null);
   const [chartModal, setChartModal] = useState<{ title: string; data: { label: string; value: number; color: string }[]; max: number } | null>(null);
 
-  // Derive passRate from bottleneckScore when DB value is null/0
-  // bottleneckScore = fraction of attempts AT or BELOW concern threshold (fail)
-  // so passRate = (1 - bottleneckScore) * 100
+  // Derive passRate when DB value is null (old rows pre-fix)
+  // Grading scale: 1=Unsatisfactory, 2=Below Standard, 3=Satisfactory(Pass), 4=Above Avg, 5=Exceptional
+  // Pass threshold: grade >= 3 is a PASS. Only grades 1 or 2 are failures.
+  //
+  // Old DB bottleneckScore was computed with WRONG threshold (counted grade 3 as fail).
+  // So bottleneckScore is heavily inflated. We derive pass rate from avgOverallGrade instead:
+  //   - avg = 3.0 means all grades are exactly 3 → 100% pass
+  //   - avg = 2.8 means some grade-2s dragging it down → some failures
+  //   - avg = 2.5 means roughly half grade-2, half grade-3 → ~50% pass
+  // Formula: on a 1-5 scale where pass=3, fail=1or2:
+  //   If avg >= 3.0 → all passing → 100%
+  //   If avg < 3.0 → estimate fail% as (3.0 - avg) / 2.0 * 100
+  //     e.g. avg=2.92 → failPct=(0.08/2)*100=4% → passRate=96%
+  //     e.g. avg=2.5  → failPct=(0.5/2)*100=25% → passRate=75%
+  //     e.g. avg=2.0  → failPct=(1.0/2)*100=50% → passRate=50%
   const getPassRate = (ev: TIEEventSummary): number => {
     const stored = safeN(ev.passRate);
     if (stored > 0) return stored;
-    // Fallback: derive from bottleneckScore
-    const bs = safeN(ev.bottleneckScore);
-    if (safeN(ev.totalAttempts) > 0) {
-      return Math.round((1 - bs) * 100);
-    }
-    return 0;
+    const attempts = safeN(ev.totalAttempts);
+    if (attempts === 0) return 0;
+    const avg = safeN(ev.avgOverallGrade);
+    if (avg <= 0) return 0;
+    if (avg >= 3.0) return 100;
+    // avg < 3.0: estimate fail fraction from distance below pass threshold
+    const estimatedFailPct = Math.min(100, ((3.0 - avg) / 2.0) * 100);
+    return Math.round(Math.max(0, 100 - estimatedFailPct));
   };
 
   const handleSort = (k: keyof TIEEventSummary) => {

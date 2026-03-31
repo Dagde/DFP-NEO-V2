@@ -1186,7 +1186,9 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         .map(([el, avg]) => ({ element: el, avg: Math.round(avg * 100) / 100 }));
 
       // Count trainees below concern threshold
-      const traineesBelowThreshold = records.filter(r => (r.overallGrade || 0) <= CONCERN_THRESHOLD).length;
+      // Grade >= CONCERN_THRESHOLD is a PASS (3 = Satisfactory = Pass)
+      // Grade < CONCERN_THRESHOLD is a FAIL (only grades 1 or 2 are failures)
+      const traineesBelowThreshold = records.filter(r => (r.overallGrade || 0) < CONCERN_THRESHOLD).length;
       const bottleneckPct = grades.length > 0 ? (traineesBelowThreshold / grades.length) * 100 : 0;
       const isBottleneck = bottleneckPct >= BOTTLENECK_PCT && grades.length >= MIN_OBS;
       const isOverService = avgGrade >= OVER_SERVICE_AVG && variance < 0.5 && grades.length >= MIN_OBS;
@@ -1214,8 +1216,8 @@ async function runTIEAnalytics(db, courseFilter, triggeredBy = 'manual') {
         bottleneck: isBottleneck, overService: isOverService
       });
 
-      // Pass rate: % of attempts with overall grade > CONCERN_THRESHOLD (i.e. a pass)
-      const passCount = grades.filter(g => g > CONCERN_THRESHOLD).length;
+      // Pass rate: % of attempts with overall grade >= CONCERN_THRESHOLD (grade 3+ = pass)
+      const passCount = grades.filter(g => g >= CONCERN_THRESHOLD).length;
       const passRate = grades.length > 0 ? (passCount / grades.length) * 100 : 0;
 
       const evtSumId = `esum-${runId}-${eventCode}-${courseName}`.substring(0, 200);
