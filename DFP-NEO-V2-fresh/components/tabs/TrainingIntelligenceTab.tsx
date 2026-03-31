@@ -697,12 +697,14 @@ const CourseTab: React.FC<{
       {/* Row 1: Status Donut + Skill Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SCard title="Trainee Status Distribution">
-          <DonutChart size={150} segments={[
-            { label: 'At Risk', value: atRisk, color: '#ef4444' },
-            { label: 'Monitor', value: monitor, color: '#eab308' },
-            { label: 'Normal', value: normal, color: '#3b82f6' },
-            { label: 'Exceeding', value: exceeding, color: '#10b981' },
-          ].filter(s => s.value > 0)} />
+          <div className="flex justify-center items-center py-2">
+            <DonutChart size={300} segments={[
+              { label: 'At Risk', value: atRisk, color: '#ef4444' },
+              { label: 'Monitor', value: monitor, color: '#eab308' },
+              { label: 'Normal', value: normal, color: '#3b82f6' },
+              { label: 'Exceeding', value: exceeding, color: '#10b981' },
+            ].filter(s => s.value > 0)} />
+          </div>
         </SCard>
         <SCard title="Skill Family Performance">
           {skillEntries.length > 0
@@ -1183,15 +1185,21 @@ const EventsTab: React.FC<{ events: TIEEventSummary[] }> = ({ events }) => {
   const mostAttempts = events.reduce((m, ev) => safeN(ev.totalAttempts) > safeN(m.totalAttempts) ? ev : m, events[0]);
   const mostVariable = events.reduce((m, ev) => safeN(ev.gradeVariance) > safeN(m.gradeVariance) ? ev : m, events[0]);
 
-  // Top 5 events trainees struggle with (lowest avg grade, min 2 attempts)
+  // Exclude CPT, TUT, MB events from hardest/easiest analysis — only Flights and FTD count
+  const isFlightOrFTD = (code: string) => {
+    const c = code.toUpperCase();
+    return !c.startsWith('CPT') && !c.startsWith('TUT') && !c.includes('MB') && !c.startsWith('MB');
+  };
+
+  // Top 5 events trainees struggle with (lowest avg grade, flights/FTD only, min 2 attempts)
   const top5Struggle = [...events]
-    .filter(ev => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0)
+    .filter(ev => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode))
     .sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade))
     .slice(0, 5);
 
-  // Top 5 events trainees excel at (highest avg grade, min 2 attempts)
+  // Top 5 events trainees excel at (highest avg grade, flights/FTD only, min 2 attempts)
   const top5Excel = [...events]
-    .filter(ev => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0)
+    .filter(ev => safeN(ev.totalAttempts) >= 2 && safeN(ev.avgOverallGrade) > 0 && isFlightOrFTD(ev.eventCode))
     .sort((a, b) => safeN(b.avgOverallGrade) - safeN(a.avgOverallGrade))
     .slice(0, 5);
 
