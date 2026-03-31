@@ -199,9 +199,19 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
         onUpdate({ ...currency, [field]: value });
     };
 
-    // Auto-suggest input type based on expiry rule
-    const suggestedInputType = currency.expiryRule === 'ROLLING_WINDOW' ? 'count' : 'date';
-    const effectiveInputType = currency.postFlightInputType ?? suggestedInputType;
+    // Auto-suggest input types based on expiry rule
+    const suggestedTypes: PostFlightInputType[] = currency.expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date'];
+    const activeTypes: PostFlightInputType[] = (currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0)
+        ? currency.postFlightInputTypes
+        : suggestedTypes;
+
+    const toggleInputType = (type: PostFlightInputType) => {
+        const current = activeTypes;
+        const next = current.includes(type)
+            ? current.filter((t) => t !== type)
+            : [...current, type];
+        handleChange('postFlightInputTypes', next.length > 0 ? next : suggestedTypes);
+    };
 
     return (
         <div className="space-y-4">
@@ -227,28 +237,33 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
                 />
                 {currency.showInPostFlight && (
                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-1">Input Type in Post-Flight</label>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">
+                            Input Type(s) in Post-Flight
+                            <span className="ml-2 text-xs text-gray-500">(select all that apply)</span>
+                        </label>
                         <div className="flex flex-col space-y-2 mt-1">
-                            {(['date', 'count', 'checkbox'] as const).map(type => (
-                                <label key={type} className="flex items-center space-x-3 cursor-pointer">
+                            {([
+                                { type: 'date' as PostFlightInputType, icon: '\ud83d\udcc5', label: 'Date picker', desc: 'Records when this was last completed' },
+                                { type: 'count' as PostFlightInputType, icon: '\ud83d\udd22', label: 'Number input', desc: 'Records how many times completed today' },
+                                { type: 'checkbox' as PostFlightInputType, icon: '\u2611', label: 'Checkbox', desc: 'Ticking records the flight date as the currency date' },
+                            ] as { type: PostFlightInputType; icon: string; label: string; desc: string }[]).map(({ type, icon, label, desc }) => (
+                                <label key={type} className="flex items-start space-x-3 cursor-pointer group">
                                     <input
-                                        type="radio"
-                                        name={`pfInputType-${currency.id}`}
-                                        value={type}
-                                        checked={effectiveInputType === type}
-                                        onChange={() => handleChange('postFlightInputType', type)}
-                                        className="h-4 w-4 accent-amber-500"
+                                        type="checkbox"
+                                        checked={activeTypes.includes(type)}
+                                        onChange={() => toggleInputType(type)}
+                                        className="h-4 w-4 mt-0.5 rounded accent-amber-500 cursor-pointer"
                                     />
-                                    <span className="text-sm text-gray-300">
-                                        {type === 'date' && '\ud83d\udcc5 Date picker \u2014 "When did you last complete this?" (for annual/periodic currencies)'}
-                                        {type === 'count' && '\ud83d\udd22 Number input \u2014 "How many times today?" (for rolling-window count currencies)'}
-                                        {type === 'checkbox' && '\u2705 Checkbox \u2014 "Is this current? Yes/No" (for simple go/no-go currencies)'}
+                                    <span className="text-sm text-gray-300 leading-tight">
+                                        <span className="mr-1">{icon}</span>
+                                        <span className="font-medium">{label}</span>
+                                        <span className="text-gray-500 ml-1">&mdash; {desc}</span>
                                     </span>
                                 </label>
                             ))}
                         </div>
                         <p className="text-xs text-amber-500/70 mt-2">
-                            Auto-suggested: <span className="font-semibold">{suggestedInputType}</span> based on expiry rule ({currency.expiryRule === 'ROLLING_WINDOW' ? 'rolling count' : 'last event date'})
+                            Auto-suggested: <span className="font-semibold">{suggestedTypes.join(', ')}</span> based on expiry rule ({currency.expiryRule === 'ROLLING_WINDOW' ? 'rolling count' : 'last event date'})
                         </p>
                     </div>
                 )}
@@ -264,6 +279,21 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
     const handleLogicTreeChange = (newLogicTree: LogicNode) => {
         handleChange('logicTree', newLogicTree);
     };
+
+    // Default for composite currencies is checkbox (most common)
+    const suggestedTypes: PostFlightInputType[] = ['checkbox'];
+    const activeTypes: PostFlightInputType[] = (currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0)
+        ? currency.postFlightInputTypes
+        : suggestedTypes;
+
+    const toggleInputType = (type: PostFlightInputType) => {
+        const current = activeTypes;
+        const next = current.includes(type)
+            ? current.filter((t) => t !== type)
+            : [...current, type];
+        handleChange('postFlightInputTypes', next.length > 0 ? next : suggestedTypes);
+    };
+
     return (
         <div className="space-y-4">
             <h2 className="text-2xl font-bold text-purple-400">Edit Composite Currency</h2>
@@ -286,26 +316,34 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
                 />
                 {currency.showInPostFlight && (
                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-1">Input Type in Post-Flight</label>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">
+                            Input Type(s) in Post-Flight
+                            <span className="ml-2 text-xs text-gray-500">(select all that apply)</span>
+                        </label>
                         <div className="flex flex-col space-y-2 mt-1">
-                            {(['checkbox', 'date', 'count'] as const).map(type => (
-                                <label key={type} className="flex items-center space-x-3 cursor-pointer">
+                            {([
+                                { type: 'checkbox' as PostFlightInputType, icon: '\u2611', label: 'Checkbox', desc: 'Ticking records the flight date as the currency date (recommended for composite)' },
+                                { type: 'date' as PostFlightInputType, icon: '\ud83d\udcc5', label: 'Date picker', desc: 'Records when this was last completed' },
+                                { type: 'count' as PostFlightInputType, icon: '\ud83d\udd22', label: 'Number input', desc: 'Records how many times completed today' },
+                            ] as { type: PostFlightInputType; icon: string; label: string; desc: string }[]).map(({ type, icon, label, desc }) => (
+                                <label key={type} className="flex items-start space-x-3 cursor-pointer group">
                                     <input
-                                        type="radio"
-                                        name={`pfInputType-${currency.id}`}
-                                        value={type}
-                                        checked={(currency.postFlightInputType ?? 'checkbox') === type}
-                                        onChange={() => handleChange('postFlightInputType', type)}
-                                        className="h-4 w-4 accent-purple-500"
+                                        type="checkbox"
+                                        checked={activeTypes.includes(type)}
+                                        onChange={() => toggleInputType(type)}
+                                        className="h-4 w-4 mt-0.5 rounded accent-purple-500 cursor-pointer"
                                     />
-                                    <span className="text-sm text-gray-300">
-                                        {type === 'checkbox' && '\u2705 Checkbox \u2014 "Is this GO/NO-GO?" (recommended for composite currencies)'}
-                                        {type === 'date' && '\ud83d\udcc5 Date picker \u2014 "When was this last satisfied?"'}
-                                        {type === 'count' && '\ud83d\udd22 Number input \u2014 "Count of completions today"'}
+                                    <span className="text-sm text-gray-300 leading-tight">
+                                        <span className="mr-1">{icon}</span>
+                                        <span className="font-medium">{label}</span>
+                                        <span className="text-gray-500 ml-1">&mdash; {desc}</span>
                                     </span>
                                 </label>
                             ))}
                         </div>
+                        <p className="text-xs text-purple-500/70 mt-2">
+                            Recommended for composite currencies: <span className="font-semibold">Checkbox</span> (flight date is recorded automatically)
+                        </p>
                     </div>
                 )}
             </div>

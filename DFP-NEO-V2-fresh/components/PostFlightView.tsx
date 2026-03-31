@@ -44,10 +44,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         setCurrencyValues(prev => ({ ...prev, [id]: value }));
     };
 
-    const getEffectiveInputType = (c: CurrencyDefinition): PostFlightInputType => {
-        if (c.postFlightInputType) return c.postFlightInputType;
-        if (c.type === 'composite') return 'checkbox';
-        return (c as CurrencyRequirement).expiryRule === 'ROLLING_WINDOW' ? 'count' : 'date';
+    const getEffectiveInputTypes = (c: CurrencyDefinition): PostFlightInputType[] => {
+        if (c.postFlightInputTypes && c.postFlightInputTypes.length > 0) return c.postFlightInputTypes;
+        if (c.type === 'composite') return ['checkbox'];
+        return (c as CurrencyRequirement).expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date'];
     };
 
     // State
@@ -656,78 +656,86 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
                     {/* Currency Updates Panel (Right of Result) */}
                     {postFlightCurrencies.length > 0 && (
-                        <div className="flex-1 bg-gray-700/50 p-4 rounded-lg border border-amber-600/30">
-                            <label className="block text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <div className="flex-1 bg-gray-700/50 p-4 rounded-lg border border-amber-600/30 min-w-[220px]">
+                            <div className="flex items-center gap-2 mb-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                                 </svg>
-                                Currency Updates
-                            </label>
-                            <div className="flex flex-wrap gap-4">
+                                <span className="text-sm font-semibold text-amber-400 uppercase tracking-wide">Currency Updates</span>
+                            </div>
+                            <div className="flex flex-col gap-2">
                                 {postFlightCurrencies.map(c => {
-                                    const inputType = getEffectiveInputType(c);
-                                    const val = currencyValues[c.id] ?? '';
+                                    const inputTypes = getEffectiveInputTypes(c);
                                     const isComposite = c.type === 'composite';
+                                    const accentColor = isComposite ? 'border-purple-500/50' : 'border-green-500/50';
                                     return (
-                                        <div key={c.id} className={`flex flex-col gap-1 min-w-[140px] ${isComposite ? 'border-l-2 border-purple-500/50 pl-2' : 'border-l-2 border-green-500/50 pl-2'}`}>
-                                            <label className="text-xs font-medium text-gray-300 leading-tight">{c.name}</label>
-                                            {inputType === 'date' && (
-                                                <input
-                                                    type="date"
-                                                    value={val}
-                                                    onChange={e => handleCurrencyChange(c.id, e.target.value)}
-                                                    className="block w-full bg-gray-700 border border-gray-600 rounded-md h-[34px] py-1 px-2 text-white text-xs focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-                                                    style={{ colorScheme: 'dark' }}
-                                                    title="Date last completed"
-                                                />
-                                            )}
-                                            {inputType === 'count' && (
-                                                <div className="flex items-center gap-1">
-                                                    <input
-                                                        type="number"
-                                                        min={0}
-                                                        value={val}
-                                                        onChange={e => handleCurrencyChange(c.id, e.target.value)}
-                                                        placeholder="0"
-                                                        className="block w-16 bg-gray-700 border border-gray-600 rounded-md h-[34px] py-1 px-2 text-white text-xs text-center focus:outline-none focus:ring-amber-500 focus:border-amber-500"
-                                                        title="Count completed today"
-                                                    />
-                                                    <span className="text-xs text-gray-400">today</span>
-                                                </div>
-                                            )}
-                                            {inputType === 'checkbox' && (
-                                                <div className="flex items-center gap-2 h-[34px]">
-                                                    <label className="flex items-center gap-1.5 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name={`pf-cur-${c.id}`}
-                                                            value="true"
-                                                            checked={val === 'true'}
-                                                            onChange={() => handleCurrencyChange(c.id, 'true')}
-                                                            className="h-3.5 w-3.5 accent-green-500"
-                                                        />
-                                                        <span className="text-xs text-green-400 font-semibold">GO</span>
-                                                    </label>
-                                                    <label className="flex items-center gap-1.5 cursor-pointer">
-                                                        <input
-                                                            type="radio"
-                                                            name={`pf-cur-${c.id}`}
-                                                            value="false"
-                                                            checked={val === 'false'}
-                                                            onChange={() => handleCurrencyChange(c.id, 'false')}
-                                                            className="h-3.5 w-3.5 accent-red-500"
-                                                        />
-                                                        <span className="text-xs text-red-400 font-semibold">NO GO</span>
-                                                    </label>
-                                                </div>
-                                            )}
+                                        <div key={c.id} className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-l-2 ${accentColor} pl-2 py-0.5`}>
+                                            {/* Currency name spans full width as a header */}
+                                            <span className="col-span-2 text-xs font-semibold text-gray-200 leading-tight truncate" title={c.name}>
+                                                {c.name}
+                                            </span>
+
+                                            {/* One row per input type */}
+                                            {inputTypes.map(inputType => {
+                                                const fieldKey = inputTypes.length > 1 ? `${c.id}__${inputType}` : c.id;
+                                                const val = currencyValues[fieldKey] ?? '';
+
+                                                if (inputType === 'checkbox') {
+                                                    // Simple checkbox — ticking it records the flight/FTD date automatically
+                                                    const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
+                                                    const isChecked = val !== '' && val !== 'false';
+                                                    return (
+                                                        <React.Fragment key={inputType}>
+                                                            <span className="text-xs text-gray-400">Completed</span>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isChecked}
+                                                                onChange={e => handleCurrencyChange(fieldKey, e.target.checked ? flightDate : '')}
+                                                                className="h-4 w-4 rounded accent-amber-500 cursor-pointer justify-self-end"
+                                                                title={isChecked ? `Recorded: ${val}` : 'Tick to mark as completed — flight date will be recorded'}
+                                                            />
+                                                        </React.Fragment>
+                                                    );
+                                                }
+
+                                                if (inputType === 'date') {
+                                                    return (
+                                                        <React.Fragment key={inputType}>
+                                                            <input
+                                                                type="date"
+                                                                value={val}
+                                                                onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
+                                                                className="col-span-2 block w-full bg-gray-700 border border-gray-600 rounded h-[28px] py-0.5 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
+                                                                style={{ colorScheme: 'dark' }}
+                                                                title="Date last completed"
+                                                            />
+                                                        </React.Fragment>
+                                                    );
+                                                }
+
+                                                if (inputType === 'count') {
+                                                    return (
+                                                        <React.Fragment key={inputType}>
+                                                            <span className="text-xs text-gray-400">Count today</span>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                value={val}
+                                                                onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
+                                                                placeholder="0"
+                                                                className="w-14 bg-gray-700 border border-gray-600 rounded h-[28px] py-0.5 px-1 text-white text-xs text-center focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 justify-self-end"
+                                                                title="Count completed today"
+                                                            />
+                                                        </React.Fragment>
+                                                    );
+                                                }
+
+                                                return null;
+                                            })}
                                         </div>
                                     );
                                 })}
                             </div>
-                            <p className="text-xs text-gray-500 mt-3">
-                                Currency updates are saved with post-flight data and will update pilot records.
-                            </p>
                         </div>
                     )}
                 </div>

@@ -3072,64 +3072,69 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
   const handleChange = (field, value) => {
     onUpdate({ ...currency, [field]: value });
   };
-  const suggestedInputType = currency.expiryRule === "ROLLING_WINDOW" ? "count" : "date";
-  const effectiveInputType = currency.postFlightInputType ?? suggestedInputType;
+  const suggestedTypes = currency.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"];
+  const activeTypes = currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0 ? currency.postFlightInputTypes : suggestedTypes;
+  const toggleInputType = (type) => {
+    const current = activeTypes;
+    const next = current.includes(type) ? current.filter((t) => t !== type) : [...current, type];
+    handleChange("postFlightInputTypes", next.length > 0 ? next : suggestedTypes);
+  };
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-green-400", children: "Edit Primitive Currency" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 208,
+      lineNumber: 218,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Name", value: currency.name, onChange: (v) => handleChange("name", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 209,
+      lineNumber: 219,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Description", value: currency.description, onChange: (v) => handleChange("description", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 210,
+      lineNumber: 220,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckboxField, { label: "Visible in Main List", checked: currency.isVisible, onChange: (v) => handleChange("isVisible", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 211,
+      lineNumber: 221,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Validity (Days)", type: "number", value: currency.validityDays, onChange: (v) => handleChange("validityDays", Number(v)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 212,
+      lineNumber: 222,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Required Count", type: "number", value: currency.requiredCount, onChange: (v) => handleChange("requiredCount", Number(v)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 213,
+      lineNumber: 223,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DropdownField, { label: "Expiry Rule", value: currency.expiryRule, onChange: (v) => handleChange("expiryRule", v), children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "LAST_EVENT_PLUS_PERIOD", children: "Last Event + Period" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 215,
+        lineNumber: 225,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "ROLLING_WINDOW", children: "Rolling Window" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 216,
+        lineNumber: 226,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 214,
+      lineNumber: 224,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Event Codes (comma-separated)", value: currency.eventCodes.join(", "), onChange: (v) => handleChange("eventCodes", v.split(",").map((s) => s.trim()).filter(Boolean)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 218,
+      lineNumber: 228,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-amber-600/40 rounded-lg bg-amber-900/10 space-y-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-bold text-amber-400 uppercase tracking-wide", children: "Post-Flight Page" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 222,
+        lineNumber: 232,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -3143,60 +3148,84 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 223,
+          lineNumber: 233,
           columnNumber: 17
         },
         void 0
       ),
       currency.showInPostFlight && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 mb-1", children: "Input Type in Post-Flight" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: [
+          "Input Type(s) in Post-Flight",
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs text-gray-500", children: "(select all that apply)" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+            lineNumber: 242,
+            columnNumber: 29
+          }, void 0)
+        ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 230,
+          lineNumber: 240,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col space-y-2 mt-1", children: ["date", "count", "checkbox"].map((type) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col space-y-2 mt-1", children: [
+          { type: "date", icon: "📅", label: "Date picker", desc: "Records when this was last completed" },
+          { type: "count", icon: "🔢", label: "Number input", desc: "Records how many times completed today" },
+          { type: "checkbox", icon: "☑", label: "Checkbox", desc: "Ticking records the flight date as the currency date" }
+        ].map(({ type, icon, label, desc }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "input",
             {
-              type: "radio",
-              name: `pfInputType-${currency.id}`,
-              value: type,
-              checked: effectiveInputType === type,
-              onChange: () => handleChange("postFlightInputType", type),
-              className: "h-4 w-4 accent-amber-500"
+              type: "checkbox",
+              checked: activeTypes.includes(type),
+              onChange: () => toggleInputType(type),
+              className: "h-4 w-4 mt-0.5 rounded accent-amber-500 cursor-pointer"
             },
             void 0,
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 234,
+              lineNumber: 251,
               columnNumber: 37
             },
             void 0
           ),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
-            type === "date" && '📅 Date picker — "When did you last complete this?" (for annual/periodic currencies)',
-            type === "count" && '🔢 Number input — "How many times today?" (for rolling-window count currencies)',
-            type === "checkbox" && '✅ Checkbox — "Is this current? Yes/No" (for simple go/no-go currencies)'
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300 leading-tight", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "mr-1", children: icon }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+              lineNumber: 258,
+              columnNumber: 41
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-medium", children: label }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+              lineNumber: 259,
+              columnNumber: 41
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 ml-1", children: [
+              "— ",
+              desc
+            ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+              lineNumber: 260,
+              columnNumber: 41
+            }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 242,
+            lineNumber: 257,
             columnNumber: 37
           }, void 0)
         ] }, type, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 233,
+          lineNumber: 250,
           columnNumber: 33
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 231,
+          lineNumber: 244,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-amber-500/70 mt-2", children: [
           "Auto-suggested: ",
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: suggestedInputType }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: suggestedTypes.join(", ") }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 251,
+            lineNumber: 266,
             columnNumber: 45
           }, void 0),
           " based on expiry rule (",
@@ -3204,22 +3233,22 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
           ")"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 250,
+          lineNumber: 265,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 229,
+        lineNumber: 239,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 221,
+      lineNumber: 231,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 207,
+    lineNumber: 217,
     columnNumber: 9
   }, void 0);
 };
@@ -3230,52 +3259,59 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
   const handleLogicTreeChange = (newLogicTree) => {
     handleChange("logicTree", newLogicTree);
   };
+  const suggestedTypes = ["checkbox"];
+  const activeTypes = currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0 ? currency.postFlightInputTypes : suggestedTypes;
+  const toggleInputType = (type) => {
+    const current = activeTypes;
+    const next = current.includes(type) ? current.filter((t) => t !== type) : [...current, type];
+    handleChange("postFlightInputTypes", next.length > 0 ? next : suggestedTypes);
+  };
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-purple-400", children: "Edit Composite Currency" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 269,
+      lineNumber: 299,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Name", value: currency.name, onChange: (v) => handleChange("name", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 270,
+      lineNumber: 300,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$2, { label: "Description", value: currency.description, onChange: (v) => handleChange("description", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 271,
+      lineNumber: 301,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckboxField, { label: "Visible in Main List", checked: currency.isVisible, onChange: (v) => handleChange("isVisible", v) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 272,
+      lineNumber: 302,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DropdownField, { label: "Expiry Calculation", value: currency.expiryCalculation, onChange: (v) => handleChange("expiryCalculation", v), children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "EARLIEST_CHILD", children: "Use Earliest Expiry" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 274,
+        lineNumber: 304,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "LATEST_CHILD", children: "Use Latest Expiry" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 275,
+        lineNumber: 305,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 273,
+      lineNumber: 303,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LogicNodeEditor, { node: currency.logicTree, path: [], onUpdate: handleLogicTreeChange, allCurrencies }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 277,
+      lineNumber: 307,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-purple-600/40 rounded-lg bg-purple-900/10 space-y-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-bold text-purple-400 uppercase tracking-wide", children: "Post-Flight Page" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 281,
+        lineNumber: 311,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -3289,68 +3325,105 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 282,
+          lineNumber: 312,
           columnNumber: 17
         },
         void 0
       ),
       currency.showInPostFlight && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 mb-1", children: "Input Type in Post-Flight" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: [
+          "Input Type(s) in Post-Flight",
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs text-gray-500", children: "(select all that apply)" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+            lineNumber: 321,
+            columnNumber: 29
+          }, void 0)
+        ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 289,
+          lineNumber: 319,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col space-y-2 mt-1", children: ["checkbox", "date", "count"].map((type) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col space-y-2 mt-1", children: [
+          { type: "checkbox", icon: "☑", label: "Checkbox", desc: "Ticking records the flight date as the currency date (recommended for composite)" },
+          { type: "date", icon: "📅", label: "Date picker", desc: "Records when this was last completed" },
+          { type: "count", icon: "🔢", label: "Number input", desc: "Records how many times completed today" }
+        ].map(({ type, icon, label, desc }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "input",
             {
-              type: "radio",
-              name: `pfInputType-${currency.id}`,
-              value: type,
-              checked: (currency.postFlightInputType ?? "checkbox") === type,
-              onChange: () => handleChange("postFlightInputType", type),
-              className: "h-4 w-4 accent-purple-500"
+              type: "checkbox",
+              checked: activeTypes.includes(type),
+              onChange: () => toggleInputType(type),
+              className: "h-4 w-4 mt-0.5 rounded accent-purple-500 cursor-pointer"
             },
             void 0,
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-              lineNumber: 293,
+              lineNumber: 330,
               columnNumber: 37
             },
             void 0
           ),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
-            type === "checkbox" && '✅ Checkbox — "Is this GO/NO-GO?" (recommended for composite currencies)',
-            type === "date" && '📅 Date picker — "When was this last satisfied?"',
-            type === "count" && '🔢 Number input — "Count of completions today"'
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300 leading-tight", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "mr-1", children: icon }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+              lineNumber: 337,
+              columnNumber: 41
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-medium", children: label }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+              lineNumber: 338,
+              columnNumber: 41
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 ml-1", children: [
+              "— ",
+              desc
+            ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+              lineNumber: 339,
+              columnNumber: 41
+            }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-            lineNumber: 301,
+            lineNumber: 336,
             columnNumber: 37
           }, void 0)
         ] }, type, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 292,
+          lineNumber: 329,
           columnNumber: 33
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 290,
+          lineNumber: 323,
+          columnNumber: 25
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-purple-500/70 mt-2", children: [
+          "Recommended for composite currencies: ",
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: "Checkbox" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+            lineNumber: 345,
+            columnNumber: 67
+          }, void 0),
+          " (flight date is recorded automatically)"
+        ] }, void 0, true, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
+          lineNumber: 344,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 288,
+        lineNumber: 318,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 280,
+      lineNumber: 310,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 268,
+    lineNumber: 298,
     columnNumber: 9
   }, void 0);
 };
@@ -3393,79 +3466,79 @@ const LogicNodeEditor = ({ node, path: path2, onUpdate, allCurrencies }) => {
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setOperator("AND"), className: `px-3 py-1 text-xs font-bold rounded ${node.operator === "AND" ? "bg-sky-600 text-white" : "bg-gray-600 text-gray-300"}`, children: "ALL of these (AND)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 367,
+          lineNumber: 405,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setOperator("OR"), className: `px-3 py-1 text-xs font-bold rounded ${node.operator === "OR" ? "bg-purple-600 text-white" : "bg-gray-600 text-gray-300"}`, children: "ANY of these (OR)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 368,
+          lineNumber: 406,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 366,
+        lineNumber: 404,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: addCondition, className: "px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded", children: "+ Condition" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 371,
+          lineNumber: 409,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: addGroup, className: "px-2 py-1 text-xs bg-gray-600 hover:bg-gray-500 rounded", children: "+ Group" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-          lineNumber: 372,
+          lineNumber: 410,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 370,
+        lineNumber: 408,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 365,
+      lineNumber: 403,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2 pl-4 border-l-2 border-gray-500", children: node.children.length > 0 ? node.children.map((child, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center group", children: [
       typeof child === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 p-2 bg-gray-800 rounded text-sm text-gray-300", children: allCurrencies.find((c) => c.id === child)?.name || "Unlinked Condition" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 379,
+        lineNumber: 417,
         columnNumber: 29
       }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LogicNodeEditor, { node: child, path: [...path2, "children", index], onUpdate: (newNode, subPath) => handleChildUpdate(newNode, index), allCurrencies }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 383,
+        lineNumber: 421,
         columnNumber: 29
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => removeChild(index), className: "ml-2 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z", clipRule: "evenodd" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 386,
+        lineNumber: 424,
         columnNumber: 129
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 386,
+        lineNumber: 424,
         columnNumber: 29
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-        lineNumber: 385,
+        lineNumber: 423,
         columnNumber: 25
       }, void 0)
     ] }, index, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 377,
+      lineNumber: 415,
       columnNumber: 21
     }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-gray-500 italic p-4 text-center", children: "Drag currencies here or add conditions/groups." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 389,
+      lineNumber: 427,
       columnNumber: 22
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 375,
+      lineNumber: 413,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 364,
+    lineNumber: 402,
     columnNumber: 9
   }, void 0);
 };
@@ -3492,70 +3565,70 @@ const UsedInSection = ({ currencyId, allCurrencies }) => {
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-gray-600 rounded-lg bg-gray-700/30", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Used In:" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 420,
+      lineNumber: 458,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-2", children: dependencies.map((name) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "px-2 py-1 bg-purple-800 text-purple-200 text-xs font-medium rounded-full", children: name }, name, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 423,
+      lineNumber: 461,
       columnNumber: 21
     }, void 0)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-      lineNumber: 421,
+      lineNumber: 459,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 419,
+    lineNumber: 457,
     columnNumber: 9
   }, void 0);
 };
 const InputField$2 = ({ label, value, onChange, type = "text" }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 435,
+    lineNumber: 473,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type, value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 436,
+    lineNumber: 474,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-  lineNumber: 434,
+  lineNumber: 472,
   columnNumber: 5
 }, void 0);
 const CheckboxField = ({ label, checked, onChange }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3", children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked, onChange: (e) => onChange(e.target.checked), className: "h-4 w-4 bg-gray-600 border-gray-500 rounded accent-sky-500" }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 442,
+    lineNumber: 480,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: label }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 443,
+    lineNumber: 481,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-  lineNumber: 441,
+  lineNumber: 479,
   columnNumber: 5
 }, void 0);
 const DropdownField = ({ label, value, onChange, children }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 449,
+    lineNumber: 487,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value, onChange: (e) => onChange(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-    lineNumber: 450,
+    lineNumber: 488,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyBuilderView.tsx",
-  lineNumber: 448,
+  lineNumber: 486,
   columnNumber: 5
 }, void 0);
 const DarkMessageModal = ({
@@ -76432,10 +76505,10 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   const handleCurrencyChange = (id, value) => {
     setCurrencyValues((prev) => ({ ...prev, [id]: value }));
   };
-  const getEffectiveInputType = (c) => {
-    if (c.postFlightInputType) return c.postFlightInputType;
-    if (c.type === "composite") return "checkbox";
-    return c.expiryRule === "ROLLING_WINDOW" ? "count" : "date";
+  const getEffectiveInputTypes = (c) => {
+    if (c.postFlightInputTypes && c.postFlightInputTypes.length > 0) return c.postFlightInputTypes;
+    if (c.type === "composite") return ["checkbox"];
+    return c.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"];
   };
   const [result, setResult] = reactExports.useState("");
   const [aircraftNumber, setAircraftNumber] = reactExports.useState("001");
@@ -77219,9 +77292,9 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             lineNumber: 648,
             columnNumber: 21
           }, void 0),
-          postFlightCurrencies.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 bg-gray-700/50 p-4 rounded-lg border border-amber-600/30", children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-amber-400 mb-3 flex items-center gap-2", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z", clipRule: "evenodd" }, void 0, false, {
+          postFlightCurrencies.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 bg-gray-700/50 p-4 rounded-lg border border-amber-600/30 min-w-[220px]", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 mb-3", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-amber-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z", clipRule: "evenodd" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
                 lineNumber: 662,
                 columnNumber: 37
@@ -77230,138 +77303,122 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 lineNumber: 661,
                 columnNumber: 33
               }, void 0),
-              "Currency Updates"
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-semibold text-amber-400 uppercase tracking-wide", children: "Currency Updates" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+                lineNumber: 664,
+                columnNumber: 33
+              }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
               lineNumber: 660,
               columnNumber: 29
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-4", children: postFlightCurrencies.map((c) => {
-              const inputType = getEffectiveInputType(c);
-              const val = currencyValues[c.id] ?? "";
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-2", children: postFlightCurrencies.map((c) => {
+              const inputTypes = getEffectiveInputTypes(c);
               const isComposite = c.type === "composite";
-              return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `flex flex-col gap-1 min-w-[140px] ${isComposite ? "border-l-2 border-purple-500/50 pl-2" : "border-l-2 border-green-500/50 pl-2"}`, children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "text-xs font-medium text-gray-300 leading-tight", children: c.name }, void 0, false, {
+              const accentColor = isComposite ? "border-purple-500/50" : "border-green-500/50";
+              return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-l-2 ${accentColor} pl-2 py-0.5`, children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "col-span-2 text-xs font-semibold text-gray-200 leading-tight truncate", title: c.name, children: c.name }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 673,
+                  lineNumber: 674,
                   columnNumber: 45
                 }, void 0),
-                inputType === "date" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "input",
-                  {
-                    type: "date",
-                    value: val,
-                    onChange: (e) => handleCurrencyChange(c.id, e.target.value),
-                    className: "block w-full bg-gray-700 border border-gray-600 rounded-md h-[34px] py-1 px-2 text-white text-xs focus:outline-none focus:ring-amber-500 focus:border-amber-500",
-                    style: { colorScheme: "dark" },
-                    title: "Date last completed"
-                  },
-                  void 0,
-                  false,
-                  {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                    lineNumber: 675,
-                    columnNumber: 49
-                  },
-                  void 0
-                ),
-                inputType === "count" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                    "input",
-                    {
-                      type: "number",
-                      min: 0,
-                      value: val,
-                      onChange: (e) => handleCurrencyChange(c.id, e.target.value),
-                      placeholder: "0",
-                      className: "block w-16 bg-gray-700 border border-gray-600 rounded-md h-[34px] py-1 px-2 text-white text-xs text-center focus:outline-none focus:ring-amber-500 focus:border-amber-500",
-                      title: "Count completed today"
-                    },
-                    void 0,
-                    false,
-                    {
+                inputTypes.map((inputType) => {
+                  const fieldKey = inputTypes.length > 1 ? `${c.id}__${inputType}` : c.id;
+                  const val = currencyValues[fieldKey] ?? "";
+                  if (inputType === "checkbox") {
+                    const flightDate = event.date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+                    const isChecked = val !== "" && val !== "false";
+                    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(React.Fragment, { children: [
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-400", children: "Completed" }, void 0, false, {
+                        fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+                        lineNumber: 689,
+                        columnNumber: 61
+                      }, void 0),
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                        "input",
+                        {
+                          type: "checkbox",
+                          checked: isChecked,
+                          onChange: (e) => handleCurrencyChange(fieldKey, e.target.checked ? flightDate : ""),
+                          className: "h-4 w-4 rounded accent-amber-500 cursor-pointer justify-self-end",
+                          title: isChecked ? `Recorded: ${val}` : "Tick to mark as completed — flight date will be recorded"
+                        },
+                        void 0,
+                        false,
+                        {
+                          fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+                          lineNumber: 690,
+                          columnNumber: 61
+                        },
+                        void 0
+                      )
+                    ] }, inputType, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                      lineNumber: 686,
-                      columnNumber: 53
-                    },
-                    void 0
-                  ),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-400", children: "today" }, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                    lineNumber: 695,
-                    columnNumber: 53
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 685,
-                  columnNumber: 49
-                }, void 0),
-                inputType === "checkbox" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 h-[34px]", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center gap-1.5 cursor-pointer", children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                      lineNumber: 688,
+                      columnNumber: 57
+                    }, void 0);
+                  }
+                  if (inputType === "date") {
+                    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(React.Fragment, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                       "input",
                       {
-                        type: "radio",
-                        name: `pf-cur-${c.id}`,
-                        value: "true",
-                        checked: val === "true",
-                        onChange: () => handleCurrencyChange(c.id, "true"),
-                        className: "h-3.5 w-3.5 accent-green-500"
+                        type: "date",
+                        value: val,
+                        onChange: (e) => handleCurrencyChange(fieldKey, e.target.value),
+                        className: "col-span-2 block w-full bg-gray-700 border border-gray-600 rounded h-[28px] py-0.5 px-2 text-white text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500",
+                        style: { colorScheme: "dark" },
+                        title: "Date last completed"
                       },
                       void 0,
                       false,
                       {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                        lineNumber: 701,
-                        columnNumber: 57
+                        lineNumber: 704,
+                        columnNumber: 61
                       },
                       void 0
-                    ),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-green-400 font-semibold", children: "GO" }, void 0, false, {
+                    ) }, inputType, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                      lineNumber: 709,
+                      lineNumber: 703,
                       columnNumber: 57
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                    lineNumber: 700,
-                    columnNumber: 53
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center gap-1.5 cursor-pointer", children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                      "input",
-                      {
-                        type: "radio",
-                        name: `pf-cur-${c.id}`,
-                        value: "false",
-                        checked: val === "false",
-                        onChange: () => handleCurrencyChange(c.id, "false"),
-                        className: "h-3.5 w-3.5 accent-red-500"
-                      },
-                      void 0,
-                      false,
-                      {
+                    }, void 0);
+                  }
+                  if (inputType === "count") {
+                    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(React.Fragment, { children: [
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-400", children: "Count today" }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                        lineNumber: 712,
-                        columnNumber: 57
-                      },
-                      void 0
-                    ),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-red-400 font-semibold", children: "NO GO" }, void 0, false, {
+                        lineNumber: 719,
+                        columnNumber: 61
+                      }, void 0),
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                        "input",
+                        {
+                          type: "number",
+                          min: 0,
+                          value: val,
+                          onChange: (e) => handleCurrencyChange(fieldKey, e.target.value),
+                          placeholder: "0",
+                          className: "w-14 bg-gray-700 border border-gray-600 rounded h-[28px] py-0.5 px-1 text-white text-xs text-center focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 justify-self-end",
+                          title: "Count completed today"
+                        },
+                        void 0,
+                        false,
+                        {
+                          fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
+                          lineNumber: 720,
+                          columnNumber: 61
+                        },
+                        void 0
+                      )
+                    ] }, inputType, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                      lineNumber: 720,
+                      lineNumber: 718,
                       columnNumber: 57
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                    lineNumber: 711,
-                    columnNumber: 53
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 699,
-                  columnNumber: 49
-                }, void 0)
+                    }, void 0);
+                  }
+                  return null;
+                })
               ] }, c.id, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
                 lineNumber: 672,
@@ -77370,11 +77427,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             }) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
               lineNumber: 666,
-              columnNumber: 29
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-500 mt-3", children: "Currency updates are saved with post-flight data and will update pilot records." }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 728,
               columnNumber: 29
             }, void 0)
           ] }, void 0, true, {
@@ -77390,14 +77442,14 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-lg font-semibold text-gray-300", children: "Times" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-            lineNumber: 737,
+            lineNumber: 745,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2 flex items-end space-x-4", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 flex flex-col items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Flight" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 744,
+                lineNumber: 752,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 h-[38px] flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77412,24 +77464,24 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 746,
+                  lineNumber: 754,
                   columnNumber: 33
                 },
                 void 0
               ) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 745,
+                lineNumber: 753,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 743,
+              lineNumber: 751,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 flex flex-col items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "FTD" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 757,
+                lineNumber: 765,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 h-[38px] flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77444,24 +77496,24 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 759,
+                  lineNumber: 767,
                   columnNumber: 33
                 },
                 void 0
               ) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 758,
+                lineNumber: 766,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 756,
+              lineNumber: 764,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 flex flex-col items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Solo" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 770,
+                lineNumber: 778,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 h-[38px] flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77476,24 +77528,24 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 772,
+                  lineNumber: 780,
                   columnNumber: 33
                 },
                 void 0
               ) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 771,
+                lineNumber: 779,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 769,
+              lineNumber: 777,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 flex flex-col items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Dual" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 783,
+                lineNumber: 791,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 h-[38px] flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77508,87 +77560,87 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 785,
+                  lineNumber: 793,
                   columnNumber: 33
                 },
                 void 0
               ) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 784,
+                lineNumber: 792,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 782,
+              lineNumber: 790,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Date" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 796,
+                lineNumber: 804,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: event.date }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 797,
+                lineNumber: 805,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 795,
+              lineNumber: 803,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 801,
+                lineNumber: 809,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: "PC-21" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 802,
+                lineNumber: 810,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 800,
+              lineNumber: 808,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", style: { width: "6.75rem" }, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Number" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 806,
+                lineNumber: 814,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-1 mt-1", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "p-2 bg-gray-700 rounded-l-md text-white h-[38px] flex items-center", children: "A54-" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 808,
+                  lineNumber: 816,
                   columnNumber: 33
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), className: "block w-full bg-gray-700 border border-gray-600 rounded-r-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm appearance-none text-center", children: aircraftNumberOptions.map((num) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: num, children: num }, num, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 810,
+                  lineNumber: 818,
                   columnNumber: 71
                 }, void 0)) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 809,
+                  lineNumber: 817,
                   columnNumber: 33
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 807,
+                lineNumber: 815,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 805,
+              lineNumber: 813,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Duty" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 817,
+                lineNumber: 825,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77603,85 +77655,85 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 818,
+                  lineNumber: 826,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 816,
+              lineNumber: 824,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", style: { flexBasis: "8rem" }, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Captain/Instructor" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 828,
+                lineNumber: 836,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: (event.instructor || event.pilot)?.split(" – ")[0] }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 829,
+                lineNumber: 837,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 827,
+              lineNumber: 835,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", style: { flexBasis: "6rem" }, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Crew/Trainee" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 833,
+                lineNumber: 841,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center truncate", children: isSolo ? "Solo" : event.student?.split(" – ")[0] }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 834,
+                lineNumber: 842,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 832,
+              lineNumber: 840,
               columnNumber: 25
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-            lineNumber: 740,
+            lineNumber: 748,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-4 flex items-end space-x-4 overflow-x-auto pb-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 text-center", children: "Route" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 844,
+                lineNumber: 852,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mt-1", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", value: from, onChange: (e) => setFrom(e.target.value.toUpperCase()), maxLength: 3, placeholder: "From", className: "w-16 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-2 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 846,
+                  lineNumber: 854,
                   columnNumber: 33
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", value: to, onChange: (e) => setTo(e.target.value.toUpperCase()), maxLength: 3, placeholder: "To", className: "w-16 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 847,
+                  lineNumber: 855,
                   columnNumber: 33
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 845,
+                lineNumber: 853,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 843,
+              lineNumber: 851,
               columnNumber: 26
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Takeoff" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 852,
+                lineNumber: 860,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77697,20 +77749,20 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 853,
+                  lineNumber: 861,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 851,
+              lineNumber: 859,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Land" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 863,
+                lineNumber: 871,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77726,36 +77778,36 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 864,
+                  lineNumber: 872,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 862,
+              lineNumber: 870,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Total" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 874,
+                lineNumber: 882,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 p-2 bg-gray-900/50 border border-gray-500 rounded-md text-white h-[38px] flex items-center justify-center font-mono w-20", children: totalTime }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 875,
+                lineNumber: 883,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 873,
+              lineNumber: 881,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Captain" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 879,
+                lineNumber: 887,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77771,20 +77823,20 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 880,
+                  lineNumber: 888,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 878,
+              lineNumber: 886,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Instructor" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 890,
+                lineNumber: 898,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77800,20 +77852,20 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 891,
+                  lineNumber: 899,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 889,
+              lineNumber: 897,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Night" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 901,
+                lineNumber: 909,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77829,20 +77881,20 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 902,
+                  lineNumber: 910,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 900,
+              lineNumber: 908,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "IF Actual" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 912,
+                lineNumber: 920,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77858,20 +77910,20 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 913,
+                  lineNumber: 921,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 911,
+              lineNumber: 919,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "IF Sim" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 923,
+                lineNumber: 931,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77887,20 +77939,20 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 924,
+                  lineNumber: 932,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 922,
+              lineNumber: 930,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Ineffective" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                lineNumber: 934,
+                lineNumber: 942,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -77916,54 +77968,54 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-                  lineNumber: 935,
+                  lineNumber: 943,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 933,
+              lineNumber: 941,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ApproachInput, { label: "ILS/GLS", isChecked: ilsChecked, setIsChecked: setIlsChecked, count: ilsCount, setCount: setIlsCount }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 945,
+              lineNumber: 953,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ApproachInput, { label: "RNP", isChecked: rnpChecked, setIsChecked: setRnpChecked, count: rnpCount, setCount: setRnpCount }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 946,
+              lineNumber: 954,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ApproachInput, { label: "TACAN", isChecked: tacanChecked, setIsChecked: setTacanChecked, count: tacanCount, setCount: setTacanCount }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 947,
+              lineNumber: 955,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ApproachInput, { label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-              lineNumber: 948,
+              lineNumber: 956,
               columnNumber: 25
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-            lineNumber: 841,
+            lineNumber: 849,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-          lineNumber: 736,
+          lineNumber: 744,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LogbookStrip, { title: `Captain's Log (${getFormattedName(event.instructor || event.pilot)})`, data: getLogbookData("Captain") }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-          lineNumber: 953,
+          lineNumber: 961,
           columnNumber: 17
         }, void 0),
         !isSolo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LogbookStrip, { title: `Crew's Log (${getFormattedName(event.student)})`, data: getLogbookData("Crew") }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-          lineNumber: 954,
+          lineNumber: 962,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
@@ -77979,22 +78031,22 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleManualSave, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Save & Return" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 961,
+        lineNumber: 969,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleAttemptReturn, className: "px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm", children: "Return" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 962,
+        lineNumber: 970,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Post-Flight" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 963,
+        lineNumber: 971,
         columnNumber: 20
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-      lineNumber: 960,
+      lineNumber: 968,
       columnNumber: 13
     }, void 0),
     showUnsavedWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -78015,7 +78067,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PostFlightView.tsx",
-        lineNumber: 966,
+        lineNumber: 974,
         columnNumber: 17
       },
       void 0
@@ -87017,43 +87069,43 @@ async function initializeData() {
 }
 const INITIAL_CURRENCY_REQUIREMENTS = [
   // 12 months = 365 days
-  { id: "aircrew-medical", name: "Aircrew Medical", description: "Annual aircrew medical check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "combat-survival", name: "Combat Survival Refresher", description: "Annual combat survival training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "live-fire", name: "W/PN Live Fire Licence", description: "Annual live fire qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "category-check", name: "Category Check", description: "Annual instructor category check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "wpn-handling", name: "WPN Handing Test", description: "Annual weapon handling test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "pft", name: "Physical Fitness Test", description: "Annual physical fitness test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "arm", name: "Aviation Risk Management", description: "Annual ARM course.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "nts", name: "Non-Technical Skills", description: "Annual NTS training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "alse-survival", name: "ALSE/Survival Theory", description: "Annual ALSE and survival theory.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "dinghy-drill", name: "Dinghy Drill", description: "Annual dinghy drill.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "pc21-life-support", name: "PC21 Life Support AF/BF Qualification", description: "Annual PC21 life support qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "pc21-training", name: "PC21 AF/BF/TA Training", description: "Annual PC21 training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "avmed-refresher", name: "AVMED Refresher", description: "Annual AVMED refresher.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "duty-instructor", name: "Duty Instructor", description: "Annual duty instructor qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "fob", name: "Flying Order Book", description: "Annual FOB check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "night-glide-solo", name: "Night Glide Solo", description: "Annual night glide solo qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "4-ship-wing", name: "4 Ship Wing", description: "Annual 4-ship wing qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "4-ship-lead", name: "4 Ship Lead", description: "Annual 4-ship lead qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "tac-form-wing", name: "Tac Form wing", description: "Annual tactical formation wing qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "tac-form-lead", name: "Tac Form Lead", description: "Annual tactical formation lead qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "if-currency-ride", name: "IF Currency Ride", description: "Annual instrument flight currency ride.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "low-flying", name: "Low Flying", description: "Annual low flying qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "navigation", name: "Navigation", description: "Annual navigation check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "dental", name: "Dental", description: "Annual dental check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "pc21-emergency-check", name: "PC21 Emergency Check", description: "Annual PC21 emergency check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "pc21-instrument-rating", name: "PC21 Instrument Rating Test", description: "Annual PC21 instrument rating test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
+  { id: "aircrew-medical", name: "Aircrew Medical", description: "Annual aircrew medical check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "combat-survival", name: "Combat Survival Refresher", description: "Annual combat survival training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "live-fire", name: "W/PN Live Fire Licence", description: "Annual live fire qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "category-check", name: "Category Check", description: "Annual instructor category check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "wpn-handling", name: "WPN Handing Test", description: "Annual weapon handling test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "pft", name: "Physical Fitness Test", description: "Annual physical fitness test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "arm", name: "Aviation Risk Management", description: "Annual ARM course.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "nts", name: "Non-Technical Skills", description: "Annual NTS training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "alse-survival", name: "ALSE/Survival Theory", description: "Annual ALSE and survival theory.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "dinghy-drill", name: "Dinghy Drill", description: "Annual dinghy drill.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "pc21-life-support", name: "PC21 Life Support AF/BF Qualification", description: "Annual PC21 life support qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "pc21-training", name: "PC21 AF/BF/TA Training", description: "Annual PC21 training.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "avmed-refresher", name: "AVMED Refresher", description: "Annual AVMED refresher.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "duty-instructor", name: "Duty Instructor", description: "Annual duty instructor qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "fob", name: "Flying Order Book", description: "Annual FOB check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "night-glide-solo", name: "Night Glide Solo", description: "Annual night glide solo qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "4-ship-wing", name: "4 Ship Wing", description: "Annual 4-ship wing qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "4-ship-lead", name: "4 Ship Lead", description: "Annual 4-ship lead qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "tac-form-wing", name: "Tac Form wing", description: "Annual tactical formation wing qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "tac-form-lead", name: "Tac Form Lead", description: "Annual tactical formation lead qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "if-currency-ride", name: "IF Currency Ride", description: "Annual instrument flight currency ride.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "low-flying", name: "Low Flying", description: "Annual low flying qualification.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "navigation", name: "Navigation", description: "Annual navigation check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "dental", name: "Dental", description: "Annual dental check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "pc21-emergency-check", name: "PC21 Emergency Check", description: "Annual PC21 emergency check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "pc21-instrument-rating", name: "PC21 Instrument Rating Test", description: "Annual PC21 instrument rating test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
   // 30 day currencies
-  { id: "pc21-day-gf-30d", name: "PC21 Day General Flying 30D", description: "At least one general flying event in last 30 days.", type: "primitive", isVisible: true, validityDays: 30, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputType: "count" },
+  { id: "pc21-day-gf-30d", name: "PC21 Day General Flying 30D", description: "At least one general flying event in last 30 days.", type: "primitive", isVisible: true, validityDays: 30, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
   // 90 day currencies
-  { id: "pc21-3-ia-90d", name: "PC21 3 Instrument Approach in 90 Days", description: "Three instrument approaches in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 3, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputType: "count" },
-  { id: "ia-3d-90d", name: "IA 3D PC21 90D", description: "3D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputType: "count" },
-  { id: "ia-2d-90d", name: "IA 2D PC21 90D", description: "2D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputType: "count" },
-  { id: "pc21-night-90d", name: "PC21 Night Flying 90D", description: "Night flying event in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputType: "count" },
+  { id: "pc21-3-ia-90d", name: "PC21 3 Instrument Approach in 90 Days", description: "Three instrument approaches in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 3, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
+  { id: "ia-3d-90d", name: "IA 3D PC21 90D", description: "3D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
+  { id: "ia-2d-90d", name: "IA 2D PC21 90D", description: "2D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
+  { id: "pc21-night-90d", name: "PC21 Night Flying 90D", description: "Night flying event in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
   // Hidden/Subordinate currencies
-  { id: "wpn-9mm", name: "9mm Qualification", description: "Qualification on 9mm pistol.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "wpn-glock", name: "Glock Qualification", description: "Qualification on Glock pistol.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" },
-  { id: "wpn-rifle", name: "Rifle Qualification", description: "Qualification on service rifle.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputType: "date" }
+  { id: "wpn-9mm", name: "9mm Qualification", description: "Qualification on 9mm pistol.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "wpn-glock", name: "Glock Qualification", description: "Qualification on Glock pistol.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
+  { id: "wpn-rifle", name: "Rifle Qualification", description: "Qualification on service rifle.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] }
 ];
 const INITIAL_MASTER_CURRENCIES = [
   {
@@ -87064,7 +87116,7 @@ const INITIAL_MASTER_CURRENCIES = [
     isVisible: true,
     expiryCalculation: "EARLIEST_CHILD",
     showInPostFlight: false,
-    postFlightInputType: "checkbox",
+    postFlightInputTypes: ["checkbox"],
     logicTree: {
       operator: "AND",
       children: [
@@ -87088,7 +87140,7 @@ const INITIAL_MASTER_CURRENCIES = [
     isVisible: true,
     expiryCalculation: "EARLIEST_CHILD",
     showInPostFlight: false,
-    postFlightInputType: "checkbox",
+    postFlightInputTypes: ["checkbox"],
     logicTree: {
       operator: "AND",
       children: [
@@ -87106,7 +87158,7 @@ const INITIAL_MASTER_CURRENCIES = [
     isVisible: true,
     expiryCalculation: "LATEST_CHILD",
     showInPostFlight: false,
-    postFlightInputType: "checkbox",
+    postFlightInputTypes: ["checkbox"],
     logicTree: {
       operator: "OR",
       children: [
@@ -87120,17 +87172,25 @@ const INITIAL_MASTER_CURRENCIES = [
 const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
   const enrichedReqs = dbRequirements.map((dbCur) => {
     const initial = INITIAL_CURRENCY_REQUIREMENTS.find((i) => i.id === dbCur.id);
+    const legacy = dbCur;
+    const migratedTypes = dbCur.postFlightInputTypes ?? (legacy.postFlightInputType ? [legacy.postFlightInputType] : void 0);
     return {
       showInPostFlight: false,
-      postFlightInputType: initial?.postFlightInputType ?? (dbCur.expiryRule === "ROLLING_WINDOW" ? "count" : "date"),
-      ...dbCur
+      postFlightInputTypes: initial?.postFlightInputTypes ?? (dbCur.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"]),
+      ...dbCur,
+      ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
     };
   });
-  const enrichedMasters = dbMasters.map((dbCur) => ({
-    showInPostFlight: false,
-    postFlightInputType: "checkbox",
-    ...dbCur
-  }));
+  const enrichedMasters = dbMasters.map((dbCur) => {
+    const legacy = dbCur;
+    const migratedTypes = dbCur.postFlightInputTypes ?? (legacy.postFlightInputType ? [legacy.postFlightInputType] : void 0);
+    return {
+      showInPostFlight: false,
+      postFlightInputTypes: ["checkbox"],
+      ...dbCur,
+      ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
+    };
+  });
   const dbReqIds = new Set(enrichedReqs.map((c) => c.id));
   const missingReqs = INITIAL_CURRENCY_REQUIREMENTS.filter((i) => !dbReqIds.has(i.id));
   const dbMasterIds = new Set(enrichedMasters.map((c) => c.id));
