@@ -182,7 +182,7 @@ const SparkLine: React.FC<{
   color?: string;
   interactive?: boolean;
 }> = ({ data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false }) => {
-  const [tooltip, setTooltip] = React.useState<{ i: number; svgX: number; svgY: number } | null>(null);
+  const [tooltip, setTooltip] = React.useState<{ i: number; pageX: number; pageY: number } | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
 
   if (!data || data.length < 2) return <span className="text-gray-600 text-xs">&mdash;</span>;
@@ -240,7 +240,13 @@ const SparkLine: React.FC<{
               {interactive && (
                 <circle
                   cx={x} cy={y} r={14} fill="transparent"
-                  onMouseEnter={() => setTooltip({ i, svgX: x, svgY: y })}
+                  onMouseEnter={(e) => {
+                    const rect = svgRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      const scaleX = rect.width / (svgRef.current?.viewBox?.baseVal?.width || width);
+                      setTooltip({ i, pageX: rect.left + x * (rect.width / width), pageY: rect.top + y * (rect.height / height) });
+                    }
+                  }}
                   onMouseLeave={() => setTooltip(null)}
                 />
               )}
@@ -249,23 +255,23 @@ const SparkLine: React.FC<{
         })}
       </svg>
 
-      {/* Floating tooltip — positioned relative to SVG container, never clipped */}
+      {/* Floating tooltip — fixed position relative to viewport, never clipped */}
       {interactive && tooltip !== null && hoveredVal !== null && (() => {
         const label = labels?.[tooltip.i] ?? `Assessment #${tooltip.i + 1}`;
-        const ttW = 130, ttH = 44;
-        // Position: right of point if in left half, left of point if in right half
-        const flipLeft = tooltip.svgX + ttW + 14 > width;
-        const leftPos = flipLeft ? tooltip.svgX - ttW - 8 : tooltip.svgX + 10;
-        const topPos = Math.max(0, tooltip.svgY - ttH / 2);
+        const ttW = 140, ttH = 52;
+        // Use fixed positioning based on page coordinates to escape any overflow:hidden parent
+        const vpW = window.innerWidth;
+        const leftPos = tooltip.pageX + ttW + 14 > vpW ? tooltip.pageX - ttW - 8 : tooltip.pageX + 12;
+        const topPos = Math.max(8, tooltip.pageY - ttH / 2);
         return (
           <div
             style={{
-              position: 'absolute',
+              position: 'fixed',
               left: leftPos,
               top: topPos,
               width: ttW,
               pointerEvents: 'none',
-              zIndex: 100,
+              zIndex: 9999,
             }}
             className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 shadow-xl"
           >
@@ -827,13 +833,12 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
       {gradeByTraineeModal && (
         <GradeByTraineeModal
           trainees={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
-            // Use surname if name has spaces; if no spaces, use last underscore-segment
-            const spaceParts = t.traineeFullName.trim().split(/\s+/);
-            const label = spaceParts.length >= 2
-              ? spaceParts[spaceParts.length - 1]  // surname (last word)
-              : t.traineeFullName.includes('_')
-                ? t.traineeFullName.split('_').pop() || t.traineeFullName  // last underscore segment e.g. "1" from "ADF302_TRAINEE_1"
-                : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
+            // traineeFullName format: "Brown, John – ADF302"
+            // Split on em-dash to get name part "Brown, John", then take surname before comma
+            const namePart = t.traineeFullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim(); // "Brown, John"
+            const label = namePart.includes(',')
+              ? namePart.split(',')[0].trim()  // "Brown" (surname)
+              : namePart.split(/\s+/)[0].trim(); // first word if no comma
             return { label, value: safeN(t.avgOverallGrade) };
           })}
           onClose={() => setGradeByTraineeModal(false)}
@@ -926,12 +931,11 @@ const TraineeTab: React.FC<{ trainees: TIETraineeSummary[] }> = ({ trainees }) =
                   <div className="overflow-x-auto">
                     <ColChart
                       data={[...trainees].sort((a, b) => safeN(a.avgOverallGrade) - safeN(b.avgOverallGrade)).map(t => {
-                        const spaceParts = t.traineeFullName.trim().split(/\s+/);
-                        const label = spaceParts.length >= 2
-                          ? spaceParts[spaceParts.length - 1]
-                          : t.traineeFullName.includes('_')
-                            ? t.traineeFullName.split('_').pop() || t.traineeFullName
-                            : t.traineeFullName.length > 10 ? t.traineeFullName.slice(0, 10) : t.traineeFullName;
+                        // traineeFullName format: "Brown, John – ADF302"
+                        const namePart2 = t.traineeFullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+                        const label = namePart2.includes(',')
+                          ? namePart2.split(',')[0].trim()
+                          : namePart2.split(/\s+/)[0].trim();
                         return { label, value: safeN(t.avgOverallGrade) };
                       })}
                       max={5} height={130} />
