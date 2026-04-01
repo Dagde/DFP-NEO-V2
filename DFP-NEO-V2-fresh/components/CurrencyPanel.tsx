@@ -179,25 +179,33 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     const newStatus: PersonCurrencyStatus[] = [];
     visibleCurrencyDefinitions.forEach(def => {
       const editedDate = editedStatuses.get(def.name);
-      if (editedDate) {
-        const validityDays = 'validityDays' in def ? def.validityDays : 365;
-        const expiryDate = addDaysToDate(editedDate, validityDays);
-        const daysRem = getDaysRemaining(expiryDate);
-        newStatus.push({
-          currencyName: def.name,
-          lastEventDate: editedDate,
-          calculatedExpiry: expiryDate,
-          isCurrent: daysRem > 0,
-        });
+      if (editedDate !== undefined) {
+        // User edited this field — use the new date (or clear if empty string)
+        if (editedDate) {
+          const validityDays = 'validityDays' in def ? def.validityDays : 365;
+          const expiryDate = addDaysToDate(editedDate, validityDays);
+          const daysRem = getDaysRemaining(expiryDate);
+          newStatus.push({
+            currencyName: def.name,
+            lastEventDate: editedDate,
+            calculatedExpiry: expiryDate,
+            isCurrent: daysRem > 0,
+          });
+        }
+        // If editedDate is empty string, the user cleared the field — don't push (removes it)
+      } else {
+        // Not edited — preserve existing saved status if it exists
+        const existing = currencyStatus.find(s => s.currencyName === def.name);
+        if (existing) {
+          newStatus.push(existing);
+        }
       }
     });
 
     // Preserve statuses for currencies not in visible list
     currencyStatus.forEach(status => {
       if (!visibleCurrencyDefinitions.some(def => def.name === status.currencyName)) {
-        if (!editedStatuses.has(status.currencyName)) {
-          newStatus.push(status);
-        }
+        newStatus.push(status);
       }
     });
 
