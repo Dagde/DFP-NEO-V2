@@ -424,6 +424,84 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================================
+// CURRENCY STATUS - Dedicated clean endpoints
+// ============================================================
+
+// GET /api/currency/:personId - Load currency status for a person
+app.get('/api/currency/:personId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const numericId = parseInt(req.params.personId, 10);
+    if (isNaN(numericId)) {
+      return res.status(400).json({ error: 'Invalid personId' });
+    }
+
+    // Find all records for this idNumber (handles duplicates)
+    const records = await db.personnel.findMany({ where: { idNumber: numericId } });
+    if (!records || records.length === 0) {
+      // Person not in DB (mock data only) - return empty array
+      return res.json({ currencyStatus: [] });
+    }
+
+    // Find the record that has currencyStatus data - prefer it
+    let currencyStatus = [];
+    for (const record of records) {
+      if (record.qualifications && typeof record.qualifications === 'object') {
+        const q = record.qualifications;
+        if (q.currencyStatus && Array.isArray(q.currencyStatus) && q.currencyStatus.length > 0) {
+          currencyStatus = q.currencyStatus;
+          break;
+        }
+      }
+    }
+
+    console.log(`✅ GET /api/currency/${numericId} - returning ${currencyStatus.length} entries`);
+    res.json({ currencyStatus });
+  } catch (error) {
+    console.error('❌ GET /api/currency/:personId error:', error);
+    res.status(500).json({ error: 'Failed to load currency status', details: error.message });
+  }
+});
+
+// POST /api/currency/:personId - Save currency status for a person
+app.post('/api/currency/:personId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const numericId = parseInt(req.params.personId, 10);
+    if (isNaN(numericId)) {
+      return res.status(400).json({ error: 'Invalid personId' });
+    }
+
+    const { currencyStatus } = req.body;
+    if (!Array.isArray(currencyStatus)) {
+      return res.status(400).json({ error: 'currencyStatus must be an array' });
+    }
+
+    // Find all records for this idNumber
+    const records = await db.personnel.findMany({ where: { idNumber: numericId } });
+    if (!records || records.length === 0) {
+      return res.status(404).json({ error: `No personnel record found for idNumber ${numericId}` });
+    }
+
+    // Update ALL matching records (handles duplicates)
+    await Promise.all(records.map(record => {
+      const existing = (typeof record.qualifications === 'object' && record.qualifications !== null)
+        ? record.qualifications : {};
+      return db.personnel.update({
+        where: { id: record.id },
+        data: { qualifications: { ...existing, currencyStatus } }
+      });
+    }));
+
+    console.log(`✅ POST /api/currency/${numericId} - saved ${currencyStatus.length} entries to ${records.length} record(s)`);
+    res.json({ success: true, saved: currencyStatus.length, records: records.length });
+  } catch (error) {
+    console.error('❌ POST /api/currency/:personId error:', error);
+    res.status(500).json({ error: 'Failed to save currency status', details: error.message });
+  }
+});
+
+// ============================================================
 // SERVE STATIC VITE BUILD
 // ============================================================
 

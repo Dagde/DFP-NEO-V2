@@ -86,6 +86,7 @@ import { InstructorProfileFlyout } from './components/InstructorProfileFlyout';
 import TraineeProfileFlyout from './components/TraineeProfileFlyout';
 import PublishConfirmationFlyout from './components/PublishConfirmationFlyout';
 import CurrencyView from './components/CurrencyView';
+import CurrencyStatusPage from './components/CurrencyStatusPage';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
@@ -9057,41 +9058,11 @@ updates.forEach(update => {
                 return <div>Error: Could not load trainee LMP.</div>;
              case 'Currency':
                 if (selectedPersonForCurrency) {
-                    return <CurrencyView
+                    return <CurrencyStatusPage
                                 person={selectedPersonForCurrency}
                                 masterCurrencies={masterCurrencies}
                                 currencyRequirements={currencyRequirements}
-                                allEvents={events}
-                                syllabusDetails={syllabusDetails}
                                 onClose={handleCurrencyBack}
-                                onUpdateCurrencyStatus={async (personId, newStatus) => {
-                                    const isInstructor = 'role' in selectedPersonForCurrency;
-                                    // Update local state immediately
-                                    if (isInstructor) {
-                                        setInstructorsData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));
-                                    } else {
-                                        setTraineesData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));
-                                    }
-                                    // Also update the selectedPersonForCurrency so CurrencyView shows fresh data
-                                    setSelectedPersonForCurrency(prev => prev && prev.idNumber === personId ? {...prev, currencyStatus: newStatus} : prev);
-                                    // Save to database
-                                    try {
-                                        const response = await fetch(`/api/personnel/${personId}`, {
-                                            method: 'PATCH',
-                                            credentials: 'include',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ currencyStatus: newStatus }),
-                                        });
-                                        if (!response.ok) {
-                                            const errData = await response.json();
-                                            console.error('Failed to save currencyStatus to DB:', response.status, errData);
-                                        } else {
-                                            console.log('currencyStatus saved to DB for personId:', personId);
-                                        }
-                                    } catch (err) {
-                                        console.error('Error saving currencyStatus to DB:', err);
-                                    }
-                                }}
                                 registerDirtyCheck={registerDirtyCheck}
                            />;
                 }
