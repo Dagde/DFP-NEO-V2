@@ -25,7 +25,17 @@ const CurrencyView: React.FC<CurrencyViewProps> = ({
 }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
-    
+    // LOCAL copy of currencyStatus so we can update immediately on save
+    // without waiting for the parent to re-render with updated person prop
+    const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[]>(
+        person.currencyStatus || []
+    );
+
+    // Sync localCurrencyStatus if person prop changes (e.g. navigating to a different person)
+    useEffect(() => {
+        setLocalCurrencyStatus(person.currencyStatus || []);
+    }, [person.idNumber]); // Only sync when person changes (not on every re-render)
+
     // FIX: Combine master and requirement currencies into a single list and filter by visibility.
     const visibleCurrencyDefinitions: CurrencyDefinition[] = useMemo(() => {
         return [...masterCurrencies, ...currencyRequirements]
@@ -43,7 +53,7 @@ const CurrencyView: React.FC<CurrencyViewProps> = ({
     const hasUnsavedChanges = useMemo(() => {
         if (!isEditing) return false;
     
-        const originalMap = new Map(person.currencyStatus?.map(s => [s.currencyName, s.lastEventDate]));
+        const originalMap = new Map(localCurrencyStatus.map(s => [s.currencyName, s.lastEventDate]));
     
         for (const def of visibleCurrencyDefinitions) {
             const originalDate = originalMap.get(def.name) || '';
@@ -54,10 +64,11 @@ const CurrencyView: React.FC<CurrencyViewProps> = ({
         }
     
         return false;
-    }, [isEditing, editedStatuses, person.currencyStatus, visibleCurrencyDefinitions]);
+    }, [isEditing, editedStatuses, localCurrencyStatus, visibleCurrencyDefinitions]);
 
+    // Read from LOCAL state (not from person prop)
     const getCurrencyStatus = (currencyName: string): PersonCurrencyStatus | undefined => {
-        return person.currencyStatus?.find(c => c.currencyName === currencyName);
+        return localCurrencyStatus.find(c => c.currencyName === currencyName);
     };
 
     const calculateExpiry = (lastEventDateStr: string, periodInDays: number): Date => {
@@ -113,17 +124,23 @@ const CurrencyView: React.FC<CurrencyViewProps> = ({
             }
         });
 
-        person.currencyStatus?.forEach(status => {
+        // Preserve any currencies not in the visible definitions
+        localCurrencyStatus.forEach(status => {
             if (!visibleCurrencyDefinitions.some(def => def.name === status.currencyName)) {
-                 if(!editedStatuses.has(status.currencyName)) {
+                if (!editedStatuses.has(status.currencyName)) {
                     newCurrencyStatus.push(status);
-                 }
+                }
             }
         });
 
-        onUpdateCurrencyStatus(person.idNumber, newCurrencyStatus);
+        // Update LOCAL state immediately so the view shows data right away
+        // without waiting for the parent prop to update
+        setLocalCurrencyStatus(newCurrencyStatus);
         setIsEditing(false);
-    }, [editedStatuses, onUpdateCurrencyStatus, person.idNumber, person.currencyStatus, visibleCurrencyDefinitions]);
+
+        // Tell parent to persist the data (updates instructorsData state + saves to DB)
+        onUpdateCurrencyStatus(person.idNumber, newCurrencyStatus);
+    }, [editedStatuses, onUpdateCurrencyStatus, person.idNumber, localCurrencyStatus, visibleCurrencyDefinitions]);
     
     useEffect(() => {
         registerDirtyCheck(
@@ -172,8 +189,6 @@ const CurrencyView: React.FC<CurrencyViewProps> = ({
                             ) : (
                                 <>
                                     <button onClick={handleEditClick} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold shadow-md">Edit</button>
-                                    {/* FIX: onSetupClick is not passed. This button's function needs to be handled in parent.
-                                        For now, removing it as it's not implemented. If needed, can be re-added via App.tsx. */}
                                 </>
                             )}
                         </div>
