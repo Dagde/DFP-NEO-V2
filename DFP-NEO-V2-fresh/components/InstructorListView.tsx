@@ -126,7 +126,12 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     if (selectedInstructor) {
         const updatedInstructor = instructorsData.find(i => i.idNumber === selectedInstructor.idNumber);
         if (updatedInstructor && JSON.stringify(updatedInstructor) !== JSON.stringify(selectedInstructor)) {
-            setSelectedInstructor(updatedInstructor);
+            // Preserve any locally-edited currencyStatus so a background instructorsData refresh
+            // doesn't overwrite currency saves that haven't propagated back to the master array yet
+            setSelectedInstructor({
+              ...updatedInstructor,
+              currencyStatus: selectedInstructor.currencyStatus ?? updatedInstructor.currencyStatus,
+            });
         }
     }
   }, [instructorsData, selectedInstructor]);

@@ -159,8 +159,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
 
             // Update the state only if the data has actually changed to avoid an infinite loop.
+            // Preserve any locally-edited currencyStatus so a background traineesData refresh
+            // doesn't overwrite currency saves that haven't propagated back to the master array yet.
             if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
-                setSelectedTrainee(updatedTrainee);
+                setSelectedTrainee({
+                  ...updatedTrainee,
+                  currencyStatus: selectedTrainee.currencyStatus ?? updatedTrainee.currencyStatus,
+                });
             }
         }
     }, [traineesData, selectedTrainee, isCreatingNew]);

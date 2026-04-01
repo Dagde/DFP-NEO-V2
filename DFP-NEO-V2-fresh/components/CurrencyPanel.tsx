@@ -97,6 +97,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   // Use UUID if available, otherwise fall back to numeric idNumber
   const resolvedId = personId || (idNumber !== undefined ? String(idNumber) : undefined);
   const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(initialCurrencyStatus || []);
+  // Ref to prevent re-fetching from API after a successful save (which would overwrite fresh state)
+  const hasSavedRef = React.useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
   // Track the original values at the time Edit was clicked, so we can distinguish
@@ -115,6 +117,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     const endpoint = personType === 'instructor'
       ? `/api/personnel/${resolvedId}/currencies`
       : `/api/trainees/${resolvedId}/currencies`;
+
+    // If we just saved, skip the re-fetch to avoid overwriting freshly saved state
+    if (hasSavedRef.current) {
+      console.log(`[CurrencyPanel] Skipping re-fetch after save (hasSaved=true)`);
+      setIsLoading(false);
+      return;
+    }
 
     console.log(`[CurrencyPanel] Loading currencies from: ${endpoint} (resolvedId=${resolvedId}, personType=${personType})`);
 
@@ -253,9 +262,11 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         const err = await res.json().catch(() => ({}));
         throw new Error((err as any).error || `HTTP ${res.status}`);
       }
+      hasSavedRef.current = true; // prevent re-fetch from overwriting this fresh save
       setCurrencyStatus(newStatus);
       setIsEditing(false);
       setEditedStatuses(new Map());
+      setOriginalStatuses(new Map());
       onCurrencyStatusChange?.(newStatus);
 
       // Write audit entry to DB (fire-and-forget)
