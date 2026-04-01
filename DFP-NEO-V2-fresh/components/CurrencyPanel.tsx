@@ -99,6 +99,9 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(initialCurrencyStatus || []);
   const [isEditing, setIsEditing] = useState(false);
   const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
+  // Track the original values at the time Edit was clicked, so we can distinguish
+  // "user actively cleared a field" vs "field was already empty and user didn't touch it"
+  const [originalStatuses, setOriginalStatuses] = useState<Map<string, string>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -113,10 +116,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       ? `/api/personnel/${resolvedId}/currencies`
       : `/api/trainees/${resolvedId}/currencies`;
 
+    console.log(`[CurrencyPanel] Loading currencies from: ${endpoint} (resolvedId=${resolvedId}, personType=${personType})`);
+
     fetch(endpoint, { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
       .then(data => {
         const status: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
+        console.log(`[CurrencyPanel] Loaded ${status.length} currency record(s):`, JSON.stringify(status));
         setCurrencyStatus(status);
       })
       .catch(err => {
@@ -156,7 +162,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       const status = getCurrencyStatus(def.name);
       initialMap.set(def.name, status?.lastEventDate || '');
     });
-    setEditedStatuses(initialMap);
+    setEditedStatuses(new Map(initialMap));
+    setOriginalStatuses(new Map(initialMap)); // snapshot original values
     setIsEditing(true);
     setSaveError(null);
   };
@@ -164,6 +171,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   const handleCancelClick = () => {
     setIsEditing(false);
     setEditedStatuses(new Map());
+    setOriginalStatuses(new Map());
     setSaveError(null);
   };
 
@@ -177,11 +185,18 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     setSaveError(null);
 
     const newStatus: PersonCurrencyStatus[] = [];
+    console.log('[CurrencyPanel] handleSaveClick — currencyStatus before save:', JSON.stringify(currencyStatus));
+    console.log('[CurrencyPanel] editedStatuses:', JSON.stringify(Array.from(editedStatuses.entries())));
+    console.log('[CurrencyPanel] originalStatuses:', JSON.stringify(Array.from(originalStatuses.entries())));
+
     visibleCurrencyDefinitions.forEach(def => {
       const editedDate = editedStatuses.get(def.name);
+      const originalDate = originalStatuses.get(def.name);
+
       if (editedDate !== undefined) {
-        // User edited this field — use the new date (or clear if empty string)
+        // This field was in the edit form
         if (editedDate) {
+          // Has a date value — save it
           const validityDays = 'validityDays' in def ? def.validityDays : 365;
           const expiryDate = addDaysToDate(editedDate, validityDays);
           const daysRem = getDaysRemaining(expiryDate);
@@ -191,10 +206,22 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
             calculatedExpiry: expiryDate,
             isCurrent: daysRem > 0,
           });
+        } else {
+          // editedDate is empty string
+          if (originalDate) {
+            // User actively cleared a field that had a value — honour the clear (remove it)
+            console.log('[CurrencyPanel] User cleared ' + def.name + ' (was: ' + originalDate + ')');
+          } else {
+            // Field was already empty when edit started — preserve any existing DB record
+            const existing = currencyStatus.find(s => s.currencyName === def.name);
+            if (existing) {
+              console.log('[CurrencyPanel] Preserving existing ' + def.name + ':', existing.lastEventDate);
+              newStatus.push(existing);
+            }
+          }
         }
-        // If editedDate is empty string, the user cleared the field — don't push (removes it)
       } else {
-        // Not edited — preserve existing saved status if it exists
+        // Not in editedStatuses at all — preserve existing saved status
         const existing = currencyStatus.find(s => s.currencyName === def.name);
         if (existing) {
           newStatus.push(existing);
@@ -208,6 +235,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         newStatus.push(status);
       }
     });
+
+    console.log('[CurrencyPanel] newStatus to save:', JSON.stringify(newStatus));
 
     const endpoint = personType === 'instructor'
       ? `/api/personnel/${resolvedId}/currencies`

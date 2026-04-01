@@ -304,19 +304,24 @@ app.get('/api/personnel/:id/currencies', async (req, res) => {
     const { id } = req.params;
     let record = null;
     const numericId = parseInt(id, 10);
+    console.log(`GET /api/personnel/${id}/currencies -- numericId=${numericId}, isNumeric=${!isNaN(numericId)}`);
     if (!isNaN(numericId)) {
-      // Order by updatedAt desc — consistently get the most recently updated record
+      // Order by updatedAt desc -- consistently get the most recently updated record
       // Also prefer records that already have currency data
       const records = await db.personnel.findMany({ where: { idNumber: numericId }, orderBy: { updatedAt: 'desc' } });
+      console.log(`   Found ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => ({ id: r.id, name: r.name, hasCurrency: !!(r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length) })));
       record = records.find(r => r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length > 0) || records[0] || null;
+      console.log(`   Using record id=${record && record.id}, name=${record && record.name}`);
     } else {
       record = await db.personnel.findUnique({ where: { id } });
+      console.log(`   UUID lookup -- found: id=${record && record.id}, name=${record && record.name}`);
     }
     if (!record) return res.status(404).json({ error: 'Personnel not found' });
     const currencies = record.qualifications ? (record.qualifications.currencyStatus || []) : [];
+    console.log(`   Returning ${currencies.length} currency record(s):`, JSON.stringify(currencies));
     res.json({ currencyStatus: currencies });
   } catch (error) {
-    console.error('❌ GET /api/personnel/:id/currencies error:', error);
+    console.error('GET /api/personnel/:id/currencies error:', error);
     res.status(500).json({ error: 'Failed to fetch personnel currencies', details: error.message });
   }
 });
@@ -331,11 +336,14 @@ app.patch('/api/personnel/:id/currencies', async (req, res) => {
 
     if (!id) return res.status(400).json({ error: 'Personnel ID is required' });
 
+    console.log(`PATCH /api/personnel/${id}/currencies -- saving ${currencyStatus && currencyStatus.length} items:`, JSON.stringify(currencyStatus));
+
     const numericId = parseInt(id, 10);
     if (!isNaN(numericId)) {
       // Update ALL records with this idNumber to keep duplicates in sync
       const records = await db.personnel.findMany({ where: { idNumber: numericId } });
       if (!records.length) return res.status(404).json({ error: 'Personnel not found' });
+      console.log(`   Updating ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => r.id));
       await Promise.all(records.map(existing => {
         const currentQual = existing.qualifications || {};
         return db.personnel.update({
@@ -348,7 +356,7 @@ app.patch('/api/personnel/:id/currencies', async (req, res) => {
           }
         });
       }));
-      console.log(`✅ PATCH /api/personnel/${id}/currencies - updated ${records.length} record(s) for: ${records[0].name}`);
+      console.log(`   PATCH /api/personnel/${id}/currencies - updated ${records.length} record(s) for: ${records[0].name}`);
       res.json({ success: true, currencyStatus });
     } else {
       const existing = await db.personnel.findUnique({ where: { id } });
@@ -363,11 +371,11 @@ app.patch('/api/personnel/:id/currencies', async (req, res) => {
           }
         }
       });
-      console.log(`✅ PATCH /api/personnel/${id}/currencies - updated currency for: ${updated.name}`);
+      console.log(`   PATCH /api/personnel/${id}/currencies - updated currency for: ${updated.name}`);
       res.json({ success: true, currencyStatus });
     }
   } catch (error) {
-    console.error('❌ PATCH /api/personnel/:id/currencies error:', error);
+    console.error('PATCH /api/personnel/:id/currencies error:', error);
     res.status(500).json({ error: 'Failed to update personnel currencies', details: error.message });
   }
 });
@@ -380,22 +388,27 @@ app.get('/api/trainees/:id/currencies', async (req, res) => {
     const { id } = req.params;
     let record = null;
     const numericId = parseInt(id, 10);
+    console.log(`GET /api/trainees/${id}/currencies -- numericId=${numericId}, isNumeric=${!isNaN(numericId)}`);
     if (!isNaN(numericId)) {
-      // Order by updatedAt desc — prefer most recently updated record
+      // Order by updatedAt desc -- prefer most recently updated record
       // Also prefer records that already have currency data
       const records = await db.trainee.findMany({ where: { idNumber: numericId }, orderBy: { updatedAt: 'desc' } });
+      console.log(`   Found ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => ({ id: r.id, name: r.name, hasCurrency: !!(r.currencyStatus && r.currencyStatus.length) })));
       record = records.find(r => r.currencyStatus && Array.isArray(r.currencyStatus) && r.currencyStatus.length > 0) || records[0] || null;
+      console.log(`   Using record id=${record && record.id}, name=${record && record.name}`);
     } else {
       record = await db.trainee.findUnique({ where: { id } });
+      console.log(`   UUID lookup -- found: id=${record && record.id}, name=${record && record.name}`);
     }
     if (!record) return res.status(404).json({ error: 'Trainee not found' });
     let currencies = [];
     if (record.currencyStatus) {
       currencies = Array.isArray(record.currencyStatus) ? record.currencyStatus : [];
     }
+    console.log(`   Returning ${currencies.length} currency record(s):`, JSON.stringify(currencies));
     res.json({ currencyStatus: currencies });
   } catch (error) {
-    console.error('❌ GET /api/trainees/:id/currencies error:', error);
+    console.error('GET /api/trainees/:id/currencies error:', error);
     res.status(500).json({ error: 'Failed to fetch trainee currencies', details: error.message });
   }
 });
@@ -410,18 +423,21 @@ app.patch('/api/trainees/:id/currencies', async (req, res) => {
 
     if (!id) return res.status(400).json({ error: 'Trainee ID is required' });
 
+    console.log(`PATCH /api/trainees/${id}/currencies -- saving ${currencyStatus && currencyStatus.length} items:`, JSON.stringify(currencyStatus));
+
     const numericId = parseInt(id, 10);
     if (!isNaN(numericId)) {
       // Update ALL records with this idNumber to keep duplicates in sync
       const records = await db.trainee.findMany({ where: { idNumber: numericId } });
       if (!records.length) return res.status(404).json({ error: 'Trainee not found' });
+      console.log(`   Updating ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => r.id));
       await Promise.all(records.map(existing =>
         db.trainee.update({
           where: { id: existing.id },
           data: { currencyStatus: currencyStatus || [] }
         })
       ));
-      console.log(`✅ PATCH /api/trainees/${id}/currencies - updated ${records.length} record(s) for: ${records[0].name}`);
+      console.log(`   PATCH /api/trainees/${id}/currencies - updated ${records.length} record(s) for: ${records[0].name}`);
       res.json({ success: true, currencyStatus });
     } else {
       const existing = await db.trainee.findUnique({ where: { id } });
@@ -430,11 +446,11 @@ app.patch('/api/trainees/:id/currencies', async (req, res) => {
         where: { id: existing.id },
         data: { currencyStatus: currencyStatus || [] }
       });
-      console.log(`✅ PATCH /api/trainees/${id}/currencies - updated currency for: ${updated.name}`);
+      console.log(`   PATCH /api/trainees/${id}/currencies - updated currency for: ${updated.name}`);
       res.json({ success: true, currencyStatus });
     }
   } catch (error) {
-    console.error('❌ PATCH /api/trainees/:id/currencies error:', error);
+    console.error('PATCH /api/trainees/:id/currencies error:', error);
     res.status(500).json({ error: 'Failed to update trainee currencies', details: error.message });
   }
 });
