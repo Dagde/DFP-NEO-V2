@@ -89,7 +89,21 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     currentUserId,
     currentUserName,
 }) => {
-  console.log(`🏫 [INSTRUCTORLISTVIEW RENDER] school=${school}, instructorsData.length=${instructorsData.length}`);
+  // Track which prop changed to diagnose render loop
+  const prevPropsRef = React.useRef<any>({});
+  const renderCountRef = React.useRef(0);
+  renderCountRef.current++;
+  const changedProps: string[] = [];
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName };
+  Object.keys(currentProps).forEach(key => {
+    if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
+      changedProps.push(key);
+    }
+  });
+  prevPropsRef.current = currentProps;
+  if (changedProps.length > 0) {
+    console.log(`🏫 [INSTRUCTORLISTVIEW RENDER #${renderCountRef.current}] Changed props:`, changedProps.join(', '));
+  }
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
