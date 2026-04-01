@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 
+// Module-level cache: survives component unmount/remount
+// Key: resolvedId (UUID or idNumber string), Value: last successfully saved currency status
+const savedCurrencyCache = new Map<string, PersonCurrencyStatus[]>();
+
 interface CurrencyPanelProps {
   personId: string | undefined;        // DB string UUID (Personnel.id or Trainee.id) — falls back to idNumber
   idNumber?: number;                   // Numeric idNumber — used as fallback when personId is undefined
@@ -97,12 +101,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   // Use UUID if available, otherwise fall back to numeric idNumber
   const resolvedId = personId || (idNumber !== undefined ? String(idNumber) : undefined);
 
-  // Track the last successfully saved status so we can restore it if fetch returns stale data
-  const lastSavedStatusRef = useRef<PersonCurrencyStatus[] | null>(null);
-  // Track whether a save just happened in this mount cycle
-  const justSavedRef = useRef(false);
+  // On mount, initialise state from module-level cache (survives tab close/reopen)
+  // Falls back to initialCurrencyStatus prop, then empty array
+  const cachedStatus = resolvedId ? (savedCurrencyCache.get(resolvedId) ?? null) : null;
 
-  const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(initialCurrencyStatus || []);
+  const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(
+    cachedStatus || initialCurrencyStatus || []
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
   // Track the original values at the time Edit was clicked
@@ -116,11 +121,11 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   useEffect(() => {
     if (!resolvedId) return;
 
-    // If we just saved in this render cycle, don't immediately re-fetch
-    // (the save already updated local state optimistically)
-    if (justSavedRef.current) {
-      console.log(`[CurrencyPanel] Skipping re-fetch right after save`);
-      justSavedRef.current = false;
+    // If we have a cached save for this person, skip the API fetch entirely
+    // The cache is populated after every successful PATCH save
+    if (savedCurrencyCache.has(resolvedId)) {
+      console.log(`[CurrencyPanel] Using cached saved status for ${resolvedId} (${savedCurrencyCache.get(resolvedId)!.length} records) — skipping API fetch`);
+      setCurrencyStatus(savedCurrencyCache.get(resolvedId)!);
       return;
     }
 
@@ -136,25 +141,11 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       .then(data => {
         const status: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
         console.log(`[CurrencyPanel] Fetched ${status.length} currency record(s):`, JSON.stringify(status));
-
-        // If we have a lastSaved that is more recent than what the API returned, use that
-        // This handles the race condition where the component remounts right after a save
-        if (lastSavedStatusRef.current !== null) {
-          const savedCount = lastSavedStatusRef.current.length;
-          const fetchedCount = status.length;
-          console.log(`[CurrencyPanel] Have lastSaved (${savedCount} items) vs fetched (${fetchedCount} items) — using lastSaved`);
-          setCurrencyStatus(lastSavedStatusRef.current);
-        } else {
-          setCurrencyStatus(status);
-        }
+        setCurrencyStatus(status);
       })
       .catch(err => {
         console.warn('[CurrencyPanel] Could not load from API, using initial:', err);
-        if (lastSavedStatusRef.current !== null) {
-          setCurrencyStatus(lastSavedStatusRef.current);
-        } else if (initialCurrencyStatus) {
-          setCurrencyStatus(initialCurrencyStatus);
-        }
+        if (initialCurrencyStatus) setCurrencyStatus(initialCurrencyStatus);
       })
       .finally(() => setIsLoading(false));
   }, [resolvedId, personType]);
@@ -281,10 +272,12 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 
       console.log('[CurrencyPanel] ✅ Save successful — updating local state with', newStatus.length, 'records');
 
-      // Store the saved status persistently (survives remount via parent state)
-      lastSavedStatusRef.current = newStatus;
-      // Mark that we just saved so the next useEffect fetch doesn't overwrite
-      justSavedRef.current = true;
+      // Store in module-level cache — survives component unmount/remount
+      // This means closing and reopening the tab will show saved data immediately
+      if (resolvedId) {
+        savedCurrencyCache.set(resolvedId, newStatus);
+        console.log(`[CurrencyPanel] Cached saved status for ${resolvedId}`);
+      }
 
       // Update local state immediately — this is what the user sees
       setCurrencyStatus(newStatus);
