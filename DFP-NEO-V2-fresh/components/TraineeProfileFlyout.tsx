@@ -274,6 +274,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     } | null>(null);
     // Local currency status override — updated after successful save without triggering full onUpdateTrainee
     const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+    const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
     // Audit flyout visibility
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
@@ -905,14 +906,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           </div>
                         </div>
                         <CurrencyPanel
+                          key={`currency-panel-${trainee.idNumber}`}
                           personId={(trainee as any).id}
                           idNumber={trainee.idNumber}
                           personType="trainee"
                           personName={trainee.name}
                           masterCurrencies={masterCurrencies}
                           currencyRequirements={currencyRequirements}
-                          initialCurrencyStatus={localCurrencyStatus ?? trainee.currencyStatus}
+                          initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus}
                           onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
+                            localCurrencyStatusRef.current = newStatus;
                             setLocalCurrencyStatus(newStatus);
                           }}
                           onEditStateChange={setCurrencyEditState}

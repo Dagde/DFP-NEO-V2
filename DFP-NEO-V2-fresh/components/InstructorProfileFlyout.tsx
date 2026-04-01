@@ -298,7 +298,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   } | null>(null);
 
   // Local currency status override — updated after successful save without triggering full onUpdateInstructor
+  // Uses a ref to ensure the value persists across renders and instructor prop changes
   const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+  const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
   // Audit flyout visibility
   const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
 
@@ -419,14 +421,16 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     </div>
                   </div>
                   <CurrencyPanel
+                    key={`currency-panel-${instructor.idNumber}`}
                     personId={(instructor as any).id}
                     idNumber={instructor.idNumber}
                     personType="instructor"
                     personName={instructor.name}
                     masterCurrencies={masterCurrencies}
                     currencyRequirements={currencyRequirements}
-                    initialCurrencyStatus={localCurrencyStatus ?? instructor.currencyStatus}
+                    initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? instructor.currencyStatus}
                     onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
+                      localCurrencyStatusRef.current = newStatus;
                       setLocalCurrencyStatus(newStatus);
                     }}
                     onEditStateChange={setCurrencyEditState}

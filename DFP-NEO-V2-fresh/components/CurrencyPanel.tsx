@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 
 interface CurrencyPanelProps {
@@ -96,47 +96,65 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 }) => {
   // Use UUID if available, otherwise fall back to numeric idNumber
   const resolvedId = personId || (idNumber !== undefined ? String(idNumber) : undefined);
+
+  // Track the last successfully saved status so we can restore it if fetch returns stale data
+  const lastSavedStatusRef = useRef<PersonCurrencyStatus[] | null>(null);
+  // Track whether a save just happened in this mount cycle
+  const justSavedRef = useRef(false);
+
   const [currencyStatus, setCurrencyStatus] = useState<PersonCurrencyStatus[]>(initialCurrencyStatus || []);
-  // Ref to prevent re-fetching from API after a successful save (which would overwrite fresh state)
-  const hasSavedRef = React.useRef(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
-  // Track the original values at the time Edit was clicked, so we can distinguish
-  // "user actively cleared a field" vs "field was already empty and user didn't touch it"
+  // Track the original values at the time Edit was clicked
   const [originalStatuses, setOriginalStatuses] = useState<Map<string, string>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
 
   // Load currency status from API on mount
   useEffect(() => {
     if (!resolvedId) return;
-    setIsLoading(true);
+
+    // If we just saved in this render cycle, don't immediately re-fetch
+    // (the save already updated local state optimistically)
+    if (justSavedRef.current) {
+      console.log(`[CurrencyPanel] Skipping re-fetch right after save`);
+      justSavedRef.current = false;
+      return;
+    }
+
     const endpoint = personType === 'instructor'
       ? `/api/personnel/${resolvedId}/currencies`
       : `/api/trainees/${resolvedId}/currencies`;
 
-    // If we just saved, skip the re-fetch to avoid overwriting freshly saved state
-    if (hasSavedRef.current) {
-      console.log(`[CurrencyPanel] Skipping re-fetch after save (hasSaved=true)`);
-      setIsLoading(false);
-      return;
-    }
-
-    console.log(`[CurrencyPanel] Loading currencies from: ${endpoint} (resolvedId=${resolvedId}, personType=${personType})`);
+    console.log(`[CurrencyPanel] Fetching currencies from: ${endpoint} (resolvedId=${resolvedId})`);
+    setIsLoading(true);
 
     fetch(endpoint, { credentials: 'include' })
       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
       .then(data => {
         const status: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
-        console.log(`[CurrencyPanel] Loaded ${status.length} currency record(s):`, JSON.stringify(status));
-        setCurrencyStatus(status);
+        console.log(`[CurrencyPanel] Fetched ${status.length} currency record(s):`, JSON.stringify(status));
+
+        // If we have a lastSaved that is more recent than what the API returned, use that
+        // This handles the race condition where the component remounts right after a save
+        if (lastSavedStatusRef.current !== null) {
+          const savedCount = lastSavedStatusRef.current.length;
+          const fetchedCount = status.length;
+          console.log(`[CurrencyPanel] Have lastSaved (${savedCount} items) vs fetched (${fetchedCount} items) — using lastSaved`);
+          setCurrencyStatus(lastSavedStatusRef.current);
+        } else {
+          setCurrencyStatus(status);
+        }
       })
       .catch(err => {
         console.warn('[CurrencyPanel] Could not load from API, using initial:', err);
-        if (initialCurrencyStatus) setCurrencyStatus(initialCurrencyStatus);
+        if (lastSavedStatusRef.current !== null) {
+          setCurrencyStatus(lastSavedStatusRef.current);
+        } else if (initialCurrencyStatus) {
+          setCurrencyStatus(initialCurrencyStatus);
+        }
       })
       .finally(() => setIsLoading(false));
   }, [resolvedId, personType]);
@@ -172,9 +190,10 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       initialMap.set(def.name, status?.lastEventDate || '');
     });
     setEditedStatuses(new Map(initialMap));
-    setOriginalStatuses(new Map(initialMap)); // snapshot original values
+    setOriginalStatuses(new Map(initialMap));
     setIsEditing(true);
     setSaveError(null);
+    setSaveSuccessMessage(null);
   };
 
   const handleCancelClick = () => {
@@ -192,6 +211,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     if (!resolvedId) return;
     setIsSaving(true);
     setSaveError(null);
+    setSaveSuccessMessage(null);
 
     const newStatus: PersonCurrencyStatus[] = [];
     console.log('[CurrencyPanel] handleSaveClick — currencyStatus before save:', JSON.stringify(currencyStatus));
@@ -203,9 +223,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       const originalDate = originalStatuses.get(def.name);
 
       if (editedDate !== undefined) {
-        // This field was in the edit form
         if (editedDate) {
-          // Has a date value — save it
           const validityDays = 'validityDays' in def ? def.validityDays : 365;
           const expiryDate = addDaysToDate(editedDate, validityDays);
           const daysRem = getDaysRemaining(expiryDate);
@@ -216,7 +234,6 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
             isCurrent: daysRem > 0,
           });
         } else {
-          // editedDate is empty string
           if (originalDate) {
             // User actively cleared a field that had a value — honour the clear (remove it)
             console.log('[CurrencyPanel] User cleared ' + def.name + ' (was: ' + originalDate + ')');
@@ -230,7 +247,6 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
           }
         }
       } else {
-        // Not in editedStatuses at all — preserve existing saved status
         const existing = currencyStatus.find(s => s.currencyName === def.name);
         if (existing) {
           newStatus.push(existing);
@@ -262,11 +278,22 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
         const err = await res.json().catch(() => ({}));
         throw new Error((err as any).error || `HTTP ${res.status}`);
       }
-      hasSavedRef.current = true; // prevent re-fetch from overwriting this fresh save
+
+      console.log('[CurrencyPanel] ✅ Save successful — updating local state with', newStatus.length, 'records');
+
+      // Store the saved status persistently (survives remount via parent state)
+      lastSavedStatusRef.current = newStatus;
+      // Mark that we just saved so the next useEffect fetch doesn't overwrite
+      justSavedRef.current = true;
+
+      // Update local state immediately — this is what the user sees
       setCurrencyStatus(newStatus);
       setIsEditing(false);
       setEditedStatuses(new Map());
       setOriginalStatuses(new Map());
+      setSaveSuccessMessage(`✅ Saved ${newStatus.length} currency entries`);
+
+      // Notify parent with the new status — parent should store this
       onCurrencyStatusChange?.(newStatus);
 
       // Write audit entry to DB (fire-and-forget)
@@ -305,10 +332,11 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       }
     } catch (err: any) {
       setSaveError(err.message || 'Save failed');
+      console.error('[CurrencyPanel] ❌ Save failed:', err);
     } finally {
       setIsSaving(false);
     }
-  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName]);
+  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
 
   // Notify parent of current edit state and control handlers
   useEffect(() => {
@@ -320,6 +348,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       onCancel: handleCancelClick,
     });
   }, [isEditing, isSaving]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-clear success message after 4 seconds
+  useEffect(() => {
+    if (!saveSuccessMessage) return;
+    const t = setTimeout(() => setSaveSuccessMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [saveSuccessMessage]);
 
   if (isLoading) {
     return (
@@ -366,6 +401,12 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
           </span>
         )}
       </div>
+
+      {saveSuccessMessage && (
+        <div className="text-green-400 text-[10px] bg-green-900/30 border border-green-700/40 rounded px-2 py-1">
+          {saveSuccessMessage}
+        </div>
+      )}
 
       {saveError && (
         <div className="text-red-400 text-[10px] bg-red-900/30 border border-red-700/40 rounded px-2 py-1">
