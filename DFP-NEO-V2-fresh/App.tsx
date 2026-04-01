@@ -88,6 +88,7 @@ import { InstructorProfileFlyout } from './components/InstructorProfileFlyout';
 import TraineeProfileFlyout from './components/TraineeProfileFlyout';
 import PublishConfirmationFlyout from './components/PublishConfirmationFlyout';
 import CurrencyView from './components/CurrencyView';
+import CurrencyStatusPage from './components/CurrencyStatusPage';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
@@ -11618,21 +11619,11 @@ updates.forEach(update => {
                 return <div>Error: Could not load trainee LMP.</div>;
              case 'Currency':
                 if (selectedPersonForCurrency) {
-                    return <CurrencyView
+                    return <CurrencyStatusPage
                                 person={selectedPersonForCurrency}
                                 masterCurrencies={masterCurrencies}
                                 currencyRequirements={currencyRequirements}
-                                allEvents={events}
-                                syllabusDetails={syllabusDetails}
                                 onClose={handleCurrencyBack}
-                                onUpdateCurrencyStatus={(personId, newStatus) => {
-                                    const isInstructor = 'role' in selectedPersonForCurrency;
-                                    if (isInstructor) {
-                                        setInstructorsData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));
-                                    } else {
-                                        setTraineesData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));
-                                    }
-                                }}
                                 registerDirtyCheck={registerDirtyCheck}
                            />;
                 }
