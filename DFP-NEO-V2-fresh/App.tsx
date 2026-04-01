@@ -6596,10 +6596,10 @@ useEffect(() => {
         handleNavigation('TraineeLMP');
     };
     
-    const handleViewLogbook = (person: Instructor | Trainee) => {
+    const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForLogbook(person);
         handleNavigation('Logbook');
-    };
+    }, []);
 
     const handleOpenAddRemedialPackage = (trainee: Trainee) => {
         setSelectedTraineeForRemedial(trainee);
@@ -8800,6 +8800,46 @@ updates.forEach(update => {
         });
     }, []);
 
+    // Callbacks for StaffView/InstructorListView to prevent render loop
+    const handleCloseStaffView = useCallback(() => {
+        handleNavigation('Program Schedule');
+    }, []);
+
+    const handleProfileOpened = useCallback(() => {
+        setSelectedPersonForProfile(null);
+    }, []);
+
+    const handleProfileTabConsumed = useCallback(() => {
+        setProfileInitialTab(null);
+    }, []);
+
+    const handleRequestSct = useCallback((instructor: Instructor) => {
+        setInstructorForSct(instructor);
+        setShowSctRequest(true);
+    }, []);
+
+    const handleArchiveInstructor = useCallback((id: number) => {
+        setInstructorsData(prev => {
+            const instructorToArchive = prev.find(i => i.idNumber === id);
+            if (instructorToArchive) {
+                setArchivedInstructorsData(archived => [...archived, instructorToArchive]);
+                return prev.filter(i => i.idNumber !== id);
+            }
+            return prev;
+        });
+    }, []);
+
+    const handleRestoreInstructor = useCallback((id: number) => {
+        setArchivedInstructorsData(prev => {
+            const instructorToRestore = prev.find(i => i.idNumber === id);
+            if (instructorToRestore) {
+                setInstructorsData(instructors => [...instructors, instructorToRestore]);
+                return prev.filter(i => i.idNumber !== id);
+            }
+            return prev;
+        });
+    }, []);
+
     const handleReplaceInstructors = useCallback((newInstructors: Instructor[]) => {
         setInstructorsData(newInstructors);
         setSuccessMessage('Instructors successfully replaced!');
@@ -10078,10 +10118,10 @@ updates.forEach(update => {
         }
     };
 
-    const handleNavigateToCurrency = (person: Instructor | Trainee) => {
+    const handleNavigateToCurrency = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForCurrency(person);
         handleNavigation('Currency');
-    };
+    }, []);
 
     const handleSelectMyCurrency = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
@@ -11313,7 +11353,7 @@ updates.forEach(update => {
             case 'Staff':
                 console.log(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
-                            onClose={() => handleNavigation('Program Schedule')}
+                            onClose={handleCloseStaffView}
                             events={events}
                             traineesData={traineesData}
                             instructorsData={instructorsData}
@@ -11373,20 +11413,8 @@ updates.forEach(update => {
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
-                            onArchiveInstructor={(id) => {
-                                const instructorToArchive = instructorsData.find(i => i.idNumber === id);
-                                if (instructorToArchive) {
-                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
-                                }
-                            }}
-                            onRestoreInstructor={(id) => {
-                                const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
-                                if (instructorToRestore) {
-                                    setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setInstructorsData(prev => [...prev, instructorToRestore]);
-                                }
-                            }}
+                            onArchiveInstructor={handleArchiveInstructor}
+                            onRestoreInstructor={handleRestoreInstructor}
                             date={date}
                             onDateChange={handleDateChange}
                             eventSegmentsForDate={eventSegmentsForDate}
@@ -11400,19 +11428,16 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
-                            onRequestSct={(instructor) => {
-                                setInstructorForSct(instructor);
-                                setShowSctRequest(true);
-                            }}
+                            onRequestSct={handleRequestSct}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            onProfileOpened={handleProfileOpened}
                             onViewLogbook={handleViewLogbook}
                             masterCurrencies={masterCurrencies}
                             currencyRequirements={currencyRequirements}
                             profileInitialTab={profileInitialTab}
-                            onProfileTabConsumed={() => setProfileInitialTab(null)}
+                            onProfileTabConsumed={handleProfileTabConsumed}
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                         />;

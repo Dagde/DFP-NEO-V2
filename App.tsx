@@ -4695,11 +4695,6 @@ useEffect(() => {
         handleNavigation('TraineeLMP');
     };
     
-    const handleViewLogbook = (person: Instructor | Trainee) => {
-        setSelectedPersonForLogbook(person);
-        handleNavigation('Logbook');
-    };
-
     const handleOpenAddRemedialPackage = (trainee: Trainee) => {
         setSelectedTraineeForRemedial(trainee);
         setShowAddRemedialPackage(true);
@@ -7871,17 +7866,68 @@ updates.forEach(update => {
         }
     };
 
-    const handleNavigateToCurrency = (person: Instructor | Trainee) => {
+    const handleNavigateToCurrency = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForCurrency(person);
         handleNavigation('Currency');
-    };
+    }, [handleNavigation]);
 
-    const handleSelectMyCurrency = () => {
+    const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
+        setSelectedPersonForLogbook(person);
+        handleNavigation('Logbook');
+    }, [handleNavigation]);
+
+    const handleCloseStaffView = useCallback(() => {
+        handleNavigation('Program Schedule');
+    }, [handleNavigation]);
+
+    const handleProfileOpened = useCallback(() => {
+        setSelectedPersonForProfile(null);
+    }, []);
+
+    const handleProfileTabConsumed = useCallback(() => {
+        setProfileInitialTab(null);
+    }, []);
+
+    const handleRequestSct = useCallback((instructor: Instructor) => {
+        setInstructorForSct(instructor);
+        setShowSctRequest(true);
+    }, []);
+
+    const handleArchiveInstructor = useCallback((id: string) => {
+        const instructorToArchive = instructorsData.find(i => i.idNumber === id);
+        if (instructorToArchive) {
+            setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+            setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
+        }
+    }, [instructorsData]);
+
+    const handleRestoreInstructor = useCallback((id: string) => {
+        const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
+        if (instructorToRestore) {
+            setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+            setInstructorsData(prev => [...prev, instructorToRestore]);
+        }
+    }, [archivedInstructorsData]);
+
+    const handleArchiveTrainee = useCallback((id: string) => {
+        const trainee = traineesData.find(t => t.idNumber === id);
+        if (trainee) {
+            setArchivedTraineesData(prev => [...prev, trainee]);
+            setTraineesData(prev => prev.filter(t => t.idNumber !== id));
+        }
+    }, [traineesData]);
+
+    const handleRequestSctForTrainee = useCallback((trainee: Trainee) => {
+        setTraineeForSct(trainee);
+        setShowSctRequest(true);
+    }, []);
+
+    const handleSelectMyCurrency = useCallback(() => {
         const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
             handleNavigateToCurrency(user);
         }
-    };
+    }, [instructorsData, currentUserName, handleNavigateToCurrency]);
 
     const handleSelectMySct = () => {
         const user = instructorsData.find(i => i.name === currentUserName); // Current logged in user
@@ -8131,7 +8177,7 @@ updates.forEach(update => {
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            onProfileOpened={handleProfileOpened}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => {
@@ -8211,7 +8257,7 @@ updates.forEach(update => {
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            onProfileOpened={handleProfileOpened}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => {
@@ -8837,20 +8883,8 @@ updates.forEach(update => {
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
-                            onArchiveInstructor={(id) => {
-                                const instructorToArchive = instructorsData.find(i => i.idNumber === id);
-                                if (instructorToArchive) {
-                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
-                                }
-                            }}
-                            onRestoreInstructor={(id) => {
-                                const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
-                                if (instructorToRestore) {
-                                    setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setInstructorsData(prev => [...prev, instructorToRestore]);
-                                }
-                            }}
+                            onArchiveInstructor={handleArchiveInstructor}
+                            onRestoreInstructor={handleRestoreInstructor}
                             date={date}
                             onDateChange={handleDateChange}
                             eventSegmentsForDate={eventSegmentsForDate}
@@ -8873,7 +8907,7 @@ updates.forEach(update => {
                         />;
             case 'Instructors':
                 return <InstructorListView 
-                            onClose={() => handleNavigation('Program Schedule')}
+                            onClose={handleCloseStaffView}
                             events={events}
                             traineesData={traineesData}
                             instructorsData={instructorsData}
@@ -8933,33 +8967,18 @@ updates.forEach(update => {
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
-                            onArchiveInstructor={(id) => {
-                                const instructorToArchive = instructorsData.find(i => i.idNumber === id);
-                                if (instructorToArchive) {
-                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
-                                }
-                            }}
-                             onRestoreInstructor={(id) => {
-                                const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
-                                if (instructorToRestore) {
-                                    setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setInstructorsData(prev => [...prev, instructorToRestore]);
-                                }
-                            }}
+                            onArchiveInstructor={handleArchiveInstructor}
+                             onRestoreInstructor={handleRestoreInstructor}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Instructor | null}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            onProfileOpened={handleProfileOpened}
                             onViewLogbook={handleViewLogbook}
-                            onRequestSct={(instructor) => {
-                                setInstructorForSct(instructor);
-                                setShowSctRequest(true);
-                            }}
+                            onRequestSct={handleRequestSct}
                         />;
                 case 'Trainees':
                     return <TraineeListView 
-                                onClose={() => handleNavigation('Program Schedule')}
+                                onClose={handleCloseStaffView}
                                 events={events}
                                 traineesData={traineesData}
                                 instructorsData={instructorsData}
@@ -8977,20 +8996,11 @@ updates.forEach(update => {
                                 }}
                                 onNavigateToCurrency={handleNavigateToCurrency}
                                 onBulkUpdateTrainees={handleBulkUpdateTrainees}
-                                onArchiveTrainee={(id) => {
-                                    const trainee = traineesData.find(t => t.idNumber === id);
-                                    if (trainee) {
-                                        setArchivedTraineesData(prev => [...prev, trainee]);
-                                        setTraineesData(prev => prev.filter(t => t.idNumber !== id));
-                                    }
-                                }}
+                                onArchiveTrainee={handleArchiveTrainee}
                                 selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
-                                onProfileOpened={() => setSelectedPersonForProfile(null)}
+                                onProfileOpened={handleProfileOpened}
                                 onViewLogbook={handleViewLogbook}
-                                onRequestSct={(trainee) => {
-                                    setTraineeForSct(trainee);
-                                    setShowSctRequest(true);
-                                }}
+                                onRequestSct={handleRequestSctForTrainee}
                             />;
              case 'Syllabus':
                 return <SyllabusView
