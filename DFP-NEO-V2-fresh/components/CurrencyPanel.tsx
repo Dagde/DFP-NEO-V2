@@ -332,6 +332,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
 
   // Notify parent of current edit state and control handlers
+  // IMPORTANT: handleSaveClick must be in deps so parent always has the latest version
+  // (which captures the current editedStatuses map with user's entered dates)
   useEffect(() => {
     onEditStateChange?.({
       isEditing,
@@ -340,7 +342,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       onSave: handleSaveClick,
       onCancel: handleCancelClick,
     });
-  }, [isEditing, isSaving]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isEditing, isSaving, handleSaveClick]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-clear success message after 4 seconds
   useEffect(() => {
