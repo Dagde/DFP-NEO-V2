@@ -23,6 +23,12 @@ interface StaffViewProps {
   selectedPersonForProfile?: any;
   onProfileOpened?: () => void;
   onViewLogbook?: (person: any) => void;
+  masterCurrencies?: any[];
+  currencyRequirements?: any[];
+  profileInitialTab?: 'currency' | null;
+  onProfileTabConsumed?: () => void;
+  currentUserId?: string;
+  currentUserName?: string;
   
   // Props for InstructorScheduleView
   date: string;
@@ -138,6 +144,12 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             selectedPersonForProfile={props.selectedPersonForProfile}
             onProfileOpened={props.onProfileOpened}
             onViewLogbook={props.onViewLogbook}
+            masterCurrencies={props.masterCurrencies}
+            currencyRequirements={props.currencyRequirements}
+            profileInitialTab={props.profileInitialTab}
+            onProfileTabConsumed={props.onProfileTabConsumed}
+            currentUserId={props.currentUserId}
+            currentUserName={props.currentUserName}
           />
         )}
         {activeTab === 'schedule' && (

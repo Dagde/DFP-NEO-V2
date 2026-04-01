@@ -10606,6 +10606,10 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectTrainee={handleSelectTraineeFromSchedule}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'CourseRoster':
                 return <CourseRosterView 
@@ -11439,6 +11443,12 @@ updates.forEach(update => {
                             selectedPersonForProfile={selectedPersonForProfile as any}
                             onProfileOpened={() => setSelectedPersonForProfile(null)}
                             onViewLogbook={handleViewLogbook}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            profileInitialTab={profileInitialTab}
+                            onProfileTabConsumed={() => setProfileInitialTab(null)}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'Instructors':
                 return <InstructorListView 
