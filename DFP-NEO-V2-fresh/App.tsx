@@ -4061,37 +4061,21 @@ useEffect(() => {
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
-    const instructorsData = (() => {
+    const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
-        console.log(`🏫 [INSTRUCTORS DEBUG] school=${school}, allInstructorsData.length=${allInstructorsData.length}, mockOn=${mockOn}, dbOn=${dbOn}`);
-        if (!mockOn && !dbOn) {
-            console.log(`🏫 [INSTRUCTORS DEBUG] Both OFF - returning empty array`);
-            return [];
-        }
-        if (mockOn && dbOn) {
-            const locations = [...new Set(allInstructorsData.map((i: any) => i.location))];
-            console.log(`🏫 [INSTRUCTORS DEBUG] Both ON - returning all ${allInstructorsData.length} instructors. Locations: ${locations.join(', ')}`);
-            return allInstructorsData;
-        }
-        if (mockOn && !dbOn) {
-            const mockOnly = allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
-            console.log(`🏫 [INSTRUCTORS DEBUG] Mock only - ${mockOnly.length} instructors`);
-            return mockOnly;
-        }
-        const dbOnly = allInstructorsData.filter(i => (i as any)._dataSource === 'database');
-        console.log(`🏫 [INSTRUCTORS DEBUG] DB only - ${dbOnly.length} instructors. Locations: ${[...new Set(dbOnly.map((i: any) => i.location))].join(', ')}`);
-        return dbOnly;
-    })();
+        if (!mockOn && !dbOn) return [];
+        if (mockOn && dbOn) return allInstructorsData;
+        if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
+        return allInstructorsData.filter(i => (i as any)._dataSource === 'database');
+    }, [allInstructorsData, dataSourceSettings]);
 
-    const traineesData = (() => {
+    const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
 
         // Filter by location (ESL = East Sale, PEA = Pearce)
         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredTrainees = allTraineesData.filter(t => {
-            if (t.location) {
-                return t.location === locationFullName;
-            }
+            if (t.location) return t.location === locationFullName;
             if (t.unit) {
                 if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                 if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
@@ -4099,33 +4083,16 @@ useEffect(() => {
             return true;
         });
 
-        let result: Trainee[];
+        if (!mockOn && !dbOn) return [];
+        if (mockOn && !dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
+        if (!mockOn && dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
 
-        if (!mockOn && !dbOn) {
-            // Both OFF → empty
-            result = [];
-        } else if (mockOn && !dbOn) {
-            // Mock ONLY — explicit _dataSource === 'mockdata' check
-            result = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
-        } else if (!mockOn && dbOn) {
-            // DB ONLY — explicit _dataSource === 'database' check, no unknowns slip through
-            result = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
-        } else {
-            // Both ON → DB records take precedence: exclude mock trainees for courses that have DB records
-            const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
-            const dbCourses = new Set(dbTrainees.map(t => t.course));
-            const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
-            result = [...mockTrainees, ...dbTrainees];
-        }
-
-        // Required output log
-        const dbCount = result.filter(t => (t as any)._dataSource === 'database').length;
-        const mockCount = result.filter(t => (t as any)._dataSource === 'mockdata').length;
-        const unknownCount = result.filter(t => !['database', 'mockdata'].includes((t as any)._dataSource)).length;
-        console.log(`[traineesData] total=${result.length}, db=${dbCount}, mock=${mockCount}, unknown=${unknownCount} | mockOn=${mockOn}, dbOn=${dbOn}`);
-
-        return result;
-    })();
+        // Both ON → DB records take precedence
+        const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+        const dbCourses = new Set(dbTrainees.map(t => t.course));
+        const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
+        return [...mockTrainees, ...dbTrainees];
+    }, [allTraineesData, dataSourceSettings, school]);
     
     // ============================================================
     // AUTHENTICATION STATE
