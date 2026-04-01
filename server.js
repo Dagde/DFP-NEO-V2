@@ -351,6 +351,73 @@ app.post('/api/schedule', async (req, res) => {
   }
 });
 
+// PATCH /api/personnel/:id - Update personnel record (partial update, e.g. currencyStatus)
+app.patch('/api/personnel/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const body = req.body;
+
+    // Find the personnel record by idNumber (numeric)
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return res.status(400).json({ error: 'Invalid personnel id' });
+    }
+
+    const records = await db.personnel.findMany({ where: { idNumber: numericId } });
+    if (!records || records.length === 0) {
+      return res.status(404).json({ error: `Personnel with idNumber ${numericId} not found` });
+    }
+
+    // Build update data - support updating currencyStatus and other qualifications fields
+    const updateData = {};
+
+    if (body.currencyStatus !== undefined) {
+      // Update qualifications.currencyStatus for ALL matching records (handles duplicates)
+      await Promise.all(records.map(record => {
+        const existing = (typeof record.qualifications === 'object' && record.qualifications !== null)
+          ? record.qualifications
+          : {};
+        return db.personnel.update({
+          where: { id: record.id },
+          data: {
+            qualifications: {
+              ...existing,
+              currencyStatus: body.currencyStatus,
+            }
+          }
+        });
+      }));
+      console.log(`✅ PATCH /api/personnel/${id} - saved currencyStatus (${body.currencyStatus?.length || 0} entries) for ${records.length} record(s)`);
+      return res.json({ success: true, updated: records.length });
+    }
+
+    // Generic field updates
+    const allowedFields = ['rank', 'role', 'category', 'unit', 'location', 'email', 'phoneNumber',
+      'isQFI', 'isOFI', 'isCFI', 'isExecutive', 'isFlyingSupervisor', 'isIRE',
+      'isCommandingOfficer', 'isTestingOfficer', 'isContractor', 'isAdminStaff',
+      'permissions', 'isActive'];
+    
+    allowedFields.forEach(field => {
+      if (body[field] !== undefined) updateData[field] = body[field];
+    });
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    await Promise.all(records.map(record =>
+      db.personnel.update({ where: { id: record.id }, data: updateData })
+    ));
+
+    console.log(`✅ PATCH /api/personnel/${id} - updated fields: ${Object.keys(updateData).join(', ')} for ${records.length} record(s)`);
+    res.json({ success: true, updated: records.length });
+  } catch (error) {
+    console.error('❌ PATCH /api/personnel/:id error:', error);
+    res.status(500).json({ error: 'Failed to update personnel', details: error.message });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
