@@ -1,26 +1,9 @@
-# Currency Panel - Wiring currentUserId/currentUserName + MyDashboard Fix
+# Currency Panel Fix - Staff/Trainee Profile
 
-## Status: ALL COMPLETE
-
-## Completed Tasks
-
-### Task 1: Wire currentUserId/currentUserName through InstructorListView ✅
-- [x] Add currentUserId/currentUserName to InstructorListViewProps interface
-- [x] Add to component destructuring
-- [x] Pass to InstructorProfileFlyout
-
-### Task 2: Wire currentUserId/currentUserName through CourseRosterView ✅
-- [x] Add currentUserId/currentUserName to CourseRosterViewProps interface
-- [x] Add to component destructuring
-- [x] Pass to TraineeProfileFlyout
-
-### Task 3: Pass props from App.tsx ✅
-- [x] Pass getCurrentUserId()/currentUserName to InstructorListView
-- [x] Pass getCurrentUserId()/currentUserName to CourseRosterView
-
-### Task 4: MyDashboard "My Currency" → open profile with currency tab ✅
-- [x] Already correctly implemented: handleSelectMyCurrency sets selectedPersonForProfile + profileInitialTab='currency' + navigates to 'Instructors'
-
-### Task 5: Build and deploy ✅
-- [x] npm run build: 786 modules, no TS errors
-- [x] Git commit a988cc9f pushed to Railway
+## Tasks
+[x] Identify root cause of "No currency definitions configured" in Staff/Trainee profile currency panel
+[x] Fix StaffView.tsx - add missing props to interface and pass-through
+[x] Fix TraineeView.tsx - add missing props to interface and pass-through  
+[x] Fix App.tsx - pass masterCurrencies/currencyRequirements to StaffView and TraineeView
+[x] Build (786 modules, no errors)
+[x] Commit (74ad0957) and push

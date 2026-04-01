@@ -16,7 +16,7 @@ const AuditButton: React.FC<AuditButtonProps> = ({ pageName, className = '', sty
     <>
       <button
         onClick={() => setShowFlyout(true)}
-        className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed ${className}`}
+        className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md ${className}`}
         style={style}
         title="View Audit Log"
       >

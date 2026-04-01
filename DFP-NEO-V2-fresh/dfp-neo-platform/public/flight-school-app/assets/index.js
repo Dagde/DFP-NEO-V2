@@ -2785,7 +2785,7 @@ const AuditButton = ({ pageName, className = "", style }) => {
       "button",
       {
         onClick: () => setShowFlyout(true),
-        className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed ${className}`,
+        className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md ${className}`,
         style,
         title: "View Audit Log",
         children: "Audit"
@@ -13013,7 +13013,7 @@ const TraineeProfileFlyout = ({
                   "button",
                   {
                     onClick: currencyEditState.onEdit,
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                     title: "Edit currency dates",
                     children: "Edit"
                   },
@@ -13032,7 +13032,7 @@ const TraineeProfileFlyout = ({
                     {
                       onClick: currencyEditState.onCancel,
                       disabled: currencyEditState.isSaving,
-                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                       title: "Cancel editing",
                       children: "Cancel"
                     },
@@ -13050,7 +13050,7 @@ const TraineeProfileFlyout = ({
                     {
                       onClick: currencyEditState.onSave,
                       disabled: currencyEditState.isSaving,
-                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:opacity-50",
+                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50",
                       title: "Save currency dates",
                       children: currencyEditState.isSaving ? "Saving…" : "Save"
                     },
@@ -13072,7 +13072,7 @@ const TraineeProfileFlyout = ({
                   "button",
                   {
                     onClick: () => setActiveTab(null),
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                     title: "Close currency panel",
                     children: "Close"
                   },
@@ -13089,7 +13089,7 @@ const TraineeProfileFlyout = ({
                   "button",
                   {
                     onClick: () => setShowCurrencyAudit(true),
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                     title: "View currency audit log",
                     children: "Audit"
                   },
@@ -34001,7 +34001,7 @@ const InstructorProfileFlyout = ({
                   "button",
                   {
                     onClick: currencyEditState.onEdit,
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                     title: "Edit currency dates",
                     children: "Edit"
                   },
@@ -34020,7 +34020,7 @@ const InstructorProfileFlyout = ({
                     {
                       onClick: currencyEditState.onCancel,
                       disabled: currencyEditState.isSaving,
-                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                       title: "Cancel editing",
                       children: "Cancel"
                     },
@@ -34038,7 +34038,7 @@ const InstructorProfileFlyout = ({
                     {
                       onClick: currencyEditState.onSave,
                       disabled: currencyEditState.isSaving,
-                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:opacity-50",
+                      className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50",
                       title: "Save currency dates",
                       children: currencyEditState.isSaving ? "Saving…" : "Save"
                     },
@@ -34060,7 +34060,7 @@ const InstructorProfileFlyout = ({
                   "button",
                   {
                     onClick: () => setActiveTab(null),
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                     title: "Close currency panel",
                     children: "Close"
                   },
@@ -34077,7 +34077,7 @@ const InstructorProfileFlyout = ({
                   "button",
                   {
                     onClick: () => setShowCurrencyAudit(true),
-                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+                    className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                     title: "View currency audit log",
                     children: "Audit"
                   },

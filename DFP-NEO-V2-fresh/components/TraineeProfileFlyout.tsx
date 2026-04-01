@@ -862,7 +862,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             {currencyEditState && !currencyEditState.isEditing && (
                               <button
                                 onClick={currencyEditState.onEdit}
-                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                 title="Edit currency dates"
                               >
                                 Edit
@@ -873,7 +873,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 <button
                                   onClick={currencyEditState.onCancel}
                                   disabled={currencyEditState.isSaving}
-                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                   title="Cancel editing"
                                 >
                                   Cancel
@@ -881,7 +881,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 <button
                                   onClick={currencyEditState.onSave}
                                   disabled={currencyEditState.isSaving}
-                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed disabled:opacity-50"
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50"
                                   title="Save currency dates"
                                 >
                                   {currencyEditState.isSaving ? 'Saving\u2026' : 'Save'}
@@ -890,14 +890,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             )}
                             <button
                               onClick={() => setActiveTab(null)}
-                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                               title="Close currency panel"
                             >
                               Close
                             </button>
                             <button
                               onClick={() => setShowCurrencyAudit(true)}
-                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                               title="View currency audit log"
                             >
                               Audit
