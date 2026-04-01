@@ -8873,6 +8873,9 @@ updates.forEach(update => {
                 const personnelData = await personnelRes.json();
                 const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
                     ...p,
+                    // Extract qualifications.currencyStatus to top-level so Post Flight
+                    // and other in-memory reads can find it at person.currencyStatus
+                    currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
                 }));
                 
@@ -11843,8 +11846,25 @@ updates.forEach(update => {
                                             const dbId = (person as any).id;
                                             if (!dbId) continue;
                                             
-                                            // Build currency updates: currencyId -> date value
-                                            const existingStatus: PersonCurrencyStatus[] = person.currencyStatus || [];
+                                            // Fetch the LATEST currency status from DB before merging
+                                            // This ensures we don't overwrite currencies saved via the profile tab
+                                            let existingStatus: PersonCurrencyStatus[] = person.currencyStatus || (person as any).qualifications?.currencyStatus || [];
+                                            try {
+                                                const freshEndpoint = personType === 'instructor'
+                                                    ? `/api/personnel/${dbId}/currencies`
+                                                    : `/api/trainees/${dbId}/currencies`;
+                                                const freshRes = await fetch(freshEndpoint, { credentials: 'include' });
+                                                if (freshRes.ok) {
+                                                    const freshData = await freshRes.json();
+                                                    if (Array.isArray(freshData.currencyStatus)) {
+                                                        existingStatus = freshData.currencyStatus;
+                                                        console.log(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
+                                                    }
+                                                }
+                                            } catch (fetchErr) {
+                                                console.warn(`[PostFlight] Could not fetch fresh currency for ${person.name}, using in-memory:`, fetchErr);
+                                            }
+                                            
                                             const allCurrencyDefs = [...masterCurrencies, ...currencyRequirements];
                                             const updatedStatus = [...existingStatus];
                                             
