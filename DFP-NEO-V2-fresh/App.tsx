@@ -1,6 +1,5 @@
-console.log("🔥🔥🔥 FORCED REDEPLOY V4 🔥🔥🔥");
-console.log("🚨🚨🚨 NEW BUILD V3 LOADED 🚨🚨🚨");
-console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
+console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
+console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from './context/ThemeContext';
