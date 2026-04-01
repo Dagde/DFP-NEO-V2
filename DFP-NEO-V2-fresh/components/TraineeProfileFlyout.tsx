@@ -278,7 +278,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
-    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
+    // Ref for scrollable content area - used to scroll to top when a tab opens
+    const contentScrollRef = useRef<HTMLDivElement>(null);
+
+    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
+      const next = prev === tab ? null : tab;
+      if (next !== null) {
+        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+      }
+      return next;
+    });
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
     
@@ -838,7 +847,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* MAIN CONTENT — scrollable */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+                  <div ref={contentScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 relative">
                     {/* Transparent freeze overlay — blocks all interaction with content */}
                     {isFrozen && (
                       <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
