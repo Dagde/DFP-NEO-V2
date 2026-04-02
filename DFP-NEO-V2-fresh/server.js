@@ -541,26 +541,52 @@ app.post('/api/audit/currency', async (req, res) => {
     }).join('; ');
 
     // Resolve the DB User for the audit entry
-    // Try to find by userId (the AuthUser.userId / PMKEYS number)
+    // User.userId = PMKEYS string (what frontend sends), User.id = UUID primary key (what AuditLog needs)
     let dbUserId = null;
+
+    // 1. Try by User.userId field (PMKEYS number sent from frontend)
     if (userId) {
-      const user = await db.user.findFirst({ where: { id: userId } });
-      if (user) dbUserId = user.id;
+      const user = await db.user.findFirst({ where: { userId: String(userId) } });
+      if (user) {
+        dbUserId = user.id;
+        console.log(`[Audit] Resolved user by userId/PMKEYS: ${userId} → dbUserId=${dbUserId}`);
+      }
     }
-    // If no auth user found, try to find by userName (fallback)
+
+    // 2. Try matching by username or name fragments
     if (!dbUserId && userName) {
-      const user = await db.user.findFirst({ where: { OR: [
-        { firstName: { contains: userName.split(' ')[0] || '', mode: 'insensitive' } },
-        { username: { contains: userName, mode: 'insensitive' } },
-      ]}});
-      if (user) dbUserId = user.id;
+      const nameParts = userName.split(/[,\s]+/).filter(Boolean);
+      const user = await db.user.findFirst({
+        where: {
+          OR: [
+            { username: { contains: userName, mode: 'insensitive' } },
+            nameParts[0] ? { lastName: { contains: nameParts[0], mode: 'insensitive' } } : undefined,
+            nameParts[1] ? { firstName: { contains: nameParts[1], mode: 'insensitive' } } : undefined,
+          ].filter(Boolean),
+        }
+      });
+      if (user) {
+        dbUserId = user.id;
+        console.log(`[Audit] Resolved user by name match: "${userName}" → dbUserId=${dbUserId}`);
+      }
     }
-    // If still no user, use a system user or skip audit
+
+    // 3. Last resort: use the first active admin/system user so audit is NEVER silently dropped
     if (!dbUserId) {
-      // Create a system audit entry with a placeholder - store in changes JSON without FK
-      // Return success with a warning
-      console.warn(`[Audit] No DB user found for userId=${userId}, userName=${userName}. Audit entry skipped.`);
-      return res.json({ success: true, warning: 'Audit entry skipped: user not found in DB', summary });
+      const fallbackUser = await db.user.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (fallbackUser) {
+        dbUserId = fallbackUser.id;
+        console.warn(`[Audit] Could not match user (userId=${userId}, userName=${userName}). Using fallback user ${dbUserId}. Recording audit anyway.`);
+      }
+    }
+
+    // If absolutely no user exists in DB at all, we cannot create an AuditLog record (FK constraint)
+    if (!dbUserId) {
+      console.warn(`[Audit] No users in DB at all. Cannot log audit for userId=${userId}, userName=${userName}.`);
+      return res.json({ success: true, warning: 'Audit entry skipped: no users in DB', summary });
     }
 
     const auditEntry = await db.auditLog.create({
