@@ -6,7 +6,7 @@ interface AuditEntry {
   userName: string;
   summary: string;
   personName: string;
-  details: { currencyName: string; oldDate: string; newDate: string }[];
+  details: { currencyName: string; oldDate: string; newDate: string; activeChanged?: boolean; isNowInactive?: boolean }[];
 }
 
 interface CurrencyAuditFlyoutProps {
@@ -69,7 +69,7 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
           </div>
           <button
             onClick={onClose}
-            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed"
             title="Close"
           >
             Close
@@ -107,17 +107,26 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
               {entry.details && entry.details.length > 0 && (
                 <div className="space-y-1">
                   {entry.details.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <span className="text-gray-300 font-medium min-w-0 flex-1 truncate" title={d.currencyName}>
+                    <div key={i} className="flex flex-col gap-0.5 text-[10px] border-l-2 border-gray-600 pl-2">
+                      <span className="text-gray-300 font-medium truncate" title={d.currencyName}>
                         {d.currencyName}
                       </span>
-                      <span className="text-gray-500 flex-shrink-0">
-                        {d.oldDate ? formatDate(d.oldDate) : <span className="italic">unset</span>}
-                      </span>
-                      <span className="text-gray-600 flex-shrink-0">→</span>
-                      <span className={`font-medium flex-shrink-0 ${d.newDate ? 'text-green-400' : 'text-red-400 italic'}`}>
-                        {d.newDate ? formatDate(d.newDate) : 'cleared'}
-                      </span>
+                      {d.activeChanged && (
+                        <span className={`font-semibold ${d.isNowInactive ? 'text-gray-400' : 'text-sky-400'}`}>
+                          {d.isNowInactive ? '⊘ Set Inactive' : '✓ Set Active'}
+                        </span>
+                      )}
+                      {d.oldDate !== d.newDate && (
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className="text-gray-500">
+                            {d.oldDate ? formatDate(d.oldDate) : 'unset'}
+                          </span>
+                          <span className="text-gray-600">→</span>
+                          <span className={`font-medium ${d.newDate ? 'text-green-400' : 'text-red-400 italic'}`}>
+                            {d.newDate ? formatDate(d.newDate) : 'cleared'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -112,8 +112,11 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   );
   const [isEditing, setIsEditing] = useState(false);
   const [editedStatuses, setEditedStatuses] = useState<Map<string, string>>(new Map());
+  // Track active/inactive state per currency in edit mode
+  const [editedInactive, setEditedInactive] = useState<Map<string, boolean>>(new Map());
   // Track the original values at the time Edit was clicked
   const [originalStatuses, setOriginalStatuses] = useState<Map<string, string>>(new Map());
+  const [originalInactive, setOriginalInactive] = useState<Map<string, boolean>>(new Map());
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -176,12 +179,16 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 
   const handleEditClick = () => {
     const initialMap = new Map<string, string>();
+    const inactiveMap = new Map<string, boolean>();
     visibleCurrencyDefinitions.forEach(def => {
       const status = getCurrencyStatus(def.name);
       initialMap.set(def.name, status?.lastEventDate || '');
+      inactiveMap.set(def.name, !!status?.isInactive);
     });
     setEditedStatuses(new Map(initialMap));
     setOriginalStatuses(new Map(initialMap));
+    setEditedInactive(new Map(inactiveMap));
+    setOriginalInactive(new Map(inactiveMap));
     setIsEditing(true);
     setSaveError(null);
     setSaveSuccessMessage(null);
@@ -191,7 +198,17 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     setIsEditing(false);
     setEditedStatuses(new Map());
     setOriginalStatuses(new Map());
+    setEditedInactive(new Map());
+    setOriginalInactive(new Map());
     setSaveError(null);
+  };
+
+  const handleToggleInactive = (currencyName: string) => {
+    setEditedInactive(prev => {
+      const next = new Map(prev);
+      next.set(currencyName, !prev.get(currencyName));
+      return next;
+    });
   };
 
   const handleDateChange = (currencyName: string, date: string) => {
@@ -212,6 +229,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     visibleCurrencyDefinitions.forEach(def => {
       const editedDate = editedStatuses.get(def.name);
       const originalDate = originalStatuses.get(def.name);
+      const isNowInactive = !!editedInactive.get(def.name);
 
       if (editedDate !== undefined) {
         if (editedDate) {
@@ -222,25 +240,32 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
             currencyName: def.name,
             lastEventDate: editedDate,
             calculatedExpiry: expiryDate,
-            isCurrent: daysRem > 0,
+            isCurrent: !isNowInactive && daysRem > 0,
+            isInactive: isNowInactive || undefined,
           });
         } else {
           if (originalDate) {
             // User actively cleared a field that had a value — honour the clear (remove it)
+            // But preserve isInactive flag if set
             console.log('[CurrencyPanel] User cleared ' + def.name + ' (was: ' + originalDate + ')');
+            if (isNowInactive) {
+              newStatus.push({ currencyName: def.name, lastEventDate: '', isInactive: true });
+            }
           } else {
             // Field was already empty when edit started — preserve any existing DB record
             const existing = currencyStatus.find(s => s.currencyName === def.name);
             if (existing) {
               console.log('[CurrencyPanel] Preserving existing ' + def.name + ':', existing.lastEventDate);
-              newStatus.push(existing);
+              newStatus.push({ ...existing, isInactive: isNowInactive || existing.isInactive });
+            } else if (isNowInactive) {
+              newStatus.push({ currencyName: def.name, lastEventDate: '', isInactive: true });
             }
           }
         }
       } else {
         const existing = currencyStatus.find(s => s.currencyName === def.name);
         if (existing) {
-          newStatus.push(existing);
+          newStatus.push({ ...existing, isInactive: isNowInactive || existing.isInactive });
         }
       }
     });
@@ -291,18 +316,27 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
 
       // Write audit entry to DB (fire-and-forget)
       try {
-        const changes: { currencyName: string; oldDate: string; newDate: string }[] = [];
+        const changes: { currencyName: string; oldDate: string; newDate: string; activeChanged?: boolean; isNowInactive?: boolean }[] = [];
         editedStatuses.forEach((newDate, currencyName) => {
           const oldRecord = currencyStatus.find(c => c.currencyName === currencyName);
           const oldDate = oldRecord?.lastEventDate || '';
-          if (newDate !== oldDate) {
-            changes.push({ currencyName, oldDate, newDate });
+          const wasInactive = !!oldRecord?.isInactive;
+          const isNowInactive = !!editedInactive.get(currencyName);
+          const dateChanged = newDate !== oldDate;
+          const activeChanged = wasInactive !== isNowInactive;
+          if (dateChanged || activeChanged) {
+            changes.push({ currencyName, oldDate, newDate, activeChanged, isNowInactive });
           }
         });
-        currencyStatus.forEach(s => {
-          if (!editedStatuses.has(s.currencyName) &&
-              visibleCurrencyDefinitions.some(d => d.name === s.currencyName)) {
-            changes.push({ currencyName: s.currencyName, oldDate: s.lastEventDate, newDate: '' });
+        // Also check any currency not in editedStatuses (e.g. only inactive toggled)
+        visibleCurrencyDefinitions.forEach(def => {
+          if (!editedStatuses.has(def.name)) {
+            const oldRecord = currencyStatus.find(c => c.currencyName === def.name);
+            const wasInactive = !!oldRecord?.isInactive;
+            const isNowInactive = !!editedInactive.get(def.name);
+            if (wasInactive !== isNowInactive) {
+              changes.push({ currencyName: def.name, oldDate: oldRecord?.lastEventDate || '', newDate: oldRecord?.lastEventDate || '', activeChanged: true, isNowInactive });
+            }
           }
         });
         if (changes.length > 0) {
@@ -329,7 +363,7 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
+  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, editedInactive, originalInactive, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
 
   // Notify parent of current edit state and control handlers
   // IMPORTANT: handleSaveClick must be in deps so parent always has the latest version
@@ -420,12 +454,16 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
               <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Last Event</th>
               <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Expires</th>
               <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Days Rem.</th>
+              {isEditing && (
+                <th scope="col" className="px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-gray-800 divide-y divide-gray-700/60">
             {visibleCurrencyDefinitions.map(def => {
               const record = getCurrencyStatus(def.name);
-              const isInactive = !!record?.isInactive;
+              // In edit mode, use editedInactive map; otherwise use saved record
+              const isInactive = isEditing ? !!editedInactive.get(def.name) : !!record?.isInactive;
               const periodInDays = 'validityDays' in def ? def.validityDays : null;
               const periodText = getPeriodText(periodInDays);
               const validityDays = periodInDays ?? 365;
@@ -483,6 +521,28 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                   <td className={`px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`}>
                     {isInactive ? '---' : daysRemaining !== null ? daysRemaining : '---'}
                   </td>
+                  {/* Active/Inactive toggle — only in edit mode */}
+                  {isEditing && (
+                    <td className="px-2 py-1.5 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleInactive(def.name)}
+                        title={isInactive ? 'Set Active' : 'Set Inactive'}
+                        className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          isInactive ? 'bg-gray-600' : 'bg-sky-600'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            isInactive ? 'translate-x-4' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                      <div className={`text-[9px] mt-0.5 font-medium ${isInactive ? 'text-gray-500' : 'text-sky-400'}`}>
+                        {isInactive ? 'Inactive' : 'Active'}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}

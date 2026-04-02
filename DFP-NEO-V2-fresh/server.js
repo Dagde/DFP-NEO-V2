@@ -528,9 +528,16 @@ app.post('/api/audit/currency', async (req, res) => {
 
     // Build a human-readable summary
     const summary = changes.map(c => {
-      if (!c.oldDate && c.newDate) return `${c.currencyName}: set to ${c.newDate}`;
-      if (c.oldDate && !c.newDate) return `${c.currencyName}: cleared (was ${c.oldDate})`;
-      return `${c.currencyName}: ${c.oldDate} → ${c.newDate}`;
+      const parts = [];
+      if (c.activeChanged) {
+        parts.push(`${c.currencyName}: ${c.isNowInactive ? 'set Inactive' : 'set Active'}`);
+      }
+      if (c.oldDate !== c.newDate) {
+        if (!c.oldDate && c.newDate) parts.push(`${c.currencyName}: date set to ${c.newDate}`);
+        else if (c.oldDate && !c.newDate) parts.push(`${c.currencyName}: date cleared (was ${c.oldDate})`);
+        else if (!c.activeChanged) parts.push(`${c.currencyName}: ${c.oldDate} → ${c.newDate}`);
+      }
+      return parts.join(', ') || `${c.currencyName}: updated`;
     }).join('; ');
 
     // Resolve the DB User for the audit entry

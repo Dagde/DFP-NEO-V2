@@ -11802,7 +11802,9 @@ const CurrencyPanel = ({
   );
   const [isEditing, setIsEditing] = reactExports.useState(false);
   const [editedStatuses, setEditedStatuses] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [editedInactive, setEditedInactive] = reactExports.useState(/* @__PURE__ */ new Map());
   const [originalStatuses, setOriginalStatuses] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [originalInactive, setOriginalInactive] = reactExports.useState(/* @__PURE__ */ new Map());
   const [isSaving2, setIsSaving] = reactExports.useState(false);
   const [saveError, setSaveError] = reactExports.useState(null);
   const [isLoading, setIsLoading] = reactExports.useState(false);
@@ -11842,12 +11844,16 @@ const CurrencyPanel = ({
   }, [visibleCurrencyDefinitions, currencyStatus]);
   const handleEditClick = () => {
     const initialMap = /* @__PURE__ */ new Map();
+    const inactiveMap = /* @__PURE__ */ new Map();
     visibleCurrencyDefinitions.forEach((def) => {
       const status = getCurrencyStatus(def.name);
       initialMap.set(def.name, status?.lastEventDate || "");
+      inactiveMap.set(def.name, !!status?.isInactive);
     });
     setEditedStatuses(new Map(initialMap));
     setOriginalStatuses(new Map(initialMap));
+    setEditedInactive(new Map(inactiveMap));
+    setOriginalInactive(new Map(inactiveMap));
     setIsEditing(true);
     setSaveError(null);
     setSaveSuccessMessage(null);
@@ -11856,7 +11862,16 @@ const CurrencyPanel = ({
     setIsEditing(false);
     setEditedStatuses(/* @__PURE__ */ new Map());
     setOriginalStatuses(/* @__PURE__ */ new Map());
+    setEditedInactive(/* @__PURE__ */ new Map());
+    setOriginalInactive(/* @__PURE__ */ new Map());
     setSaveError(null);
+  };
+  const handleToggleInactive = (currencyName) => {
+    setEditedInactive((prev) => {
+      const next = new Map(prev);
+      next.set(currencyName, !prev.get(currencyName));
+      return next;
+    });
   };
   const handleDateChange = (currencyName, date) => {
     setEditedStatuses((prev) => new Map(prev).set(currencyName, date));
@@ -11873,6 +11888,7 @@ const CurrencyPanel = ({
     visibleCurrencyDefinitions.forEach((def) => {
       const editedDate = editedStatuses.get(def.name);
       const originalDate = originalStatuses.get(def.name);
+      const isNowInactive = !!editedInactive.get(def.name);
       if (editedDate !== void 0) {
         if (editedDate) {
           const validityDays = "validityDays" in def ? def.validityDays : 365;
@@ -11882,23 +11898,29 @@ const CurrencyPanel = ({
             currencyName: def.name,
             lastEventDate: editedDate,
             calculatedExpiry: expiryDate,
-            isCurrent: daysRem > 0
+            isCurrent: !isNowInactive && daysRem > 0,
+            isInactive: isNowInactive || void 0
           });
         } else {
           if (originalDate) {
             console.log("[CurrencyPanel] User cleared " + def.name + " (was: " + originalDate + ")");
+            if (isNowInactive) {
+              newStatus.push({ currencyName: def.name, lastEventDate: "", isInactive: true });
+            }
           } else {
             const existing = currencyStatus.find((s) => s.currencyName === def.name);
             if (existing) {
               console.log("[CurrencyPanel] Preserving existing " + def.name + ":", existing.lastEventDate);
-              newStatus.push(existing);
+              newStatus.push({ ...existing, isInactive: isNowInactive || existing.isInactive });
+            } else if (isNowInactive) {
+              newStatus.push({ currencyName: def.name, lastEventDate: "", isInactive: true });
             }
           }
         }
       } else {
         const existing = currencyStatus.find((s) => s.currencyName === def.name);
         if (existing) {
-          newStatus.push(existing);
+          newStatus.push({ ...existing, isInactive: isNowInactive || existing.isInactive });
         }
       }
     });
@@ -11936,13 +11958,22 @@ const CurrencyPanel = ({
         editedStatuses.forEach((newDate, currencyName) => {
           const oldRecord = currencyStatus.find((c) => c.currencyName === currencyName);
           const oldDate = oldRecord?.lastEventDate || "";
-          if (newDate !== oldDate) {
-            changes.push({ currencyName, oldDate, newDate });
+          const wasInactive = !!oldRecord?.isInactive;
+          const isNowInactive = !!editedInactive.get(currencyName);
+          const dateChanged = newDate !== oldDate;
+          const activeChanged = wasInactive !== isNowInactive;
+          if (dateChanged || activeChanged) {
+            changes.push({ currencyName, oldDate, newDate, activeChanged, isNowInactive });
           }
         });
-        currencyStatus.forEach((s) => {
-          if (!editedStatuses.has(s.currencyName) && visibleCurrencyDefinitions.some((d) => d.name === s.currencyName)) {
-            changes.push({ currencyName: s.currencyName, oldDate: s.lastEventDate, newDate: "" });
+        visibleCurrencyDefinitions.forEach((def) => {
+          if (!editedStatuses.has(def.name)) {
+            const oldRecord = currencyStatus.find((c) => c.currencyName === def.name);
+            const wasInactive = !!oldRecord?.isInactive;
+            const isNowInactive = !!editedInactive.get(def.name);
+            if (wasInactive !== isNowInactive) {
+              changes.push({ currencyName: def.name, oldDate: oldRecord?.lastEventDate || "", newDate: oldRecord?.lastEventDate || "", activeChanged: true, isNowInactive });
+            }
           }
         });
         if (changes.length > 0) {
@@ -11969,7 +12000,7 @@ const CurrencyPanel = ({
     } finally {
       setIsSaving(false);
     }
-  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
+  }, [resolvedId, personType, visibleCurrencyDefinitions, editedStatuses, editedInactive, originalInactive, currencyStatus, onCurrencyStatusChange, personName, currentUserId, currentUserName, originalStatuses]);
   reactExports.useEffect(() => {
     onEditStateChange?.({
       isEditing,
@@ -11987,18 +12018,18 @@ const CurrencyPanel = ({
   if (isLoading) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center py-8", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-xs animate-pulse", children: "Loading currency data…" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 357,
+      lineNumber: 391,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 356,
+      lineNumber: 390,
       columnNumber: 7
     }, void 0);
   }
   if (visibleCurrencyDefinitions.length === 0) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-xs italic text-center py-6", children: "No currency definitions configured. Set up currencies in the Currency Builder." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 364,
+      lineNumber: 398,
       columnNumber: 7
     }, void 0);
   }
@@ -12007,63 +12038,63 @@ const CurrencyPanel = ({
       summaryCount.expired > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/40 text-red-300", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-red-400 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 376,
+          lineNumber: 410,
           columnNumber: 13
         }, void 0),
         summaryCount.expired,
         " Expired"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 375,
+        lineNumber: 409,
         columnNumber: 11
       }, void 0),
       summaryCount.approaching > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-600/40 text-amber-300", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 382,
+          lineNumber: 416,
           columnNumber: 13
         }, void 0),
         summaryCount.approaching,
         " Expiring"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 381,
+        lineNumber: 415,
         columnNumber: 11
       }, void 0),
       summaryCount.current > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-600/40 text-green-300", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-green-400 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 388,
+          lineNumber: 422,
           columnNumber: 13
         }, void 0),
         summaryCount.current,
         " Current"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 387,
+        lineNumber: 421,
         columnNumber: 11
       }, void 0),
       summaryCount.unassigned > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-600/40 text-gray-400", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 394,
+          lineNumber: 428,
           columnNumber: 13
         }, void 0),
         summaryCount.unassigned,
         " Unset"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 393,
+        lineNumber: 427,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 373,
+      lineNumber: 407,
       columnNumber: 7
     }, void 0),
     saveSuccessMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-green-400 text-[10px] bg-green-900/30 border border-green-700/40 rounded px-2 py-1", children: saveSuccessMessage }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 401,
+      lineNumber: 435,
       columnNumber: 9
     }, void 0),
     saveError && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-400 text-[10px] bg-red-900/30 border border-red-700/40 rounded px-2 py-1", children: [
@@ -12071,53 +12102,58 @@ const CurrencyPanel = ({
       saveError
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 407,
+      lineNumber: 441,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "min-w-full divide-y divide-gray-700 text-[11px]", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider w-8" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 417,
+          lineNumber: 451,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider", children: "Currency" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 418,
+          lineNumber: 452,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Period" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 419,
+          lineNumber: 453,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Last Event" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 420,
+          lineNumber: 454,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Expires" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 421,
+          lineNumber: 455,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Days Rem." }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 422,
+          lineNumber: 456,
           columnNumber: 15
+        }, void 0),
+        isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Status" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+          lineNumber: 458,
+          columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 416,
+        lineNumber: 450,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 415,
+        lineNumber: 449,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "bg-gray-800 divide-y divide-gray-700/60", children: visibleCurrencyDefinitions.map((def) => {
         const record = getCurrencyStatus(def.name);
-        const isInactive = !!record?.isInactive;
+        const isInactive = isEditing ? !!editedInactive.get(def.name) : !!record?.isInactive;
         const periodInDays = "validityDays" in def ? def.validityDays : null;
         const periodText = getPeriodText(periodInDays);
         const validityDays = periodInDays ?? 365;
@@ -12132,32 +12168,32 @@ const CurrencyPanel = ({
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: rowClass, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-2.5 h-2.5 rounded-sm mx-auto ${dotColor}` }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 451,
+            lineNumber: 489,
             columnNumber: 21
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 450,
+            lineNumber: 488,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 font-medium max-w-[160px]", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `block truncate ${isInactive ? "text-gray-500" : "text-gray-200"}`, title: def.name, children: def.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 455,
+              lineNumber: 493,
               columnNumber: 21
             }, void 0),
             isInactive && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-600 font-normal", children: "Inactive" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 456,
+              lineNumber: 494,
               columnNumber: 36
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 454,
+            lineNumber: 492,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-400 whitespace-nowrap", children: periodText }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 459,
+            lineNumber: 497,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -12173,47 +12209,89 @@ const CurrencyPanel = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 463,
+              lineNumber: 501,
               columnNumber: 23
             },
             void 0
           ) : lastEventDate ? lastEventDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 461,
+            lineNumber: 499,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap", children: isInactive ? "---" : expiryDate ? expiryDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 477,
+            lineNumber: 515,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`, children: isInactive ? "---" : daysRemaining !== null ? daysRemaining : "---" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 483,
+            lineNumber: 521,
             columnNumber: 19
+          }, void 0),
+          isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleToggleInactive(def.name),
+                title: isInactive ? "Set Active" : "Set Inactive",
+                className: `relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isInactive ? "bg-gray-600" : "bg-sky-600"}`,
+                children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                  "span",
+                  {
+                    className: `pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isInactive ? "translate-x-4" : "translate-x-0"}`
+                  },
+                  void 0,
+                  false,
+                  {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+                    lineNumber: 535,
+                    columnNumber: 25
+                  },
+                  void 0
+                )
+              },
+              void 0,
+              false,
+              {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+                lineNumber: 527,
+                columnNumber: 23
+              },
+              void 0
+            ),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `text-[9px] mt-0.5 font-medium ${isInactive ? "text-gray-500" : "text-sky-400"}`, children: isInactive ? "Inactive" : "Active" }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+              lineNumber: 541,
+              columnNumber: 23
+            }, void 0)
+          ] }, void 0, true, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+            lineNumber: 526,
+            columnNumber: 21
           }, void 0)
         ] }, def.name, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 448,
+          lineNumber: 486,
           columnNumber: 17
         }, void 0);
       }) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 425,
+        lineNumber: 462,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 414,
+      lineNumber: 448,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 413,
+      lineNumber: 447,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-    lineNumber: 371,
+    lineNumber: 405,
     columnNumber: 5
   }, void 0);
 };
@@ -12280,7 +12358,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
             "button",
             {
               onClick: onClose,
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed",
+              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed",
               title: "Close",
               children: "Close"
             },
@@ -12350,30 +12428,37 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
               lineNumber: 104,
               columnNumber: 17
             }, void 0),
-            entry.details && entry.details.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-1", children: entry.details.map((d, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 text-[10px]", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 font-medium min-w-0 flex-1 truncate", title: d.currencyName, children: d.currencyName }, void 0, false, {
+            entry.details && entry.details.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-1", children: entry.details.map((d, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-0.5 text-[10px] border-l-2 border-gray-600 pl-2", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 font-medium truncate", title: d.currencyName, children: d.currencyName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
                 lineNumber: 111,
                 columnNumber: 23
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500 flex-shrink-0", children: d.oldDate ? formatDate2(d.oldDate) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "italic", children: "unset" }, void 0, false, {
+              d.activeChanged && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-semibold ${d.isNowInactive ? "text-gray-400" : "text-sky-400"}`, children: d.isNowInactive ? "⊘ Set Inactive" : "✓ Set Active" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
                 lineNumber: 115,
-                columnNumber: 62
-              }, void 0) }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
-                lineNumber: 114,
-                columnNumber: 23
+                columnNumber: 25
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 flex-shrink-0", children: "→" }, void 0, false, {
+              d.oldDate !== d.newDate && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1.5 text-[10px]", children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500", children: d.oldDate ? formatDate2(d.oldDate) : "unset" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
+                  lineNumber: 121,
+                  columnNumber: 27
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600", children: "→" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
+                  lineNumber: 124,
+                  columnNumber: 27
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-medium ${d.newDate ? "text-green-400" : "text-red-400 italic"}`, children: d.newDate ? formatDate2(d.newDate) : "cleared" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
+                  lineNumber: 125,
+                  columnNumber: 27
+                }, void 0)
+              ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
-                lineNumber: 117,
-                columnNumber: 23
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-medium flex-shrink-0 ${d.newDate ? "text-green-400" : "text-red-400 italic"}`, children: d.newDate ? formatDate2(d.newDate) : "cleared" }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
-                lineNumber: 118,
-                columnNumber: 23
+                lineNumber: 120,
+                columnNumber: 25
               }, void 0)
             ] }, i, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyAuditFlyout.tsx",
