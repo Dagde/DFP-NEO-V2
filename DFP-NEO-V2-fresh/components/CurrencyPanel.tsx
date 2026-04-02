@@ -503,9 +503,9 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
               const expiryDate = expiryDateStr ? parseDate(expiryDateStr) : null;
               const daysRemaining = (!isInactive && expiryDateStr) ? getDaysRemaining(expiryDateStr) : null;
 
-              const dotColor = isInactive ? 'bg-gray-500' : getStatusDotColor(daysRemaining);
+              const dotColor = isInactive ? 'bg-gray-600' : getStatusDotColor(daysRemaining);
               const daysColor = isInactive ? 'text-gray-400' : (daysRemaining !== null ? getDaysColor(daysRemaining) : 'text-gray-500');
-              const rowClass = isInactive ? 'bg-gray-800/40 hover:bg-gray-700/40 transition-colors' : 'hover:bg-gray-700/40 transition-colors';
+              const rowClass = isInactive ? 'bg-gray-800/50 hover:bg-gray-700/40 transition-colors' : 'hover:bg-gray-700/40 transition-colors';
 
               return (
                 <React.Fragment key={def.name}>
@@ -527,8 +527,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                   </td>
                   {/* Currency name */}
                   <td className="px-2 py-1.5 font-medium max-w-[160px]">
-                    <span className={`block truncate ${isInactive ? 'text-gray-300' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
-                    {isInactive && <span className="text-[9px] text-gray-400 font-normal">Inactive</span>}
+                    <span className={`truncate ${isInactive ? 'text-gray-400' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
+                    {isInactive && <span className="ml-2 text-[9px] text-gray-400 font-normal">Inactive</span>}
                   </td>
                   {/* Period */}
                   <td className="px-2 py-1.5 text-center text-gray-400 whitespace-nowrap">{periodText}</td>
