@@ -142,22 +142,60 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
 
   // ── SAVE ─────────────────────────────────────────────────────────────────────
   const handleSaveClick = useCallback(async () => {
-    // Build updated status from edited dates
-    const newStatus: PersonCurrencyStatus[] = [];
+    // ─── Step 1: Fetch the LATEST currency status from DB ─────────────────────
+    // This ensures we don't overwrite any data saved by Post Flight (or any other
+    // source) since this page was last loaded.
+    let latestStatus: PersonCurrencyStatus[] = [...currencyStatus];
+    try {
+      const freshRes = await fetch(currencyEndpoint, { credentials: 'include' });
+      if (freshRes.ok) {
+        const freshData = await freshRes.json();
+        if (Array.isArray(freshData.currencyStatus)) {
+          latestStatus = freshData.currencyStatus;
+          console.log(`[CurrencyStatusPage] Fetched fresh before save: ${latestStatus.length} records`);
+        }
+      }
+    } catch (freshErr) {
+      console.warn('[CurrencyStatusPage] Could not fetch fresh before save, using loaded state:', freshErr);
+    }
+
+    // ─── Step 2: Build updated status ─────────────────────────────────────────
+    // Start with all records from the latest DB state, then apply edits on top.
+    // This ensures currencies saved by Post Flight are NOT wiped by a profile save.
+    const newStatus: PersonCurrencyStatus[] = [...latestStatus];
 
     visibleDefs.forEach(def => {
       const date = editedDates[def.name];
-      if (date && date.trim()) {
-        newStatus.push({ currencyName: def.name, lastEventDate: date.trim() });
-      }
-    });
+      const existingIdx = newStatus.findIndex(s => s.currencyName === def.name);
 
-    // Preserve hidden currencies (not in visibleDefs)
-    currencyStatus.forEach(existing => {
-      const isVisible = visibleDefs.some(d => d.name === existing.currencyName);
-      if (!isVisible) {
-        newStatus.push(existing);
+      if (date !== undefined && date.trim()) {
+        // User entered/kept a non-empty date — update or add
+        if (existingIdx >= 0) {
+          newStatus[existingIdx] = { ...newStatus[existingIdx], currencyName: def.name, lastEventDate: date.trim() };
+        } else {
+          newStatus.push({ currencyName: def.name, lastEventDate: date.trim() });
+        }
+      } else if (date === '') {
+        // Empty string in editedDates means:
+        // - Field was empty when edit started AND user didn't enter anything
+        // - OR user had a value and deliberately cleared it
+        // We can distinguish: if latestStatus has a record for this def but editedDates
+        // was pre-filled as '' (i.e. currencyStatus at edit time had no record),
+        // we PRESERVE the latestStatus record (it was added by Post Flight after edit started).
+        // If currencyStatus at edit time HAD a record and user cleared it to '',
+        // the user intended to clear it — honour that.
+        const hadRecordAtEditStart = currencyStatus.find(s => s.currencyName === def.name);
+        if (!hadRecordAtEditStart) {
+          // Field was empty when edit started — preserve any latestStatus record (e.g. from Post Flight)
+          // Do nothing — it's already in newStatus from the spread above ✅
+        } else {
+          // User had a date and cleared it — remove it from newStatus
+          if (existingIdx >= 0) {
+            newStatus.splice(existingIdx, 1);
+          }
+        }
       }
+      // If editedDates[def.name] is undefined — not in map, do nothing (preserve latestStatus)
     });
 
     // 1. Update local state IMMEDIATELY — user sees result right away

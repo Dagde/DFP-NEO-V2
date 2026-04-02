@@ -11809,11 +11809,6 @@ const CurrencyPanel = ({
   const [saveSuccessMessage, setSaveSuccessMessage] = reactExports.useState(null);
   reactExports.useEffect(() => {
     if (!resolvedId) return;
-    if (savedCurrencyCache.has(resolvedId)) {
-      console.log(`[CurrencyPanel] Using cached saved status for ${resolvedId} (${savedCurrencyCache.get(resolvedId).length} records) — skipping API fetch`);
-      setCurrencyStatus(savedCurrencyCache.get(resolvedId));
-      return;
-    }
     const endpoint = personType === "instructor" ? `/api/personnel/${resolvedId}/currencies` : `/api/trainees/${resolvedId}/currencies`;
     console.log(`[CurrencyPanel] Fetching currencies from: ${endpoint} (resolvedId=${resolvedId})`);
     setIsLoading(true);
@@ -11991,18 +11986,18 @@ const CurrencyPanel = ({
   if (isLoading) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center py-8", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-xs animate-pulse", children: "Loading currency data…" }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 357,
+      lineNumber: 355,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 356,
+      lineNumber: 354,
       columnNumber: 7
     }, void 0);
   }
   if (visibleCurrencyDefinitions.length === 0) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-xs italic text-center py-6", children: "No currency definitions configured. Set up currencies in the Currency Builder." }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 364,
+      lineNumber: 362,
       columnNumber: 7
     }, void 0);
   }
@@ -12011,63 +12006,63 @@ const CurrencyPanel = ({
       summaryCount.expired > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/40 text-red-300", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-red-400 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 376,
+          lineNumber: 374,
           columnNumber: 13
         }, void 0),
         summaryCount.expired,
         " Expired"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 375,
+        lineNumber: 373,
         columnNumber: 11
       }, void 0),
       summaryCount.approaching > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-600/40 text-amber-300", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 382,
+          lineNumber: 380,
           columnNumber: 13
         }, void 0),
         summaryCount.approaching,
         " Expiring"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 381,
+        lineNumber: 379,
         columnNumber: 11
       }, void 0),
       summaryCount.current > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-600/40 text-green-300", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-green-400 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 388,
+          lineNumber: 386,
           columnNumber: 13
         }, void 0),
         summaryCount.current,
         " Current"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 387,
+        lineNumber: 385,
         columnNumber: 11
       }, void 0),
       summaryCount.unassigned > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-600/40 text-gray-400", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "w-1.5 h-1.5 rounded-full bg-gray-500 inline-block" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 394,
+          lineNumber: 392,
           columnNumber: 13
         }, void 0),
         summaryCount.unassigned,
         " Unset"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 393,
+        lineNumber: 391,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 373,
+      lineNumber: 371,
       columnNumber: 7
     }, void 0),
     saveSuccessMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-green-400 text-[10px] bg-green-900/30 border border-green-700/40 rounded px-2 py-1", children: saveSuccessMessage }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 401,
+      lineNumber: 399,
       columnNumber: 9
     }, void 0),
     saveError && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-400 text-[10px] bg-red-900/30 border border-red-700/40 rounded px-2 py-1", children: [
@@ -12075,48 +12070,48 @@ const CurrencyPanel = ({
       saveError
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 407,
+      lineNumber: 405,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "min-w-full divide-y divide-gray-700 text-[11px]", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider w-8" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 417,
+          lineNumber: 415,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-left text-[10px] font-medium text-gray-400 uppercase tracking-wider", children: "Currency" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 418,
+          lineNumber: 416,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Period" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 419,
+          lineNumber: 417,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Last Event" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 420,
+          lineNumber: 418,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Expires" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 421,
+          lineNumber: 419,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { scope: "col", className: "px-2 py-1.5 text-center text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap", children: "Days Rem." }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 422,
+          lineNumber: 420,
           columnNumber: 15
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 416,
+        lineNumber: 414,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 415,
+        lineNumber: 413,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "bg-gray-800 divide-y divide-gray-700/60", children: visibleCurrencyDefinitions.map((def) => {
@@ -12133,25 +12128,25 @@ const CurrencyPanel = ({
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-gray-700/40 transition-colors", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-2.5 h-2.5 rounded-sm mx-auto ${dotColor}` }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 448,
+            lineNumber: 446,
             columnNumber: 21
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 447,
+            lineNumber: 445,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 font-medium text-gray-200 max-w-[160px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block truncate", title: def.name, children: def.name }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 452,
+            lineNumber: 450,
             columnNumber: 21
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 451,
+            lineNumber: 449,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-400 whitespace-nowrap", children: periodText }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 455,
+            lineNumber: 453,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -12167,47 +12162,47 @@ const CurrencyPanel = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 459,
+              lineNumber: 457,
               columnNumber: 23
             },
             void 0
           ) : lastEventDate ? lastEventDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 457,
+            lineNumber: 455,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap", children: expiryDate ? expiryDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 473,
+            lineNumber: 471,
             columnNumber: 19
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`, children: daysRemaining !== null ? daysRemaining : "---" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-            lineNumber: 479,
+            lineNumber: 477,
             columnNumber: 19
           }, void 0)
         ] }, def.name, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-          lineNumber: 445,
+          lineNumber: 443,
           columnNumber: 17
         }, void 0);
       }) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-        lineNumber: 425,
+        lineNumber: 423,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 414,
+      lineNumber: 412,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-      lineNumber: 413,
+      lineNumber: 411,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-    lineNumber: 371,
+    lineNumber: 369,
     columnNumber: 5
   }, void 0);
 };
@@ -38994,6 +38989,7 @@ const PublishConfirmationFlyout = ({ date, onConfirm, onCancel }) => {
 };
 const CurrencyStatusPage = ({
   person,
+  personType: personTypeProp,
   masterCurrencies,
   currencyRequirements,
   onClose,
@@ -39007,18 +39003,22 @@ const CurrencyStatusPage = ({
   const [saveState, setSaveState] = reactExports.useState("idle");
   const [saveMessage, setSaveMessage] = reactExports.useState("");
   const visibleDefs = [...masterCurrencies, ...currencyRequirements].filter((c) => c.isVisible).sort((a, b) => a.name.localeCompare(b.name));
+  const personType = personTypeProp || ("course" in person ? "trainee" : "instructor");
+  const dbId = person.id || person.idNumber;
+  const currencyEndpoint = personType === "trainee" ? `/api/trainees/${dbId}/currencies` : `/api/personnel/${dbId}/currencies`;
+  console.log(`[CurrencyStatusPage] personType=${personType}, dbId=${dbId}, endpoint=${currencyEndpoint}`);
   reactExports.useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
     setIsEditing(false);
     setEditedDates({});
-    fetch(`/api/personnel/${person.idNumber}/currencies`, { credentials: "include" }).then((r) => r.json()).then((data) => {
+    fetch(currencyEndpoint, { credentials: "include" }).then((r) => r.json()).then((data) => {
       if (cancelled) return;
       const loaded = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
       setCurrencyStatus(loaded);
       setIsLoading(false);
-      console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for person ${person.idNumber}`);
+      console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for ${personType} ${dbId}`);
     }).catch((err) => {
       if (cancelled) return;
       console.error("❌ CurrencyStatusPage load error:", err);
@@ -39028,7 +39028,7 @@ const CurrencyStatusPage = ({
     return () => {
       cancelled = true;
     };
-  }, [person.idNumber]);
+  }, [currencyEndpoint]);
   const getStatus = reactExports.useCallback((name) => {
     return currencyStatus.find((s) => s.currencyName === name);
   }, [currencyStatus]);
@@ -39078,17 +39078,37 @@ const CurrencyStatusPage = ({
     setSaveState("idle");
   }, []);
   const handleSaveClick = reactExports.useCallback(async () => {
-    const newStatus = [];
+    let latestStatus = [...currencyStatus];
+    try {
+      const freshRes = await fetch(currencyEndpoint, { credentials: "include" });
+      if (freshRes.ok) {
+        const freshData = await freshRes.json();
+        if (Array.isArray(freshData.currencyStatus)) {
+          latestStatus = freshData.currencyStatus;
+          console.log(`[CurrencyStatusPage] Fetched fresh before save: ${latestStatus.length} records`);
+        }
+      }
+    } catch (freshErr) {
+      console.warn("[CurrencyStatusPage] Could not fetch fresh before save, using loaded state:", freshErr);
+    }
+    const newStatus = [...latestStatus];
     visibleDefs.forEach((def) => {
       const date = editedDates[def.name];
-      if (date && date.trim()) {
-        newStatus.push({ currencyName: def.name, lastEventDate: date.trim() });
-      }
-    });
-    currencyStatus.forEach((existing) => {
-      const isVisible = visibleDefs.some((d) => d.name === existing.currencyName);
-      if (!isVisible) {
-        newStatus.push(existing);
+      const existingIdx = newStatus.findIndex((s) => s.currencyName === def.name);
+      if (date !== void 0 && date.trim()) {
+        if (existingIdx >= 0) {
+          newStatus[existingIdx] = { ...newStatus[existingIdx], currencyName: def.name, lastEventDate: date.trim() };
+        } else {
+          newStatus.push({ currencyName: def.name, lastEventDate: date.trim() });
+        }
+      } else if (date === "") {
+        const hadRecordAtEditStart = currencyStatus.find((s) => s.currencyName === def.name);
+        if (!hadRecordAtEditStart) ;
+        else {
+          if (existingIdx >= 0) {
+            newStatus.splice(existingIdx, 1);
+          }
+        }
       }
     });
     setCurrencyStatus(newStatus);
@@ -39097,7 +39117,7 @@ const CurrencyStatusPage = ({
     setSaveState("saving");
     setSaveMessage("Saving...");
     try {
-      const response = await fetch(`/api/personnel/${person.idNumber}/currencies`, {
+      const response = await fetch(currencyEndpoint, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -39109,7 +39129,7 @@ const CurrencyStatusPage = ({
         setSaveState("error");
         setSaveMessage(`Save failed: ${data.error || response.statusText}`);
       } else {
-        console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB`);
+        console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB via ${currencyEndpoint}`);
         setSaveState("saved");
         setSaveMessage(`✅ Saved ${newStatus.length} currency entries`);
         setTimeout(() => setSaveState("idle"), 3e3);
@@ -39119,7 +39139,7 @@ const CurrencyStatusPage = ({
       setSaveState("error");
       setSaveMessage(`Network error: ${err.message}`);
     }
-  }, [editedDates, visibleDefs, currencyStatus, person.idNumber]);
+  }, [editedDates, visibleDefs, currencyStatus, currencyEndpoint]);
   const isDirty = reactExports.useCallback(() => {
     if (!isEditing) return false;
     return visibleDefs.some((def) => {
@@ -39139,7 +39159,7 @@ const CurrencyStatusPage = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h1", { className: "text-2xl font-bold text-white", children: "Currency Status" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 206,
+          lineNumber: 262,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: [
@@ -39150,12 +39170,12 @@ const CurrencyStatusPage = ({
           surname
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 207,
+          lineNumber: 263,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 205,
+        lineNumber: 261,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
@@ -39170,24 +39190,24 @@ const CurrencyStatusPage = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 210,
+            lineNumber: 266,
             columnNumber: 11
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Currency Status" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 216,
+          lineNumber: 272,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 209,
+        lineNumber: 265,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-      lineNumber: 204,
+      lineNumber: 260,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 md:p-6 max-w-7xl mx-auto w-full", children: [
@@ -39195,81 +39215,81 @@ const CurrencyStatusPage = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "ID: " }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 226,
+            lineNumber: 282,
             columnNumber: 38
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: person.idNumber }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 226,
+            lineNumber: 282,
             columnNumber: 81
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 226,
+          lineNumber: 282,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "First Name: " }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 227,
+            lineNumber: 283,
             columnNumber: 38
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: firstName }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 227,
+            lineNumber: 283,
             columnNumber: 89
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 227,
+          lineNumber: 283,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Surname: " }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 228,
+            lineNumber: 284,
             columnNumber: 38
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: surname }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 228,
+            lineNumber: 284,
             columnNumber: 86
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 228,
+          lineNumber: 284,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Rank: " }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 229,
+            lineNumber: 285,
             columnNumber: 38
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: person.rank }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 229,
+            lineNumber: 285,
             columnNumber: 83
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 229,
+          lineNumber: 285,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Course: " }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 230,
+            lineNumber: 286,
             columnNumber: 38
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white", children: "course" in person ? person.course : "N/A" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 230,
+            lineNumber: 286,
             columnNumber: 85
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 230,
+          lineNumber: 286,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end space-x-2", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -39284,7 +39304,7 @@ const CurrencyStatusPage = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 234,
+              lineNumber: 290,
               columnNumber: 19
             },
             void 0
@@ -39300,14 +39320,14 @@ const CurrencyStatusPage = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 238,
+              lineNumber: 294,
               columnNumber: 19
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 233,
+          lineNumber: 289,
           columnNumber: 17
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "button",
@@ -39321,18 +39341,18 @@ const CurrencyStatusPage = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 244,
+            lineNumber: 300,
             columnNumber: 17
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 231,
+          lineNumber: 287,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 225,
+        lineNumber: 281,
         columnNumber: 11
       }, void 0),
       saveState === "saving" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-4 px-4 py-2 bg-sky-900/50 border border-sky-600 rounded-md text-sky-300 text-sm", children: [
@@ -39340,12 +39360,12 @@ const CurrencyStatusPage = ({
         saveMessage
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 254,
+        lineNumber: 310,
         columnNumber: 13
       }, void 0),
       saveState === "saved" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-4 px-4 py-2 bg-green-900/50 border border-green-600 rounded-md text-green-300 text-sm font-semibold", children: saveMessage }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 259,
+        lineNumber: 315,
         columnNumber: 13
       }, void 0),
       saveState === "error" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-4 px-4 py-2 bg-red-900/50 border border-red-600 rounded-md text-red-300 text-sm", children: [
@@ -39353,62 +39373,62 @@ const CurrencyStatusPage = ({
         saveMessage
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 264,
+        lineNumber: 320,
         columnNumber: 13
       }, void 0),
       isLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-8 border border-gray-700 text-center text-gray-400 text-sm", children: "Loading currency data..." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 271,
+        lineNumber: 327,
         columnNumber: 13
       }, void 0),
       loadError && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-red-900/30 rounded-lg p-4 border border-red-700 text-red-300 text-sm", children: loadError }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 278,
+        lineNumber: 334,
         columnNumber: 13
       }, void 0),
       !isLoading && !loadError && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "min-w-full divide-y divide-gray-700", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-8", children: "Status" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 289,
+            lineNumber: 345,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Currency" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 290,
+            lineNumber: 346,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Last Event Date" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 291,
+            lineNumber: 347,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Expiry Date" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 292,
+            lineNumber: 348,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Days Remaining" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 293,
+            lineNumber: 349,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 288,
+          lineNumber: 344,
           columnNumber: 19
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 287,
+          lineNumber: 343,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "divide-y divide-gray-700", children: visibleDefs.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { colSpan: 5, className: "px-4 py-8 text-center text-gray-500 italic text-sm", children: "No currency items configured. Go to Settings → Currency Setup to add items." }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 299,
+          lineNumber: 355,
           columnNumber: 23
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 298,
+          lineNumber: 354,
           columnNumber: 21
         }, void 0) : visibleDefs.map((def) => {
           const validityDays = getValidityDays(def);
@@ -39422,27 +39442,27 @@ const CurrencyStatusPage = ({
           return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-gray-700/30 transition-colors", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-3 h-3 rounded-full ${getStatusDotColor2(daysRemaining)}` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 321,
+              lineNumber: 377,
               columnNumber: 29
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 320,
+              lineNumber: 376,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm font-medium text-white", children: def.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-                lineNumber: 324,
+                lineNumber: 380,
                 columnNumber: 29
               }, void 0),
               def.description && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-gray-500 mt-0.5", children: def.description }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-                lineNumber: 325,
+                lineNumber: 381,
                 columnNumber: 49
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 323,
+              lineNumber: 379,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -39457,76 +39477,76 @@ const CurrencyStatusPage = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-                lineNumber: 329,
+                lineNumber: 385,
                 columnNumber: 31
               },
               void 0
             ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: displayDate ? formatDisplayDate(displayDate) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 italic", children: "Not set" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 337,
+              lineNumber: 393,
               columnNumber: 81
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 336,
+              lineNumber: 392,
               columnNumber: 31
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 327,
+              lineNumber: 383,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: expiryDateStr }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 342,
+              lineNumber: 398,
               columnNumber: 29
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 341,
+              lineNumber: 397,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3", children: daysRemaining !== null ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-sm font-semibold ${getDaysTextColor(daysRemaining)}`, children: daysRemaining <= 0 ? "EXPIRED" : `${daysRemaining} days` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 346,
+              lineNumber: 402,
               columnNumber: 31
             }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-600 italic", children: "—" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 350,
+              lineNumber: 406,
               columnNumber: 31
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-              lineNumber: 344,
+              lineNumber: 400,
               columnNumber: 27
             }, void 0)
           ] }, def.id, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-            lineNumber: 319,
+            lineNumber: 375,
             columnNumber: 25
           }, void 0);
         }) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-          lineNumber: 296,
+          lineNumber: 352,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 286,
+        lineNumber: 342,
         columnNumber: 15
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-        lineNumber: 285,
+        lineNumber: 341,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-      lineNumber: 222,
+      lineNumber: 278,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-      lineNumber: 221,
+      lineNumber: 277,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
-    lineNumber: 201,
+    lineNumber: 257,
     columnNumber: 5
   }, void 0);
 };
@@ -72400,7 +72420,10 @@ async function fetchAPI(endpoint, options) {
 async function fetchInstructors() {
   const result = await fetchAPI("/personnel");
   if (result.success && result.data?.personnel) {
-    return result.data.personnel;
+    return result.data.personnel.map((p) => ({
+      ...p,
+      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
+    }));
   }
   return [];
 }
@@ -92649,6 +92672,7 @@ ${"=".repeat(60)}`);
   const [selectedScoreForDetail, setSelectedScoreForDetail] = reactExports.useState(null);
   const [eventForPt051, setEventForPt051] = reactExports.useState(null);
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
+  const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
   const [showAuthFlyout, setShowAuthFlyout] = reactExports.useState(false);
   const [eventForAuth, setEventForAuth] = reactExports.useState(null);
   const [showPostFlightView, setShowPostFlightView] = reactExports.useState(false);
@@ -95329,6 +95353,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         const personnelData2 = await personnelRes.json();
         const dbPersonnel = (personnelData2.personnel || []).map((p) => ({
           ...p,
+          // Extract qualifications.currencyStatus to top-level so Post Flight
+          // and other in-memory reads can find it at person.currencyStatus
+          currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
           _dataSource: "database"
         }));
         setInstructorsData((prev) => {
@@ -96273,6 +96300,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   };
   const handleNavigateToCurrency = reactExports.useCallback((person) => {
     setSelectedPersonForCurrency(person);
+    const pType = "course" in person ? "trainee" : "instructor";
+    setSelectedPersonForCurrencyType(pType);
     handleNavigation("Currency");
   }, []);
   const handleSelectMyCurrency = () => {
@@ -96439,7 +96468,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10152,
+            lineNumber: 10160,
             columnNumber: 24
           },
           void 0
@@ -96477,7 +96506,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10308,
+            lineNumber: 10316,
             columnNumber: 24
           },
           void 0
@@ -96537,7 +96566,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10377,
+              lineNumber: 10385,
               columnNumber: 28
             },
             void 0
@@ -96592,7 +96621,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10430,
+            lineNumber: 10438,
             columnNumber: 24
           },
           void 0
@@ -96637,7 +96666,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10448,
+            lineNumber: 10456,
             columnNumber: 24
           },
           void 0
@@ -96770,7 +96799,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10488,
+            lineNumber: 10496,
             columnNumber: 24
           },
           void 0
@@ -96889,7 +96918,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10622,
+            lineNumber: 10630,
             columnNumber: 24
           },
           void 0
@@ -97007,7 +97036,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10755,
+              lineNumber: 10763,
               columnNumber: 28
             },
             void 0
@@ -97027,7 +97056,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10883,
+              lineNumber: 10891,
               columnNumber: 28
             },
             void 0
@@ -97093,7 +97122,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10891,
+            lineNumber: 10899,
             columnNumber: 24
           },
           void 0
@@ -97285,7 +97314,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10947,
+            lineNumber: 10955,
             columnNumber: 24
           },
           void 0
@@ -97306,7 +97335,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11136,
+            lineNumber: 11144,
             columnNumber: 24
           },
           void 0
@@ -97337,7 +97366,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11146,
+            lineNumber: 11154,
             columnNumber: 24
           },
           void 0
@@ -97355,7 +97384,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11166,
+            lineNumber: 11174,
             columnNumber: 24
           },
           void 0
@@ -97387,7 +97416,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11173,
+            lineNumber: 11181,
             columnNumber: 25
           },
           void 0
@@ -97518,7 +97547,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11200,
+            lineNumber: 11208,
             columnNumber: 24
           },
           void 0
@@ -97542,7 +97571,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11341,
+            lineNumber: 11349,
             columnNumber: 24
           },
           void 0
@@ -97636,7 +97665,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11356,
+            lineNumber: 11364,
             columnNumber: 24
           },
           void 0
@@ -97734,7 +97763,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11446,
+            lineNumber: 11454,
             columnNumber: 24
           },
           void 0
@@ -97772,7 +97801,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11541,
+            lineNumber: 11549,
             columnNumber: 28
           },
           void 0
@@ -97793,7 +97822,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11568,
+            lineNumber: 11576,
             columnNumber: 24
           },
           void 0
@@ -97835,7 +97864,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11608,
+                lineNumber: 11616,
                 columnNumber: 32
               },
               void 0
@@ -97844,7 +97873,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Error: Could not load trainee LMP." }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11619,
+          lineNumber: 11627,
           columnNumber: 24
         }, void 0);
       case "Currency":
@@ -97853,6 +97882,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             CurrencyStatusPage,
             {
               person: selectedPersonForCurrency,
+              personType: selectedPersonForCurrencyType,
               masterCurrencies,
               currencyRequirements,
               onClose: handleCurrencyBack,
@@ -97862,7 +97892,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11622,
+              lineNumber: 11630,
               columnNumber: 28
             },
             void 0
@@ -97936,7 +97966,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11632,
+            lineNumber: 11641,
             columnNumber: 24
           },
           void 0
@@ -97955,7 +97985,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11696,
+            lineNumber: 11705,
             columnNumber: 24
           },
           void 0
@@ -98044,7 +98074,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11724,
+              lineNumber: 11733,
               columnNumber: 28
             },
             void 0
@@ -98058,7 +98088,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11807,
+            lineNumber: 11816,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -98066,7 +98096,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11808,
+            lineNumber: 11817,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -98074,7 +98104,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             eventForPt051 ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11809,
+            lineNumber: 11818,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98088,14 +98118,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11810,
+              lineNumber: 11819,
               columnNumber: 21
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11806,
+          lineNumber: 11815,
           columnNumber: 24
         }, void 0);
       case "PostFlight":
@@ -98124,12 +98154,26 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   for (const { person, personType } of targetPersons) {
                     const dbId = person.id;
                     if (!dbId) continue;
-                    const existingStatus = person.currencyStatus || [];
+                    let existingStatus = person.currencyStatus || person.qualifications?.currencyStatus || [];
+                    try {
+                      const freshEndpoint = personType === "instructor" ? `/api/personnel/${dbId}/currencies` : `/api/trainees/${dbId}/currencies`;
+                      const freshRes = await fetch(freshEndpoint, { credentials: "include" });
+                      if (freshRes.ok) {
+                        const freshData = await freshRes.json();
+                        if (Array.isArray(freshData.currencyStatus)) {
+                          existingStatus = freshData.currencyStatus;
+                          console.log(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
+                        }
+                      }
+                    } catch (fetchErr) {
+                      console.warn(`[PostFlight] Could not fetch fresh currency for ${person.name}, using in-memory:`, fetchErr);
+                    }
                     const allCurrencyDefs = [...masterCurrencies, ...currencyRequirements];
                     const updatedStatus = [...existingStatus];
                     for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
                       if (!value || value === "false") continue;
-                      const def = allCurrencyDefs.find((c) => c.id === currencyId);
+                      const baseCurrencyId = currencyId.includes("__") ? currencyId.split("__")[0] : currencyId;
+                      const def = allCurrencyDefs.find((c) => c.id === baseCurrencyId);
                       if (!def) continue;
                       const dateValue = typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : null;
                       if (!dateValue) continue;
@@ -98170,7 +98214,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                           (t) => t.id === dbId ? { ...t, currencyStatus: updatedStatus } : t
                         ));
                       }
-                      console.log(`[PostFlight] ✅ Currency updated for ${person.name}`);
+                      savedCurrencyCache.delete(dbId);
+                      console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
                     } catch (err) {
                       console.warn(`[PostFlight] ⚠️ Currency update failed for ${person.name}:`, err);
                     }
@@ -98190,7 +98235,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11819,
+              lineNumber: 11828,
               columnNumber: 28
             },
             void 0
@@ -98218,7 +98263,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11924,
+              lineNumber: 11955,
               columnNumber: 28
             },
             void 0
@@ -98228,13 +98273,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       case "AUTH":
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11941,
+          lineNumber: 11972,
           columnNumber: 24
         }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11943,
+          lineNumber: 11974,
           columnNumber: 24
         }, void 0);
     }
@@ -98276,7 +98321,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SystemFreezeBanner, {}, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 11997,
+      lineNumber: 12028,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
@@ -98318,7 +98363,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11999,
+          lineNumber: 12030,
           columnNumber: 13
         },
         void 0
@@ -98356,19 +98401,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12032,
+            lineNumber: 12063,
             columnNumber: 49
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12060,
+          lineNumber: 12091,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12031,
+        lineNumber: 12062,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98389,14 +98434,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12064,
+          lineNumber: 12095,
           columnNumber: 13
         },
         void 0
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Magnifier, { isEnabled: isMagnifierEnabled }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12076,
+        lineNumber: 12107,
         columnNumber: 36
       }, void 0),
       selectedEvent && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98523,7 +98568,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12079,
+          lineNumber: 12110,
           columnNumber: 17
         },
         void 0
@@ -98531,7 +98576,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       conflict && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12218,
+        lineNumber: 12249,
         columnNumber: 26
       }, void 0),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98546,7 +98591,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12220,
+          lineNumber: 12251,
           columnNumber: 17
         },
         void 0
@@ -98554,11 +98599,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowNeoChoiceModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Resolution Options" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12231,
+          lineNumber: 12262,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12230,
+          lineNumber: 12261,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 text-center", children: [
@@ -98566,13 +98611,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             "NEO has found multiple ways to resolve the conflict for ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: neoProblemTileForFlyout?.event.flightNumber }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12234,
+              lineNumber: 12265,
               columnNumber: 114
             }, void 0),
             ". Please choose an option:"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12234,
+            lineNumber: 12265,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-4 pt-4", children: [
@@ -98584,12 +98629,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Time Shift" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12240,
+                    lineNumber: 12271,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12241,
+                    lineNumber: 12272,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -98598,7 +98643,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12236,
+                lineNumber: 12267,
                 columnNumber: 33
               },
               void 0
@@ -98611,12 +98656,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12247,
+                    lineNumber: 12278,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12248,
+                    lineNumber: 12279,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -98625,38 +98670,38 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12243,
+                lineNumber: 12274,
                 columnNumber: 33
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12235,
+            lineNumber: 12266,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12233,
+          lineNumber: 12264,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12229,
+        lineNumber: 12260,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12228,
+        lineNumber: 12259,
         columnNumber: 17
       }, void 0),
       showTimeOnlyRemedyConfirm && timeOnlyRemedyForConfirmation && neoProblemTileForFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: handleCancelTimeOnlyRemedy, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Time Change" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12259,
+          lineNumber: 12290,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12258,
+          lineNumber: 12289,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: [
@@ -98664,89 +98709,89 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Current Start Time:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12264,
+                lineNumber: 12295,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-mono font-bold", children: formatDecimalHourToString(neoProblemTileForFlyout.event.startTime) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12265,
+                lineNumber: 12296,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12263,
+              lineNumber: 12294,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12268,
+                lineNumber: 12299,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12269,
+                lineNumber: 12300,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12267,
+              lineNumber: 12298,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12262,
+            lineNumber: 12293,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center pt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-2 text-sm", children: "Proposed New Start Time" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12280,
+              lineNumber: 12311,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl font-bold text-green-400 font-mono tracking-wider", children: formatDecimalHourToString(timeOnlyRemedyForConfirmation.newStartTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12281,
+              lineNumber: 12312,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12279,
+            lineNumber: 12310,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12261,
+          lineNumber: 12292,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelTimeOnlyRemedy, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12287,
+            lineNumber: 12318,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSwitchToCrewChange, className: "px-4 py-2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors text-sm font-semibold", children: "Change Crew Instead" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12288,
+            lineNumber: 12319,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleConfirmTimeOnlyRemedy, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Accept Time Change" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12289,
+            lineNumber: 12320,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12286,
+          lineNumber: 12317,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12257,
+        lineNumber: 12288,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12256,
+        lineNumber: 12287,
         columnNumber: 18
       }, void 0),
       showDutyWarning && dutyWarningRemedy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98761,49 +98806,49 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12295,
+          lineNumber: 12326,
           columnNumber: 17
         },
         void 0
       ),
       showInfoNotification && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12304,
+        lineNumber: 12335,
         columnNumber: 38
       }, void 0),
       showNightFlyingInfo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12305,
+        lineNumber: 12336,
         columnNumber: 37
       }, void 0),
       isBuildingDfp && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12306,
+        lineNumber: 12337,
         columnNumber: 31
       }, void 0),
       showDateWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12307,
+        lineNumber: 12338,
         columnNumber: 33
       }, void 0),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12308,
+        lineNumber: 12339,
         columnNumber: 56
       }, void 0),
       showPublishConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12309,
+        lineNumber: 12340,
         columnNumber: 36
       }, void 0),
       isLocalityChangeVisible && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LocalityChangeFlyout, { locality: school }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12310,
+        lineNumber: 12341,
         columnNumber: 41
       }, void 0),
       successMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SuccessNotification, { message: successMessage, onClose: () => setSuccessMessage(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12311,
+        lineNumber: 12342,
         columnNumber: 32
       }, void 0),
       showCurrencySetup && selectedPersonForCurrency && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98824,7 +98869,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12313,
+          lineNumber: 12344,
           columnNumber: 17
         },
         void 0
@@ -98840,7 +98885,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12329,
+          lineNumber: 12360,
           columnNumber: 17
         },
         void 0
@@ -98860,7 +98905,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12336,
+          lineNumber: 12367,
           columnNumber: 17
         },
         void 0
@@ -98903,7 +98948,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12347,
+          lineNumber: 12378,
           columnNumber: 17
         },
         void 0
@@ -98922,7 +98967,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12381,
+          lineNumber: 12412,
           columnNumber: 17
         },
         void 0
@@ -98941,7 +98986,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12391,
+          lineNumber: 12422,
           columnNumber: 17
         },
         void 0
@@ -98997,7 +99042,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12401,
+          lineNumber: 12432,
           columnNumber: 17
         },
         void 0
@@ -99019,7 +99064,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12454,
+          lineNumber: 12485,
           columnNumber: 17
         },
         void 0
@@ -99042,7 +99087,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12469,
+          lineNumber: 12500,
           columnNumber: 17
         },
         void 0
@@ -99058,44 +99103,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12485,
+          lineNumber: 12516,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 11998,
+      lineNumber: 12029,
       columnNumber: 9
     }, void 0),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoginModal, { onLoginSuccess: handleLoginSuccess }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12495,
+      lineNumber: 12526,
       columnNumber: 13
     }, void 0),
     authLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12502,
+        lineNumber: 12533,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12503,
+        lineNumber: 12534,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12501,
+      lineNumber: 12532,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12500,
+      lineNumber: 12531,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-    lineNumber: 11996,
+    lineNumber: 12027,
     columnNumber: 5
   }, void 0);
 };

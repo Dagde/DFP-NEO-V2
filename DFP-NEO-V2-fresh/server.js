@@ -313,8 +313,21 @@ app.get('/api/personnel/:id/currencies', async (req, res) => {
       record = records.find(r => r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length > 0) || records[0] || null;
       console.log(`   Using record id=${record && record.id}, name=${record && record.name}`);
     } else {
-      record = await db.personnel.findUnique({ where: { id } });
-      console.log(`   UUID lookup -- found: id=${record && record.id}, name=${record && record.name}`);
+      // UUID lookup — but also check all records with the same idNumber so we get the most complete data.
+      // This handles the case where duplicates exist and the "best" record (with currency data) differs
+      // from the specific UUID record being queried.
+      const uuidRecord = await db.personnel.findUnique({ where: { id } });
+      console.log(`   UUID lookup -- found: id=${uuidRecord && uuidRecord.id}, name=${uuidRecord && uuidRecord.name}`);
+      if (uuidRecord && uuidRecord.idNumber) {
+        // Check if any sibling record with the same idNumber has more currency data
+        const siblings = await db.personnel.findMany({ where: { idNumber: uuidRecord.idNumber }, orderBy: { updatedAt: 'desc' } });
+        console.log(`   UUID lookup -- found ${siblings.length} sibling record(s) for idNumber ${uuidRecord.idNumber}`);
+        // Prefer the record that has currency data; otherwise use the UUID record itself
+        record = siblings.find(r => r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length > 0) || uuidRecord;
+        console.log(`   UUID lookup -- using record id=${record.id} (has ${record.qualifications && record.qualifications.currencyStatus ? record.qualifications.currencyStatus.length : 0} currency entries)`);
+      } else {
+        record = uuidRecord;
+      }
     }
     if (!record) return res.status(404).json({ error: 'Personnel not found' });
     const currencies = record.qualifications ? (record.qualifications.currencyStatus || []) : [];
@@ -361,17 +374,38 @@ app.patch('/api/personnel/:id/currencies', async (req, res) => {
     } else {
       const existing = await db.personnel.findUnique({ where: { id } });
       if (!existing) return res.status(404).json({ error: 'Personnel not found' });
-      const currentQual = existing.qualifications || {};
-      const updated = await db.personnel.update({
-        where: { id: existing.id },
-        data: {
-          qualifications: {
-            ...(typeof currentQual === 'object' ? currentQual : {}),
-            currencyStatus: currencyStatus || []
+      // Also update ALL records with the same idNumber to keep duplicates in sync
+      // This mirrors the numeric-idNumber PATCH behaviour
+      if (existing.idNumber) {
+        const allRecords = await db.personnel.findMany({ where: { idNumber: existing.idNumber } });
+        console.log(`   UUID PATCH -- updating ${allRecords.length} record(s) for idNumber ${existing.idNumber}:`, allRecords.map(r => r.id));
+        await Promise.all(allRecords.map(rec => {
+          const currentQual = rec.qualifications || {};
+          return db.personnel.update({
+            where: { id: rec.id },
+            data: {
+              qualifications: {
+                ...(typeof currentQual === 'object' ? currentQual : {}),
+                currencyStatus: currencyStatus || []
+              }
+            }
+          });
+        }));
+        console.log(`   PATCH /api/personnel/${id}/currencies - updated ${allRecords.length} record(s) for: ${existing.name}`);
+      } else {
+        // No idNumber — just update the single record
+        const currentQual = existing.qualifications || {};
+        await db.personnel.update({
+          where: { id: existing.id },
+          data: {
+            qualifications: {
+              ...(typeof currentQual === 'object' ? currentQual : {}),
+              currencyStatus: currencyStatus || []
+            }
           }
-        }
-      });
-      console.log(`   PATCH /api/personnel/${id}/currencies - updated currency for: ${updated.name}`);
+        });
+        console.log(`   PATCH /api/personnel/${id}/currencies - updated single record for: ${existing.name}`);
+      }
       res.json({ success: true, currencyStatus });
     }
   } catch (error) {
@@ -397,8 +431,17 @@ app.get('/api/trainees/:id/currencies', async (req, res) => {
       record = records.find(r => r.currencyStatus && Array.isArray(r.currencyStatus) && r.currencyStatus.length > 0) || records[0] || null;
       console.log(`   Using record id=${record && record.id}, name=${record && record.name}`);
     } else {
-      record = await db.trainee.findUnique({ where: { id } });
-      console.log(`   UUID lookup -- found: id=${record && record.id}, name=${record && record.name}`);
+      // UUID lookup — but also check all records with the same idNumber so we get the most complete data.
+      const uuidRecord = await db.trainee.findUnique({ where: { id } });
+      console.log(`   UUID lookup -- found: id=${uuidRecord && uuidRecord.id}, name=${uuidRecord && uuidRecord.name}`);
+      if (uuidRecord && uuidRecord.idNumber) {
+        const siblings = await db.trainee.findMany({ where: { idNumber: uuidRecord.idNumber }, orderBy: { updatedAt: 'desc' } });
+        console.log(`   UUID lookup -- found ${siblings.length} sibling record(s) for idNumber ${uuidRecord.idNumber}`);
+        record = siblings.find(r => r.currencyStatus && Array.isArray(r.currencyStatus) && r.currencyStatus.length > 0) || uuidRecord;
+        console.log(`   UUID lookup -- using record id=${record.id} (has ${Array.isArray(record.currencyStatus) ? record.currencyStatus.length : 0} currency entries)`);
+      } else {
+        record = uuidRecord;
+      }
     }
     if (!record) return res.status(404).json({ error: 'Trainee not found' });
     let currencies = [];
@@ -442,11 +485,24 @@ app.patch('/api/trainees/:id/currencies', async (req, res) => {
     } else {
       const existing = await db.trainee.findUnique({ where: { id } });
       if (!existing) return res.status(404).json({ error: 'Trainee not found' });
-      const updated = await db.trainee.update({
-        where: { id: existing.id },
-        data: { currencyStatus: currencyStatus || [] }
-      });
-      console.log(`   PATCH /api/trainees/${id}/currencies - updated currency for: ${updated.name}`);
+      // Also update ALL records with the same idNumber to keep duplicates in sync
+      if (existing.idNumber) {
+        const allRecords = await db.trainee.findMany({ where: { idNumber: existing.idNumber } });
+        console.log(`   UUID PATCH -- updating ${allRecords.length} record(s) for idNumber ${existing.idNumber}:`, allRecords.map(r => r.id));
+        await Promise.all(allRecords.map(rec =>
+          db.trainee.update({
+            where: { id: rec.id },
+            data: { currencyStatus: currencyStatus || [] }
+          })
+        ));
+        console.log(`   PATCH /api/trainees/${id}/currencies - updated ${allRecords.length} record(s) for: ${existing.name}`);
+      } else {
+        await db.trainee.update({
+          where: { id: existing.id },
+          data: { currencyStatus: currencyStatus || [] }
+        });
+        console.log(`   PATCH /api/trainees/${id}/currencies - updated single record for: ${existing.name}`);
+      }
       res.json({ success: true, currencyStatus });
     }
   } catch (error) {
