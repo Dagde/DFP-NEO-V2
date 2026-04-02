@@ -11875,7 +11875,10 @@ updates.forEach(update => {
                                             
                                             for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
                                                 if (!value || value === 'false') continue;
-                                                const def = allCurrencyDefs.find(c => c.id === currencyId);
+                                                // fieldKey may be "id__inputType" (e.g. "abc123__date") when
+                                                // a currency has multiple input types — strip the suffix before lookup
+                                                const baseCurrencyId = currencyId.includes('__') ? currencyId.split('__')[0] : currencyId;
+                                                const def = allCurrencyDefs.find(c => c.id === baseCurrencyId);
                                                 if (!def) continue;
                                                 
                                                 // value is a date string for date inputs
