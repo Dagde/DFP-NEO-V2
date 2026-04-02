@@ -12179,9 +12179,9 @@ const CurrencyPanel = ({
         const expiryDateStr = !isInactive && statusDateStr ? addDaysToDate(statusDateStr, validityDays) : "";
         const expiryDate = expiryDateStr ? parseDate(expiryDateStr) : null;
         const daysRemaining = !isInactive && expiryDateStr ? getDaysRemaining(expiryDateStr) : null;
-        const dotColor = isInactive ? "bg-gray-500" : getStatusDotColor(daysRemaining);
+        const dotColor = isInactive ? "bg-gray-600" : getStatusDotColor(daysRemaining);
         const daysColor = isInactive ? "text-gray-400" : daysRemaining !== null ? getDaysColor(daysRemaining) : "text-gray-500";
-        const rowClass = isInactive ? "bg-gray-800/40 hover:bg-gray-700/40 transition-colors" : "hover:bg-gray-700/40 transition-colors";
+        const rowClass = isInactive ? "bg-gray-800/50 hover:bg-gray-700/40 transition-colors" : "hover:bg-gray-700/40 transition-colors";
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(React.Fragment, { children: [
           showDivider && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { colSpan: isEditing ? 7 : 6, className: "px-2 py-1 bg-gray-700/30", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 h-px bg-gray-600/60" }, void 0, false, {
@@ -12222,25 +12222,29 @@ const CurrencyPanel = ({
               lineNumber: 525,
               columnNumber: 19
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 font-medium max-w-[160px]", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `block truncate ${isInactive ? "text-gray-300" : "text-gray-200"}`, title: def.name, children: def.name }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-                lineNumber: 530,
-                columnNumber: 21
-              }, void 0),
-              isInactive && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-400 font-normal", children: "Inactive" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 font-medium max-w-[160px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-row items-center", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `${isInactive ? "text-gray-400" : "text-gray-200"}`, title: def.name, children: def.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
                 lineNumber: 531,
-                columnNumber: 36
+                columnNumber: 23
+              }, void 0),
+              isInactive && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-[9px] text-orange-400 font-normal whitespace-nowrap", children: "Inactive" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+                lineNumber: 532,
+                columnNumber: 38
               }, void 0)
             ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
+              lineNumber: 530,
+              columnNumber: 21
+            }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
               lineNumber: 529,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-400 whitespace-nowrap", children: periodText }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 534,
+              lineNumber: 536,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -12256,23 +12260,23 @@ const CurrencyPanel = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-                lineNumber: 538,
+                lineNumber: 540,
                 columnNumber: 23
               },
               void 0
             ) : lastEventDate ? lastEventDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 536,
+              lineNumber: 538,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap", children: isInactive ? "---" : expiryDate ? expiryDate.toLocaleDateString("en-GB", { timeZone: "UTC" }) : "---" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 552,
+              lineNumber: 554,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`, children: isInactive ? "---" : daysRemaining !== null ? daysRemaining : "---" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 558,
+              lineNumber: 560,
               columnNumber: 19
             }, void 0),
             isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-2 py-1.5 text-center", children: [
@@ -12292,7 +12296,7 @@ const CurrencyPanel = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-                      lineNumber: 572,
+                      lineNumber: 574,
                       columnNumber: 25
                     },
                     void 0
@@ -12302,19 +12306,19 @@ const CurrencyPanel = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-                  lineNumber: 564,
+                  lineNumber: 566,
                   columnNumber: 23
                 },
                 void 0
               ),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `text-[9px] mt-0.5 font-medium ${isInactive ? "text-gray-400" : "text-sky-400"}`, children: isInactive ? "Inactive" : "Active" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-                lineNumber: 578,
+                lineNumber: 580,
                 columnNumber: 23
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyPanel.tsx",
-              lineNumber: 563,
+              lineNumber: 565,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
@@ -39385,9 +39389,9 @@ const CurrencyStatusPage = ({
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `text-sm font-medium ${isInactive && !isEditing ? "text-gray-500" : "text-white"}`, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `text-sm font-medium ${isInactive && !isEditing ? "text-gray-400" : "text-white"} flex items-center`, children: [
           def.name,
-          isInactive && !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded", children: "Inactive" }, void 0, false, {
+          isInactive && !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs text-orange-400 px-1.5 py-0.5 rounded whitespace-nowrap", children: "Inactive" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CurrencyStatusPage.tsx",
             lineNumber: 349,
             columnNumber: 15
