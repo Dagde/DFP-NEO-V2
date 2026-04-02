@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Instructor, Trainee, MasterCurrency, CurrencyRequirement, CurrencyDefinition, PersonCurrencyStatus } from '../types';
 import AuditButton from './AuditButton';
+import { logAudit } from '../utils/auditLogger';
 
 interface CurrencyStatusPageProps {
   person: Instructor | Trainee;
@@ -29,25 +30,23 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
   const [editedDates, setEditedDates] = useState<Record<string, string>>({});
+  // Track which currencies are toggled inactive during edit
+  const [editedInactive, setEditedInactive] = useState<Record<string, boolean>>({});
 
   // Save feedback
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Visible currency definitions (sorted)
-  const visibleDefs: CurrencyDefinition[] = [...masterCurrencies, ...currencyRequirements]
+  // All visible currency definitions (sorted alphabetically)
+  const allVisibleDefs: CurrencyDefinition[] = [...masterCurrencies, ...currencyRequirements]
     .filter(c => c.isVisible)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // ── DETECT PERSON TYPE ─────────────────────────────────────────────────────
-  // Trainees have a 'course' field; instructors have a 'role' field.
-  // Use the explicit prop if provided, otherwise detect from shape.
+  // ── DETECT PERSON TYPE ────────────────────────────────────────────────────
   const personType: 'instructor' | 'trainee' = personTypeProp
     || ('course' in person ? 'trainee' : 'instructor');
 
-  // ── BUILD API ENDPOINT ──────────────────────────────────────────────────────
-  // Prefer the UUID (person.id from DB) over the numeric idNumber.
-  // Post Flight also uses the UUID, so this ensures both read/write the same record.
+  // ── BUILD API ENDPOINT ───────────────────────────────────────────────────
   const dbId = (person as any).id || person.idNumber;
   const currencyEndpoint = personType === 'trainee'
     ? `/api/trainees/${dbId}/currencies`
@@ -55,13 +54,14 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
 
   console.log(`[CurrencyStatusPage] personType=${personType}, dbId=${dbId}, endpoint=${currencyEndpoint}`);
 
-  // ── LOAD FROM DB ON MOUNT ────────────────────────────────────────────────────
+  // ── LOAD FROM DB ON MOUNT ────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setLoadError(null);
     setIsEditing(false);
     setEditedDates({});
+    setEditedInactive({});
 
     fetch(currencyEndpoint, { credentials: 'include' })
       .then(r => r.json())
@@ -82,7 +82,7 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     return () => { cancelled = true; };
   }, [currencyEndpoint]);
 
-  // ── HELPERS ─────────────────────────────────────────────────────────────────
+  // ── HELPERS ──────────────────────────────────────────────────────────────
   const getStatus = useCallback((name: string): PersonCurrencyStatus | undefined => {
     return currencyStatus.find(s => s.currencyName === name);
   }, [currencyStatus]);
@@ -101,14 +101,16 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     return Math.ceil((last.getTime() - today.getTime()) / 86400000);
   };
 
-  const getStatusDotColor = (days: number | null): string => {
+  const getStatusDotColor = (days: number | null, inactive: boolean): string => {
+    if (inactive) return 'bg-gray-600';
     if (days === null) return 'bg-gray-600';
     if (days <= 0) return 'bg-red-500';
     if (days <= 30) return 'bg-amber-400';
     return 'bg-green-500';
   };
 
-  const getDaysTextColor = (days: number | null): string => {
+  const getDaysTextColor = (days: number | null, inactive: boolean): string => {
+    if (inactive) return 'text-gray-500';
     if (days === null) return 'text-gray-400';
     if (days <= 0) return 'text-red-400';
     if (days <= 30) return 'text-amber-400';
@@ -122,14 +124,36 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
-  // ── EDIT MODE ────────────────────────────────────────────────────────────────
-  const handleEditClick = () => {
-    const initial: Record<string, string> = {};
-    visibleDefs.forEach(def => {
-      const s = getStatus(def.name);
-      initial[def.name] = s?.lastEventDate || '';
+  // ── SORTED DEFINITIONS ───────────────────────────────────────────────────
+  // During editing: use editedInactive state. Otherwise: use saved isInactive flag.
+  // Active currencies at top, inactive at bottom. Each group sorted alphabetically.
+  const getSortedDefs = useCallback(() => {
+    const active: CurrencyDefinition[] = [];
+    const inactive: CurrencyDefinition[] = [];
+    allVisibleDefs.forEach(def => {
+      const isInactive = isEditing
+        ? !!editedInactive[def.name]
+        : !!(getStatus(def.name)?.isInactive);
+      if (isInactive) {
+        inactive.push(def);
+      } else {
+        active.push(def);
+      }
     });
-    setEditedDates(initial);
+    return { active, inactive };
+  }, [allVisibleDefs, isEditing, editedInactive, getStatus]);
+
+  // ── EDIT MODE ────────────────────────────────────────────────────────────
+  const handleEditClick = () => {
+    const initialDates: Record<string, string> = {};
+    const initialInactive: Record<string, boolean> = {};
+    allVisibleDefs.forEach(def => {
+      const s = getStatus(def.name);
+      initialDates[def.name] = s?.lastEventDate || '';
+      initialInactive[def.name] = !!s?.isInactive;
+    });
+    setEditedDates(initialDates);
+    setEditedInactive(initialInactive);
     setIsEditing(true);
     setSaveState('idle');
   };
@@ -137,14 +161,17 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
   const handleCancelClick = useCallback(() => {
     setIsEditing(false);
     setEditedDates({});
+    setEditedInactive({});
     setSaveState('idle');
   }, []);
 
-  // ── SAVE ─────────────────────────────────────────────────────────────────────
+  const toggleInactive = (name: string) => {
+    setEditedInactive(prev => ({ ...prev, [name]: !prev[name] }));
+  };
+
+  // ── SAVE ────────────────────────────────────────────────────────────────
   const handleSaveClick = useCallback(async () => {
-    // ─── Step 1: Fetch the LATEST currency status from DB ─────────────────────
-    // This ensures we don't overwrite any data saved by Post Flight (or any other
-    // source) since this page was last loaded.
+    // ─── Step 1: Fetch the LATEST currency status from DB ──────────────────
     let latestStatus: PersonCurrencyStatus[] = [...currencyStatus];
     try {
       const freshRes = await fetch(currencyEndpoint, { credentials: 'include' });
@@ -159,53 +186,86 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
       console.warn('[CurrencyStatusPage] Could not fetch fresh before save, using loaded state:', freshErr);
     }
 
-    // ─── Step 2: Build updated status ─────────────────────────────────────────
-    // Start with all records from the latest DB state, then apply edits on top.
-    // This ensures currencies saved by Post Flight are NOT wiped by a profile save.
+    // ─── Step 2: Build updated status ─────────────────────────────────────
     const newStatus: PersonCurrencyStatus[] = [...latestStatus];
 
-    visibleDefs.forEach(def => {
+    // Track changes for audit log
+    const auditChanges: string[] = [];
+    const personName = person.name || `${personType} ${dbId}`;
+
+    allVisibleDefs.forEach(def => {
       const date = editedDates[def.name];
+      const isNowInactive = !!editedInactive[def.name];
       const existingIdx = newStatus.findIndex(s => s.currencyName === def.name);
+      const hadRecordAtEditStart = currencyStatus.find(s => s.currencyName === def.name);
+      const wasInactive = !!(hadRecordAtEditStart?.isInactive);
 
       if (date !== undefined && date.trim()) {
         // User entered/kept a non-empty date — update or add
+        const newRecord: PersonCurrencyStatus = existingIdx >= 0
+          ? { ...newStatus[existingIdx], currencyName: def.name, lastEventDate: date.trim(), isInactive: isNowInactive }
+          : { currencyName: def.name, lastEventDate: date.trim(), isInactive: isNowInactive };
+
+        const oldDate = hadRecordAtEditStart?.lastEventDate || '';
+        if (oldDate !== date.trim()) {
+          auditChanges.push(`${def.name}: date ${oldDate ? formatDisplayDate(oldDate) : '(none)'} → ${formatDisplayDate(date.trim())}`);
+        }
+        if (wasInactive !== isNowInactive) {
+          auditChanges.push(`${def.name}: ${isNowInactive ? 'set inactive' : 'set active'}`);
+        }
+
         if (existingIdx >= 0) {
-          newStatus[existingIdx] = { ...newStatus[existingIdx], currencyName: def.name, lastEventDate: date.trim() };
+          newStatus[existingIdx] = newRecord;
         } else {
-          newStatus.push({ currencyName: def.name, lastEventDate: date.trim() });
+          newStatus.push(newRecord);
         }
       } else if (date === '') {
-        // Empty string in editedDates means:
-        // - Field was empty when edit started AND user didn't enter anything
-        // - OR user had a value and deliberately cleared it
-        // We can distinguish: if latestStatus has a record for this def but editedDates
-        // was pre-filled as '' (i.e. currencyStatus at edit time had no record),
-        // we PRESERVE the latestStatus record (it was added by Post Flight after edit started).
-        // If currencyStatus at edit time HAD a record and user cleared it to '',
-        // the user intended to clear it — honour that.
-        const hadRecordAtEditStart = currencyStatus.find(s => s.currencyName === def.name);
-        if (!hadRecordAtEditStart) {
+        const hadRecordAtEditStart2 = currencyStatus.find(s => s.currencyName === def.name);
+        if (!hadRecordAtEditStart2) {
           // Field was empty when edit started — preserve any latestStatus record (e.g. from Post Flight)
-          // Do nothing — it's already in newStatus from the spread above ✅
-        } else {
-          // User had a date and cleared it — remove it from newStatus
+          // But still apply inactive flag change if this record now exists in latestStatus
           if (existingIdx >= 0) {
+            const updated = { ...newStatus[existingIdx], isInactive: isNowInactive };
+            if (wasInactive !== isNowInactive) {
+              auditChanges.push(`${def.name}: ${isNowInactive ? 'set inactive' : 'set active'}`);
+            }
+            newStatus[existingIdx] = updated;
+          }
+        } else {
+          // User had a date and cleared it — remove it
+          if (existingIdx >= 0) {
+            auditChanges.push(`${def.name}: date removed (was ${formatDisplayDate(hadRecordAtEditStart2.lastEventDate)})`);
             newStatus.splice(existingIdx, 1);
           }
         }
+      } else if (date === undefined && existingIdx >= 0) {
+        // Not in editedDates map — still apply inactive toggle if it changed
+        if (wasInactive !== isNowInactive) {
+          newStatus[existingIdx] = { ...newStatus[existingIdx], isInactive: isNowInactive };
+          auditChanges.push(`${def.name}: ${isNowInactive ? 'set inactive' : 'set active'}`);
+        }
       }
-      // If editedDates[def.name] is undefined — not in map, do nothing (preserve latestStatus)
     });
 
     // 1. Update local state IMMEDIATELY — user sees result right away
     setCurrencyStatus(newStatus);
     setIsEditing(false);
     setEditedDates({});
+    setEditedInactive({});
     setSaveState('saving');
     setSaveMessage('Saving...');
 
-    // 2. Save to database via PATCH endpoint
+    // 2. Log to audit trail
+    if (auditChanges.length > 0) {
+      logAudit(
+        'Currency Status',
+        'Edit',
+        `Updated currency status for ${personName}`,
+        auditChanges.join('; ')
+      );
+    }
+
+    // 3. Save to database via PATCH endpoint
     try {
       const response = await fetch(currencyEndpoint, {
         method: 'PATCH',
@@ -231,28 +291,124 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
       setSaveState('error');
       setSaveMessage(`Network error: ${err.message}`);
     }
-  }, [editedDates, visibleDefs, currencyStatus, currencyEndpoint]);
+  }, [editedDates, editedInactive, allVisibleDefs, currencyStatus, currencyEndpoint, person, personType, dbId]);
 
-  // ── DIRTY CHECK ───────────────────────────────────────────────────────────────
+  // ── DIRTY CHECK ──────────────────────────────────────────────────────────
   const isDirty = useCallback((): boolean => {
     if (!isEditing) return false;
-    return visibleDefs.some(def => {
+    return allVisibleDefs.some(def => {
       const current = getStatus(def.name)?.lastEventDate || '';
       const edited = editedDates[def.name] || '';
-      return current !== edited;
+      const currentInactive = !!(getStatus(def.name)?.isInactive);
+      const editedInactiveVal = !!editedInactive[def.name];
+      return current !== edited || currentInactive !== editedInactiveVal;
     });
-  }, [isEditing, visibleDefs, getStatus, editedDates]);
+  }, [isEditing, allVisibleDefs, getStatus, editedDates, editedInactive]);
 
   useEffect(() => {
     registerDirtyCheck(isDirty, handleSaveClick, handleCancelClick);
   }, [registerDirtyCheck, isDirty, handleSaveClick, handleCancelClick]);
 
-  // ── PERSON NAME ───────────────────────────────────────────────────────────────
+  // ── PERSON NAME ──────────────────────────────────────────────────────────
   const parts = (person.name || '').split(', ');
   const surname = parts[0] || '';
   const firstName = parts[1] || '';
 
-  // ── RENDER ────────────────────────────────────────────────────────────────────
+  const { active: activeDefs, inactive: inactiveDefs } = getSortedDefs();
+
+  // ── RENDER ROW ───────────────────────────────────────────────────────────
+  const renderRow = (def: CurrencyDefinition, isInactiveRow: boolean) => {
+    const validityDays = getValidityDays(def);
+    const isInactive = isEditing ? !!editedInactive[def.name] : isInactiveRow;
+
+    const displayDate = isEditing
+      ? (editedDates[def.name] || '')
+      : (getStatus(def.name)?.lastEventDate || '');
+
+    const daysRemaining = (!isInactive && displayDate) ? getDaysRemaining(displayDate, validityDays) : null;
+
+    const expiryDateStr = (!isInactive && displayDate) ? (() => {
+      const d = new Date(displayDate);
+      d.setDate(d.getDate() + validityDays);
+      return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    })() : '—';
+
+    const rowOpacity = isInactive && !isEditing ? 'opacity-40' : '';
+
+    return (
+      <tr key={def.id} className={`hover:bg-gray-700/30 transition-colors ${rowOpacity}`}>
+        {/* Status dot */}
+        <td className="px-4 py-3">
+          <div className={`w-3 h-3 rounded-full ${getStatusDotColor(daysRemaining, isInactive)}`} />
+        </td>
+        {/* Currency name */}
+        <td className="px-4 py-3">
+          <div className={`text-sm font-medium ${isInactive && !isEditing ? 'text-gray-500' : 'text-white'}`}>
+            {def.name}
+            {isInactive && !isEditing && (
+              <span className="ml-2 text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">Inactive</span>
+            )}
+          </div>
+          {def.description && <div className="text-xs text-gray-500 mt-0.5">{def.description}</div>}
+        </td>
+        {/* Last Event Date */}
+        <td className="px-4 py-3">
+          {isEditing ? (
+            <input
+              type="date"
+              value={editedDates[def.name] || ''}
+              onChange={e => setEditedDates(prev => ({ ...prev, [def.name]: e.target.value }))}
+              className="bg-gray-700 border border-gray-500 rounded-md px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+            />
+          ) : (
+            <span className={`text-sm ${isInactive ? 'text-gray-500' : 'text-gray-300'}`}>
+              {displayDate ? formatDisplayDate(displayDate) : <span className="text-gray-600 italic">Not set</span>}
+            </span>
+          )}
+        </td>
+        {/* Expiry Date */}
+        <td className="px-4 py-3">
+          <span className={`text-sm ${isInactive ? 'text-gray-500' : 'text-gray-300'}`}>{expiryDateStr}</span>
+        </td>
+        {/* Days Remaining */}
+        <td className="px-4 py-3">
+          {isInactive ? (
+            <span className="text-sm text-gray-500 italic">—</span>
+          ) : daysRemaining !== null ? (
+            <span className={`text-sm font-semibold ${getDaysTextColor(daysRemaining, false)}`}>
+              {daysRemaining <= 0 ? 'EXPIRED' : `${daysRemaining} days`}
+            </span>
+          ) : (
+            <span className="text-sm text-gray-600 italic">—</span>
+          )}
+        </td>
+        {/* Active/Inactive toggle (edit mode only) */}
+        {isEditing && (
+          <td className="px-4 py-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none group">
+              <div
+                onClick={() => toggleInactive(def.name)}
+                className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
+                  editedInactive[def.name]
+                    ? 'bg-gray-600'
+                    : 'bg-sky-600'
+                }`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                  editedInactive[def.name] ? 'translate-x-5' : 'translate-x-0'
+                }`} />
+              </div>
+              <span className={`text-xs font-medium ${editedInactive[def.name] ? 'text-gray-400' : 'text-sky-400'}`}>
+                {editedInactive[def.name] ? 'Inactive' : 'Active'}
+              </span>
+            </label>
+          </td>
+        )}
+      </tr>
+    );
+  };
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
 
@@ -322,6 +478,13 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
             </div>
           )}
 
+          {/* Edit mode hint */}
+          {isEditing && (
+            <div className="mb-4 px-4 py-2 bg-amber-900/30 border border-amber-700 rounded-md text-amber-300 text-xs">
+              💡 Use the toggle in the last column to mark a currency as <strong>Active</strong> or <strong>Inactive</strong>. Inactive currencies are excluded from overall currency calculations and appear greyed out at the bottom of the list.
+            </div>
+          )}
+
           {/* Loading */}
           {isLoading && (
             <div className="bg-gray-800 rounded-lg p-8 border border-gray-700 text-center text-gray-400 text-sm">
@@ -347,68 +510,39 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Last Event Date</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Expiry Date</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Days Remaining</th>
+                    {isEditing && (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Active / Inactive</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {visibleDefs.length === 0 ? (
+                  {allVisibleDefs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic text-sm">
+                      <td colSpan={isEditing ? 6 : 5} className="px-4 py-8 text-center text-gray-500 italic text-sm">
                         No currency items configured. Go to Settings → Currency Setup to add items.
                       </td>
                     </tr>
                   ) : (
-                    visibleDefs.map(def => {
-                      const validityDays = getValidityDays(def);
-                      const displayDate = isEditing
-                        ? (editedDates[def.name] || '')
-                        : (getStatus(def.name)?.lastEventDate || '');
+                    <>
+                      {/* Active currencies */}
+                      {activeDefs.map(def => renderRow(def, false))}
 
-                      const daysRemaining = displayDate ? getDaysRemaining(displayDate, validityDays) : null;
-
-                      const expiryDateStr = displayDate ? (() => {
-                        const d = new Date(displayDate);
-                        d.setDate(d.getDate() + validityDays);
-                        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-                      })() : '—';
-
-                      return (
-                        <tr key={def.id} className="hover:bg-gray-700/30 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className={`w-3 h-3 rounded-full ${getStatusDotColor(daysRemaining)}`} />
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-white">{def.name}</div>
-                            {def.description && <div className="text-xs text-gray-500 mt-0.5">{def.description}</div>}
-                          </td>
-                          <td className="px-4 py-3">
-                            {isEditing ? (
-                              <input
-                                type="date"
-                                value={editedDates[def.name] || ''}
-                                onChange={e => setEditedDates(prev => ({ ...prev, [def.name]: e.target.value }))}
-                                className="bg-gray-700 border border-gray-500 rounded-md px-2 py-1 text-white text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              />
-                            ) : (
-                              <span className="text-sm text-gray-300">
-                                {displayDate ? formatDisplayDate(displayDate) : <span className="text-gray-600 italic">Not set</span>}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-300">{expiryDateStr}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {daysRemaining !== null ? (
-                              <span className={`text-sm font-semibold ${getDaysTextColor(daysRemaining)}`}>
-                                {daysRemaining <= 0 ? 'EXPIRED' : `${daysRemaining} days`}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-gray-600 italic">—</span>
-                            )}
+                      {/* Divider if there are both active and inactive */}
+                      {activeDefs.length > 0 && inactiveDefs.length > 0 && (
+                        <tr>
+                          <td colSpan={isEditing ? 6 : 5} className="px-4 py-2 bg-gray-700/30">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-px bg-gray-600" />
+                              <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Inactive Currencies</span>
+                              <div className="flex-1 h-px bg-gray-600" />
+                            </div>
                           </td>
                         </tr>
-                      );
-                    })
+                      )}
+
+                      {/* Inactive currencies */}
+                      {inactiveDefs.map(def => renderRow(def, true))}
+                    </>
                   )}
                 </tbody>
               </table>

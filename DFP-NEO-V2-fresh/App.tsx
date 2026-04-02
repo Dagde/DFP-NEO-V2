@@ -11932,6 +11932,26 @@ updates.forEach(update => {
                                                 // Invalidate the CurrencyPanel cache so next open fetches fresh DB data
                                                 savedCurrencyCache.delete(dbId);
                                                 console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
+                                                // Log to audit trail — describe what currencies were updated
+                                                const auditChangeParts: string[] = [];
+                                                for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                                                    if (!value || value === 'false') continue;
+                                                    const baseCId = currencyId.includes('__') ? currencyId.split('__')[0] : currencyId;
+                                                    const allCDefs2 = [...masterCurrencies, ...currencyRequirements];
+                                                    const cDef = allCDefs2.find(c => c.id === baseCId);
+                                                    if (cDef && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                        const [yr, mo, dy] = value.split('-');
+                                                        auditChangeParts.push(`${cDef.name}: date set to ${dy}/${mo}/${yr}`);
+                                                    }
+                                                }
+                                                if (auditChangeParts.length > 0) {
+                                                    logAudit(
+                                                        'Currency Status',
+                                                        'Edit',
+                                                        `Post Flight currency update for ${person.name}`,
+                                                        auditChangeParts.join('; ')
+                                                    );
+                                                }
                                             } catch (err) {
                                                 console.warn(`[PostFlight] ⚠️ Currency update failed for ${person.name}:`, err);
                                             }

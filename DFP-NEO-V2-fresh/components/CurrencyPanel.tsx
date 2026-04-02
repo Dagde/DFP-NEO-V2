@@ -158,11 +158,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
     return currencyStatus.find(c => c.currencyName === currencyName);
   };
 
-  // Summary counts for the header badges
+  // Summary counts for the header badges — inactive currencies are excluded
   const summaryCount = useMemo(() => {
     const counts = { expired: 0, approaching: 0, current: 0, unassigned: 0 };
     visibleCurrencyDefinitions.forEach(def => {
       const record = getCurrencyStatus(def.name);
+      // Skip inactive currencies — they don't count toward overall currency status
+      if (record?.isInactive) return;
       const lastEventDate = record?.lastEventDate || '';
       const validityDays = 'validityDays' in def ? def.validityDays : 365;
       const expiryDate = lastEventDate ? addDaysToDate(lastEventDate, validityDays) : '';
@@ -422,6 +424,8 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
           </thead>
           <tbody className="bg-gray-800 divide-y divide-gray-700/60">
             {visibleCurrencyDefinitions.map(def => {
+              const record = getCurrencyStatus(def.name);
+              const isInactive = !!record?.isInactive;
               const periodInDays = 'validityDays' in def ? def.validityDays : null;
               const periodText = getPeriodText(periodInDays);
               const validityDays = periodInDays ?? 365;
@@ -429,25 +433,27 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
               // In edit mode, use editedStatuses; otherwise use saved currencyStatus
               const statusDateStr = isEditing
                 ? editedStatuses.get(def.name)
-                : getCurrencyStatus(def.name)?.lastEventDate;
+                : record?.lastEventDate;
 
               const lastEventDate = statusDateStr ? parseDate(statusDateStr) : null;
-              const expiryDateStr = statusDateStr ? addDaysToDate(statusDateStr, validityDays) : '';
+              const expiryDateStr = (!isInactive && statusDateStr) ? addDaysToDate(statusDateStr, validityDays) : '';
               const expiryDate = expiryDateStr ? parseDate(expiryDateStr) : null;
-              const daysRemaining = expiryDateStr ? getDaysRemaining(expiryDateStr) : null;
+              const daysRemaining = (!isInactive && expiryDateStr) ? getDaysRemaining(expiryDateStr) : null;
 
-              const dotColor = getStatusDotColor(daysRemaining);
-              const daysColor = daysRemaining !== null ? getDaysColor(daysRemaining) : 'text-gray-500';
+              const dotColor = isInactive ? 'bg-gray-600' : getStatusDotColor(daysRemaining);
+              const daysColor = isInactive ? 'text-gray-500' : (daysRemaining !== null ? getDaysColor(daysRemaining) : 'text-gray-500');
+              const rowClass = isInactive ? 'opacity-40 hover:bg-gray-700/40 transition-colors' : 'hover:bg-gray-700/40 transition-colors';
 
               return (
-                <tr key={def.name} className="hover:bg-gray-700/40 transition-colors">
+                <tr key={def.name} className={rowClass}>
                   {/* Status dot */}
                   <td className="px-2 py-1.5 text-center">
                     <div className={`w-2.5 h-2.5 rounded-sm mx-auto ${dotColor}`} />
                   </td>
                   {/* Currency name */}
-                  <td className="px-2 py-1.5 font-medium text-gray-200 max-w-[160px]">
-                    <span className="block truncate" title={def.name}>{def.name}</span>
+                  <td className="px-2 py-1.5 font-medium max-w-[160px]">
+                    <span className={`block truncate ${isInactive ? 'text-gray-500' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
+                    {isInactive && <span className="text-[9px] text-gray-600 font-normal">Inactive</span>}
                   </td>
                   {/* Period */}
                   <td className="px-2 py-1.5 text-center text-gray-400 whitespace-nowrap">{periodText}</td>
@@ -469,13 +475,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                   </td>
                   {/* Expires */}
                   <td className="px-2 py-1.5 text-center text-gray-300 font-mono whitespace-nowrap">
-                    {expiryDate
+                    {isInactive ? '---' : expiryDate
                       ? expiryDate.toLocaleDateString('en-GB', { timeZone: 'UTC' })
                       : '---'}
                   </td>
                   {/* Days Remaining */}
                   <td className={`px-2 py-1.5 text-center font-bold whitespace-nowrap ${daysColor}`}>
-                    {daysRemaining !== null ? daysRemaining : '---'}
+                    {isInactive ? '---' : daysRemaining !== null ? daysRemaining : '---'}
                   </td>
                 </tr>
               );
