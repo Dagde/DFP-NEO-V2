@@ -4,6 +4,7 @@ import AuditButton from './AuditButton';
 
 interface CurrencyStatusPageProps {
   person: Instructor | Trainee;
+  personType?: 'instructor' | 'trainee'; // optional — detected from person shape if omitted
   masterCurrencies: MasterCurrency[];
   currencyRequirements: CurrencyRequirement[];
   onClose: () => void;
@@ -14,6 +15,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
 const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
   person,
+  personType: personTypeProp,
   masterCurrencies,
   currencyRequirements,
   onClose,
@@ -37,7 +39,23 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     .filter(c => c.isVisible)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // ── LOAD FROM DB ON MOUNT ──────────────────────────────────────────
+  // ── DETECT PERSON TYPE ─────────────────────────────────────────────────────
+  // Trainees have a 'course' field; instructors have a 'role' field.
+  // Use the explicit prop if provided, otherwise detect from shape.
+  const personType: 'instructor' | 'trainee' = personTypeProp
+    || ('course' in person ? 'trainee' : 'instructor');
+
+  // ── BUILD API ENDPOINT ──────────────────────────────────────────────────────
+  // Prefer the UUID (person.id from DB) over the numeric idNumber.
+  // Post Flight also uses the UUID, so this ensures both read/write the same record.
+  const dbId = (person as any).id || person.idNumber;
+  const currencyEndpoint = personType === 'trainee'
+    ? `/api/trainees/${dbId}/currencies`
+    : `/api/personnel/${dbId}/currencies`;
+
+  console.log(`[CurrencyStatusPage] personType=${personType}, dbId=${dbId}, endpoint=${currencyEndpoint}`);
+
+  // ── LOAD FROM DB ON MOUNT ────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
@@ -45,14 +63,14 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     setIsEditing(false);
     setEditedDates({});
 
-    fetch(`/api/personnel/${person.idNumber}/currencies`, { credentials: 'include' })
+    fetch(currencyEndpoint, { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
         const loaded: PersonCurrencyStatus[] = Array.isArray(data.currencyStatus) ? data.currencyStatus : [];
         setCurrencyStatus(loaded);
         setIsLoading(false);
-        console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for person ${person.idNumber}`);
+        console.log(`✅ CurrencyStatusPage loaded ${loaded.length} entries for ${personType} ${dbId}`);
       })
       .catch(err => {
         if (cancelled) return;
@@ -62,9 +80,9 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
       });
 
     return () => { cancelled = true; };
-  }, [person.idNumber]);
+  }, [currencyEndpoint]);
 
-  // ── HELPERS ─────────────────────────────────────────────────────────
+  // ── HELPERS ─────────────────────────────────────────────────────────────────
   const getStatus = useCallback((name: string): PersonCurrencyStatus | undefined => {
     return currencyStatus.find(s => s.currencyName === name);
   }, [currencyStatus]);
@@ -104,7 +122,7 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
-  // ── EDIT MODE ────────────────────────────────────────────────────────
+  // ── EDIT MODE ────────────────────────────────────────────────────────────────
   const handleEditClick = () => {
     const initial: Record<string, string> = {};
     visibleDefs.forEach(def => {
@@ -122,7 +140,7 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     setSaveState('idle');
   }, []);
 
-  // ── SAVE ─────────────────────────────────────────────────────────────
+  // ── SAVE ─────────────────────────────────────────────────────────────────────
   const handleSaveClick = useCallback(async () => {
     // Build updated status from edited dates
     const newStatus: PersonCurrencyStatus[] = [];
@@ -149,9 +167,9 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     setSaveState('saving');
     setSaveMessage('Saving...');
 
-    // 2. Save to database via existing PATCH endpoint
+    // 2. Save to database via PATCH endpoint
     try {
-      const response = await fetch(`/api/personnel/${person.idNumber}/currencies`, {
+      const response = await fetch(currencyEndpoint, {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -165,7 +183,7 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
         setSaveState('error');
         setSaveMessage(`Save failed: ${data.error || response.statusText}`);
       } else {
-        console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB`);
+        console.log(`✅ CurrencyStatusPage saved ${newStatus.length} entries to DB via ${currencyEndpoint}`);
         setSaveState('saved');
         setSaveMessage(`✅ Saved ${newStatus.length} currency entries`);
         setTimeout(() => setSaveState('idle'), 3000);
@@ -175,9 +193,9 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
       setSaveState('error');
       setSaveMessage(`Network error: ${err.message}`);
     }
-  }, [editedDates, visibleDefs, currencyStatus, person.idNumber]);
+  }, [editedDates, visibleDefs, currencyStatus, currencyEndpoint]);
 
-  // ── DIRTY CHECK ──────────────────────────────────────────────────────
+  // ── DIRTY CHECK ───────────────────────────────────────────────────────────────
   const isDirty = useCallback((): boolean => {
     if (!isEditing) return false;
     return visibleDefs.some(def => {
@@ -191,12 +209,12 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
     registerDirtyCheck(isDirty, handleSaveClick, handleCancelClick);
   }, [registerDirtyCheck, isDirty, handleSaveClick, handleCancelClick]);
 
-  // ── PERSON NAME ──────────────────────────────────────────────────────
+  // ── PERSON NAME ───────────────────────────────────────────────────────────────
   const parts = (person.name || '').split(', ');
   const surname = parts[0] || '';
   const firstName = parts[1] || '';
 
-  // ── RENDER ───────────────────────────────────────────────────────────
+  // ── RENDER ────────────────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
 

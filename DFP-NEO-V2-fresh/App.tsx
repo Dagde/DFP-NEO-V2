@@ -5380,6 +5380,7 @@ useEffect(() => {
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
     const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
+    const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
     const [eventForAuth, setEventForAuth] = useState<ScheduleEvent | null>(null);
     const [showPostFlightView, setShowPostFlightView] = useState(false);
@@ -10124,6 +10125,9 @@ updates.forEach(update => {
 
     const handleNavigateToCurrency = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForCurrency(person);
+        // Detect whether this person is a trainee (has 'course' field) or instructor
+        const pType: 'instructor' | 'trainee' = 'course' in person ? 'trainee' : 'instructor';
+        setSelectedPersonForCurrencyType(pType);
         handleNavigation('Currency');
     }, []);
 
@@ -11624,6 +11628,7 @@ updates.forEach(update => {
                 if (selectedPersonForCurrency) {
                     return <CurrencyStatusPage
                                 person={selectedPersonForCurrency}
+                                personType={selectedPersonForCurrencyType}
                                 masterCurrencies={masterCurrencies}
                                 currencyRequirements={currencyRequirements}
                                 onClose={handleCurrencyBack}
