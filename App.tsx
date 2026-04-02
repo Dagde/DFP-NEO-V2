@@ -1,21 +1,23 @@
-console.log("🔥🔥🔥 FORCED REDEPLOY V4 🔥🔥🔥");
-console.log("🚨🚨🚨 NEW BUILD V3 LOADED 🚨🚨🚨");
-console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
+console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
+console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useTheme } from './src/context/ThemeContext';
+import { useTheme } from './context/ThemeContext';
+import { useSystemFreeze } from './context/SystemFreezeContext';
 import LoginModal, { AuthUser, checkSession, logoutUser } from './components/LoginModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
+import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 import DarkMessageModal from './components/DarkMessageModal';
+import SystemFreezeBanner from './components/SystemFreezeBanner';
 
 
 // Import types
@@ -87,6 +89,7 @@ import TraineeProfileFlyout from './components/TraineeProfileFlyout';
 import PublishConfirmationFlyout from './components/PublishConfirmationFlyout';
 import CurrencyView from './components/CurrencyView';
 import CurrencyStatusPage from './components/CurrencyStatusPage';
+import { savedCurrencyCache } from './components/CurrencyPanel';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
@@ -117,7 +120,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
 import { initializeData } from './lib/dataService';
-import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
+import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
 // --- PT-051 STRUCTURE ---
@@ -344,6 +347,28 @@ const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
 };
 
 
+// --- INSTRUCTOR PRIORITY CONFIG ---
+
+export interface InstructorPriorityGroups {
+  primary: boolean;
+  secondary: boolean;
+  sameFlight: boolean; // same base unit AND same flight letter (e.g. unit="CFS", flight="A")
+}
+
+export interface InstructorPriorityConfig {
+  enabled: boolean;
+  mode: 'soft' | 'hard';
+  softGroups: InstructorPriorityGroups;  // which groups to prefer (soft mode)
+  hardGroups: InstructorPriorityGroups;  // which groups MUST match for flight/FTD (hard mode)
+}
+
+export const DEFAULT_INSTRUCTOR_PRIORITY_CONFIG: InstructorPriorityConfig = {
+  enabled: true,
+  mode: 'soft',
+  softGroups: { primary: true, secondary: true, sameFlight: false },
+  hardGroups: { primary: false, secondary: false, sameFlight: false },
+};
+
 // --- DFP GENERATION ALGORITHM ---
 
 interface DfpConfig {
@@ -367,7 +392,7 @@ interface DfpConfig {
   commenceNightFlying: number;
   ceaseNightFlying: number;
   highestPriorityEvents: ScheduleEvent[];
-  programWithPrimaries: boolean;
+  instructorPriority: InstructorPriorityConfig;
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
   flightTurnaround: number;
   ftdTurnaround: number;
@@ -380,6 +405,8 @@ interface DfpConfig {
   remedialRequests: RemedialRequest[];
   sctEvents: string[];
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
+  staffSharingEnabled: boolean;
+  staffSharingUnits: string[];
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -700,7 +727,7 @@ interface BuildAnalysis {
 
 // Helper function to count possible events per course
 function countPossibleEvents(
-    traineesData: Trainee[],
+    allTraineesData: Trainee[],
     coursePriorities: string[],
     traineeLMPs: Map<string, LMP[]>,
     scores: Map<string, Score[]>,
@@ -716,7 +743,7 @@ function countPossibleEvents(
     });
     
     // Count trainees with next events per course
-    const activeTrainees = traineesData.filter(t => !t.isPaused);
+    const activeTrainees = allTraineesData.filter(t => !t.isPaused);
     
     activeTrainees.forEach(trainee => {
         if (!coursePriorities.includes(trainee.course)) return;
@@ -753,7 +780,7 @@ function analyzeBuildResults(
     coursePriorities: string[],
     availableAircraft: number,
     buildDate: string,
-    traineesData: Trainee[],
+    allTraineesData: Trainee[],
     traineeLMPs: Map<string, LMP[]>,
     scores: Map<string, Score[]>,
     syllabusDetails: SyllabusDetail[],
@@ -791,7 +818,7 @@ function analyzeBuildResults(
     });
     
     scheduledEvents.forEach(event => {
-        const trainee = traineesData.find(t => t.fullName === event.student || t.fullName === event.pilot);
+        const trainee = allTraineesData.find(t => t.fullName === event.student || t.fullName === event.pilot);
         if (trainee && coursePriorities.includes(trainee.course)) {
             const course = trainee.course;
             courseEventCounts.set(course, (courseEventCounts.get(course) || 0) + 1);
@@ -807,7 +834,7 @@ function analyzeBuildResults(
     // Build course analysis
     // Count possible events per course
     const possibleEventCounts = countPossibleEvents(
-        traineesData,
+        allTraineesData,
         coursePriorities,
         traineeLMPs,
         scores,
@@ -968,11 +995,314 @@ function analyzeBuildResults(
     };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
+// Pure localStorage-based. No React state. No UI props.
+// Run a build → open DevTools console → type: __downloadBuildDiagnostic()
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface InstructorDiagTraineeEntry {
+    traineeName: string;
+    traineeUnit: string;
+    eventType: string;
+    syllabusCode: string;
+    totalInstructorsInConfig: number;
+    afterQualificationFilter: number;
+    afterUnitFilter: number;
+    candidatesEnteringLoop: number;
+    rejections: {
+        staticUnavailable: number;
+        softDutyLimit: number;
+        groundLimit: number;
+        eventLimit: number;
+        timeOverlap: number;
+        crewDutyPeriod: number;
+    };
+    finalAvailable: number;
+    instructorFound: boolean;
+    zeroReason: string | null;
+}
+
+interface InstructorDiagReport {
+    timestamp: string;
+    buildDate: string;
+    totalInstructorsInConfig: number;
+    sampleInstructors: Array<{ id: string; name: string; role: string; unit: string; location: string }>;
+    totalTraineesProcessed: number;
+    entries: InstructorDiagTraineeEntry[];
+    summary: {
+        totalSchedulingAttempts: number;
+        instructorFound: number;
+        instructorNotFound: number;
+        zeroInstructorCases: {
+            noInstructorsLoaded: number;
+            noQualified: number;
+            noUnitMatch: number;
+            allFilteredOut: number;
+        };
+    };
+}
+
+let _instructorDiag: InstructorDiagReport | null = null;
+
+function _diagInitInstructors(buildDate: string, instructors: any[]) {
+    _instructorDiag = {
+        timestamp: new Date().toISOString(),
+        buildDate,
+        totalInstructorsInConfig: instructors.length,
+        sampleInstructors: instructors.slice(0, 10).map(i => ({
+            id: i.idNumber || 'unknown',
+            name: i.name || 'unknown',
+            role: i.role || 'unknown',
+            unit: i.unit || 'unknown',
+            location: i.location || 'unknown',
+        })),
+        totalTraineesProcessed: 0,
+        entries: [],
+        summary: {
+            totalSchedulingAttempts: 0,
+            instructorFound: 0,
+            instructorNotFound: 0,
+            zeroInstructorCases: {
+                noInstructorsLoaded: 0,
+                noQualified: 0,
+                noUnitMatch: 0,
+                allFilteredOut: 0,
+            },
+        },
+    };
+    console.log('[INSTR-DIAG] Initialized. Instructors in config:', instructors.length);
+}
+
+function _diagRecordEntry(entry: InstructorDiagTraineeEntry) {
+    if (!_instructorDiag) return;
+    _instructorDiag.entries.push(entry);
+    _instructorDiag.summary.totalSchedulingAttempts++;
+    if (entry.instructorFound) {
+        _instructorDiag.summary.instructorFound++;
+    } else {
+        _instructorDiag.summary.instructorNotFound++;
+        if (entry.zeroReason === 'NO_INSTRUCTORS_LOADED') _instructorDiag.summary.zeroInstructorCases.noInstructorsLoaded++;
+        else if (entry.zeroReason === 'NO_QUALIFIED') _instructorDiag.summary.zeroInstructorCases.noQualified++;
+        else if (entry.zeroReason === 'NO_UNIT_MATCH') _instructorDiag.summary.zeroInstructorCases.noUnitMatch++;
+        else if (entry.zeroReason === 'ALL_FILTERED_OUT') _instructorDiag.summary.zeroInstructorCases.allFilteredOut++;
+    }
+}
+
+function _diagFinalizeInstructors() {
+    if (!_instructorDiag) return;
+    _instructorDiag.totalTraineesProcessed = _instructorDiag.entries.length;
+    try {
+        localStorage.setItem('instructor_diag_report', JSON.stringify(_instructorDiag));
+        console.log('[INSTR-DIAG] ✅ Report saved to localStorage. Attempts:', _instructorDiag.summary.totalSchedulingAttempts,
+            'Found:', _instructorDiag.summary.instructorFound,
+            'NOT found:', _instructorDiag.summary.instructorNotFound);
+        console.log('[INSTR-DIAG] Zero instructor breakdown:', JSON.stringify(_instructorDiag.summary.zeroInstructorCases));
+        console.log('[INSTR-DIAG] To download: open console and type __downloadBuildDiagnostic()');
+    } catch (e) {
+        console.warn('[INSTR-DIAG] Failed to save to localStorage:', e);
+    }
+}
+
+// Global download helper — callable from browser DevTools console
+(window as any).__downloadBuildDiagnostic = () => {
+    const raw = localStorage.getItem('instructor_diag_report');
+    if (!raw) { console.error('No diagnostic report found. Run a build first.'); return; }
+    const report = JSON.parse(raw);
+    const ts = report.timestamp.replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `instructor-diag-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('[INSTR-DIAG] Download triggered:', `instructor-diag-${ts}.json`);
+};
+
+// Flight bottleneck diagnostic download helper
+(window as any).__downloadFlightDiag = () => {
+    const raw = localStorage.getItem("flight_diag_report");
+    if (!raw) { console.error("No flight diag report. Run a build first."); return; }
+    const report = JSON.parse(raw);
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "flight-diag-" + report.timestamp.replace(/[:.]/g, "-").slice(0, 19) + ".json";
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON");
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// END INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
 function generateDfpInternal(
     config: DfpConfig, 
     setProgress: (progress: { message: string, percentage: number }) => void,
     publishedSchedules: Record<string, ScheduleEvent[]>
 ): Omit<ScheduleEvent, 'date'>[] {
+    // ── OVERLAP REJECTION DIAGNOSTIC ─────────────────────────────────────────
+    // Tracks the first 10 instructor rejections caused by booking-window overlap.
+    let _overlapRejCount = 0;
+    // ----------------------------------------------------------
+    // TRAINEE SOURCE FORENSIC DIAGNOSTIC - Build Entry Point
+    // ----------------------------------------------------------
+    const _traineeTotal = config.trainees.length;
+    const _traineeDb = config.trainees.filter((t: any) => (t as any)._dataSource === 'database').length;
+    const _traineeMock = config.trainees.filter((t: any) => (t as any)._dataSource !== 'database').length;
+    const _traineeUnknown = config.trainees.filter((t: any) => !(t as any)._dataSource).length;
+    
+    console.log('\n🔴🔴🔴 [TRAINEE-SOURCE-FORENSIC] BUILD ENTRY POINT ANALYSIS 🔴🔴🔴');
+    console.log('A. Exact build input counts:');
+    console.log(`   Total trainees: ${_traineeTotal}`);
+    console.log(`   DB-tagged trainees: ${_traineeDb}`);
+    console.log(`   Mock-tagged trainees: ${_traineeMock}`);
+    console.log(`   Unknown source trainees: ${_traineeUnknown}`);
+    
+    let _buildDataType = 'UNKNOWN';
+    if (_traineeDb > 0 && _traineeMock === 0 && _traineeUnknown === 0) _buildDataType = 'DB ONLY';
+    else if (_traineeMock > 0 && _traineeDb === 0 && _traineeUnknown === 0) _buildDataType = 'MOCK ONLY';
+    else if (_traineeDb > 0 && _traineeMock > 0) _buildDataType = 'MIXED (DB + MOCK)';
+    else if (_traineeUnknown > 0) _buildDataType = 'MIXED (CONTAINS UNKNOWN)';
+    else if (_traineeTotal === 0) _buildDataType = 'EMPTY';
+    
+    console.log('B. Build input type:', _buildDataType);
+    console.log('C. 10 sample trainee records from actual build input:');
+    const _sampleTrainees = config.trainees.slice(0, 10).map((t: any) => ({
+      id: t.idNumber || t.id,
+      fullName: t.fullName || t.name,
+      course: t.course || 'N/A',
+      _dataSource: (t as any)._dataSource || 'undefined'
+    }));
+    _sampleTrainees.forEach((sample, i) => {
+      console.log(`   [${i+1}] ID:${sample.id} | Name:${sample.fullName} | Course:${sample.course} | Source:${sample._dataSource}`);
+    });
+    
+    if (_buildDataType === 'MIXED (DB + MOCK)') {
+        console.log('\n🚨 CONTAMINATION DETECTED 🚨');
+        console.log('D. Conclusion: Build algorithm is receiving mixed DB+mock trainee dataset.');
+        console.log('E. This is the FIRST proven contamination point - scheduling has not even started yet.');
+        console.log('F. In DB-only mode, mock trainees should be present in traineesData? NO - they should be filtered out.');
+        console.log('G. Are they actually present in final build input? YES - counts above prove contamination.');
+    } else if (_buildDataType === 'DB ONLY') {
+        console.log('\n✅ NO CONTAMINATION');
+        console.log('D. Conclusion: Build algorithm is receiving DB-only trainee dataset as expected.');
+    } else {
+        console.log('\n⚠️ UNEXPECTED STATE');
+        console.log('D. Build input is:', _buildDataType);
+    }
+    console.log('🔴🔴🔴 [TRAINEE-SOURCE-FORENSIC] ANALYSIS COMPLETE 🔴🔴🔴\n');
+
+    const _MAX_OVERLAP_LOG = 10;
+    const _logOverlapRejection = (
+        instructorName: string,
+        candidateFlightNumber: string,
+        candidateType: string,
+        candidateStart: number,
+        candidateEnd: number,
+        conflictingFlightNumber: string,
+        conflictingType: string,
+        conflictingStart: number,
+        conflictingEnd: number
+    ) => {
+        if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
+        _overlapRejCount++;
+        const isCrossType = (candidateType === 'ground') !== (conflictingType === 'ground');
+        const crossTypeLabel = isCrossType ? '⚠️ CROSS-TYPE (should not block)' : '✅ SAME-TYPE (correct block)';
+        console.log(
+            `[OVERLAP-REJ #${_overlapRejCount}] ${crossTypeLabel}\n` +
+            `  Instructor  : ${instructorName}\n` +
+            `  Candidate   : ${candidateFlightNumber} (type=${candidateType}, ${candidateStart.toFixed(2)}-${candidateEnd.toFixed(2)}h)\n` +
+            `  Conflicts w : ${conflictingFlightNumber} (type=${conflictingType}, ${conflictingStart.toFixed(2)}-${conflictingEnd.toFixed(2)}h)`
+        );
+    };
+
+    // ── SAME-TRAINEE SEQUENCING DIAGNOSTIC ──────────────────────────────────
+    // Logs the first 10 same-trainee conflict rejections ONLY.
+    // Goal: prove whether valid NEXT→NEXT+1 sequential events are incorrectly rejected.
+    let _stSeqCount = 0;
+    const _MAX_ST_SEQ_LOG = 10;
+    const _fmtH = (h: number) => {
+        const hh = Math.floor(h);
+        const mm = Math.round((h - hh) * 60);
+        return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+    };
+    const _logSameTraineeConflict = (
+        candTraineeName: string,
+        candEventName: string,
+        candIsNext: boolean,
+        candStart: number,
+        candEnd: number,
+        conflTraineeName: string,
+        conflEventName: string,
+        conflIsNext: boolean | undefined,
+        conflStart: number,
+        conflEnd: number,
+        conflSource: string,
+        requiredTurnaroundHours: number
+    ) => {
+        // Log first 5 regardless of same-trainee to verify what names are flowing through
+        if (_stSeqCount >= _MAX_ST_SEQ_LOG) return;
+        _stSeqCount++;
+        const _isSameTrainee = candTraineeName === conflTraineeName;
+
+        const isNextVsNextPlusOne = (candIsNext === true && conflIsNext === false)
+                                 || (candIsNext === false && conflIsNext === true);
+
+        // Use booking-window edges for clock overlap check
+        const gapMinutes = Math.round((candStart - conflEnd) * 60);
+        const hasClockOverlap = gapMinutes < 0;
+        const turnaroundMinutes = Math.round(requiredTurnaroundHours * 60);
+
+        const shouldBeAllowed = _isSameTrainee && isNextVsNextPlusOne && !hasClockOverlap
+                             && gapMinutes >= turnaroundMinutes;
+
+        let verdict: string;
+        if (!_isSameTrainee) {
+            verdict = `SHOULD BE ALLOWED: N/A  →  different trainees (cand="${candTraineeName}" vs confl="${conflTraineeName}")`;
+        } else if (shouldBeAllowed) {
+            verdict = `SHOULD BE ALLOWED: YES  →  🐛 BUG: valid NEXT+1 rejected`;
+        } else if (hasClockOverlap) {
+            verdict = `SHOULD BE ALLOWED: NO   →  true clock overlap (${gapMinutes}m gap)`;
+        } else {
+            verdict = `SHOULD BE ALLOWED: NO   →  insufficient turnaround (have ${gapMinutes}m, need ${turnaroundMinutes}m)`;
+        }
+
+        console.log(
+            `\n═══════════════════════════════════════════════════\n` +
+            `🔴 SAME-TRAINEE SEQ-CONFLICT #${_stSeqCount}\n` +
+            `═══════════════════════════════════════════════════\n` +
+            `1. CANDIDATE (rejected)\n` +
+            `   Trainee : ${candTraineeName}\n` +
+            `   Event   : ${candEventName}\n` +
+            `   Type    : ${candIsNext ? 'NEXT' : 'NEXT+1'}\n` +
+            `   Time    : ${_fmtH(candStart)} – ${_fmtH(candEnd)}\n` +
+            `\n` +
+            `2. CONFLICTING EVENT\n` +
+            `   Trainee : ${conflTraineeName}\n` +
+            `   Event   : ${conflEventName}\n` +
+            `   Type    : ${conflIsNext === undefined ? 'unknown' : conflIsNext ? 'NEXT' : 'NEXT+1'}\n` +
+            `   Time    : ${_fmtH(conflStart)} – ${_fmtH(conflEnd)}\n` +
+            `   Source  : ${conflSource}\n` +
+            `\n` +
+            `3. SEQUENCING CHECK\n` +
+            `   Same trainee           : ${_isSameTrainee ? 'YES' : 'NO'}\n` +
+            `   NEXT vs NEXT+1 pairing : ${isNextVsNextPlusOne ? 'YES' : 'NO'}\n` +
+            `   Actual clock overlap   : ${hasClockOverlap ? 'YES' : 'NO'}\n` +
+            `   Time gap               : ${gapMinutes} minutes\n` +
+            `   Required turnaround    : ${turnaroundMinutes} minutes\n` +
+            `\n` +
+            `4. FINAL VERDICT\n` +
+            `   ${verdict}\n` +
+            `═══════════════════════════════════════════════════`
+        );
+    };
+    // ────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Starting with config.instructors:', config.instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
     console.log('🚨🚨🚨 [GENERATE DFP INTERNAL] Total instructors in config:', config.instructors.length);
     
@@ -987,11 +1317,75 @@ function generateDfpInternal(
         courseColors, school, dayStart: flyingStartTime, dayEnd: flyingEndTime,
         ftdStart: ftdStartTime, ftdEnd: ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying, buildDate,
-        highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
+        highestPriorityEvents, instructorPriority, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
-        getEventDayNightClassification
+        getEventDayNightClassification,
+        staffSharingEnabled, staffSharingUnits
     } = config;
+
+    // --- INSTRUCTOR PRIORITY HELPERS ---
+    // Derived convenience flags from the new instructorPriority config.
+    // These replace the old programWithPrimaries boolean throughout the algorithm.
+    const priorityEnabled      = instructorPriority.enabled;
+    const priorityMode         = instructorPriority.mode;           // 'soft' | 'hard'
+    const softGroups           = instructorPriority.softGroups;     // { primary, secondary, sameFlight }
+    const hardGroups           = instructorPriority.hardGroups;     // { primary, secondary, sameFlight }
+
+    // Whether ANY soft-preference group is selected (replaces old programWithPrimaries for ordering)
+    const anySoftGroup  = priorityEnabled && (softGroups.primary || softGroups.secondary || softGroups.sameFlight);
+    // Whether ANY hard group is selected (determines if flight/FTD can be blocked)
+    const anyHardGroup  = priorityEnabled && priorityMode === 'hard' &&
+                          (hardGroups.primary || hardGroups.secondary || hardGroups.sameFlight);
+
+    // --- STAFF SHARING HELPER ---
+    // Determines if an instructor is eligible to teach a trainee based on unit sharing rules.
+    // Step 1: Identify trainee's unit.
+    // Step 2: If staff sharing OFF → only same-unit instructors eligible.
+    // Step 3: If staff sharing ON → if trainee's unit is in the sharing group AND instructor's unit is in the sharing group → eligible.
+    //         If trainee's unit is NOT in the sharing group → only same-unit instructors eligible.
+    // Normalise a unit string by stripping any flight-suffix (e.g. "CFS/D" → "CFS", "1FTS/A" → "1FTS")
+    const normalizeUnit = (unit: string): string => {
+        if (!unit) return '';
+        const slashIdx = unit.indexOf('/');
+        return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
+    };
+
+    // Full unit string including flight suffix (e.g. "CFS/A") for exact same-flight matching
+    const fullUnit = (unit: string): string => (unit || '').trim();
+
+    const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
+        const traineeUnit = normalizeUnit(trainee.unit || '');
+        const instructorUnit = normalizeUnit(instructor.unit || '');
+
+        if (!staffSharingEnabled) {
+            // Staff sharing OFF: must be same unit (normalised).
+            // Priority preference is respected in ordering (STEP 3) but NOT as a
+            // unit-eligibility bypass — cross-unit primaries are still blocked when sharing is OFF.
+            return instructorUnit === traineeUnit;
+        }
+
+        // Staff sharing ON — primary/secondary from ANY shared unit are eligible when priority is on
+        if (priorityEnabled) {
+            const primaryArr = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+            const secondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+            if (softGroups.primary && primaryArr.includes(instructor.name)) return true;
+            if (softGroups.secondary && secondaryArr.includes(instructor.name)) return true;
+            // Hard mode groups also grant eligibility
+            if (hardGroups.primary && primaryArr.includes(instructor.name)) return true;
+            if (hardGroups.secondary && secondaryArr.includes(instructor.name)) return true;
+        }
+
+        // Staff sharing ON — standard group check
+        const traineeInGroup = staffSharingUnits.includes(traineeUnit);
+        if (!traineeInGroup) {
+            // Trainee's unit not in sharing group → same-unit only
+            return instructorUnit === traineeUnit;
+        }
+        // Trainee IS in the sharing group → instructor must also be in the sharing group
+        const instructorInGroup = staffSharingUnits.includes(instructorUnit);
+        return instructorInGroup;
+    };
 
     // --- HELPER FUNCTIONS ---
     
@@ -1102,6 +1496,7 @@ function generateDfpInternal(
     // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
 
     setProgress({ message: 'Initializing DFP build...', percentage: 0 });
+    console.log('🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active');
 
     // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
     const activeDfpEvents = publishedSchedules[buildDate] || [];
@@ -1113,7 +1508,12 @@ function generateDfpInternal(
         return eventWithoutDate;
     });
 
-    let generatedEvents: Omit<ScheduleEvent, 'date'>[] = [...activeDfpEventsWithoutDate];
+    let generatedEvents: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] = activeDfpEventsWithoutDate.map(e => ({
+        ...e,
+        _source: 'active-dfp',
+        _isNext: undefined,
+        _traineeName: e.student || e.pilot || ''
+    }));
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
     trainees.forEach(t => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
@@ -1154,7 +1554,7 @@ function generateDfpInternal(
                if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
                    eventWithoutDate.pilot = eventWithoutDate.instructor;
                }
-            generatedEvents.push(eventWithoutDate);
+            generatedEvents.push({ ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' });
             includedCount++;
             console.log(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
             console.log(`  - pilot: ${eventWithoutDate.pilot}, instructor: ${eventWithoutDate.instructor}, student: ${eventWithoutDate.student}`);
@@ -1303,6 +1703,12 @@ function generateDfpInternal(
 
     Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
     Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
+    console.log(
+        `🟢🟢🟢 [SEQ-DIAG] Category lists built:\n` +
+        `  Next  → flight:${nextEventLists.flight.length} ftd:${nextEventLists.ftd.length} cpt:${nextEventLists.cpt.length} ground:${nextEventLists.ground.length} bnf:${nextEventLists.bnf.length}\n` +
+        `  Next+1→ flight:${nextPlusOneLists.flight.length} ftd:${nextPlusOneLists.ftd.length} cpt:${nextPlusOneLists.cpt.length} ground:${nextPlusOneLists.ground.length}`
+    );
+    try { localStorage.setItem("category_lists_diag", JSON.stringify({ activeTrainees: activeTrainees.length, next: { flight: nextEventLists.flight.length, ftd: nextEventLists.ftd.length, cpt: nextEventLists.cpt.length, ground: nextEventLists.ground.length, bnf: nextEventLists.bnf.length }, nextPlusOne: { flight: nextPlusOneLists.flight.length, ftd: nextPlusOneLists.ftd.length, cpt: nextPlusOneLists.cpt.length, ground: nextPlusOneLists.ground.length }, traineeNextEvents: Array.from(traineeNextEventMap.entries()).slice(0, 20).map(([name, ev]) => ({ name, nextType: ev.next?.type || "null", nextCode: ev.next?.code || "null" })) })); } catch(e) { /* ignore */ }
 // REORDER SOLO FLIGHTS WITH TWR DI REQUIREMENT
     // After sorting, reorder Day Next Event List to group Solo-with-TWR-DI events
     const reorderSoloWithTwrDi = (list: Trainee[]) => {
@@ -1512,6 +1918,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const nightPairings = new Map<string, string>();
     let instructors = [...originalInstructors.map(i => ({...i, unavailability: [...(i.unavailability || [])]}))]; 
 
+    // ── DIAGNOSTIC: Capture instructor config at build start ──
+    _diagInitInstructors(buildDate, instructors);
+
     // NEW LOGIC: If there are 2+ trainees waiting for night flying, then night flying is programmed
     if (nextEventLists.bnf.length >= 2) {
         const bnfTraineeCount = nextEventLists.bnf.length;
@@ -1570,6 +1979,115 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
 
+    // ── FLIGHT BOTTLENECK DIAGNOSTIC ────────────────────────────────────────
+    // Tracks first 2 successes and next 10 failures for flight events only.
+    // Read-only: does not change scheduling behaviour or business rules.
+    let _fbSuccessCount = 0;
+    let _fbFailCount = 0;
+    const _FB_MAX_FAIL = 10;
+    const _fbBuckets: Record<string, number> = {
+        NO_INSTRUCTORS_LOADED: 0, NO_QUALIFIED: 0, NO_UNIT_MATCH: 0,
+        INSTRUCTOR_STATICALLY_UNAVAILABLE: 0, INSTRUCTOR_SOFT_DUTY_LIMIT: 0,
+        INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED: 0, INSTRUCTOR_TOTAL_LIMIT_EXCEEDED: 0,
+        INSTRUCTOR_TIME_OVERLAP: 0, INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED: 0,
+        NO_AIRCRAFT_AVAILABLE: 0, TIME_BOUNDARY_VIOLATION: 0,
+        NO_AREA_AVAILABLE: 0, HOURLY_DISPATCH_LIMIT: 0,
+        TAKEOFF_SEPARATION_VIOLATION: 0, TRAINEE_EVENT_LIMIT_EXCEEDED: 0,
+        TRAINEE_TOTAL_LIMIT_EXCEEDED: 0, TRAINEE_STATICALLY_UNAVAILABLE: 0, OTHER: 0,
+    };
+    const _fbTimeSlotsAttempted: Map<number, { attempts: number; reasons: string[] }> = new Map();
+    const _fmtT = (h: number) => { const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`; };
+
+    const _fbLogSuccess = (trainee: Trainee, syllabusItem: SyllabusItemDetail, isNext: boolean, startTime: number, endTime: number, instructorName: string, aircraft: string, area: string | undefined) => {
+        if (_fbSuccessCount >= 2) return;
+        _fbSuccessCount++;
+        console.log(`\n\u2705 [FLIGHT-DIAG] SUCCESS #${_fbSuccessCount}`);
+        console.log(`   Trainee:   ${trainee.fullName}`);
+        console.log(`   Event:     ${syllabusItem.id} (${syllabusItem.code})`);
+        console.log(`   Type:      ${isNext ? 'NEXT' : 'NEXT+1'}`);
+        console.log(`   Time:      ${_fmtT(startTime)} - ${_fmtT(endTime)}`);
+        console.log(`   Instructor:${instructorName || 'SOLO'}`);
+        console.log(`   Aircraft:  ${aircraft}`);
+        console.log(`   Area:      ${area || 'N/A'}`);
+        console.log(`   Slot:      ${_fmtT(startTime)}`);
+    };
+
+    const _fbLogFailure = (trainee: Trainee, syllabusItem: SyllabusItemDetail, isNext: boolean, startTime: number, endTime: number, reason: string) => {
+        // Always count in buckets regardless of cap
+        if (_fbBuckets[reason] !== undefined) _fbBuckets[reason]++; else _fbBuckets['OTHER']++;
+        const slotKey = Math.round(startTime * 12) / 12; // round to 5-min
+        const slot = _fbTimeSlotsAttempted.get(slotKey) || { attempts: 0, reasons: [] };
+        slot.attempts++;
+        if (!slot.reasons.includes(reason)) slot.reasons.push(reason);
+        _fbTimeSlotsAttempted.set(slotKey, slot);
+        // Print first 15 failures regardless of success count
+        if (_fbFailCount >= 15) return;
+        _fbFailCount++;
+        console.log(`\n\u274c [FLIGHT-DIAG] FAIL #${_fbFailCount}`);
+        console.log(`   Trainee:  ${trainee.fullName}`);
+        console.log(`   Event:    ${syllabusItem.id} (${syllabusItem.code})`);
+        console.log(`   Type:     ${isNext ? 'NEXT' : 'NEXT+1'}`);
+        console.log(`   Proposed: ${_fmtT(startTime)} - ${_fmtT(endTime)}`);
+        console.log(`   Reason:   ${reason}`);
+    };
+
+    const _fbPrintSummary = () => {
+        const postFirstTwo = [8 + 10/60, 8 + 15/60, 8 + 20/60, 8 + 25/60, 8 + 30/60];
+        const topReason = Object.entries(_fbBuckets).sort((a,b) => b[1]-a[1])[0];
+        const laterSlotData = postFirstTwo.map(t => _fbTimeSlotsAttempted.get(Math.round(t * 12) / 12));
+        const laterSlotsTriedCount = laterSlotData.filter(Boolean).length;
+        const instrTotal = (_fbBuckets.NO_INSTRUCTORS_LOADED||0)+(_fbBuckets.NO_QUALIFIED||0)+(_fbBuckets.NO_UNIT_MATCH||0)+(_fbBuckets.INSTRUCTOR_STATICALLY_UNAVAILABLE||0)+(_fbBuckets.INSTRUCTOR_SOFT_DUTY_LIMIT||0)+(_fbBuckets.INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED||0)+(_fbBuckets.INSTRUCTOR_TOTAL_LIMIT_EXCEEDED||0)+(_fbBuckets.INSTRUCTOR_TIME_OVERLAP||0)+(_fbBuckets.INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED||0);
+        const acTotal = _fbBuckets.NO_AIRCRAFT_AVAILABLE||0;
+        const areaTotal = _fbBuckets.NO_AREA_AVAILABLE||0;
+        const sepTotal = (_fbBuckets.HOURLY_DISPATCH_LIMIT||0)+(_fbBuckets.TAKEOFF_SEPARATION_VIOLATION||0);
+        const blockerType = instrTotal >= acTotal && instrTotal >= areaTotal && instrTotal >= sepTotal ? 'INSTRUCTOR' : acTotal >= areaTotal && acTotal >= sepTotal ? 'AIRCRAFT' : areaTotal >= sepTotal ? 'AREA' : 'SEPARATION';
+
+        // Save to localStorage so it survives console scroll
+        const _fbSummaryData = {
+            timestamp: new Date().toISOString(),
+            flightListSize: (window as any).__fbFlightListSize || 0,
+            successCount: _fbSuccessCount,
+            failCount: _fbFailCount,
+            buckets: { ..._fbBuckets },
+            timeSlots: Object.fromEntries(
+                postFirstTwo.map(t => {
+                    const key = Math.round(t * 12) / 12;
+                    const data = _fbTimeSlotsAttempted.get(key);
+                    return [_fmtT(t), data ? { attempts: data.attempts, reasons: data.reasons } : { attempts: 0, reasons: [] }];
+                })
+            ),
+            conclusion: {
+                topReason: topReason ? topReason[0] : 'NONE',
+                topReasonCount: topReason ? topReason[1] : 0,
+                laterSlotsTried: laterSlotsTriedCount,
+                primaryBlocker: blockerType,
+                instrTotal, acTotal, areaTotal, sepTotal
+            }
+        };
+        try { localStorage.setItem('flight_diag_report', JSON.stringify(_fbSummaryData)); } catch(e) { /* ignore */ }
+
+        console.log('\n[FLIGHT-DIAG] BOTTLENECK SUMMARY');
+        console.log('   Flight list size: ' + ((window as any).__fbFlightListSize || 0) + ' | Successes: ' + _fbSuccessCount + ' | Failures logged: ' + _fbFailCount);
+        console.log('C. REJECTION BUCKET TOTALS:');
+        const bucketsWithValues = Object.entries(_fbBuckets).filter(([,v]) => v > 0);
+        if (bucketsWithValues.length === 0) console.log('   (ZERO rejections - flight list is likely empty)');
+        else bucketsWithValues.forEach(([k,v]) => console.log('   ' + k + ': ' + v));
+        console.log('D. TIME SLOTS AFTER 0805:');
+        postFirstTwo.forEach(t => {
+            const key = Math.round(t * 12) / 12;
+            const data = _fbTimeSlotsAttempted.get(key);
+            if (data) console.log('   ' + _fmtT(t) + ': ' + data.attempts + ' attempts | ' + data.reasons.join(', '));
+            else console.log('   ' + _fmtT(t) + ': 0 attempts');
+        });
+        console.log('E. CONCLUSION:');
+        console.log('   A. Top rejection: ' + (topReason ? topReason[0] : 'NONE') + ' (' + (topReason ? topReason[1] : 0) + ')');
+        console.log('   B. Later slots tried: ' + (laterSlotsTriedCount > 0 ? 'YES - ' + laterSlotsTriedCount : 'NO'));
+        console.log('   C. Primary blocker: ' + blockerType + ' (instr=' + instrTotal + ', ac=' + acTotal + ', area=' + areaTotal + ', sep=' + sepTotal + ')');
+        console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
+    };
+
+    // ── END FLIGHT BOTTLENECK DIAGNOSTIC SETUP ──────────────────────────────
+
     const scheduleList = (
         list: Trainee[],
         type: 'flight' | 'ftd' | 'cpt' | 'ground',
@@ -1627,34 +2145,52 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ? segmentSearchOrder.map(s => ({ start: Math.max(searchStartTime, s.start), end: s.end }))
                     : [{ start: searchStartTime, end: endTimeBoundary }];
 
-                for (const space of searchSpaces) {
-                    if (placed) break;
-                    for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
-                        const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne);
-                        if (result && typeof result === 'object' && 'id' in result) {
-                            generatedEvents.push(result);
-                            // Only get instructor counts if not a solo flight
-                               const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
-                            const tCounts = eventCounts.get(trainee.fullName)!;
-                            if (type === 'flight' || type === 'ftd') { 
-                                tCounts.flightFtd++; 
-                                if (ipCounts) ipCounts.flightFtd++; 
-                            } else if (type === 'ground') { 
-                                tCounts.ground++; 
-                                if (ipCounts) ipCounts.ground++; // Count ground events for instructors
-                            } else if (type === 'cpt') {
-                                tCounts.cpt++; 
-                                if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
-                            }
-                            
-                            if (type === 'cpt' || type === 'ground') {
-                                const segment = segments.find(s => time >= s.start && time < s.end);
-                                if (segment) segment.count++;
-                            }
+                // TWO-PASS SLOT SEARCH (priority mode active, non-night):
+                // Pass 1 (primaryPreferOnly=true):
+                //   Soft mode: scan all time slots accepting ONLY priority-group instructors.
+                //              If a slot with a priority instructor is found, use it.
+                //   Hard mode: same — try to find a slot where a hard-group instructor IS available.
+                // Pass 2 (primaryPreferOnly=false):
+                //   Soft mode: fall back to any available instructor (event always gets placed).
+                //   Hard mode: fall back — scheduleEvent will detect no hard-group instructor and
+                //              place event on STBY with no instructor assigned.
+                // Night pass: single pass (night pairings are fixed, two-pass not applicable)
+                // Priority disabled: single pass, any instructor.
+                const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass
+                    ? [true, false]   // priority-only pass first, then fallback
+                    : [false];        // priority disabled or night pass — single pass only
 
-                            placed = true;
-                            placedThisPass = true;
-                            break;
+                for (const primaryOnly of passModes) {
+                    if (placed) break;
+                    for (const space of searchSpaces) {
+                        if (placed) break;
+                        for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
+                            const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
+                            if (result && typeof result === 'object' && 'id' in result) {
+                                generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                // Only get instructor counts if not a solo flight
+                                   const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
+                                const tCounts = eventCounts.get(trainee.fullName)!;
+                                if (type === 'flight' || type === 'ftd') { 
+                                    tCounts.flightFtd++; 
+                                    if (ipCounts) ipCounts.flightFtd++; 
+                                } else if (type === 'ground') { 
+                                    tCounts.ground++; 
+                                    if (ipCounts) ipCounts.ground++; // Count ground events for instructors
+                                } else if (type === 'cpt') {
+                                    tCounts.cpt++; 
+                                    if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                                }
+                                
+                                if (type === 'cpt' || type === 'ground') {
+                                    const segment = segments.find(s => time >= s.start && time < s.end);
+                                    if (segment) segment.count++;
+                                }
+
+                                placed = true;
+                                placedThisPass = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -1675,9 +2211,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         startTime: number,
         type: 'flight' | 'ftd' | 'ground' | 'cpt',
         isNightPass: boolean,
-        isPlusOne: boolean
+        isPlusOne: boolean,
+        primaryPreferOnly: boolean = false
     ): ScheduleEventResult => {
-        
+        const _isFlight = type === 'flight' && !isNightPass;
+        const _isNext = !isPlusOne;
+        const _fbEnd = startTime + syllabusItem.duration;
+
         const traineeCounts = eventCounts.get(trainee.fullName)!;
         
         // CRITICAL FIX: For night flying BNF events, allow 2 flights per night
@@ -1685,7 +2225,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
         
         if (type === 'flight' || type === 'ftd') {
-             if (traineeCounts.flightFtd >= bnfFlightLimit) return null;
+             if (traineeCounts.flightFtd >= bnfFlightLimit) {
+                 if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_EVENT_LIMIT_EXCEEDED');
+                 return null;
+             }
         } else {
              if (traineeCounts.ground >= 2) return null;
         }
@@ -1693,15 +2236,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
         // For BNF events, allow higher total limit to accommodate 2 night flights
         const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
-        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) return null;
+        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TOTAL_LIMIT_EXCEEDED');
+            return null;
+        }
         
         const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.id, duration: syllabusItem.duration }, syllabusDetails);
-        if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) return null;
+        if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_STATICALLY_UNAVAILABLE');
+            return null;
+        }
 
         const findAvailableInstructor = (
             traineeForCheck: Trainee, 
             syllabusItemForCheck: SyllabusItemDetail,
-            isPlusOneCheck: boolean
+            isPlusOneCheck: boolean,
+            primaryOnlyMode: boolean = false
         ): Instructor | null => {
             const isBnfEvent = syllabusItemForCheck.code.startsWith('BNF');
             
@@ -1750,14 +2300,52 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                      if (instructor.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
                 }
                 
+                // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
+                // Ground↔flight cross-type pairs are NOT blocking: instructor can ground-brief
+                // AND fly on the same day. Only same-category overlaps are true conflicts.
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(instructor.name)) return false;
+                         // Skip ground↔flight/ftd cross-type: not a real double-booking
+                         const existingIsGround = e.type === 'ground';
+                         const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === 'ground';
+                         if (existingIsGround !== proposedIsGround) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         if (overlaps) {
+                             _logOverlapRejection(
+                                 instructor.name,
+                                 syllabusItemForCheck.id,
+                                 syllabusItemForCheck.type || 'unknown',
+                                 proposedBookingWindow.start,
+                                 proposedBookingWindow.end,
+                                 e.flightNumber,
+                                 e.type || 'unknown',
+                                 e.startTime,
+                                 e.startTime + e.duration
+                             );
+                             // Same-trainee sequencing diagnostic
+                             const conflictingTraineeName = (e as any)._traineeName || e.student || e.pilot || '';
+                             _logSameTraineeConflict(
+                                 traineeForCheck.fullName,
+                                 syllabusItemForCheck.id,
+                                 !isPlusOneCheck,
+                                 proposedBookingWindow.start + (syllabusItemForCheck.preFlightTime || 0),
+                                 proposedBookingWindow.end - (syllabusItemForCheck.postFlightTime || 0),
+                                 conflictingTraineeName,
+                                 e.flightNumber,
+                                 (e as any)._isNext,
+                                 e.startTime,
+                                 e.startTime + e.duration,
+                                 (e as any)._source || 'unknown',
+                                 flightTurnaround
+                             );
+                         }
+                         return overlaps;
                      });
                 if (hasOverlap) return null;
+                // ─────────────────────────────────────────────────────────────────────
 
                 // Special check for second night flight turnaround for the same crew
                 if (isNightPass && isPlusOneCheck) {
@@ -1792,72 +2380,152 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             let candidates: Instructor[] = [];
 
+            // ── DIAGNOSTIC: per-trainee tracking ──
+            const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
+
+            // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
             if (type === 'ftd') {
-                // NEW RULE: COMPLETE separation - NO day events for instructors with night events
-                const simIps = instructors
-                    .filter(i => 
-                        i.role === 'SIM IP' && 
-                        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
-                    )
-                    .sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                
-                // NEW RULE: COMPLETE separation - NO day events for instructors with night events
-                const availableQfis = instructors.filter(i => 
-                    i.role === 'QFI' && 
+                // FTD: SIM IPs first, then QFIs
+                const simIps = instructors.filter(i =>
+                    i.role === 'SIM IP' &&
                     !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
                 );
-                let orderedQfis: Instructor[] = [];
-                
-                if (programWithPrimaries) {
-                    const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
-                    const primaries = availableQfis.filter(i => pNames.includes(i.name));
-                    const others = availableQfis.filter(i => !pNames.includes(i.name));
-                    
-                    primaries.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                    others.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                    
-                    orderedQfis = [...primaries, ...others];
-                } else {
-                    orderedQfis = availableQfis.sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
-                }
-                
-                candidates = [...simIps, ...orderedQfis];
+                const availableQfis = instructors.filter(i =>
+                    i.role === 'QFI' &&
+                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                );
+                candidates = [...simIps, ...availableQfis];
             } else {
-                const qualified = instructors.filter(ip => {
-                    const isQFI = ip.role === 'QFI';
-                    if (type === 'flight' && !isQFI) return false;
-                    // This applies to ALL event types including CPT and ground
-                    // NEW RULE: COMPLETE separation - NO day events for instructors with night events
+                // FLIGHT = QFI only; CPT/GROUND = any instructor
+                candidates = instructors.filter(ip => {
+                    if (type === 'flight' && ip.role !== 'QFI') return false;
                     if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
                     return true;
                 });
+            }
 
-                if (programWithPrimaries) {
-                     const pNames = [traineeForCheck.primaryInstructor, traineeForCheck.secondaryInstructor].filter(Boolean);
-                     const primaries = qualified.filter(i => pNames.includes(i.name));
-                     const others = qualified.filter(i => !pNames.includes(i.name));
-                     
-                     others.sort((a, b) => {
-                        const countA = eventCounts.get(a.name)?.flightFtd || 0;
-                        const countB = eventCounts.get(b.name)?.flightFtd || 0;
-                        if (countA !== countB) return countA - countB;
-                        return a.name.localeCompare(b.name);
-                     });
-                     
-                     candidates = [...primaries, ...others];
-                } else {
-                    candidates = qualified.sort((a, b) => {
-                        const countA = eventCounts.get(a.name)?.flightFtd || 0;
-                        const countB = eventCounts.get(b.name)?.flightFtd || 0;
-                        if (countA !== countB) return countA - countB;
-                        return a.name.localeCompare(b.name);
+            // ── DIAGNOSTIC: after qualification filter ──
+            const _afterQualFilter = candidates.length;
+
+            // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
+            candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+
+            // ── DIAGNOSTIC: after unit filter ──
+            const _afterUnitFilter = candidates.length;
+
+            // ── STEP 3: Order candidates by staff-sharing priority ──
+            // Priority order:
+            //   1. Primary instructor from trainee's same unit
+            //   2. Secondary instructor from trainee's same unit
+            //   3. Other same-unit instructors (by weighted workload)
+            //   4. Primary instructor from other shared units
+            //   5. Secondary instructor from other shared units
+            //   6. Other instructors from other shared units (by weighted workload)
+            //
+            // Weighted workload score: flight/FTD = 2pts, CPT/ground = 1pt
+            // This ensures the daily workload is distributed as evenly as possible
+            // across all instructors within each unit (per-unit balancing).
+            const workloadOf = (i: Instructor): number => {
+                const c = eventCounts.get(i.name);
+                if (!c) return 0;
+                return (c.flightFtd * 2) + (c.cpt) + (c.ground);
+            };
+
+            if (priorityEnabled) {
+                // ── Priority ordering: Primary → Secondary → Same-flight → Other same-unit → Other ──
+                // "Same-flight" means same base unit AND same flight letter (e.g. unit="CFS", flight="A" for both)
+                // All buckets sorted by workload ascending so least-loaded instructor is tried first.
+                const primaryNames   = Array.isArray(traineeForCheck.primaryInstructor) ? traineeForCheck.primaryInstructor : traineeForCheck.primaryInstructor ? [traineeForCheck.primaryInstructor] : [];
+                const secondaryNames = Array.isArray(traineeForCheck.secondaryInstructor) ? traineeForCheck.secondaryInstructor : traineeForCheck.secondaryInstructor ? [traineeForCheck.secondaryInstructor] : [];
+                const traineeFull    = fullUnit(traineeForCheck.unit || '');   // e.g. "CFS/A" or "CFS"
+                const traineeBase    = normalizeUnit(traineeForCheck.unit || ''); // e.g. "CFS"
+                const traineeFlight  = (traineeForCheck.flight || '').trim();   // e.g. "A", "B", "C", "D"
+
+                const isPrimary    = (i: Instructor) => primaryNames.includes(i.name);
+                const isSecondary  = (i: Instructor) => secondaryNames.includes(i.name);
+                // Same-flight: instructor and trainee share the same base unit AND the same flight letter
+                const isSameFlight = (i: Instructor) => {
+                    const instrFlight = (i.flight || '').trim();
+                    const instrBase   = normalizeUnit(i.unit || '');
+                    return instrBase === traineeBase && instrFlight !== '' && traineeFlight !== '' && instrFlight === traineeFlight;
+                };
+                const isSameBase   = (i: Instructor) => normalizeUnit(i.unit || '') === traineeBase;
+                const wSort = (a: Instructor, b: Instructor) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name);
+
+                // Determine which groups are active for ordering (soft OR hard selections drive ordering)
+                const usePrimary    = softGroups.primary    || hardGroups.primary;
+                const useSecondary  = softGroups.secondary  || hardGroups.secondary;
+                const useSameFlight = softGroups.sameFlight || hardGroups.sameFlight;
+
+                // Bucket 1: Primary instructors (if group enabled)
+                const bucket1Primary    = usePrimary
+                    ? candidates.filter(i => isPrimary(i)).sort(wSort)
+                    : [];
+                // Bucket 2: Secondary instructors (if group enabled)
+                const bucket2Secondary  = useSecondary
+                    ? candidates.filter(i => !isPrimary(i) && isSecondary(i)).sort(wSort)
+                    : [];
+                // Bucket 3: Same-flight instructors who are not primary/secondary (if group enabled)
+                const bucket3SameFlight = useSameFlight
+                    ? candidates.filter(i => !isPrimary(i) && !isSecondary(i) && isSameFlight(i)).sort(wSort)
+                    : [];
+                // Bucket 4: Other same-base-unit instructors not in higher buckets (always included, lowest priority)
+                const higherBucketNames = new Set([
+                    ...bucket1Primary.map(i => i.name),
+                    ...bucket2Secondary.map(i => i.name),
+                    ...bucket3SameFlight.map(i => i.name),
+                ]);
+                const bucket4OtherSameUnit = candidates
+                    .filter(i => isSameBase(i) && !higherBucketNames.has(i.name))
+                    .sort(wSort);
+                // Bucket 5: Instructors from other units
+                const allHigherNames = new Set([...higherBucketNames, ...bucket4OtherSameUnit.map(i => i.name)]);
+                const bucket5Other   = candidates
+                    .filter(i => !allHigherNames.has(i.name))
+                    .sort(wSort);
+
+                candidates = [
+                    ...bucket1Primary,
+                    ...bucket2Secondary,
+                    ...bucket3SameFlight,
+                    ...bucket4OtherSameUnit,
+                    ...bucket5Other,
+                ];
+
+                // PRIMARY-ONLY MODE (pass 1 for both soft and hard mode):
+                // Restrict the candidate pool to ONLY instructors from the selected priority groups.
+                // This forces the time-slot search to only succeed when a priority-group instructor is free.
+                //
+                // Soft mode: if no priority-group slot found in full time window, pass 2 falls back to any instructor.
+                // Hard mode: if no priority-group slot found in full time window, pass 2 uses any instructor BUT
+                //            scheduleEvent's hard-mode check will detect a non-priority instructor and place on STBY.
+                //
+                // In primary-only mode, use the UNION of soft and hard groups as the allowed set —
+                // if a group is selected in either mode, it qualifies during pass 1.
+                if (primaryOnlyMode) {
+                    candidates = candidates.filter(i => {
+                        if ((softGroups.primary    || hardGroups.primary)    && isPrimary(i))    return true;
+                        if ((softGroups.secondary  || hardGroups.secondary)  && isSecondary(i))  return true;
+                        if ((softGroups.sameFlight || hardGroups.sameFlight) && isSameFlight(i)) return true;
+                        return false;
                     });
                 }
+            } else {
+                // Priority disabled: same-unit first, then shared-unit, both sorted by weighted workload
+                const traineeBase = normalizeUnit(traineeForCheck.unit || '');
+                const sameUnit  = candidates.filter(i => normalizeUnit(i.unit || '') === traineeBase)
+                                            .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
+                const otherUnit = candidates.filter(i => normalizeUnit(i.unit || '') !== traineeBase)
+                                            .sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
+                candidates = [...sameUnit, ...otherUnit];
             }
+
+            // ── DIAGNOSTIC: track candidates entering the loop ──
+            const _candidatesEnteringLoop = candidates.length;
 
             for (const ip of candidates) {
                 const eventTypeForCheck = type === 'cpt' ? 'ground' : type;
-                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) continue;
+                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) { _dRej.staticUnavailable++; continue; }
                 
                 const ipCounts = eventCounts.get(ip.name)!;
                 
@@ -1872,7 +2540,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 
                 if (currentDutyHours > preferredDutyPeriod) {
                     console.log(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
-                    continue;
+                    _dRej.softDutyLimit++; continue;
                 }
                 
                 // NEW RULE: Ground event limits based on Flight/FTD activity
@@ -1880,35 +2548,80 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // If instructor has no Flight or FTD events: max 4 ground events
                 if (eventTypeForCheck === 'ground') {
                     const maxGroundEvents = ipCounts.flightFtd > 0 ? 1 : 4;
-                    if (ipCounts.ground >= maxGroundEvents) continue;
+                    if (ipCounts.ground >= maxGroundEvents) { _dRej.groundLimit++; continue; }
                 }
                 
                 if (ip.isExecutive) {
                     if (isNightPass && (eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd')) {
-                        if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.exec.maxTotal) continue;
+                        if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
                     } else {
-                        if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) continue;
+                        if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.exec.maxFlightFtd) { _dRej.eventLimit++; continue; }
                     }
-                    if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) continue;
-                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) continue;
+                    if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) { _dRej.eventLimit++; continue; }
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
                 } else if (ip.role === 'SIM IP') {
-                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) continue;
-                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) continue;
+                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) { _dRej.eventLimit++; continue; }
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) { _dRej.eventLimit++; continue; }
                 } else {
-                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) continue;
-                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) continue;
+                    if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) { _dRej.eventLimit++; continue; }
+                    if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) { _dRej.eventLimit++; continue; }
                     // Check duty supervisor limit for Flying Supervisors (included in total events)
-                    if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) continue;
+                    if (ip.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) { _dRej.eventLimit++; continue; }
                 }
 
+                // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
+                // Ground↔flight/ftd cross-type pairs are NOT blocking: instructor can brief
+                // AND fly on the same day. Only same-category overlaps are true conflicts.
+                let _crossTypeSkipped = false;
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(ip.name)) return false;
+                         // Skip ground↔flight/ftd cross-type: not a real double-booking
+                         const existingIsGround = e.type === 'ground';
+                         const proposedIsGround = type === 'ground';
+                         if (existingIsGround !== proposedIsGround) {
+                             _crossTypeSkipped = true;
+                             return false;
+                         }
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
-                         return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+                         if (overlaps) {
+                             _logOverlapRejection(
+                                 ip.name,
+                                 syllabusItem.id,
+                                 type,
+                                 proposedBookingWindow.start,
+                                 proposedBookingWindow.end,
+                                 e.flightNumber,
+                                 e.type || 'unknown',
+                                 e.startTime,
+                                 e.startTime + e.duration
+                             );
+                             // Same-trainee sequencing diagnostic
+                             const conflictingTraineeName = (e as any)._traineeName || e.student || e.pilot || '';
+                             const reqTurnaround = type === 'flight' ? flightTurnaround
+                                                 : type === 'ftd'    ? ftdTurnaround
+                                                 : cptTurnaround;
+                             _logSameTraineeConflict(
+                                 trainee.fullName,
+                                 syllabusItem.id,
+                                 !isPlusOne,
+                                 proposedBookingWindow.start + (syllabusItem.preFlightTime || 0),
+                                 proposedBookingWindow.end   - (syllabusItem.postFlightTime || 0),
+                                 conflictingTraineeName,
+                                 e.flightNumber,
+                                 (e as any)._isNext,
+                                 e.startTime,
+                                 e.startTime + e.duration,
+                                 (e as any)._source || 'unknown',
+                                 reqTurnaround
+                             );
+                         }
+                         return overlaps;
                      });
-                if (hasOverlap) continue;
+                if (hasOverlap) { _dRej.timeOverlap++; continue; }
+                // ─────────────────────────────────────────────────────────────────────
 
                 const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.id, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
                 const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
@@ -1920,11 +2633,46 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     const lastEventSyllabus = syllabusDetails.find(s => s.id === lastEvent.flightNumber);
                     const dutyStartTime = firstEvent.startTime - (firstEventSyllabus?.preFlightTime || 0);
                     const dutyEndTime = lastEvent.startTime + lastEvent.duration + (lastEventSyllabus?.postFlightTime || 0);
-                    if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) continue;
+                    if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) { _dRej.crewDutyPeriod++; continue; }
                 }
 
+                // ── DIAGNOSTIC: instructor found ──
+                _diagRecordEntry({
+                    traineeName: traineeForCheck.fullName,
+                    traineeUnit: traineeForCheck.unit || '',
+                    eventType: type,
+                    syllabusCode: syllabusItemForCheck.code || syllabusItemForCheck.id,
+                    totalInstructorsInConfig: instructors.length,
+                    afterQualificationFilter: _afterQualFilter,
+                    afterUnitFilter: _afterUnitFilter,
+                    candidatesEnteringLoop: _candidatesEnteringLoop,
+                    rejections: { ..._dRej },
+                    finalAvailable: 1,
+                    instructorFound: true,
+                    zeroReason: null,
+                });
                 return ip;
             }
+            // ── DIAGNOSTIC: no instructor found ──
+            let _zeroReason = 'ALL_FILTERED_OUT';
+            if (instructors.length === 0) _zeroReason = 'NO_INSTRUCTORS_LOADED';
+            else if (_afterQualFilter === 0) _zeroReason = 'NO_QUALIFIED';
+            else if (_afterUnitFilter === 0) _zeroReason = 'NO_UNIT_MATCH';
+
+            _diagRecordEntry({
+                traineeName: traineeForCheck.fullName,
+                traineeUnit: traineeForCheck.unit || '',
+                eventType: type,
+                syllabusCode: syllabusItemForCheck.code || syllabusItemForCheck.id,
+                totalInstructorsInConfig: instructors.length,
+                afterQualificationFilter: _afterQualFilter,
+                afterUnitFilter: _afterUnitFilter,
+                candidatesEnteringLoop: _candidatesEnteringLoop,
+                rejections: { ..._dRej },
+                finalAvailable: 0,
+                instructorFound: false,
+                zeroReason: _zeroReason,
+            });
             return null;
         };
         
@@ -1932,12 +2680,85 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const isSoloFlight = syllabusItem.sortieType === 'Solo';
         
         let instructor: Instructor | null = null;
+        // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
+        let hardModeStby = false;
+
         if (!isSoloFlight) {
-            instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne);
-            if (!instructor) return null;
+            instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne, primaryPreferOnly);
+            if (!instructor) {
+                if (_isFlight) {
+                    // Map _zeroReason from findAvailableInstructor diagnostic to bucket
+                    const diagEntry = _instructorDiag?.entries[_instructorDiag.entries.length - 1];
+                    let noInstrReason = 'OTHER';
+                    if (diagEntry && !diagEntry.instructorFound) {
+                        if (diagEntry.zeroReason === 'NO_INSTRUCTORS_LOADED') noInstrReason = 'NO_INSTRUCTORS_LOADED';
+                        else if (diagEntry.zeroReason === 'NO_QUALIFIED') noInstrReason = 'NO_QUALIFIED';
+                        else if (diagEntry.zeroReason === 'NO_UNIT_MATCH') noInstrReason = 'NO_UNIT_MATCH';
+                        else if (diagEntry.rejections.staticUnavailable > 0 && diagEntry.rejections.staticUnavailable === diagEntry.candidatesEnteringLoop) noInstrReason = 'INSTRUCTOR_STATICALLY_UNAVAILABLE';
+                        else if (diagEntry.rejections.softDutyLimit > 0 && diagEntry.rejections.softDutyLimit >= (diagEntry.candidatesEnteringLoop - diagEntry.rejections.staticUnavailable)) noInstrReason = 'INSTRUCTOR_SOFT_DUTY_LIMIT';
+                        else if (diagEntry.rejections.eventLimit > 0) {
+                            // check if it's flight limit or total limit
+                            noInstrReason = 'INSTRUCTOR_FLIGHT_LIMIT_EXCEEDED';
+                        }
+                        else if (diagEntry.rejections.timeOverlap > 0) noInstrReason = 'INSTRUCTOR_TIME_OVERLAP';
+                        else if (diagEntry.rejections.crewDutyPeriod > 0) noInstrReason = 'INSTRUCTOR_CREW_DUTY_PERIOD_EXCEEDED';
+                        else noInstrReason = 'OTHER';
+                    }
+                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
+                }
+                return null;
+            }
+
+            // ── HARD MODE CHECK ──
+            // If hard priority mode is active for flight/FTD, check whether the found instructor
+            // belongs to one of the hard-required groups. If not, we place this event on STBY
+            // (no instructor assigned) rather than flying with a non-priority instructor.
+            // CPT and Ground events are NEVER subject to hard mode blocking.
+            if (anyHardGroup && (type === 'flight' || type === 'ftd') && !isNightPass && !primaryPreferOnly) {
+                const traineeFlight  = (trainee.flight || '').trim();
+                const traineeBase    = normalizeUnit(trainee.unit || '');
+                const traineePrimaryArr   = Array.isArray(trainee.primaryInstructor)   ? trainee.primaryInstructor   : trainee.primaryInstructor   ? [trainee.primaryInstructor]   : [];
+                const traineeSecondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+                const instructorInHardGroup =
+                    (hardGroups.primary    && traineePrimaryArr.includes(instructor.name)) ||
+                    (hardGroups.secondary  && traineeSecondaryArr.includes(instructor.name)) ||
+                    (hardGroups.sameFlight && ((): boolean => {
+                        const instrFlight = (instructor.flight || '').trim();
+                        const instrBase   = normalizeUnit(instructor.unit || '');
+                        return instrBase === traineeBase && instrFlight !== '' && traineeFlight !== '' && instrFlight === traineeFlight;
+                    })());
+
+                if (!instructorInHardGroup) {
+                    // Instructor found but not from required hard group → place on STBY with no instructor
+                    hardModeStby = true;
+                    instructor = null; // no instructor assigned to this STBY event
+                }
+            }
         }
         
         let resourceId: string | null = null;
+
+        // HARD MODE STBY: place on STBY line immediately (no instructor, no normal resource)
+        if (hardModeStby && (type === 'flight' || type === 'ftd')) {
+            // Find an available STBY line for this time slot
+            const stbyPrefix = type === 'flight' ? 'STBY' : 'FTD-STBY';
+            let stbyLine = 1;
+            while (generatedEvents.some(e => e.resourceId === `${stbyPrefix} ${stbyLine}` &&
+                e.startTime < startTime + syllabusItem.duration && e.startTime + e.duration > startTime)) {
+                stbyLine++;
+            }
+            resourceId = `${stbyPrefix} ${stbyLine}`;
+            const stbyResult = {
+                id: uuidv4(), type: type, instructor: '', student: trainee.fullName,
+                pilot: trainee.fullName,
+                flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
+                color: courseColors[trainee.course] || 'bg-gray-500',
+                flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
+                area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
+            };
+            return stbyResult;
+        }
+
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
@@ -1979,16 +2800,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
         
         // If no resource available, return null (STBY will be handled in separate pass)
-        if (!resourceId) return null;
+        if (!resourceId) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AIRCRAFT_AVAILABLE');
+            return null;
+        }
         
         let area: string | undefined = undefined;
         if (type === 'flight') {
             const isBnf = syllabusItem.code.startsWith('BNF');
             const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
-            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) return null;
+            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
+                return null;
+            }
             
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
-            if (!area) return null;
+            if (!area) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
+                return null;
+            }
 
             const nonStbyFlights = generatedEvents.filter(e => 
                 !e.resourceId.startsWith('STBY') && 
@@ -1996,7 +2826,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             );
             
             const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
-            if (takeoffsInLastHour >= 8) return null;
+            if (takeoffsInLastHour >= 8) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
+                return null;
+            }
             
             const takeoffConflict = nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
@@ -2008,7 +2841,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 
                 return diffMinutes < minSeparation;
             });
-            if(takeoffConflict) return null;
+            if(takeoffConflict) {
+                _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TAKEOFF_SEPARATION_VIOLATION');
+                return null;
+            }
         }
         
            // Debug: Log syllabusItem for BGF11 and BGF18
@@ -2023,13 +2859,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
            if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
                console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
            }
-        return {
+        const result = {
             id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
         };
+        // Log successful flight events (first 2 only)
+        if (_isFlight) {
+            _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || '', result.area);
+        }
+        return result;
     };
 
     // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
@@ -2252,8 +3093,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Highest Priority Flight Events are already added at the start
     
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
+    const _flightListForScheduling = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. List size: ${_flightListForScheduling.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    (window as any).__fbFlightListSize = _flightListForScheduling.length;
     scheduleList(
-        applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight)), 
+        _flightListForScheduling,
         'flight', 
         false, 
         flyingStartTime, 
@@ -2261,7 +3105,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         null, 
         false
     );
-    
+    _fbPrintSummary();
+
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
     // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
     setProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
@@ -2463,18 +3308,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
         console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:', config.school);
         
-        // Filter instructors by location first
+        // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
         const locationFilteredInstructors = instructors.filter(i => {
-            if (config.school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff (CFS has no Sim IPs)
-                return i.unit === '1FTS' || i.unit === 'CFS';
-            } else {
-                // PEA: Only 2FTS staff
-                return i.unit === '2FTS';
-            }
+            const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
+            return i.location === locationFullName;
         });
         
         console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
@@ -2938,6 +3778,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     console.log('DEBUG ===== END FINAL BUILD RESULTS =====');
     
     setProgress({ message: 'Build complete!', percentage: 100 });
+
+    // ── DIAGNOSTIC: Finalize and save instructor allocation report ──
+    _diagFinalizeInstructors();
+
     return sortedEvents;
 }
 
@@ -2945,9 +3789,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 const App: React.FC = () => {
        // Default zoom level (fixed at 1 since zoom functionality was removed)
        const zoomLevel = 1;
-       
-       // Theme hook for light/dark mode
-       const { theme } = useTheme();
+    
+    // Theme
+    const { theme } = useTheme();
+    const { checkAndWarn, freezeState } = useSystemFreeze();
+    const freezeStateRef = React.useRef(freezeState);
+    React.useEffect(() => {
+        freezeStateRef.current = freezeState;
+    }, [freezeState]);
 
     // Wrap String.prototype.split to catch errors
     React.useEffect(() => {
@@ -3065,7 +3914,7 @@ const App: React.FC = () => {
     // Validation Settings State
     const [showDepartureDensityOverlay, setShowDepartureDensityOverlay] = useState<boolean>(() => {
         const saved = localStorage.getItem('showDepartureDensityOverlay');
-        return saved !== null ? JSON.parse(saved) : true; // Default to true
+        return saved !== null ? JSON.parse(saved) : false; // Default to false (OFF) on launch
     });
 
     // Save overlay setting to localStorage when it changes
@@ -3154,15 +4003,37 @@ const App: React.FC = () => {
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
     const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
 
+    // Data Source Settings - manages which sources are active (drives immediate filtering)
+    const [dataSourceSettings, setDataSourceSettings] = useState<{
+        staff: boolean;
+        trainee: boolean;
+        staffDb: boolean;
+        traineeDb: boolean;
+    }>(() => {
+        try {
+            const stored = localStorage.getItem('dataSourceSettings');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                return {
+                    staff: parsed.staff !== false,
+                    trainee: parsed.trainee !== false,
+                    staffDb: parsed.staffDb !== false,
+                    traineeDb: parsed.traineeDb !== false,
+                };
+            }
+        } catch (e) {}
+        return { staff: true, trainee: true, staffDb: true, traineeDb: true };
+    });
+
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
-    const [instructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+    const [allInstructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
     
-    // Monitor instructorsData for duplicates
+    // Monitor allInstructorsData for duplicates
     useEffect(() => {
         const instructorIds = new Map();
         const duplicates: any[] = [];
-        instructorsData.forEach((instructor: any) => {
+        allInstructorsData.forEach((instructor: any) => {
             if (instructorIds.has(instructor.idNumber)) {
                 duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
             }
@@ -3170,24 +4041,59 @@ const App: React.FC = () => {
         });
         
         if (duplicates.length > 0) {
-            console.error('🔴 DUPLICATES FOUND IN instructorsData STATE:', duplicates.length);
+            console.error('🔴 DUPLICATES FOUND IN allInstructorsData STATE:', duplicates.length);
             console.error('Duplicate details:', duplicates);
-            console.error('All Burns entries in state:', instructorsData.filter((i: any) => i.name.includes('Burns')));
+            console.error('All Burns entries in state:', allInstructorsData.filter((i: any) => i.name.includes('Burns')));
         } else {
-            console.log('🟢 instructorsData state is clean - no duplicates');
+            console.log('🟢 allInstructorsData state is clean - no duplicates');
         }
-    }, [instructorsData]);
+    }, [allInstructorsData]);
 
 // DATA TRACKING: Initial data load
 useEffect(() => {
   console.log('🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors');
-  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', instructorsData.length);
-  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', instructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
+  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', allInstructorsData.length);
+  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', allInstructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
 }, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [traineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees);
-       const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+    const [allTraineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees.map(t => ({ ...t, _dataSource: 'mockdata' as const })));
+    const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+
+    // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
+    // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
+    const instructorsData = useMemo(() => {
+        const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
+        if (!mockOn && !dbOn) return [];
+        if (mockOn && dbOn) return allInstructorsData;
+        if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
+        return allInstructorsData.filter(i => (i as any)._dataSource === 'database');
+    }, [allInstructorsData, dataSourceSettings]);
+
+    const traineesData = useMemo(() => {
+        const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
+
+        // Filter by location (ESL = East Sale, PEA = Pearce)
+        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+        const locationFilteredTrainees = allTraineesData.filter(t => {
+            if (t.location) return t.location === locationFullName;
+            if (t.unit) {
+                if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true;
+        });
+
+        if (!mockOn && !dbOn) return [];
+        if (mockOn && !dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
+        if (!mockOn && dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+
+        // Both ON → DB records take precedence
+        const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+        const dbCourses = new Set(dbTrainees.map(t => t.course));
+        const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
+        return [...mockTrainees, ...dbTrainees];
+    }, [allTraineesData, dataSourceSettings, school]);
     
     // ============================================================
     // AUTHENTICATION STATE
@@ -3198,6 +4104,41 @@ useEffect(() => {
     const [authLoading, setAuthLoading] = useState<boolean>(true);
     const [showChangePassword, setShowChangePassword] = useState<boolean>(false);
     const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
+
+    // Fetch the logged-in user's military rank from Personnel table and update audit logger
+    const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string) => {
+        const formattedName = lastName && firstName
+            ? `${lastName}, ${firstName}`
+            : displayName || lastName || firstName || 'Unknown User';
+
+        let rank = '';
+        try {
+            const searchName = lastName || firstName || '';
+            if (searchName) {
+                const res = await fetch(`/api/personnel?search=${encodeURIComponent(searchName)}`, {
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const matched = (data.personnel || []).find((p: any) => {
+                        const pName = (p.name || '').toLowerCase();
+                        const fnLower = (firstName || '').toLowerCase();
+                        const lnLower = (lastName || '').toLowerCase();
+                        return pName.includes(lnLower) && (fnLower ? pName.includes(fnLower) : true);
+                    });
+                    if (matched && matched.rank) {
+                        rank = matched.rank;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[AUDIT] Could not fetch rank from Personnel:', e);
+        }
+
+        const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
+        setCurrentUser(auditUserString);
+        console.log('[AUDIT] setCurrentUser ->', auditUserString);
+    };
 
     // Check for existing session on app load
     useEffect(() => {
@@ -3242,6 +4183,8 @@ useEffect(() => {
                             userId: ssoUser.userId,
                             username: ssoUser.username
                         });
+                        // Set correct user for audit logging
+                        fetchAndSetAuditUser(ssoUser.firstName || null, ssoUser.lastName || null, ssoUser.displayName);
                         return; // Exit early - SSO user authenticated
                     }
                 } catch (e) {
@@ -3272,6 +4215,8 @@ useEffect(() => {
                         userId: user.userId,
                         username: user.username
                     });
+                    // Set correct user for audit logging
+                    fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
                     if (user.mustChangePassword) {
                         setShowChangePassword(true);
                     }
@@ -3303,6 +4248,8 @@ useEffect(() => {
             militaryRank: 'FLTLT',
             userId: user.userId,
         });
+        // Set correct user for audit logging
+        fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
         if (user.mustChangePassword) {
             setShowChangePassword(true);
         }
@@ -3388,13 +4335,14 @@ useEffect(() => {
 
     const [currentUserId, setCurrentUserId] = useState<number>(currentUser?.idNumber || 1);
     
-    // Set current user for audit logging (fallback only if not already set by session)
+    // Set current user for audit logging — fallback only when no auth user is set
+    // (fetchAndSetAuditUser handles the primary case on login/session restore)
     useEffect(() => {
-        if (currentUser && currentUserName === 'Bloggs, Joe') {
+        if (!authUser && currentUser) {
             const userString = `${currentUser.rank || ''} ${currentUser.name}`.trim();
             setCurrentUser(userString);
         }
-    }, [currentUser, currentUserName]);
+    }, [authUser, currentUser, currentUserName]);
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
         const loadInitialData = async () => {
@@ -3430,6 +4378,245 @@ useEffect(() => {
                 setInstructorsData(data.instructors);
                 setTraineesData(data.trainees);
                 setEvents(data.events);
+
+                // --- Individual LMP Sync ---
+                // For each trainee, read their completed PT-051 Score records from DB,
+                // mark those events as complete in their Individual LMP (persisted in DB),
+                // then load the completedEventIds back into scores state so
+                // computeNextEventsForTrainee advances them to their correct next event.
+                //
+                // This runs on every app load to keep LMPs in sync with PT-051 records.
+                // Always run sync unconditionally — server reads PT-051 scores directly from DB.
+                {
+                    console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
+                    try {
+                        // Build syllabusData payload — master syllabus split by lmpType
+                        // The backend has no knowledge of syllabus structure, so we send it from the frontend.
+                        const bpcIpcSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                            (item: any) => !item.lmpType || item.lmpType === 'Master LMP'
+                        );
+                        const ficSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                            (item: any) => item.courses && item.courses.includes('FIC')
+                        );
+                        const syllabusData: Record<string, any[]> = {
+                            'BPC+IPC': bpcIpcSyllabus,
+                            'FIC': ficSyllabus,
+                        };
+
+                        const apiBase = window.location.origin.includes('railway.app')
+                            ? '/api'
+                            : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                        const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ syllabusData }),
+                        });
+
+                        if (syncRes.ok) {
+                            const syncData = await syncRes.json();
+                            console.log(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
+
+                            // Now load back completed event IDs from DB LMPs into scores state
+                            // so computeNextEventsForTrainee knows which events are done
+                            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync`);
+                            if (lmpRes.ok) {
+                                const lmpData = await lmpRes.json();
+                                const lmps = lmpData.lmps as Array<{
+                                    traineeFullName: string;
+                                    lmpType: string;
+                                    completedEventIds: string[];
+                                }>;
+
+                                if (lmps && lmps.length > 0) {
+                                    // Update both scores state and traineeLMPs state with completion status
+                                    setScores(prev => {
+                                        const merged = new Map(prev);
+                                        lmps.forEach(lmp => {
+                                            // Only update scores for trainees that have at least 1 completed event.
+                                            // Skip trainees with 0 completedEventIds to preserve mock/simulated scores
+                                            // for trainees who don't yet have DB-persisted completion data.
+                                            if (!lmp.completedEventIds || lmp.completedEventIds.length === 0) return;
+
+                                            // Normalize event IDs — strip asterisks so 'BIF FTD1*' matches 'BIF FTD1'
+                                            // in the syllabus (createSyllabusItem already strips asterisks from item.id)
+                                            const normalizedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
+
+                                            // Convert completedEventIds (string[]) back to Score[] shape
+                                            // so computeNextEventsForTrainee can do: scores.get(fullName).map(s => s.event)
+                                            const scoreRecords: Score[] = normalizedIds.map((eventId: string) => ({
+                                                event: eventId,
+                                                score: 3 as 0 | 1 | 2 | 3 | 4 | 5,
+                                                date: '',
+                                                instructor: '',
+                                                notes: '',
+                                                details: [],
+                                            }));
+                                            merged.set(lmp.traineeFullName, scoreRecords);
+                                            console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
+                                        });
+                                        console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
+                                        return merged;
+                                    });
+
+                                    // Update traineeLMPs state with completion status from database
+                                    setTraineeLMPs(prev => {
+                                        const newLMPs = new Map(prev);
+                                        lmps.forEach(lmp => {
+                                            const existingLMP = newLMPs.get(lmp.traineeFullName);
+                                            if (!existingLMP) return;
+
+                                            // Normalize event IDs - strip asterisks
+                                            const normalizedCompletedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
+
+                                            // Update completedAt field for each event in the Individual LMP
+                                            const updatedLMP = existingLMP.map(item => {
+                                                const isCompleted = normalizedCompletedIds.includes(item.id || item.code);
+                                                return {
+                                                    ...item,
+                                                    completedAt: isCompleted ? (item.completedAt || new Date().toISOString()) : null,
+                                                };
+                                            });
+
+                                            newLMPs.set(lmp.traineeFullName, updatedLMP);
+                                            console.log(`[LMP Sync] Updated Individual LMP for ${lmp.traineeFullName} with ${lmp.completedEventIds.length} completed events`);
+                                        });
+                                        console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs updated with completion status`);
+                                        return newLMPs;
+                                    });
+                                }
+                            }
+                        } else {
+                            console.warn('[LMP Sync] Backend sync failed, falling back to direct DB scores...');
+                            // Fallback: directly apply DB PT-051 scores to state
+                            // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
+                            setScores(prev => {
+                                const merged = new Map(prev);
+                                Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+                                    const ts = traineeScores as Score[];
+                                    const eventIds = ts.map(s => (s.event || '').replace('*', ''));
+                                    const extra: Score[] = [];
+                                    // BIF FTD dependency: BIF FTD2 done → add BIF FTD1
+                                    if (eventIds.includes('BIF FTD2') && !eventIds.includes('BIF FTD1')) {
+                                        extra.push({ event: 'BIF FTD1', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                    }
+                                    // BIF FTD dependency: BIF1 done → add BIF FTD3
+                                    if (eventIds.includes('BIF1') && !eventIds.includes('BIF FTD3')) {
+                                        extra.push({ event: 'BIF FTD3', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                    }
+                                    merged.set(traineeName, [...ts, ...extra]);
+                                });
+                                return merged;
+                            });
+                        }
+                    } catch (syncErr) {
+                        console.warn('[LMP Sync] Sync error, falling back to direct DB scores:', syncErr);
+                        // Fallback: directly apply DB PT-051 scores to state
+                        // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 show as complete
+                        setScores(prev => {
+                            const merged = new Map(prev);
+                            Object.entries(data.scores).forEach(([traineeName, traineeScores]) => {
+                                const ts = traineeScores as Score[];
+                                const eventIds = ts.map(s => (s.event || '').replace('*', ''));
+                                const extra: Score[] = [];
+                                // BIF FTD dependency: BIF FTD2 done → add BIF FTD1
+                                if (eventIds.includes('BIF FTD2') && !eventIds.includes('BIF FTD1')) {
+                                    extra.push({ event: 'BIF FTD1', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                }
+                                // BIF FTD dependency: BIF1 done → add BIF FTD3
+                                if (eventIds.includes('BIF1') && !eventIds.includes('BIF FTD3')) {
+                                    extra.push({ event: 'BIF FTD3', score: 3, date: '', instructor: '', notes: '', details: [] });
+                                }
+                                merged.set(traineeName, [...ts, ...extra]);
+                            });
+                            return merged;
+                        });
+                    }
+                }
+
+                // Initialize Individual LMPs for all DB trainees on load
+                // This ensures FIC210/FIC211 trainees get the FIC syllabus, not BPC+IPC
+                const dbTrainees = data.trainees.filter((t: any) => t._dataSource === 'database');
+                if (dbTrainees.length > 0) {
+                    setTraineeLMPs(prev => {
+                        const newLMPs = new Map(prev);
+                        dbTrainees.forEach((trainee: any) => {
+                            // Derive lmpType from course name if it's still the default 'BPC+IPC'
+                            // FIC210/FIC211 trainees should get the FIC syllabus
+                            let lmpType = trainee.lmpType || 'BPC+IPC';
+                            if (lmpType === 'BPC+IPC' && trainee.course) {
+                                const courseUpper = (trainee.course as string).toUpperCase();
+                                if (courseUpper.startsWith('FIC')) {
+                                    lmpType = 'FIC';
+                                    console.log(`[LMP Init] Detected FIC course for ${trainee.fullName} (${trainee.course}) — overriding lmpType to 'FIC'`);
+                                }
+                            }
+
+                            // For FIC trainees: always assign correct FIC LMP (overwrite any incorrect BPC+IPC LMP)
+                            // For non-FIC trainees: only initialize if not already set
+                            const isFicTrainee = lmpType === 'FIC';
+                            const alreadySet = newLMPs.has(trainee.fullName);
+
+                            if (!alreadySet || isFicTrainee) {
+                                const masterLMP = INITIAL_SYLLABUS_DETAILS.filter(item => {
+                                    if (lmpType === 'BPC+IPC') {
+                                        return !item.lmpType || item.lmpType === 'Master LMP';
+                                    }
+                                    return item.courses && item.courses.includes(lmpType);
+                                });
+                                if (masterLMP.length > 0) {
+                                    newLMPs.set(trainee.fullName, [...masterLMP]);
+                                    console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? ' [CORRECTED]' : ''}`);
+                                }
+                            }
+                        });
+                        return newLMPs;
+                    });
+                }
+
+                // Fix lmpType in DB for FIC trainees that still have the default 'BPC+IPC'
+                // This is a one-time correction that runs on every load (idempotent - no-ops if already correct)
+                const ficDbTrainees = data.trainees.filter((t: any) =>
+                    t._dataSource === 'database' &&
+                    t.course && (t.course as string).toUpperCase().startsWith('FIC') &&
+                    (!t.lmpType || t.lmpType === 'BPC+IPC')
+                );
+                if (ficDbTrainees.length > 0) {
+                    console.log(`[LMP Fix] Fixing lmpType for ${ficDbTrainees.length} FIC trainees in DB...`);
+                    fetch('/api/trainees/fix-lmp-type', { method: 'PATCH' })
+                        .then(r => r.json())
+                        .then(result => {
+                            if (result.success) {
+                                console.log(`[LMP Fix] ✅ Updated ${result.count} FIC trainees' lmpType to 'FIC' in DB`);
+                            }
+                        })
+                        .catch(err => console.warn('[LMP Fix] Could not fix lmpType:', err));
+                }
+
+                // Register any DB trainee courses that aren't in courseColors yet
+                // Without this, DB-only mode shows zero trainees because CourseRosterView
+                // only renders courses that exist in courseColors
+                const defaultColors = [
+                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
+                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
+                    'bg-red-400/50', 'bg-cyan-400/50'
+                ];
+                const dbTraineesFromLoad = data.trainees.filter((t: any) => t._dataSource === 'database');
+                const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t: any) => t.course).filter(Boolean))] as string[];
+                if (dbCourseNamesFromLoad.length > 0) {
+                    setCourseColors(prev => {
+                        const updated = { ...prev };
+                        let colorIndex = Object.keys(updated).length;
+                        dbCourseNamesFromLoad.forEach((course: string) => {
+                            if (!updated[course]) {
+                                updated[course] = defaultColors[colorIndex % defaultColors.length];
+                                colorIndex++;
+                                console.log(`[Initial Load] Added missing courseColor for "${course}"`);
+                            }
+                        });
+                        return updated;
+                    });
+                }
                 
                 console.log('✅ State updated successfully');
             } catch (error) {
@@ -3437,7 +4624,160 @@ useEffect(() => {
             }
         };
         loadInitialData();
-    }, []);    
+    }, []);
+
+    // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
+    useEffect(() => {
+        const loadHistoricalData = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
+                try {
+                    const snapRes = await fetch(`${apiBase}/daily-snapshot`);
+                    if (snapRes.ok) {
+                        const snapData = await snapRes.json();
+                        const snapshots: any[] = snapData.snapshots || [];
+                        if (snapshots.length > 0) {
+                            console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
+                            setPublishedSchedules(prev => {
+                                const merged = { ...prev };
+                                snapshots.forEach(snap => {
+                                    const dateKey = snap.date;
+                                    const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
+                                    // Only use snapshot events if there are no existing non-seed events for this date
+                                    const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
+                                    if (existingNonSeed.length === 0 && events.length > 0) {
+                                        merged[dateKey] = events;
+                                    }
+                                });
+                                return merged;
+                            });
+
+                            // Load PT-051 assessments from the most recent snapshot
+                            const mostRecent = snapshots[0];
+                            if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
+                                const assessments = mostRecent.pt051Assessments as Record<string, Pt051Assessment>;
+                                console.log(`[Snapshot] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments from latest snapshot`);
+                                setPt051Assessments(prev => {
+                                    const merged = new Map(prev);
+                                    Object.entries(assessments).forEach(([key, assessment]) => {
+                                        if (!merged.has(key)) {
+                                            merged.set(key, assessment as Pt051Assessment);
+                                        }
+                                    });
+                                    return merged;
+                                });
+                            }
+                        }
+                    }
+                } catch (snapErr) {
+                    console.warn('[Snapshot] Could not load daily snapshots:', snapErr);
+                }
+
+                // ── SECONDARY: Legacy DataBackup historical-data (seed data, fallback) ──
+                const res = await fetch(`${apiBase}/historical-data`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+                    const schedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
+                    const eventCount = Object.values(schedules).flat().length;
+                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates (legacy/seed)`);
+                    setPublishedSchedules(prev => {
+                        // Merge historical/seed data — real snapshot data takes priority
+                        const merged = { ...schedules };
+                        Object.entries(prev).forEach(([date, events]) => {
+                            if (events.some(e => !(e as any).isHistoricalSeed)) {
+                                // Keep existing non-seed events for this date (snapshot data wins)
+                                const existing = merged[date] || [];
+                                const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
+                                merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
+                            }
+                        });
+                        return merged;
+                    });
+                }
+
+                if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
+                    const assessments = data.pt051Assessments as Record<string, Pt051Assessment>;
+                    console.log(`[Historical] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments (legacy)`);
+                    setPt051Assessments(prev => {
+                        const merged = new Map(prev);
+                        Object.entries(assessments).forEach(([key, assessment]) => {
+                            if (!merged.has(key)) {
+                                merged.set(key, assessment);
+                            }
+                        });
+                        return merged;
+                    });
+                }
+
+                if (data.seedingMetadata) {
+                    console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(', ')}`);
+                }
+            } catch (error) {
+                console.warn('[Historical] Could not load historical data:', error);
+            }
+        };
+        loadHistoricalData();
+    }, []);
+
+    // Load snapshot dates for calendar dropdown
+    useEffect(() => {
+        const loadSnapshotDates = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/daily-snapshot/dates`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const dates: string[] = (data.dates || []).map((d: any) => d.date);
+                console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
+                setSnapshotDates(dates);
+                // Mark the last 5 (already loaded on startup) as loaded
+                dates.slice(0, 5).forEach(d => loadedSnapshotDates.current.add(d));
+            } catch (err) {
+                console.warn('[Snapshot] Could not load snapshot dates:', err);
+            }
+        };
+        loadSnapshotDates();
+    }, []);
+
+    // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
+    const loadSnapshotForDate = React.useCallback(async (targetDate: string) => {
+        if (loadedSnapshotDates.current.has(targetDate)) return; // already loaded
+        loadedSnapshotDates.current.add(targetDate); // mark as attempted
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
+            if (!res.ok) return; // 404 = no snapshot for that date, that's fine
+            const data = await res.json();
+            const snap = data.snapshot;
+            if (!snap) return;
+            const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
+            if (events.length > 0) {
+                setPublishedSchedules(prev => {
+                    // Only load if no existing non-seed events for this date
+                    const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
+                    if (existingNonSeed.length > 0) return prev;
+                    return { ...prev, [targetDate]: events };
+                });
+                console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
+            }
+            // Also merge PT-051 assessments from this snapshot
+            if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
+                setPt051Assessments(prev => {
+                    const merged = new Map(prev);
+                    Object.entries(snap.pt051Assessments as Record<string, Pt051Assessment>).forEach(([key, assessment]) => {
+                        if (!merged.has(key)) merged.set(key, assessment);
+                    });
+                    return merged;
+                });
+            }
+        } catch (err) {
+            console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
+        }
+    }, []);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
@@ -3516,6 +4856,10 @@ useEffect(() => {
 
     // Published Schedules State (must be declared before buildResources)
     const [publishedSchedules, setPublishedSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    // Snapshot dates available in DB (for calendar dropdown on date selector)
+    const [snapshotDates, setSnapshotDates] = useState<string[]>([]);
+    // Track which snapshot dates have already been loaded to avoid redundant fetches
+    const loadedSnapshotDates = React.useRef<Set<string>>(new Set());
     
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
@@ -3535,6 +4879,23 @@ useEffect(() => {
     const [allowNightFlying, setAllowNightFlying] = useState(true);
     const [commenceNightFlying, setCommenceNightFlying] = useState(18.5); // 18:30
     const [ceaseNightFlying, setCeaseNightFlying] = useState(23.5); // 23:30
+    
+    // Wrapper function to update aircraft count AND save to database
+    const handleUpdateAircraftCount = async (count: number) => {
+        const previousCount = availableAircraftCount;
+        setAvailableAircraftCount(count);
+        
+        // Save to database if count changed and user is logged in
+        if (count !== previousCount && sessionUser?.userId) {
+            console.log(`[AV] ✈️ Aircraft count changed: ${previousCount} → ${count}, saving to database`);
+            await postAvailabilityEvent(
+                count,
+                'change',
+                undefined,
+                `Aircraft availability updated: ${count}`
+            );
+        }
+    };
     const [preferredDutyPeriod, setPreferredDutyPeriod] = useState(8);
     const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = useState(10);
     const [maxDispatchPerHour, setMaxDispatchPerHour] = useState(8);
@@ -3547,7 +4908,7 @@ useEffect(() => {
     const [unavailabilityNotifications, setUnavailabilityNotifications] = useState<string[]>([]);
     const [isPriorityEventCreation, setIsPriorityEventCreation] = useState(false);
     const [highestPriorityEvents, setHighestPriorityEvents] = useState<ScheduleEvent[]>([]);
-    const [programWithPrimaries, setProgramWithPrimaries] = useState(true);
+    const [instructorPriority, setInstructorPriority] = useState<InstructorPriorityConfig>(DEFAULT_INSTRUCTOR_PRIORITY_CONFIG);
     
     // Cancellation Records State
     const [cancellationRecords, setCancellationRecords] = useState<CancellationRecord[]>(() => {
@@ -3583,6 +4944,402 @@ useEffect(() => {
     // SCT & Remedial State
     const [sctFlights, setSctFlights] = useState<SctRequest[]>([]);
     const [sctFtds, setSctFtds] = useState<SctRequest[]>([]);
+
+    // Helper: get current userId from multiple sources
+    const getCurrentUserId = (): string | null => {
+        // 1. Try sessionUser (set after login)
+        if (sessionUser?.userId) return sessionUser.userId;
+        // 2. Try authUser (set after regular login)
+        if (authUser?.userId) return authUser.userId;
+        // 3. Try localStorage SSO data
+        try {
+            const ssoData = localStorage.getItem('dfp_sso_user');
+            if (ssoData) {
+                const ssoUser = JSON.parse(ssoData);
+                if (ssoUser?.userId) return ssoUser.userId;
+            }
+        } catch (e) {}
+        return null;
+    };
+
+    // Load SCT requests from database when sessionUser is available
+    useEffect(() => {
+        console.log('[SCT] useEffect triggered - sessionUser?.userId:', sessionUser?.userId);
+        if (!sessionUser?.userId) return;
+        const loadSctRequests = async () => {
+            try {
+                console.log('[SCT] Loading SCT requests from DB for userId:', sessionUser.userId);
+                const res = await fetch(`/api/sct-requests?userId=${sessionUser.userId}`);
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    console.error('[SCT] Failed to load from DB:', res.status, errData);
+                    return;
+                }
+                const data = await res.json();
+                console.log('[SCT] Loaded', data.length, 'SCT requests from DB');
+                setSctFlights(data.filter((r: any) => r.requestType === 'flight').map((r: any) => ({
+                    id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
+                    currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
+                    notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
+                    submitted: r.submitted, includeInBuild: r.includeInBuild
+                })));
+                setSctFtds(data.filter((r: any) => r.requestType === 'ftd').map((r: any) => ({
+                    id: r.id, name: r.name, event: r.event, flightType: r.flightType as 'Solo' | 'Dual',
+                    currency: r.currency, currencyExpire: r.currencyExpire, priority: r.priority as 'High' | 'Medium' | 'Low',
+                    notes: r.notes, dateRequested: r.dateRequested, requestedTime: r.requestedTime,
+                    submitted: r.submitted, includeInBuild: r.includeInBuild
+                })));
+            } catch (err) {
+                console.error('[SCT] Failed to load SCT requests from DB:', err);
+            }
+        };
+        loadSctRequests();
+    }, [sessionUser?.userId]);
+
+    // ─── Aircraft Availability Event-Based Tracking ──────────────────────────────
+    // Helper: format decimal hour (e.g. 8.5) to "0830"
+    const formatWindowTime = (decimalHour: number): string => {
+        const h = Math.floor(decimalHour);
+        const m = Math.round((decimalHour - h) * 60);
+        return `${h.toString().padStart(2, '0')}${m.toString().padStart(2, '0')}`;
+    };
+
+    // Helper: get the correct API base URL for cross-origin deployments
+    const getApiBaseUrl = (): string => {
+        const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
+        const currentOrigin = window.location.origin;
+        
+        // If we're on the Railway backend, use relative URL
+        if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) {
+            return '/api';
+        }
+        
+        // Otherwise, use absolute URL to the Railway backend
+        return `${railwayBackend}/api`;
+    };
+
+    // Helper: post an aircraft availability event to the database
+    const postAvailabilityEvent = async (
+        availableCount: number,
+        changeType: 'startup' | 'reset' | 'change' | 'window_start' | 'window_end' | 'shutdown',
+        totalAircraftOverride?: number,
+        notesOverride?: string,
+        timestampOverride?: Date
+    ): Promise<{ success: boolean; data?: any; error?: string }> => {
+        const requestId = `post_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
+        
+        const apiBase = getApiBaseUrl();
+        const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
+        const windowStart = formatWindowTime(flyingStartTime);
+        const windowEnd   = formatWindowTime(flyingEndTime);
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const ts = timestampOverride ?? new Date();
+
+        console.log(`[AV] 📋 Event details:`, {
+            requestId,
+            type: changeType,
+            date: dateStr,
+            available: `${availableCount}/${totalAircraftCount}`,
+            window: `${windowStart}-${windowEnd}`,
+            timestamp: ts.toISOString(),
+            sessionUser: sessionUser?.userId ?? 'not logged in',
+            apiBase
+        });
+
+        const requestBody = {
+            timestamp: ts.toISOString(),
+            date: dateStr,
+            availableCount,
+            totalAircraft: totalAircraftCount,
+            changeType,
+            recordedBy: sessionUser?.userId ?? null,
+            notes: notesOverride ?? null,
+            flyingWindowStart: windowStart,
+            flyingWindowEnd:   windowEnd,
+            // Send client's local time for accurate timezone comparison
+            clientLocalHour: new Date().getHours(),
+            clientLocalMinute: new Date().getMinutes(),
+        };
+        
+        console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
+        console.log(`[AV] 🌐 API URL: ${apiBase}/aircraft-availability-events`);
+
+        try {
+            console.log(`[AV] 🚀 Starting fetch...`);
+            const fetchStart = Date.now();
+            
+            const res = await fetch(`${apiBase}/aircraft-availability-events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(requestBody)
+            });
+            
+            const fetchDuration = Date.now() - fetchStart;
+            console.log(`[AV] ⏱️ Fetch completed in ${fetchDuration}ms`);
+            console.log(`[AV] 📥 Response status: ${res.status} ${res.statusText}`);
+            console.log(`[AV] 📥 Response headers:`, Object.fromEntries(res.headers.entries()));
+            
+            if (res.ok) {
+                const data = await res.json();
+                console.log(`[AV] ✅ Response data:`, data);
+                if (data.skipped) {
+                    console.log(`[AV] ⏭️ Event skipped: ${data.reason}`);
+                } else {
+                    console.log(`[AV] ✅ Event recorded successfully!`);
+                }
+                console.log(`${'='.repeat(60)}\n`);
+                return { success: true, data };
+            } else {
+                const errText = await res.text();
+                console.error(`[AV] ❌ Request failed: ${res.status} ${errText}`);
+                console.log(`${'='.repeat(60)}\n`);
+                return { success: false, error: `${res.status}: ${errText}` };
+            }
+        } catch (err) {
+            console.error(`[AV] ❌ Exception during fetch:`, err);
+            console.error(`[AV] ❌ Error type:`, (err as Error)?.constructor?.name);
+            console.error(`[AV] ❌ Error message:`, (err as Error)?.message);
+            console.error(`[AV] ❌ Error stack:`, (err as Error)?.stack);
+            console.log(`${'='.repeat(60)}\n`);
+            return { success: false, error: String(err) };
+        }
+    };
+    
+    // 🧪 Global debug helper - call from browser console
+    // Usage: window.testAvailabilityAPI() or window.debugAvailability()
+    useEffect(() => {
+        (window as any).testAvailabilityAPI = async () => {
+            console.log('\n🧪 TESTING AVAILABILITY API FROM CONSOLE');
+            console.log('🧪 Current origin:', window.location.origin);
+            console.log('🧪 API Base URL:', getApiBaseUrl());
+            const result = await postAvailabilityEvent(99, 'debug_test', undefined, 'Console test');
+            console.log('🧪 Test result:', result);
+            return result;
+        };
+        
+        (window as any).debugAvailabilityDB = async () => {
+            console.log('\n🧪 DEBUGGING AVAILABILITY DATABASE');
+            const apiBase = getApiBaseUrl();
+            const url = `${apiBase}/aircraft-availability-debug`;
+            console.log('🧪 API URL:', url);
+            console.log('🧪 Current origin:', window.location.origin);
+            try {
+                const res = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                console.log('🧪 Response status:', res.status, res.statusText);
+                console.log('🧪 Response headers:', Object.fromEntries(res.headers.entries()));
+                
+                const text = await res.text();
+                console.log('🧪 Response text (first 500 chars):', text.substring(0, 500));
+                
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    console.error('🧪 JSON parse failed - response is not JSON!');
+                    console.error('🧪 Full response text:', text);
+                    return { 
+                        error: 'Response is not JSON',
+                        status: res.status,
+                        statusText: res.statusText,
+                        responseText: text.substring(0, 2000),
+                        parseError: String(parseErr),
+                        url: url
+                    };
+                }
+                
+                console.log('🧪 Debug result:', data);
+                return data;
+            } catch (e) {
+                console.error('🧪 Debug failed:', e);
+                return { error: String(e), url };
+            }
+        };
+        
+        (window as any).forceInsertAvailability = async (count: number = 15) => {
+            console.log('\n🧪 FORCE INSERTING AVAILABILITY RECORD');
+            const apiBase = getApiBaseUrl();
+            const url = `${apiBase}/aircraft-availability-debug`;
+            console.log('🧪 API URL:', url);
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ availableCount: count })
+                });
+                const text = await res.text();
+                console.log('🧪 Response text:', text.substring(0, 500));
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    return { error: 'Not JSON', responseText: text.substring(0, 2000), url };
+                }
+                console.log('🧪 Force insert result:', data);
+                return data;
+            } catch (e) {
+                console.error('🧪 Force insert failed:', e);
+                return { error: String(e), url };
+            }
+        };
+        
+        console.log('🔧 Debug helpers available:');
+        console.log('  - window.testAvailabilityAPI() - Test posting an event');
+        console.log('  - window.debugAvailabilityDB() - Check database status');
+        console.log('  - window.forceInsertAvailability(count) - Force insert a test record');
+    }, [sessionUser?.userId, availableAircraftCount, flyingStartTime, flyingEndTime]);
+
+    // Track whether we've loaded the persisted availability
+    const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = useState(false);
+    // Ref to hold the loaded availability value immediately (avoids async state issue)
+    const loadedAvailabilityRef = useRef<number | null>(null);
+
+    // Fetch current availability from database on startup
+    // This ensures the availability persists across app restarts/hard refreshes
+    useEffect(() => {
+        if (!sessionUser?.userId) return;
+
+        const fetchCurrentAvailability = async () => {
+            try {
+                const apiBase = getApiBaseUrl();
+                const res = await fetch(`${apiBase}/aircraft-availability-current`, {
+                    credentials: 'include'
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.availableCount !== undefined) {
+                        // Always use the persisted value if it exists (even from previous days)
+                        // The server returns the most recent event regardless of date
+                        if (!data.isDefault) {
+                            console.log(`[AV] 🔄 Restored availability from database: ${data.availableCount} aircraft (from ${data.date || 'unknown date'})`);
+                            setAvailableAircraftCount(data.availableCount);
+                            // Store in ref for immediate use in startup
+                            loadedAvailabilityRef.current = data.availableCount;
+                        } else {
+                            console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
+                            loadedAvailabilityRef.current = 15; // Explicit default
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[AV] ❌ Failed to fetch current availability:', err);
+            } finally {
+                // Mark that we've attempted to load persisted availability
+                setHasLoadedPersistedAvailability(true);
+            }
+        };
+
+        fetchCurrentAvailability();
+    }, [sessionUser?.userId]);
+
+    // Startup: fire once when user logs in AND after persisted availability is loaded
+    // - Posts a "startup" event with current availability
+    // - Runs recovery: checks if today's summary is missing and triggers recalculation
+    useEffect(() => {
+        if (!sessionUser?.userId || !hasLoadedPersistedAvailability) return;
+
+        const runStartup = async () => {
+            console.log('[AV] 🚀 Startup: recording initial availability state');
+
+            // 1. Fire startup event (1s delay to allow state to settle)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Use the ref value if available (avoids async state issue), otherwise fall back to state
+            const availabilityToRecord = loadedAvailabilityRef.current ?? availableAircraftCount;
+            console.log(`[AV] Startup: using availability ${availabilityToRecord} (ref: ${loadedAvailabilityRef.current}, state: ${availableAircraftCount})`);
+
+            await postAvailabilityEvent(
+                availabilityToRecord,
+                'startup',
+                undefined,
+                `App startup - initial availability: ${availabilityToRecord}`
+            );
+
+            // 2. Recovery: check if today's summary exists, rebuild from events if missing
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const windowStart = formatWindowTime(flyingStartTime);
+            const windowEnd   = formatWindowTime(flyingEndTime);
+
+            console.log(`[AV] Running recovery check for ${todayStr}`);
+            try {
+                const apiBase = getApiBaseUrl();
+                const recovRes = await fetch(`${apiBase}/aircraft-availability-recalculate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        date: todayStr,
+                        flyingWindowStart: windowStart,
+                        flyingWindowEnd:   windowEnd,
+                        clientLocalHour: new Date().getHours(),
+                        clientLocalMinute: new Date().getMinutes(),
+                    })
+                });
+                if (recovRes.ok) {
+                    const recovData = await recovRes.json();
+                    if (recovData.skipped) {
+                        console.log(`[AV] Recovery: summary for ${todayStr} is recent, no rebuild needed`);
+                    } else {
+                        console.log(`[AV] Recovery: rebuilt daily summary for ${todayStr}`, recovData.record);
+                    }
+                }
+            } catch (err) {
+                console.error('[AV] Recovery check failed:', err);
+            }
+        };
+
+        runStartup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionUser?.userId]);
+
+    // Flying-window boundary events: fire when time crosses window start/end
+    useEffect(() => {
+        if (!sessionUser?.userId) return;
+
+        const checkWindowBoundaries = () => {
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const windowStartMin = Math.floor(flyingStartTime) * 60 + Math.round((flyingStartTime % 1) * 60);
+            const windowEndMin   = Math.floor(flyingEndTime) * 60 + Math.round((flyingEndTime % 1) * 60);
+
+            // Fire window_start event at exact flying window start (within 1-min window)
+            if (currentMinutes >= windowStartMin && currentMinutes < windowStartMin + 1) {
+                console.log(`[AV] ⏰ Flying window START reached (${formatWindowTime(flyingStartTime)})`);
+                postAvailabilityEvent(
+                    availableAircraftCount,
+                    'window_start',
+                    undefined,
+                    `Flying window start: ${formatWindowTime(flyingStartTime)}`
+                );
+            }
+            // Fire window_end event at exact flying window end (within 1-min window)
+            if (currentMinutes >= windowEndMin && currentMinutes < windowEndMin + 1) {
+                console.log(`[AV] ⏰ Flying window END reached (${formatWindowTime(flyingEndTime)})`);
+                postAvailabilityEvent(
+                    availableAircraftCount,
+                    'window_end',
+                    undefined,
+                    `Flying window end: ${formatWindowTime(flyingEndTime)}`
+                );
+            }
+        };
+
+        // Check every minute
+        const interval = setInterval(checkWindowBoundaries, 60 * 1000);
+        return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionUser?.userId, flyingStartTime, flyingEndTime, availableAircraftCount]);
+
     const [showSctRequest, setShowSctRequest] = useState(false);
     const [instructorForSct, setInstructorForSct] = useState<Instructor | null>(null);
     const [traineeForSct, setTraineeForSct] = useState<Trainee | null>(null);
@@ -3607,6 +5364,7 @@ useEffect(() => {
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
+    const [profileInitialTab, setProfileInitialTab] = useState<'currency' | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showAddGroundEvent, setShowAddGroundEvent] = useState(false);
     const [cptConflict, setCptConflict] = useState<Conflict | null>(null);
@@ -3623,6 +5381,7 @@ useEffect(() => {
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
     const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
+    const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
     const [eventForAuth, setEventForAuth] = useState<ScheduleEvent | null>(null);
     const [showPostFlightView, setShowPostFlightView] = useState(false);
@@ -3662,6 +5421,145 @@ useEffect(() => {
         { name: 'Vampire', code: 'VAMP', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
         { name: 'Voodoo', code: 'VODO', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' },
         { name: 'Vulcan', code: 'VULC', unit: '2FTS', location: 'Pearce', locationCode: 'PEA' }
+    ]);
+
+
+    // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const saved = await loadSettingsFromDB();
+                if (!saved) {
+                    setSettingsLoaded(true);
+                    return;
+                }
+
+                // Apply all saved settings to state
+                if (saved.locations?.length) setLocations(saved.locations);
+                if (saved.units?.length) setUnits(saved.units);
+                if (saved.unitLocations) setUnitLocations(saved.unitLocations);
+                if (saved.eventLimits) setEventLimits(saved.eventLimits);
+                if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
+                if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
+                if (saved.maxDispatchPerHour != null) setMaxDispatchPerHour(saved.maxDispatchPerHour);
+                if (saved.flightTurnaround != null) setFlightTurnaround(saved.flightTurnaround);
+                if (saved.ftdTurnaround != null) setFtdTurnaround(saved.ftdTurnaround);
+                if (saved.cptTurnaround != null) setCptTurnaround(saved.cptTurnaround);
+                if (saved.flyingStartTime != null) setFlyingStartTime(saved.flyingStartTime);
+                if (saved.flyingEndTime != null) setFlyingEndTime(saved.flyingEndTime);
+                if (saved.ftdStartTime != null) setFtdStartTime(saved.ftdStartTime);
+                if (saved.ftdEndTime != null) setFtdEndTime(saved.ftdEndTime);
+                if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
+                if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
+                if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
+                if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
+                if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
+                if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
+                if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
+                if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
+                if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
+                if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
+                if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+                if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
+                if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
+                // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
+                {
+                    const dbReqs = saved.currencyRequirements ?? [];
+                    const dbMasters = saved.masterCurrencies ?? [];
+                    const merged = mergeWithInitialCurrencies(dbReqs, dbMasters);
+                    setMasterCurrencies(merged.masters);
+                    setCurrencyRequirements(merged.requirements);
+                }
+                if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
+                if (saved.organisationSettings) {
+                    console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
+                    setOrganisationSettings(saved.organisationSettings);
+                } else {
+                    console.warn('[App] ⚠️ No organisationSettings found in DB data — saved.organisationSettings is:', saved.organisationSettings);
+                }
+
+                console.log('[Settings] ✅ All settings restored from DB');
+            } catch (error) {
+                console.error('[Settings] ❌ Failed to load settings from DB:', error);
+            } finally {
+                console.log('[App] 🏁 Setting settingsLoaded = true');
+                setSettingsLoaded(true);
+            }
+        };
+        loadSettings();
+    }, []);
+
+    // ─── ORGANISATION SETTINGS STATE ──────────────────────────────────────────
+    const [organisationSettings, setOrganisationSettings] = useState<AppSettingsData['organisationSettings']>({
+        staffSharingEnabled: false,
+        staffSharingUnits: [],
+        fleetSharingEnabled: false,
+        allocationMode: 'combined',
+        selectedUnits: [],
+        desiredAllocations: {},
+        remainderUnitIndex: -1,
+    });
+
+    // ─── SETTINGS: Auto-save when anything changes ────────────────────────────
+    useEffect(() => {
+        if (!settingsLoaded) {
+            console.log('[App] ⏭️ Auto-save skipped — settingsLoaded is false');
+            return;
+        }
+
+        console.log('[App] 💾 Auto-save triggered — organisationSettings:', JSON.stringify(organisationSettings));
+
+        const snapshot = buildSettingsSnapshot({
+            locations,
+            units,
+            unitLocations,
+            eventLimits,
+            preferredDutyPeriod,
+            maxCrewDutyPeriod,
+            maxDispatchPerHour,
+            flightTurnaround,
+            ftdTurnaround,
+            cptTurnaround,
+            flyingStartTime,
+            flyingEndTime,
+            ftdStartTime,
+            ftdEndTime,
+            allowNightFlying,
+            commenceNightFlying,
+            ceaseNightFlying,
+            availableAircraftCount,
+            availableFtdCount,
+            availableCptCount,
+            timezoneOffset,
+            showDepartureDensityOverlay,
+            sctEvents,
+            formationCallsigns,
+            courseColors,
+            phraseBank,
+            cancellationCodes,
+            masterCurrencies,
+            currencyRequirements,
+            syllabusDetails,
+            organisationSettings,
+        });
+
+        saveSettingsToDB(snapshot, sessionUser?.userId);
+    }, [
+        settingsLoaded,
+        locations, units, unitLocations,
+        eventLimits,
+        preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
+        flightTurnaround, ftdTurnaround, cptTurnaround,
+        flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
+        allowNightFlying, commenceNightFlying, ceaseNightFlying,
+        availableAircraftCount, availableFtdCount, availableCptCount,
+        timezoneOffset, showDepartureDensityOverlay,
+        sctEvents, formationCallsigns, courseColors,
+        phraseBank, cancellationCodes,
+        masterCurrencies, currencyRequirements,
+        syllabusDetails, organisationSettings,
     ]);
 
     // Baseline schedule state
@@ -4069,7 +5967,7 @@ useEffect(() => {
             }
         });
         return data;
-    }, [instructorsData, school]);
+    }, [allInstructorsData, school]);
 
     const seatConfigs = useMemo(() => {
         const data = new Map<string, string>();
@@ -4080,14 +5978,14 @@ useEffect(() => {
             }
         });
         
-        traineesData.forEach(trainee => {
+        allTraineesData.forEach(trainee => {
             if (trainee.name && trainee.seatConfig) {
                 data.set(trainee.name, trainee.seatConfig);
             }
         });
         
         return data;
-    }, [instructorsData, traineesData]);
+    }, [allInstructorsData, allTraineesData]);
 
     // ============================================================================
     // CONFLICT DETECTION SYSTEM
@@ -4234,6 +6132,15 @@ useEffect(() => {
         }
 
         for (const event of validEvents) {
+            // Ground events (mass briefs) do not create personnel conflicts with flight/ftd/cpt events.
+            // Trainees can attend a ground brief AND fly on the same day — these are not double-bookings.
+            const targetIsGround = targetEvent.type === 'ground';
+            const eventIsGround = event.type === 'ground';
+            if (targetIsGround !== eventIsGround) {
+                // One is ground, other is flight/ftd/cpt — skip personnel conflict for this pair
+                continue;
+            }
+
             const eventPersonnel = getPersonnel(event);
             const commonPersonnel = targetPersonnel.filter(p => eventPersonnel.includes(p));
 
@@ -4465,11 +6372,7 @@ useEffect(() => {
             const otherEvents = eventsForDate.filter(e => e.id !== event.id);
             const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
             if (result.hasConflict) {
-                console.log(`🔴 ❌ CONFLICT FOUND: ${event.flightNumber} (${event.id}) - ${result.reason || result.conflictType}`);
-                console.log(`🔴 Event instructor:`, event.instructor);
-                console.log(`🔴 Event student:`, event.student);
-                console.log(`🔴 Event pilot:`, event.pilot);
-                console.log(`🔴 Event personnel:`, getPersonnel(event));
+                // UI conflict logger silenced - focused build-algorithm diagnostic active
                 conflictingEventIds.add(event.id);
             }
         }
@@ -4584,7 +6487,7 @@ useEffect(() => {
      */
     const unavailabilityConflicts = useMemo(() => {
         const newConflicts = new Map<string, string[]>();
-        const allPersonnel: (Instructor | Trainee)[] = [...instructorsData, ...traineesData];
+        const allPersonnel: (Instructor | Trainee)[] = [...allInstructorsData, ...allTraineesData];
         const personMap = new Map<string, Instructor | Trainee>();
         
         allPersonnel.forEach(p => {
@@ -4652,7 +6555,7 @@ useEffect(() => {
         }
         
         return newConflicts;
-    }, [eventsForDate, instructorsData, traineesData, syllabusDetails]);
+    }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
 
 
 
@@ -4696,6 +6599,11 @@ useEffect(() => {
         handleNavigation('TraineeLMP');
     };
     
+    const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
+        setSelectedPersonForLogbook(person);
+        handleNavigation('Logbook');
+    }, []);
+
     const handleOpenAddRemedialPackage = (trainee: Trainee) => {
         setSelectedTraineeForRemedial(trainee);
         setShowAddRemedialPackage(true);
@@ -4734,6 +6642,50 @@ useEffect(() => {
         
         setSuccessMessage('New Trainee Added!');
     }, [syllabusDetails]);
+
+    // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
+    const handleUpdateTrainee = useCallback(async (data: Trainee) => {
+        // Update in-memory state immediately
+        setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
+
+        // If this is a DB trainee, persist changes to the database
+        const dbId = (data as any).id;
+        if (dbId && (data as any)._dataSource === 'database') {
+            try {
+                const response = await fetch(`/api/trainees/${dbId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        name: data.name,
+                        fullName: data.fullName,
+                        rank: data.rank,
+                        course: data.course,
+                        lmpType: data.lmpType,
+                        unit: data.unit,
+                        flight: data.flight,
+                        location: data.location,
+                        service: data.service,
+                        seatConfig: data.seatConfig,
+                        isPaused: data.isPaused,
+                        traineeCallsign: data.traineeCallsign,
+                        primaryInstructor: data.primaryInstructor,
+                        secondaryInstructor: data.secondaryInstructor,
+                        phoneNumber: data.phoneNumber,
+                        email: data.email,
+                    })
+                });
+                if (response.ok) {
+                    console.log(`✅ DB trainee updated: ${data.name}`);
+                } else {
+                    const err = await response.text();
+                    console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
+                }
+            } catch (err) {
+                console.error(`❌ Error updating DB trainee ${data.name}:`, err);
+            }
+        }
+    }, []);
 
     const handleSaveRemedialPackage = (
         trainee: Trainee,
@@ -4843,24 +6795,11 @@ useEffect(() => {
         setIsLocalityChangeVisible(true);
         setTimeout(() => setIsLocalityChangeVisible(false), 2000);
 
-        const data = newSchool === 'ESL' ? ESL_DATA : PEA_DATA;
-        setInstructorsData(data.instructors);
-        setTraineesData(data.trainees);
-        setEvents(data.events);
-        setCourses(data.courses);
-        setScores(data.scores);
-        setPt051Assessments(data.pt051Assessments);
-        setCourseColors(data.courseColors);
-        setArchivedCourses(data.archivedCourses);
-        setCoursePriorities(data.coursePriorities);
-        setCoursePercentages(data.coursePercentages);
-        setTraineeLMPs(data.traineeLMPs); // Load the correct LMPs for the new school
+        // Don't replace instructors/trainees data - keep the database data
+        // The filtering is done in components based on the school state
+        // Only reset UI state that is specific to each school
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
-        
-        // Reset baseline on school change to avoid stale comparisons
-        const todayStr = getLocalDateString();
-        setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(data.events.filter(e => e.date === todayStr))) });
     };
     
     useEffect(() => {
@@ -4967,6 +6906,19 @@ useEffect(() => {
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
+        // On-demand load: if this date has a snapshot not yet loaded, fetch it
+        if (snapshotDates.includes(newDateStr)) {
+            loadSnapshotForDate(newDateStr);
+        }
+    };
+
+    // Navigate directly to a specific date (used by calendar dropdown on date selector)
+    const handleDateSelect = (selectedDate: string) => {
+        setDate(selectedDate);
+        // On-demand load: fetch snapshot for this date if available and not yet loaded
+        if (snapshotDates.includes(selectedDate)) {
+            loadSnapshotForDate(selectedDate);
+        }
     };
 
     const onSavePT051Assessment = (assessment: Pt051Assessment) => {
@@ -5202,9 +7154,18 @@ useEffect(() => {
         });
     };
 
-    const handleSaveEvents = (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
+    const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
         console.log('🔵 ========== handleSaveEvents START ==========');
         console.log('🔵 Called from:', new Error().stack?.split('\\n')[2]?.trim());
+        
+        // System freeze check - prevent modifications when system is frozen
+        // Read directly from localStorage as most reliable freeze check
+        const _freezeData = localStorage.getItem('systemFreezeState');
+        const _isFrozen = _freezeData ? JSON.parse(_freezeData).isFrozen === true : false;
+        if (_isFrozen) {
+            showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+            return;
+        }
         console.log('🔵 Events to save:', eventsToSave.length);
         console.log('🔵 First event details:', {
             id: eventsToSave[0]?.id,
@@ -5424,7 +7385,7 @@ useEffect(() => {
                 } else if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
                     // Handle group events - add currency to all trainees in the group
                     event.groupTraineeIds.forEach(traineeId => {
-                        const trainee = traineesData.find(t => t.idNumber === traineeId);
+                        const trainee = allTraineesData.find(t => t.idNumber === traineeId);
                         if (trainee) {
                             addCurrencyEventToTraineeLMP(trainee.fullName, event.flightNumber);
                         }
@@ -5525,7 +7486,16 @@ useEffect(() => {
         console.log('🔵 ========== handleSaveEvents END ==========');
     };
 
-    const handleCancelEvent = (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+    const handleCancelEvent = async (eventId: string, cancellationCode: string, manualCodeEntry?: string) => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         if (!selectedEvent) {
             return;
         }
@@ -5604,7 +7574,16 @@ useEffect(() => {
         
     };
     
-    const handleDeleteEvent = () => {
+    const handleDeleteEvent = async () => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         if (!selectedEvent) return;
         const eventDate = selectedEvent.date;
 
@@ -5648,8 +7627,17 @@ useEffect(() => {
     };
     
     // Visual Adjust handlers
-    const handleVisualAdjustStart = (event: ScheduleEvent) => {
+    const handleVisualAdjustStart = async (event: ScheduleEvent) => {
         console.log('Visual Adjust Start - Event:', event);
+        // System freeze check - prevent dragging when frozen
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. Dragging events is not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         setIsVisualAdjustMode(true);
         setVisualAdjustEvent(event);
         console.log('Visual Adjust Mode set to true');
@@ -5671,15 +7659,15 @@ useEffect(() => {
         let added = 0;
         const newPriorityEvents = [...highestPriorityEvents];
         
-        // 1. Auto-add HIGH priority SCT requests
+        // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
         console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
         const highPrioritySctFlights = sctFlights.filter(req => 
-            req.priority === 'High' && req.name.trim() !== '' && req.currency.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.currency.trim() !== ''
         );
         const highPrioritySctFtds = sctFtds.filter(req => 
-            req.priority === 'High' && req.name.trim() !== '' && req.currency.trim() !== ''
+            (req.priority === 'High' || req.includeInBuild) && req.name.trim() !== '' && req.currency.trim() !== ''
         );
-        console.log('🔍 Found HIGH priority SCT flights:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
+        console.log('🔍 Found SCT flights to include:', highPrioritySctFlights.length, '| FTDs:', highPrioritySctFtds.length);
         
         // Process SCT Flights
         highPrioritySctFlights.forEach(sctReq => {
@@ -5718,7 +7706,7 @@ useEffect(() => {
                 console.log('🔄 Updated HIGH priority SCT flight:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
-                const trainee = traineesData.find(t => t.fullName === sctReq.name);
+                const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = syllabusItem?.duration || 1.5;
                 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
@@ -5739,7 +7727,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-red-500/50', // Highlight as high priority SCT
+                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
                     locationType: 'Local',
@@ -5795,7 +7783,7 @@ useEffect(() => {
                 console.log('🔄 Updated HIGH priority SCT FTD:', sctReq.event, 'for', sctReq.name, 'at', sctReq.requestedTime || '08:00');
             } else if (!existingInNextDay) {
                 const syllabusItem = syllabusDetails.find(s => s.code === sctReq.event);
-                const trainee = traineesData.find(t => t.fullName === sctReq.name);
+                const trainee = allTraineesData.find(t => t.fullName === sctReq.name);
                 const duration = syllabusItem?.duration || 1.5;
                 
                 // Convert requested time to decimal hours (e.g., "15:00" -> 15.0)
@@ -5816,7 +7804,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-red-500/50', // Highlight as high priority SCT
+                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
                     locationType: 'Local',
@@ -5853,7 +7841,7 @@ useEffect(() => {
                     console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
                 } else if (!existingEvent) {
                     // For remedial events, look in the trainee's Individual LMP first, then fallback to master syllabus
-                    const trainee = traineesData.find(t => t.idNumber === remedialReq.traineeId);
+                    const trainee = allTraineesData.find(t => t.idNumber === remedialReq.traineeId);
                     let syllabusItem = null;
                     
                     if (trainee) {
@@ -6137,6 +8125,22 @@ useEffect(() => {
         );
     };
 
+    const handleDeletePriorityEvent = async (eventId: string) => {
+        // System freeze check
+        const _freezeRaw2 = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw2) {
+            const _freeze2 = JSON.parse(_freezeRaw2);
+            if (_freeze2.isFrozen) {
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
+        setHighestPriorityEvents(prevEvents => 
+            prevEvents.filter(event => event.id !== eventId)
+        );
+        console.log('🗑️ Deleted priority event:', eventId);
+    };
+
     const handleSelectInstructorFromSchedule = (instructorName: string) => {
         const instructor = instructorsData.find(i => i.name === instructorName);
         if (instructor) {
@@ -6146,7 +8150,7 @@ useEffect(() => {
     };
 
     const handleSelectTraineeFromSchedule = (traineeFullName: string) => {
-        const trainee = traineesData.find(t => t.fullName === traineeFullName);
+        const trainee = allTraineesData.find(t => t.fullName === traineeFullName);
         if (trainee) {
             setSelectedPersonForProfile(trainee);
             handleNavigation('CourseRoster');
@@ -6219,7 +8223,7 @@ useEffect(() => {
         console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
         
         // Now proceed with normal build process
-        const activeTrainees = traineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
@@ -6239,7 +8243,16 @@ useEffect(() => {
         }, 3000);
     };
 
-    const handleBuildDfp = () => {
+    const handleBuildDfp = async () => {
+        // System freeze check - prevent NEO Build when frozen
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. NEO Build is not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         console.log('🚀 [NEO-Build] handleBuildDfp called');
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         
@@ -6281,12 +8294,16 @@ useEffect(() => {
         
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
         
-        console.log('🔍 [NEO BUILD CONFIG DEBUG] Creating config with instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role })));
-        console.log('🔍 [NEO BUILD CONFIG DEBUG] Total instructors in config:', instructorsData.length);
+        const instructorsInBuild = instructorsData;
+        const traineesInBuild = traineesData;
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] Data source settings:', dataSourceSettings);
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] instructorsData (filtered):', instructorsInBuild.length, '| mockData count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource !== 'database').length, '| DB count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource === 'database').length);
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):', traineesInBuild.length, '| mockData count:', traineesInBuild.filter((t: any) => (t as any)._dataSource !== 'database').length, '| DB count:', traineesInBuild.filter((t: any) => (t as any)._dataSource === 'database').length);
+        console.log('🔍 [NEO BUILD CONFIG DEBUG] Instructors sample:', instructorsInBuild.slice(0, 5).map((i: any) => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, src: (i as any)._dataSource })));
         
         const config: DfpConfig = {
-            instructors: instructorsData,
-            trainees: traineesData,
+            instructors: instructorsInBuild,
+            trainees: traineesInBuild,
             syllabus: syllabusDetails,
             scores,
             coursePriorities,
@@ -6305,7 +8322,7 @@ useEffect(() => {
             ceaseNightFlying,
             buildDate: buildDfpDate,
             highestPriorityEvents: eventsToUse,
-            programWithPrimaries,
+            instructorPriority,
             traineeLMPs,
             flightTurnaround,
             ftdTurnaround,
@@ -6318,6 +8335,8 @@ useEffect(() => {
             remedialRequests: remedialRequests,
             sctEvents: sctEvents,
             getEventDayNightClassification: getEventDayNightClassification,
+            staffSharingEnabled: organisationSettings.staffSharingEnabled,
+            staffSharingUnits: organisationSettings.staffSharingUnits,
         };
 
         setTimeout(() => {
@@ -6345,7 +8364,7 @@ useEffect(() => {
                     coursePriorities,
                     availableAircraftCount,
                     buildDfpDate,
-                    traineesData,
+                    allTraineesData,
                     traineeLMPs,
                     scores,
                     syllabusDetails,
@@ -6368,7 +8387,7 @@ useEffect(() => {
                 console.log('Build analysis:', analysis);
 
                 const notifications: string[] = [];
-                const allPersonnel = [...instructorsData, ...traineesData];
+                const allPersonnel = [...allInstructorsData, ...allTraineesData];
                 generated.forEach(event => {
                     getPersonnel(event).forEach(personName => {
                         const person = allPersonnel.find(p => p.name === personName || ('fullName' in p && p.fullName === personName));
@@ -6404,8 +8423,17 @@ useEffect(() => {
         }, 500);
     };
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         if(nextDayBuildEvents.length > 0) {
+        // System freeze check - prevent publishing when frozen
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. Publishing from NEO Build is not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
             setShowPublishConfirm(true);
         } else {
             showDarkAlert("No DFP has been built to publish. Please run 'Build DFP' first.", 'Publish Error', 'warning');
@@ -6424,9 +8452,9 @@ useEffect(() => {
         }));
         
         // NEW APPROACH: Sync PT-051s with Active DFP after publish
-        console.log('📋 Triggering PT-051 sync after publish...');
+        console.log('\u{1F4CB} Triggering PT-051 sync after publish...');
         setTimeout(() => {
-            console.log('⏰ Executing delayed PT-051 sync after publish...');
+            console.log('\u{23F0} Executing delayed PT-051 sync after publish...');
             setPublishedSchedules(currentSchedules => {
                 setPt051Assessments(currentAssessments => {
                     syncPt051WithActiveDfp(currentSchedules, currentAssessments);
@@ -6450,6 +8478,122 @@ useEffect(() => {
                `Published schedule for ${buildDfpDate}`,
                `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, FTD: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
            );
+
+        // ── SAVE DAILY SNAPSHOT TO DATABASE ──────────────────────────────────
+        // Guard: skip if any event is seed data
+        const hasSeedData = newEventsForDate.some(e => (e as any).isHistoricalSeed === true);
+        if (!hasSeedData && newEventsForDate.length > 0) {
+            // Build snapshot data from current state
+            const staffEventsForDate = newEventsForDate.filter(e =>
+                e.instructor && !e.student && e.type !== 'logbook'
+            );
+            const traineeEventsForDate = newEventsForDate.filter(e =>
+                !!(e.student || (e as any).traineeId)
+            );
+
+            // Build per-instructor logbook map from all published schedules + new date
+            const staffLogbookMap: Record<string, any[]> = {};
+            const allPublishedForLogbook = {
+                ...publishedSchedules,
+                [buildDfpDate]: newEventsForDate
+            };
+            Object.entries(allPublishedForLogbook).forEach(([dateKey, events]) => {
+                (events as ScheduleEvent[]).forEach(e => {
+                    if ((e as any).isLogbook === true || e.type === 'logbook') {
+                        const instName = e.instructor || '';
+                        if (!staffLogbookMap[instName]) staffLogbookMap[instName] = [];
+                        staffLogbookMap[instName].push({
+                            date: dateKey,
+                            eventCode: (e as any).eventCode || e.id,
+                            flightNumber: (e as any).flightNumber,
+                            duration: e.duration,
+                            student: e.student,
+                            flightType: (e as any).flightType || 'Dual',
+                            locationType: (e as any).locationType || 'Local',
+                            origin: (e as any).origin || '',
+                            destination: (e as any).destination || '',
+                        });
+                    }
+                });
+            });
+
+            // Build per-staff currency map
+            const staffCurrencyMap: Record<string, any> = {};
+            instructorsData.forEach((inst: any) => {
+                if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+                    staffCurrencyMap[inst.name] = inst.currencyStatus;
+                }
+            });
+
+            // Build trainee profiles snapshot
+            const traineeProfilesSnapshot = traineesData.map((t: any) => ({
+                idNumber: t.idNumber,
+                fullName: t.fullName,
+                name: t.name,
+                rank: t.rank,
+                course: t.course,
+                lmpType: t.lmpType,
+                service: t.service,
+                unit: t.unit,
+                primaryInstructor: t.primaryInstructor,
+                currencyStatus: t.currencyStatus || [],
+                isPaused: t.isPaused || false,
+            }));
+
+            // Build per-trainee LMP completedEventIds map
+            const lmpCompletedIdsMap: Record<string, string[]> = {};
+            traineesData.forEach((t: any) => {
+                const individualLMP = traineeLMPs.get(t.fullName);
+                if (individualLMP) {
+                    const completedIds = (individualLMP as any[])
+                        .filter((item: any) => item.completedAt || item.isComplete)
+                        .map((item: any) => (item.id || item.code || '').replace('*', ''));
+                    if (completedIds.length > 0) {
+                        lmpCompletedIdsMap[t.fullName] = completedIds;
+                    }
+                }
+            });
+
+            // Convert pt051Assessments Map to plain object for serialization
+            const pt051AssessmentsObj: Record<string, any> = {};
+            pt051Assessments.forEach((assessment: any, key: string) => {
+                pt051AssessmentsObj[key] = assessment;
+            });
+
+            const snapshotPayload = {
+                date: buildDfpDate,
+                scheduleEvents: newEventsForDate,
+                staffEvents: staffEventsForDate,
+                traineeEvents: traineeEventsForDate,
+                pt051Assessments: pt051AssessmentsObj,
+                traineeProfiles: traineeProfilesSnapshot,
+                lmpCompletedIds: lmpCompletedIdsMap,
+                staffCurrency: staffCurrencyMap,
+                staffLogbook: staffLogbookMap,
+                savedBy: authUser?.userId || (authUser as any)?.username || null,
+            };
+
+            const apiBase = getApiBaseUrl();
+            fetch(`${apiBase}/daily-snapshot/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(snapshotPayload),
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                } else {
+                    console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
+                }
+            })
+            .catch(err => {
+                console.warn(`\u26A0\uFE0F [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
+            });
+        } else if (hasSeedData) {
+            console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         setDate(buildDfpDate);
         setNextDayBuildEvents([]);
@@ -6585,7 +8729,16 @@ updates.forEach(update => {
         return options;
     }, [syllabusDetails]);
     
-    const handleAuthorise = (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
+    const handleAuthorise = async (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen && !_freeze.allowedActions?.flightAuthorisation) {
+                showDarkAlert('System is currently frozen. Flight Authorisation entries are not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         const now = new Date().toISOString();
         const authoSigner = selectedPersonName; // Use the selected person's name, not current user
         
@@ -6650,6 +8803,46 @@ updates.forEach(update => {
         });
     }, []);
 
+    // Callbacks for StaffView/InstructorListView to prevent render loop
+    const handleCloseStaffView = useCallback(() => {
+        handleNavigation('Program Schedule');
+    }, []);
+
+    const handleProfileOpened = useCallback(() => {
+        setSelectedPersonForProfile(null);
+    }, []);
+
+    const handleProfileTabConsumed = useCallback(() => {
+        setProfileInitialTab(null);
+    }, []);
+
+    const handleRequestSct = useCallback((instructor: Instructor) => {
+        setInstructorForSct(instructor);
+        setShowSctRequest(true);
+    }, []);
+
+    const handleArchiveInstructor = useCallback((id: number) => {
+        setInstructorsData(prev => {
+            const instructorToArchive = prev.find(i => i.idNumber === id);
+            if (instructorToArchive) {
+                setArchivedInstructorsData(archived => [...archived, instructorToArchive]);
+                return prev.filter(i => i.idNumber !== id);
+            }
+            return prev;
+        });
+    }, []);
+
+    const handleRestoreInstructor = useCallback((id: number) => {
+        setArchivedInstructorsData(prev => {
+            const instructorToRestore = prev.find(i => i.idNumber === id);
+            if (instructorToRestore) {
+                setInstructorsData(instructors => [...instructors, instructorToRestore]);
+                return prev.filter(i => i.idNumber !== id);
+            }
+            return prev;
+        });
+    }, []);
+
     const handleReplaceInstructors = useCallback((newInstructors: Instructor[]) => {
         setInstructorsData(newInstructors);
         setSuccessMessage('Instructors successfully replaced!');
@@ -6669,6 +8862,73 @@ updates.forEach(update => {
     const handleReplaceTrainees = useCallback((newTrainees: Trainee[]) => {
         setTraineesData(newTrainees);
         setSuccessMessage('Trainees successfully replaced!');
+    }, []);
+    
+    // Refresh database data (personnel and trainees) - called when database is modified
+    const handleDatabaseDataChanged = useCallback(async () => {
+        console.log('🔄 Refreshing database data after database modification...');
+        
+        try {
+            // Fetch fresh personnel data
+            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
+            if (personnelRes.ok) {
+                const personnelData = await personnelRes.json();
+                const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
+                    ...p,
+                    // Extract qualifications.currencyStatus to top-level so Post Flight
+                    // and other in-memory reads can find it at person.currencyStatus
+                    currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+                    _dataSource: 'database' as const,
+                }));
+                
+                // Update instructors - remove old database entries and add fresh ones
+                setInstructorsData(prev => {
+                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
+                    return [...nonDbInstructors, ...dbPersonnel];
+                });
+                console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
+            }
+            
+            // Fetch fresh trainees data
+            const traineesRes = await fetch('/api/trainees', { credentials: 'include' });
+            if (traineesRes.ok) {
+                const traineesData = await traineesRes.json();
+                const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
+                    ...t,
+                    _dataSource: 'database' as const,
+                }));
+                
+                // Update trainees - replace old database entries with fresh ones, preserve mock
+                setTraineesData(prev => {
+                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
+                    return [...mockTrainees, ...dbTrainees];
+                });
+
+                // Register any DB trainee courses that aren't in courseColors yet
+                const defaultColors = [
+                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
+                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
+                    'bg-red-400/50', 'bg-cyan-400/50'
+                ];
+                const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
+                setCourseColors(prev => {
+                    const updated = { ...prev };
+                    let colorIndex = Object.keys(updated).length;
+                    dbCourseNames.forEach((course: any) => {
+                        if (!updated[course]) {
+                            updated[course] = defaultColors[colorIndex % defaultColors.length];
+                            colorIndex++;
+                            console.log(`[DB Load] Added missing courseColor for "${course}"`);
+                        }
+                    });
+                    return updated;
+                });
+
+                console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+            }
+        } catch (error) {
+            console.error('❌ Error refreshing database data:', error);
+        }
     }, []);
     
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
@@ -6714,14 +8974,14 @@ updates.forEach(update => {
 
     const allTraineesByCourse = useMemo(() => {
         const groups: { [course: string]: Trainee[] } = {};
-        traineesData.forEach(trainee => {
+        allTraineesData.forEach(trainee => {
             if (!groups[trainee.course]) {
                 groups[trainee.course] = [];
             }
             groups[trainee.course].push(trainee);
         });
         return groups;
-    }, [traineesData]);
+    }, [allTraineesData]);
 
     const handleSaveGroundEvent = (data: any) => {
         const syllabusItem = syllabusDetails.find(s => s.code === data.flightNumber);
@@ -6756,7 +9016,7 @@ updates.forEach(update => {
         const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
         const conflictedSyllabusId = conflictedEvent.flightNumber;
     
-        const otherTrainees = traineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
+        const otherTrainees = allTraineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
     
         for (const trainee of otherTrainees) {
             // 1. Check if their next event matches
@@ -6806,7 +9066,7 @@ updates.forEach(update => {
     
         // Sort by most needy (longest since last flight)
         return suggestions.sort((a, b) => b.trainee.daysSinceLastFlight - a.trainee.daysSinceLastFlight);
-    }, [traineesData, syllabusDetails, traineeLMPs, scores]);
+    }, [allTraineesData, syllabusDetails, traineeLMPs, scores]);
     
     const generateInstructorRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
         const suggestions: NeoInstructorRemedy[] = [];
@@ -6871,7 +9131,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails]);
+    }, [allInstructorsData, syllabusDetails]);
     
     // Generate pilot remedies for SCT events
     const generatePilotRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
@@ -6879,18 +9139,13 @@ updates.forEach(update => {
         console.log('🔍 generatePilotRemediesAtTime called for:', conflictedEvent.flightNumber, 'at time:', atTime);
         
         // Get all qualified pilots (instructors who can fly as PIC)
-        console.log('🔍 [PILOT REMEDIES DEBUG] Input instructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [PILOT REMEDIES DEBUG] Input allInstructorsData:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
         console.log('🔍 [PILOT REMEDIES DEBUG] School:', school);
         
-        // Filter by location first
+        // Filter by location (not unit) - ESL = East Sale, PEA = Pearce
         const locationFilteredInstructors = instructorsData.filter(i => {
-            if (school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff
-                return i.unit === '1FTS' || i.unit === 'CFS';
-            } else {
-                // PEA: Only 2FTS staff
-                return i.unit === '2FTS';
-            }
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            return i.location === locationFullName;
         });
         
         console.log('🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
@@ -6953,7 +9208,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails]);
+    }, [allInstructorsData, syllabusDetails]);
     
     // --- New Iterative Turnaround Fix ---
     const findClosestTurnaroundFix = (
@@ -7018,7 +9273,7 @@ updates.forEach(update => {
 
             const originalCrew = getPersonnel(problemEvent);
             for (const personName of originalCrew) {
-                const person = [...instructorsData, ...traineesData].find(p => ('fullName' in p ? p.fullName : p.name) === personName);
+                const person = [...allInstructorsData, ...allTraineesData].find(p => ('fullName' in p ? p.fullName : p.name) === personName);
                 if (!person) continue;
 
                 if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type as any)) return false;
@@ -7291,7 +9546,7 @@ updates.forEach(update => {
         // Check for static unavailability for all personnel
         const eventWindow = getEventBookingWindow(event, syllabusDetails);
         const personnel = getPersonnel(event);
-        const allPersonnelData = [...instructorsData, ...traineesData];
+        const allPersonnelData = [...allInstructorsData, ...allTraineesData];
         personnel.forEach(name => {
             const person = allPersonnelData.find(p => ('fullName' in p ? p.fullName : p.name) === name);
             if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type as any)) {
@@ -7567,6 +9822,8 @@ updates.forEach(update => {
         const newReqs = allCurrencies.filter(c => c.type === 'primitive') as CurrencyRequirement[];
         setMasterCurrencies(newMasters);
         setCurrencyRequirements(newReqs);
+        // Save directly to dedicated /api/currencies endpoint for reliable persistence
+        saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
         setSuccessMessage('Currency rules saved!');
     };
     
@@ -7592,7 +9849,7 @@ updates.forEach(update => {
         });
 
         
-        const traineesAnalysis: OracleTraineeAnalysis[] = traineesData.map(trainee => {
+        const traineesAnalysis: OracleTraineeAnalysis[] = allTraineesData.map(trainee => {
             const events = currentEvents.filter(e => getPersonnel(e).includes(trainee.fullName));
             
             // Count events by type for the analysis date
@@ -7655,7 +9912,7 @@ updates.forEach(update => {
         const eligibleCount = traineesAnalysis.filter(t => t.isEligible).length;
         
         setOracleAnalysis({ instructors: instructorsAnalysis, trainees: traineesAnalysis });
-    }, [instructorsData, traineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
+    }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
 
     const handleToggleOracleMode = useCallback(() => {
         const isNextDay = ['NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'Priorities', 'ProgramData'].includes(activeView);
@@ -7869,66 +10126,20 @@ updates.forEach(update => {
 
     const handleNavigateToCurrency = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForCurrency(person);
+        // Detect whether this person is a trainee (has 'course' field) or instructor
+        const pType: 'instructor' | 'trainee' = 'course' in person ? 'trainee' : 'instructor';
+        setSelectedPersonForCurrencyType(pType);
         handleNavigation('Currency');
-    }, [handleNavigation]);
-
-    const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
-        setSelectedPersonForLogbook(person);
-        handleNavigation('Logbook');
-    }, [handleNavigation]);
-
-    const handleCloseStaffView = useCallback(() => {
-        handleNavigation('Program Schedule');
-    }, [handleNavigation]);
-
-    const handleProfileOpened = useCallback(() => {
-        setSelectedPersonForProfile(null);
     }, []);
 
-    const handleProfileTabConsumed = useCallback(() => {
-        setProfileInitialTab(null);
-    }, []);
-
-    const handleRequestSct = useCallback((instructor: Instructor) => {
-        setInstructorForSct(instructor);
-        setShowSctRequest(true);
-    }, []);
-
-    const handleArchiveInstructor = useCallback((id: string) => {
-        const instructorToArchive = instructorsData.find(i => i.idNumber === id);
-        if (instructorToArchive) {
-            setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-            setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
-        }
-    }, [instructorsData]);
-
-    const handleRestoreInstructor = useCallback((id: string) => {
-        const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
-        if (instructorToRestore) {
-            setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-            setInstructorsData(prev => [...prev, instructorToRestore]);
-        }
-    }, [archivedInstructorsData]);
-
-    const handleArchiveTrainee = useCallback((id: string) => {
-        const trainee = traineesData.find(t => t.idNumber === id);
-        if (trainee) {
-            setArchivedTraineesData(prev => [...prev, trainee]);
-            setTraineesData(prev => prev.filter(t => t.idNumber !== id));
-        }
-    }, [traineesData]);
-
-    const handleRequestSctForTrainee = useCallback((trainee: Trainee) => {
-        setTraineeForSct(trainee);
-        setShowSctRequest(true);
-    }, []);
-
-    const handleSelectMyCurrency = useCallback(() => {
+    const handleSelectMyCurrency = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
-            handleNavigateToCurrency(user);
+            setSelectedPersonForProfile(user);
+            setProfileInitialTab('currency');
+            handleNavigation('Instructors');
         }
-    }, [instructorsData, currentUserName, handleNavigateToCurrency]);
+    };
 
     const handleSelectMySct = () => {
         const user = instructorsData.find(i => i.name === currentUserName); // Current logged in user
@@ -7949,6 +10160,8 @@ updates.forEach(update => {
                 return <ScheduleView 
                            date={date}
                            onDateChange={handleDateChange}
+                           onDateSelect={handleDateSelect}
+                           snapshotDates={snapshotDates}
                            events={eventSegmentsForDate}
                            resources={buildResources}
                            instructors={instructorsData.map(i => i.name)}
@@ -7985,10 +10198,89 @@ updates.forEach(update => {
                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                            showAircraftAvailability={showAircraftAvailability}
                            plannedAvailability={availableAircraftCount}
+                           onUpdatePlannedAvailability={handleUpdateAircraftCount}
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
-                           onAvailabilityChange={(record: DailyAvailabilityRecord) => {
-                               console.log('Availability updated:', record);
+                           onAvailabilityChange={async (record: DailyAvailabilityRecord) => {
+                               // Event-based tracking: record a 'change' event whenever
+                               // the availability line is moved in the overlay.
+                               // The last snapshot in the record represents the current state.
+                               console.log('[AV] 🔥 onAvailabilityChange CALLED', {
+                                   snapshotsLength: record.snapshots.length,
+                                   date: record.date,
+                                   snapshots: record.snapshots.map((s: any) => ({
+                                       time: s.timestamp,
+                                       available: s.available
+                                   }))
+                               });
+                               
+                               if (record.snapshots.length === 0) {
+                                   console.log('[AV] ⚠️ No snapshots, returning early');
+                                   return;
+                               }
+
+                               const lastSnapshot = record.snapshots[record.snapshots.length - 1];
+                               const currentAvailable = lastSnapshot.available;
+                               const snapshotTs = new Date(lastSnapshot.timestamp);
+
+                               console.log(
+                                   `[AV] 📤 Preparing to POST event: date=${record.date} ` +
+                                   `available=${currentAvailable} snapshots=${record.snapshots.length} ` +
+                                   `timestamp=${snapshotTs.toISOString()}`
+                               );
+
+                               const totalAircraftCount = availableAircraftCount;
+                               const windowStart = formatWindowTime(flyingStartTime);
+                               const windowEnd   = formatWindowTime(flyingEndTime);
+
+                               const requestBody = {
+                                   timestamp: snapshotTs.toISOString(),
+                                   date: record.date,
+                                   availableCount: currentAvailable,
+                                   totalAircraft: totalAircraftCount,
+                                   changeType: 'change',
+                                   recordedBy: sessionUser?.userId ?? null,
+                                   notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
+                                   flyingWindowStart: windowStart,
+                                   flyingWindowEnd:   windowEnd,
+                                   // Send client's local time for accurate timezone comparison
+                                   clientLocalHour: new Date().getHours(),
+                                   clientLocalMinute: new Date().getMinutes(),
+                               };
+                               
+                               console.log('[AV] 📦 Request body:', JSON.stringify(requestBody, null, 2));
+                               console.log('[AV] 🌐 Current origin:', window.location.origin);
+                               console.log('[AV] 👤 Session user:', sessionUser?.userId ?? 'not logged in');
+
+                               try {
+                                   const apiBase = getApiBaseUrl();
+                                   const apiUrl = `${apiBase}/aircraft-availability-events`;
+                                   console.log('[AV] 🚀 Starting fetch to', apiUrl);
+                                   const res = await fetch(apiUrl, {
+                                       method: 'POST',
+                                       headers: { 'Content-Type': 'application/json' },
+                                       credentials: 'include',
+                                       body: JSON.stringify(requestBody)
+                                   });
+                                   console.log('[AV] 📥 Response status:', res.status, res.statusText);
+                                   console.log('[AV] 📥 Response headers:', Object.fromEntries(res.headers.entries()));
+                                   
+                                   if (res.ok) {
+                                       const data = await res.json();
+                                       console.log('[AV] ✅ Response data:', data);
+                                       if (data.skipped) {
+                                           console.log(`[AV] Change event skipped: count unchanged at ${currentAvailable}`);
+                                       } else {
+                                           console.log(`[AV] ✅ Change event recorded for ${record.date}: available=${currentAvailable}`);
+                                       }
+                                   } else {
+                                       const errText = await res.text();
+                                       console.error(`[AV] ❌ Failed to record change event: ${res.status} ${errText}`);
+                                   }
+                               } catch (error) {
+                                   console.error('[AV] ❌ Error recording change event:', error);
+                                   console.error('[AV] ❌ Error stack:', (error as Error).stack);
+                               }
                            }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}
@@ -8024,8 +10316,10 @@ updates.forEach(update => {
                 return <TraineeScheduleView
                             date={date}
                             onDateChange={handleDateChange}
+                            onDateSelect={handleDateSelect}
+                            snapshotDates={snapshotDates}
                             events={eventsForStaffTraineeSchedule}
-                            trainees={[...traineesData]
+                            trainees={[...allTraineesData]
                                 .sort((a, b) => {
                                     // First sort by course
                                     if (a.course !== b.course) {
@@ -8051,27 +10345,48 @@ updates.forEach(update => {
                             courseColors={courseColors}
                        />;
             case 'InstructorSchedule':
-                // Filter instructors by location for Staff Schedule
-                const locationFilteredInstructorsForSchedule = instructorsData.filter(i => {
-                    if (school === 'ESL') {
-                        // ESL: Only 1FTS and CFS staff
-                        return i.unit === '1FTS' || i.unit === 'CFS';
-                    } else {
-                        // PEA: Only 2FTS staff
-                        return i.unit === '2FTS';
-                    }
-                });
+                // Filter instructors by location (not unit) for Staff Schedule
+                // ESL = East Sale, PEA = Pearce
+                // Rank precedence for sorting (higher rank = lower number)
+                const rankPrecedence: Record<string, number> = {
+                    'WGCDR': 1,
+                    'SQNLDR': 2,
+                    'FLTLT': 3,
+                    'FLGOFF': 4,
+                    'PLTOFF': 5,
+                    'Mr': 6
+                };
                 
-                console.log('🔍 STAFF SCHEDULE - Location filtering applied');
+                const locationFilteredInstructorsForSchedule = instructorsData
+                    .filter(i => {
+                        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                        return i.location === locationFullName;
+                    })
+                    .sort((a, b) => {
+                        // First sort by unit (group by unit)
+                        const unitA = a.unit || 'ZZZ'; // Put staff without unit at the end
+                        const unitB = b.unit || 'ZZZ';
+                        if (unitA !== unitB) {
+                            return unitA.localeCompare(unitB);
+                        }
+                        // Within same unit, sort by rank (higher rank first)
+                        const rankA = rankPrecedence[a.rank] || 99;
+                        const rankB = rankPrecedence[b.rank] || 99;
+                        return rankA - rankB;
+                    });
+                
+                console.log('🔍 STAFF SCHEDULE - Location filtering and sorting applied');
                 console.log('🔍 School:', school);
-                console.log('🔍 Total instructors:', instructorsData?.length);
+                console.log('👁 Total instructors:', instructorsData?.length);
                 console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
-                console.log('🔍 Filtered instructor units:', locationFilteredInstructorsForSchedule.map(i => i.unit));
+                console.log('🔍 Sorted instructors (unit then rank):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
                 
                 try {
                     return <InstructorScheduleView
                       date={date}
                       onDateChange={handleDateChange}
+                      onDateSelect={handleDateSelect}
+                      snapshotDates={snapshotDates}
                       events={eventSegmentsForDate}
                       instructors={locationFilteredInstructorsForSchedule.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
                       instructorsData={locationFilteredInstructorsForSchedule}
@@ -8094,9 +10409,35 @@ updates.forEach(update => {
                     throw error;
                 }
             case 'NextDayInstructorSchedule':
+                // Apply same sorting for Next Day view: group by unit, sort by rank within unit
+                const nextDayRankPrecedence: Record<string, number> = {
+                    'WGCDR': 1,
+                    'SQNLDR': 2,
+                    'FLTLT': 3,
+                    'FLGOFF': 4,
+                    'PLTOFF': 5,
+                    'Mr': 6
+                };
+                
+                const sortedNextDayInstructors = instructorsData
+                    .filter(i => {
+                        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                        return i.location === locationFullName;
+                    })
+                    .sort((a, b) => {
+                        const unitA = a.unit || 'ZZZ';
+                        const unitB = b.unit || 'ZZZ';
+                        if (unitA !== unitB) {
+                            return unitA.localeCompare(unitB);
+                        }
+                        const rankA = nextDayRankPrecedence[a.rank] || 99;
+                        const rankB = nextDayRankPrecedence[b.rank] || 99;
+                        return rankA - rankB;
+                    });
+                
                 return <NextDayInstructorScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    instructors={instructorsData.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
+                    instructors={sortedNextDayInstructors.map(i => ({ name: i.name, rank: i.rank, unit: i.unit }))}
                     traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
@@ -8114,7 +10455,28 @@ updates.forEach(update => {
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView
                     events={nextDayEventsForStaffTraineeSchedule.map(e => ({...e, date: buildDfpDate}))}
-                    trainees={traineesData.map(t => t.fullName)}
+                    trainees={[...allTraineesData]
+                        .filter(t => {
+                            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+                            if (t.location) {
+                                return t.location === locationFullName;
+                            }
+                            if (t.unit) {
+                                if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                                if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+                            }
+                            return true;
+                        })
+                        .sort((a, b) => {
+                            // First sort by course (matching Daily Schedule behavior)
+                            if (a.course !== b.course) {
+                                return a.course.localeCompare(b.course);
+                            }
+                            // Then sort alphabetically by name within the same course
+                            return a.name.localeCompare(b.name);
+                        })
+                        .map(t => t.fullName)
+                    }
                     traineesData={traineesData}
                     onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                     onUpdateEvent={handleNextDayScheduleUpdate}
@@ -8142,31 +10504,7 @@ updates.forEach(update => {
                                 handleNavigation('HateSheet');
                             }}
                             onRestoreCourse={() => {}}
-                            onUpdateTrainee={(data) => {
-                                const isNewTrainee = !traineesData.find(t => t.idNumber === data.idNumber);
-                                
-                                if (isNewTrainee) {
-                                    // Initialize Individual LMP for new trainee
-                                    const lmpType = data.lmpType || 'BPC+IPC';
-                                    const masterLMP = syllabusDetails.filter(item => {
-                                        if (lmpType === 'BPC+IPC') {
-                                            return !item.lmpType || item.lmpType === 'Master LMP';
-                                        }
-                                        return item.courses.includes(lmpType);
-                                    });
-                                    
-                                    if (masterLMP.length > 0) {
-                                        setTraineeLMPs(prev => {
-                                            const newLMPs = new Map(prev);
-                                            newLMPs.set(data.fullName, [...masterLMP]);
-                                            console.log(`[Individual LMP] Initialized ${data.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
-                                            return newLMPs;
-                                        });
-                                    }
-                                }
-                                
-                                setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
-                            }}
+                            onUpdateTrainee={handleUpdateTrainee}
                             onAddTrainee={handleAddTrainee}
                             school={school}
                             scores={scores}
@@ -8178,7 +10516,7 @@ updates.forEach(update => {
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
-                            onProfileOpened={handleProfileOpened}
+                            onProfileOpened={() => setSelectedPersonForProfile(null)}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => {
@@ -8195,6 +10533,80 @@ updates.forEach(update => {
                                     action: 'delete',
                                     description: `Deleted trainee from roster`,
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
+                                });
+                            }}
+                            onUpdateCourseNumber={(oldCourseNumber, newCourseNumber) => {
+                                console.log(`[CourseEdit] 🔄 Updating course number "${oldCourseNumber}" → "${newCourseNumber}"`);
+                                setTraineesData(prev => prev.map(t =>
+                                    t.course === oldCourseNumber
+                                        ? { ...t, course: newCourseNumber }
+                                        : t
+                                ));
+                                setCourseColors(prev => {
+                                    const newColors = { ...prev };
+                                    if (newColors[oldCourseNumber]) {
+                                        newColors[newCourseNumber] = newColors[oldCourseNumber];
+                                        delete newColors[oldCourseNumber];
+                                    }
+                                    return newColors;
+                                });
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Course number changed`,
+                                    changes: `${oldCourseNumber} → ${newCourseNumber}`
+                                });
+                            }}
+                            onUpdateCourseUnit={async (courseNumber, newUnit) => {
+                                console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                
+                                // Update local state immediately for UI responsiveness
+                                setTraineesData(prev => {
+                                    const updated = prev.map(t =>
+                                        t.course === courseNumber
+                                            ? { ...t, unit: newUnit }
+                                            : t
+                                    );
+                                    const changed = updated.filter(t => t.course === courseNumber).length;
+                                    console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                                    return updated;
+                                });
+                                
+                                // Persist to database
+                                try {
+                                    const response = await fetch('/api/trainees/bulk-unit', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ courseNumber, newUnit })
+                                    });
+                                    if (response.ok) {
+                                        console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                                    } else {
+                                        console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
+                                    }
+                                } catch (err) {
+                                    console.error(`[CourseEdit] ❌ Error saving unit change:`, err);
+                                }
+                                
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Course unit updated`,
+                                    changes: `${courseNumber} unit changed to ${newUnit}`
+                                });
+                            }}
+                            onBackcourseTrainee={(trainee, newCourse) => {
+                                console.log(`[CourseEdit] 🔄 Backcoursing ${trainee.name} to "${newCourse}"`);
+                                setTraineesData(prev => prev.map(t =>
+                                    t.idNumber === trainee.idNumber
+                                        ? { ...t, course: newCourse }
+                                        : t
+                                ));
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Trainee backcoursed`,
+                                    changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
                                 });
                             }}
                             date={date}
@@ -8209,6 +10621,10 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectTrainee={handleSelectTraineeFromSchedule}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'CourseRoster':
                 return <CourseRosterView 
@@ -8222,31 +10638,7 @@ updates.forEach(update => {
                                 handleNavigation('HateSheet');
                             }}
                             onRestoreCourse={() => {}}
-                            onUpdateTrainee={(data) => {
-                                const isNewTrainee = !traineesData.find(t => t.idNumber === data.idNumber);
-                                
-                                if (isNewTrainee) {
-                                    // Initialize Individual LMP for new trainee
-                                    const lmpType = data.lmpType || 'BPC+IPC';
-                                    const masterLMP = syllabusDetails.filter(item => {
-                                        if (lmpType === 'BPC+IPC') {
-                                            return !item.lmpType || item.lmpType === 'Master LMP';
-                                        }
-                                        return item.courses.includes(lmpType);
-                                    });
-                                    
-                                    if (masterLMP.length > 0) {
-                                        setTraineeLMPs(prev => {
-                                            const newLMPs = new Map(prev);
-                                            newLMPs.set(data.fullName, [...masterLMP]);
-                                            console.log(`[Individual LMP] Initialized ${data.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
-                                            return newLMPs;
-                                        });
-                                    }
-                                }
-                                
-                                setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
-                            }}
+                            onUpdateTrainee={handleUpdateTrainee}
                             onAddTrainee={handleAddTrainee}
                             school={school}
                             scores={scores}
@@ -8258,7 +10650,7 @@ updates.forEach(update => {
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
-                            onProfileOpened={handleProfileOpened}
+                            onProfileOpened={() => setSelectedPersonForProfile(null)}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => {
@@ -8277,6 +10669,89 @@ updates.forEach(update => {
                                     changes: `Removed: ${trainee.rank} ${trainee.name} (${trainee.course}) - ID: ${trainee.idNumber}`
                                 });
                             }}
+                            onUpdateCourseNumber={(oldCourseNumber, newCourseNumber) => {
+                                // Update all trainees in the course
+                                setTraineesData(prev => prev.map(t => 
+                                    t.course === oldCourseNumber 
+                                        ? { ...t, course: newCourseNumber }
+                                        : t
+                                ));
+                                // Update courseColors
+                                setCourseColors(prev => {
+                                    const newColors = { ...prev };
+                                    if (newColors[oldCourseNumber]) {
+                                        newColors[newCourseNumber] = newColors[oldCourseNumber];
+                                        delete newColors[oldCourseNumber];
+                                    }
+                                    return newColors;
+                                });
+                                // Log audit
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Course number changed`,
+                                    changes: `${oldCourseNumber} → ${newCourseNumber}`
+                                });
+                            }}
+                            onUpdateCourseUnit={async (courseNumber, newUnit) => {
+                                // Update unit for all trainees in the course
+                                console.log(`[CourseEdit] 🔄 Updating unit for course "${courseNumber}" to "${newUnit}"`);
+                                
+                                // Update local state immediately for UI responsiveness
+                                setTraineesData(prev => {
+                                    const updated = prev.map(t => 
+                                        t.course === courseNumber 
+                                            ? { ...t, unit: newUnit }
+                                            : t
+                                    );
+                                    const changed = updated.filter(t => t.course === courseNumber).length;
+                                    console.log(`[CourseEdit] ✅ Updated ${changed} trainees in course "${courseNumber}" to unit "${newUnit}"`);
+                                    return updated;
+                                });
+                                
+                                // Persist to database
+                                try {
+                                    const response = await fetch('/api/trainees/bulk-unit', {
+                                        method: 'PATCH',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ courseNumber, newUnit })
+                                    });
+                                    if (response.ok) {
+                                        console.log(`[CourseEdit] 💾 Saved unit change to database`);
+                                    } else {
+                                        console.error(`[CourseEdit] ❌ Failed to save unit change to database`);
+                                    }
+                                } catch (err) {
+                                    console.error(`[CourseEdit] ❌ Error saving unit change:`, err);
+                                }
+                                
+                                // Log audit
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Course unit updated`,
+                                    changes: `${courseNumber} unit changed to ${newUnit}`
+                                });
+                            }}
+                            onBackcourseTrainee={(trainee, newCourse) => {
+                                // Move trainee to new course
+                                setTraineesData(prev => prev.map(t => 
+                                    t.idNumber === trainee.idNumber 
+                                        ? { ...t, course: newCourse }
+                                        : t
+                                ));
+                                // Log audit
+                                logAudit({
+                                    page: 'Trainee Roster',
+                                    action: 'edit',
+                                    description: `Trainee backcoursed`,
+                                    changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
+                                });
+                            }}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {
@@ -8483,7 +10958,7 @@ updates.forEach(update => {
                     coursePercentages={coursePercentages}
                     onUpdatePercentages={setCoursePercentages}
                     availableAircraftCount={availableAircraftCount}
-                    onUpdateAircraftCount={setAvailableAircraftCount}
+                    onUpdateAircraftCount={handleUpdateAircraftCount}
                     availableFtdCount={availableFtdCount}
                     onUpdateFtdCount={setAvailableFtdCount}
                     availableCptCount={availableCptCount}
@@ -8508,62 +10983,124 @@ updates.forEach(update => {
                     highestPriorityEvents={highestPriorityEvents}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
-                    programWithPrimaries={programWithPrimaries}
-                    onUpdateProgramWithPrimaries={setProgramWithPrimaries}
+                    onDeletePriorityEvent={handleDeletePriorityEvent}
+                    instructorPriority={instructorPriority}
+                    onUpdateInstructorPriority={setInstructorPriority}
                     sctFlights={sctFlights}
                     sctFtds={sctFtds}
-                    onAddSctRequest={(type) => {
-                      const newReq = { 
+                    onAddSctRequest={async (type) => {
+                      console.log('[SCT] onAddSctRequest called with type:', type);
+                      const newReq: SctRequest = { 
                           id: uuidv4(), 
                           name: '', 
-                          event: 'SCT GF', 
+                          event: 'SCT GF',
+                          flightType: 'Dual',
                           currency: '', 
                           currencyExpire: '', 
                           priority: 'Medium' as 'Medium',
-                          dateRequested: getLocalDateString()
+                          dateRequested: getLocalDateString(),
+                          requestedTime: '15:00',
+                          submitted: false,
+                          includeInBuild: false
                       };
+                      console.log('[SCT] Created new request:', newReq.id);
                       if (type === 'flight') setSctFlights(prev => [...prev, newReq]);
                       else setSctFtds(prev => [...prev, newReq]);
+                      // Persist to DB using robust userId lookup
+                      const userId = getCurrentUserId();
+                      console.log('[SCT] Attempting to save - userId from getCurrentUserId():', userId);
+                      if (userId) {
+                        try {
+                          const payload = { ...newReq, userId, requestType: type };
+                          console.log('[SCT] POST payload:', JSON.stringify(payload));
+                          const res = await fetch('/api/sct-requests', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                          });
+                          console.log('[SCT] POST response status:', res.status);
+                          if (res.ok) {
+                            const saved = await res.json();
+                            // Update local state with DB-assigned id
+                            const updater = (prev: SctRequest[]) => prev.map(r => r.id === newReq.id ? { ...r, id: saved.id } : r);
+                            if (type === 'flight') setSctFlights(updater);
+                            else setSctFtds(updater);
+                            console.log('[SCT] Saved to DB:', saved.id, 'userId:', saved.userId);
+                          } else {
+                            const errData = await res.json().catch(() => ({}));
+                            console.error('[SCT] Failed to save to DB:', res.status, errData);
+                          }
+                        } catch (err) { console.error('[SCT] Failed to save SCT request:', err); }
+                      } else {
+                        console.warn('[SCT] No userId available from any source - SCT request NOT saved to DB');
+                      }
                     }}
-                    onRemoveSctRequest={(id, type) => {
+                    onRemoveSctRequest={async (id, type) => {
                       if (type === 'flight') setSctFlights(prev => prev.filter(r => r.id !== id));
                       else setSctFtds(prev => prev.filter(r => r.id !== id));
+                      // Delete from DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, { method: 'DELETE' });
+                      } catch (err) { console.error('Failed to delete SCT request:', err); }
                     }}
-                    onUpdateSctRequest={(id, field, value, type) => {
+                    onUpdateSctRequest={async (id, field, value, type) => {
                       const updater = (prev: SctRequest[]) => prev.map(r => r.id === id ? { ...r, [field]: value } : r);
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
-                      
-                      // Trigger priority sync after a short delay to ensure state is updated
+                      // Persist to DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ [field]: value })
+                        });
+                      } catch (err) { console.error('Failed to update SCT request:', err); }
+                      // Trigger priority sync
                       setTimeout(() => {
-                        // Get the updated request to check its priority
                         const requests = type === 'flight' ? sctFlights : sctFtds;
                         const request = requests.find(r => r.id === id);
                         const updatedRequest = request ? { ...request, [field]: value } : null;
-                        
-                        console.log('🔄 SCT Request Update:', {
-                          id,
-                          field,
-                          value,
-                          type,
-                          requestPriority: updatedRequest?.priority,
-                          shouldSync: updatedRequest?.priority === 'High'
-                        });
-                        
-                        // Sync if the request is High priority (either already was, or just became High)
                         if (updatedRequest && updatedRequest.priority === 'High') {
-                          console.log('✅ Triggering sync for HIGH priority SCT request');
                           syncPriorityEventsWithSctAndRemedial();
                         }
                       }, 100);
                     }}
-                    onSubmitSctRequest={(id, type) => {
+                    onSubmitSctRequest={async (id, type) => {
                       const updater = (prev: SctRequest[]) => prev.map(r => 
                         r.id === id ? { ...r, submitted: true } : r
                       );
                       if (type === 'flight') setSctFlights(updater);
                       else setSctFtds(updater);
-                      console.log(`✅ SCT Request ${id} submitted for ${type}`);
+                      // Persist to DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ submitted: true })
+                        });
+                      } catch (err) { console.error('Failed to submit SCT request:', err); }
+                    }}
+                    onToggleSctInclude={async (id, type) => {
+                      const requests = type === 'flight' ? sctFlights : sctFtds;
+                      const req = requests.find(r => r.id === id);
+                      const newValue = !req?.includeInBuild;
+                      const updater = (prev: SctRequest[]) => prev.map(r => 
+                        r.id === id ? { ...r, includeInBuild: newValue } : r
+                      );
+                      if (type === 'flight') setSctFlights(updater);
+                      else setSctFtds(updater);
+                      // Persist to DB
+                      try {
+                        await fetch(`/api/sct-requests/${id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ includeInBuild: newValue })
+                        });
+                      } catch (err) { console.error('Failed to update SCT includeInBuild:', err); }
+                      // Trigger priority sync to include the newly selected SCT event
+                      setTimeout(() => {
+                        syncPriorityEventsWithSctAndRemedial();
+                      }, 100);
                     }}
                     syllabusDetails={syllabusDetails}
                     scores={scores}
@@ -8648,7 +11185,7 @@ updates.forEach(update => {
                             traineesData={traineesData}
                             activeCourses={coursePriorities}
                             onNavigateAndSelectPerson={(name) => {
-                                const person = [...instructorsData, ...traineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
+                                const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
                                 if (person) {
                                     if ('role' in person) handleSelectInstructorFromSchedule(name);
                                     else handleSelectTraineeFromSchedule(name);
@@ -8689,7 +11226,7 @@ updates.forEach(update => {
                                 console.log('Found event:', event);
                                 
                                 // Find the trainee
-                                const trainee = traineesData.find(t => t.fullName === assessment.traineeFullName);
+                                const trainee = allTraineesData.find(t => t.fullName === assessment.traineeFullName);
                                 console.log('Found trainee:', trainee);
                                 
                                 if (event && trainee) {
@@ -8709,7 +11246,7 @@ updates.forEach(update => {
                                         traineeFound: !!trainee,
                                         searchingForEventId: assessment.eventId,
                                         availableEventIds: allPublishedEvents.map(e => e.id).slice(0, 10),
-                                        availableTrainees: traineesData.map(t => t.fullName).slice(0, 10),
+                                        availableTrainees: allTraineesData.map(t => t.fullName).slice(0, 10),
                                         eventsForSameFlightNumber: allPublishedEvents.filter(e => e.flightNumber === assessment.flightNumber).map(e => ({id: e.id, date: e.date, instructor: e.instructor}))
                                     });
                                     
@@ -8823,8 +11360,9 @@ updates.forEach(update => {
                             }}
                         />;
             case 'Staff':
+                console.log(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
-                            onClose={() => handleNavigation('Program Schedule')}
+                            onClose={handleCloseStaffView}
                             events={events}
                             traineesData={traineesData}
                             instructorsData={instructorsData}
@@ -8899,16 +11437,22 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
-                            onRequestSct={(instructor) => {
-                                console.log('🔍 [SCT DEBUG] App.tsx onRequestSct callback called with:', instructor?.name);
-                                setInstructorForSct(instructor);
-                                setShowSctRequest(true);
-                                console.log('🔍 [SCT DEBUG] Set instructorForSct and showSctRequest to true');
-                            }}
+                            onRequestSct={handleRequestSct}
+                            locations={locations}
+                            units={units}
+                            selectedPersonForProfile={selectedPersonForProfile as any}
+                            onProfileOpened={handleProfileOpened}
+                            onViewLogbook={handleViewLogbook}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            profileInitialTab={profileInitialTab}
+                            onProfileTabConsumed={handleProfileTabConsumed}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'Instructors':
                 return <InstructorListView 
-                            onClose={handleCloseStaffView}
+                            onClose={() => handleNavigation('Program Schedule')}
                             events={events}
                             traineesData={traineesData}
                             instructorsData={instructorsData}
@@ -8968,40 +11512,65 @@ updates.forEach(update => {
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
-                            onArchiveInstructor={handleArchiveInstructor}
-                             onRestoreInstructor={handleRestoreInstructor}
+                            onArchiveInstructor={(id) => {
+                                const instructorToArchive = instructorsData.find(i => i.idNumber === id);
+                                if (instructorToArchive) {
+                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+                                    setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
+                                }
+                            }}
+                             onRestoreInstructor={(id) => {
+                                const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
+                                if (instructorToRestore) {
+                                    setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
+                                    setInstructorsData(prev => [...prev, instructorToRestore]);
+                                }
+                            }}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Instructor | null}
-                            onProfileOpened={handleProfileOpened}
+                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            profileInitialTab={profileInitialTab}
+                            onProfileTabConsumed={() => setProfileInitialTab(null)}
                             onViewLogbook={handleViewLogbook}
-                            onRequestSct={handleRequestSct}
+                            onRequestSct={(instructor) => {
+                                setInstructorForSct(instructor);
+                                setShowSctRequest(true);
+                            }}
+                            onNavigateToTrainee={(trainee) => {
+                                setSelectedPersonForProfile(trainee);
+                            }}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
                 case 'Trainees':
                     return <TraineeListView 
-                                onClose={handleCloseStaffView}
+                                onClose={() => handleNavigation('Program Schedule')}
                                 events={events}
                                 traineesData={traineesData}
                                 instructorsData={instructorsData}
                                 archivedTraineesData={archivedTraineesData}
                                 school={school}
                                 personnelData={personnelData}
-                                onUpdateTrainee={(data) => {
-                                    setTraineesData(prev => {
-                                        const exists = prev.some(t => t.idNumber === data.idNumber);
-                                        if (exists) {
-                                            return prev.map(t => t.idNumber === data.idNumber ? data : t);
-                                        }
-                                        return [...prev, data];
-                                    });
-                                }}
+                                onUpdateTrainee={handleUpdateTrainee}
                                 onNavigateToCurrency={handleNavigateToCurrency}
                                 onBulkUpdateTrainees={handleBulkUpdateTrainees}
-                                onArchiveTrainee={handleArchiveTrainee}
+                                onArchiveTrainee={(id) => {
+                                    const trainee = allTraineesData.find(t => t.idNumber === id);
+                                    if (trainee) {
+                                        setArchivedTraineesData(prev => [...prev, trainee]);
+                                        setTraineesData(prev => prev.filter(t => t.idNumber !== id));
+                                    }
+                                }}
                                 selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
-                                onProfileOpened={handleProfileOpened}
+                                onProfileOpened={() => setSelectedPersonForProfile(null)}
                                 onViewLogbook={handleViewLogbook}
-                                onRequestSct={handleRequestSctForTrainee}
+                                onRequestSct={(trainee) => {
+                                    setTraineeForSct(trainee);
+                                    setShowSctRequest(true);
+                                }}
                             />;
              case 'Syllabus':
                 return <SyllabusView
@@ -9060,6 +11629,7 @@ updates.forEach(update => {
                 if (selectedPersonForCurrency) {
                     return <CurrencyStatusPage
                                 person={selectedPersonForCurrency}
+                                personType={selectedPersonForCurrencyType}
                                 masterCurrencies={masterCurrencies}
                                 currencyRequirements={currencyRequirements}
                                 onClose={handleCurrencyBack}
@@ -9077,6 +11647,8 @@ updates.forEach(update => {
                     onUpdateUnitLocations={setUnitLocations}
                     instructorsData={instructorsData}
                     traineesData={traineesData}
+                    onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
+                    onDatabaseDataChanged={handleDatabaseDataChanged}
                     syllabusDetails={syllabusDetails}
                     onBulkUpdateInstructors={handleBulkUpdateInstructors}
                     onReplaceInstructors={handleReplaceInstructors}
@@ -9123,6 +11695,11 @@ updates.forEach(update => {
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
                        totalAircraft={24}
+                       currentAircraftAvailable={availableAircraftCount}
+                       settingsLoaded={settingsLoaded}
+                       organisationSettings={organisationSettings}
+                       onUpdateOrganisationSettings={setOrganisationSettings}
+                       
                 />;
             case 'CurrencyBuilder':
                 return <CurrencyBuilderView 
@@ -9254,8 +11831,133 @@ updates.forEach(update => {
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                 }}
-                                onSave={(data) => {
+                                onSave={async (data) => {
                                     console.log('Post flight data saved:', data);
+                                    
+                                    // Persist currency updates to person's currency records
+                                    if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
+                                        const event = eventForPostFlight;
+                                        const targetPersons: Array<{ person: any; personType: 'instructor' | 'trainee' }> = [];
+                                        
+                                        if (event?.student) {
+                                            const trainee = traineesData.find(t => t.name === event.student || t.fullName === event.student);
+                                            if (trainee) targetPersons.push({ person: trainee, personType: 'trainee' });
+                                        }
+                                        if (event?.instructor) {
+                                            const instructor = instructorsData.find(i => i.name === event.instructor);
+                                            if (instructor) targetPersons.push({ person: instructor, personType: 'instructor' });
+                                        }
+                                        
+                                        for (const { person, personType } of targetPersons) {
+                                            const dbId = (person as any).id;
+                                            if (!dbId) continue;
+                                            
+                                            // Fetch the LATEST currency status from DB before merging
+                                            // This ensures we don't overwrite currencies saved via the profile tab
+                                            let existingStatus: PersonCurrencyStatus[] = person.currencyStatus || (person as any).qualifications?.currencyStatus || [];
+                                            try {
+                                                const freshEndpoint = personType === 'instructor'
+                                                    ? `/api/personnel/${dbId}/currencies`
+                                                    : `/api/trainees/${dbId}/currencies`;
+                                                const freshRes = await fetch(freshEndpoint, { credentials: 'include' });
+                                                if (freshRes.ok) {
+                                                    const freshData = await freshRes.json();
+                                                    if (Array.isArray(freshData.currencyStatus)) {
+                                                        existingStatus = freshData.currencyStatus;
+                                                        console.log(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
+                                                    }
+                                                }
+                                            } catch (fetchErr) {
+                                                console.warn(`[PostFlight] Could not fetch fresh currency for ${person.name}, using in-memory:`, fetchErr);
+                                            }
+                                            
+                                            const allCurrencyDefs = [...masterCurrencies, ...currencyRequirements];
+                                            const updatedStatus = [...existingStatus];
+                                            
+                                            for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                                                if (!value || value === 'false') continue;
+                                                // fieldKey may be "id__inputType" (e.g. "abc123__date") when
+                                                // a currency has multiple input types — strip the suffix before lookup
+                                                const baseCurrencyId = currencyId.includes('__') ? currencyId.split('__')[0] : currencyId;
+                                                const def = allCurrencyDefs.find(c => c.id === baseCurrencyId);
+                                                if (!def) continue;
+                                                
+                                                // value is a date string for date inputs
+                                                const dateValue = typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : null;
+                                                if (!dateValue) continue;
+                                                
+                                                const validityDays = 'validityDays' in def ? def.validityDays : 365;
+                                                const expiryDate = new Date(dateValue + 'T00:00:00Z');
+                                                expiryDate.setDate(expiryDate.getDate() + validityDays);
+                                                const expStr = expiryDate.toISOString().slice(0, 10);
+                                                const today = new Date();
+                                                today.setHours(0,0,0,0);
+                                                const isCurrent = expiryDate > today;
+                                                
+                                                const idx = updatedStatus.findIndex(s => s.currencyName === def.name || s.currencyName === def.id);
+                                                const newRecord: PersonCurrencyStatus = {
+                                                    currencyName: def.name,
+                                                    lastEventDate: dateValue,
+                                                    calculatedExpiry: expStr,
+                                                    isCurrent,
+                                                };
+                                                if (idx >= 0) {
+                                                    updatedStatus[idx] = newRecord;
+                                                } else {
+                                                    updatedStatus.push(newRecord);
+                                                }
+                                            }
+                                            
+                                            const endpoint = personType === 'instructor'
+                                                ? `/api/personnel/${dbId}/currencies`
+                                                : `/api/trainees/${dbId}/currencies`;
+                                            
+                                            try {
+                                                await fetch(endpoint, {
+                                                    method: 'PATCH',
+                                                    credentials: 'include',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ currencyStatus: updatedStatus }),
+                                                });
+                                                // Update local state
+                                                if (personType === 'instructor') {
+                                                    setInstructorsData(prev => prev.map(i => 
+                                                        (i as any).id === dbId ? { ...i, currencyStatus: updatedStatus } : i
+                                                    ));
+                                                } else {
+                                                    setTraineesData(prev => prev.map(t => 
+                                                        (t as any).id === dbId ? { ...t, currencyStatus: updatedStatus } : t
+                                                    ));
+                                                }
+                                                // Invalidate the CurrencyPanel cache so next open fetches fresh DB data
+                                                savedCurrencyCache.delete(dbId);
+                                                console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
+                                                // Log to audit trail — describe what currencies were updated
+                                                const auditChangeParts: string[] = [];
+                                                for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                                                    if (!value || value === 'false') continue;
+                                                    const baseCId = currencyId.includes('__') ? currencyId.split('__')[0] : currencyId;
+                                                    const allCDefs2 = [...masterCurrencies, ...currencyRequirements];
+                                                    const cDef = allCDefs2.find(c => c.id === baseCId);
+                                                    if (cDef && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                        const [yr, mo, dy] = value.split('-');
+                                                        auditChangeParts.push(`${cDef.name}: date set to ${dy}/${mo}/${yr}`);
+                                                    }
+                                                }
+                                                if (auditChangeParts.length > 0) {
+                                                    logAudit(
+                                                        'Currency Status',
+                                                        'Edit',
+                                                        `Post Flight currency update for ${person.name}`,
+                                                        auditChangeParts.join('; ')
+                                                    );
+                                                }
+                                            } catch (err) {
+                                                console.warn(`[PostFlight] ⚠️ Currency update failed for ${person.name}:`, err);
+                                            }
+                                        }
+                                    }
+                                    
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                     setSuccessMessage('Post-flight data saved!');
@@ -9263,6 +11965,8 @@ updates.forEach(update => {
                                 school={school}
                                 traineesData={traineesData}
                                 instructorsData={instructorsData}
+                                masterCurrencies={masterCurrencies}
+                                currencyRequirements={currencyRequirements}
                            />;
                 }
                 return null;
@@ -9296,26 +12000,44 @@ updates.forEach(update => {
     
 
     const handleNavigateToProfile = (user: any) => {
-       console.log('🎹 Navigating to profile:', user);
+       console.log('🎡 Navigating to profile:', user);
        console.log('user:', JSON.stringify(user));
-       
+
+       // Determine if this is a trainee or staff based on available fields
+       // Trainees have 'course' field, staff don't
+       const isTrainee = user.userType === 'TRAINEE' || user.course || user._dataSource === 'trainee';
+       const isStaff = user.userType === 'STAFF' || (!isTrainee && (user.isQFI || user.isOFI || user.isCFI || user.role === 'INSTRUCTOR'));
+
        // Use setSelectedPersonForProfile to directly open the profile
        // This works the same way as clicking on a trainee name in CourseRoster
-       if (user.userType === 'STAFF') {
+       if (isStaff) {
           console.log('Opening staff profile:', user.name);
-          setSelectedPersonForProfile({
+          // Try to find the full instructor object from instructorsData first
+          const fullInstructor = instructorsData.find(i =>
+             i.idNumber === (user.pmkeysId || user.idNumber) || i.name === user.name
+          );
+          setSelectedPersonForProfile(fullInstructor || {
              name: user.name,
-             idNumber: user.pmkeysId,
+             idNumber: user.pmkeysId || user.idNumber,
+             rank: user.rank,
              role: 'INSTRUCTOR'
           } as Instructor);
           handleNavigation('Instructors');
              setSuccessMessage(`Navigated to Staff Profile: ${user.name}`);
-       } else if (user.userType === 'TRAINEE') {
+       } else if (isTrainee) {
           console.log('Opening trainee profile:', user.name);
-          setSelectedPersonForProfile({
+          // Try to find the full trainee object from allTraineesData first (unfiltered)
+          // This ensures all DB fields (unit, location, flight, etc.) are populated
+          // Must use allTraineesData not traineesData (which is location-filtered)
+          const fullTrainee = allTraineesData.find(t =>
+             t.idNumber === (user.pmkeysId || user.idNumber) || t.name === user.name
+          );
+          setSelectedPersonForProfile(fullTrainee || {
              name: user.name,
-             idNumber: user.pmkeysId,
-             role: 'TRAINEE'
+             idNumber: user.pmkeysId || user.idNumber,
+             rank: user.rank,
+             role: 'TRAINEE',
+             course: user.course
           } as Trainee);
           handleNavigation('CourseRoster');
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
@@ -9323,7 +12045,8 @@ updates.forEach(update => {
     };
     return (
     <>
-        <div id="app-content" className="flex h-screen bg-gray-900 text-white" data-theme={theme}>
+        <SystemFreezeBanner />
+        <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}
                 onNavigate={handleNavigation}
@@ -9353,6 +12076,8 @@ updates.forEach(update => {
                     pin: inst.pin || '1111'
                 }))}
                 onUserChange={handleUserChange}
+                school={school}
+                allTraineesData={allTraineesData}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
@@ -9383,7 +12108,9 @@ updates.forEach(update => {
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
                 />}
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {renderActiveView()}
+                </div>
             </div>
             <RightSidebar
                 activeView={activeView}
@@ -9412,7 +12139,7 @@ updates.forEach(update => {
                     onDeleteRequest={handleDeleteEvent}
                     isEditingDefault={isEditingDefault}
                     instructors={instructorsData.map(i => i.name)}
-                    trainees={traineesData.map(t => t.fullName)}
+                    trainees={allTraineesData.map(t => t.fullName)}
                     syllabus={(() => {
                         console.log('addTileSyllabusOptions length:', addTileSyllabusOptions.length);
                         console.log('syllabusForModal length:', syllabusForModal.length);
@@ -9465,6 +12192,59 @@ updates.forEach(update => {
                         console.log('Updated scores map:', updatedScores);
                         setScores(updatedScores);
                         console.log('Scores state updated successfully');
+
+                        // Persist new PT-051 completions to DB Individual LMP
+                        // Group new scores by trainee name and update their LMP
+                        const traineeNamesWithNewScores = [...new Set(newScores.map((s: any) => s.traineeName as string))];
+                        traineeNamesWithNewScores.forEach(async (traineeName) => {
+                            try {
+                                const trainee = allTraineesData.find(t => t.fullName === traineeName);
+                                if (!trainee || !(trainee as any).id) return; // Only DB trainees have an id
+
+                                const allScoresForTrainee = updatedScores.get(traineeName) || [];
+                                const completedEventIds = allScoresForTrainee.map(s => s.event);
+
+                                let lmpType = (trainee as any).lmpType || 'BPC+IPC';
+                                if (lmpType === 'BPC+IPC' && trainee.course?.toUpperCase().startsWith('FIC')) {
+                                    lmpType = 'FIC';
+                                }
+
+                                const masterSyllabus = INITIAL_SYLLABUS_DETAILS.filter((item: any) => {
+                                    if (lmpType === 'BPC+IPC') return !item.lmpType || item.lmpType === 'Master LMP';
+                                    return item.courses && item.courses.includes(lmpType);
+                                });
+
+                                const completedSet = new Set(completedEventIds);
+                                const lmpEvents = masterSyllabus.map((item: any) => ({
+                                    ...item,
+                                    completedAt: completedSet.has(item.id || item.code)
+                                        ? (allScoresForTrainee.find(s => s.event === (item.id || item.code)) as any)?.date || new Date().toISOString()
+                                        : null,
+                                }));
+
+                                const apiBase = window.location.origin.includes('railway.app')
+                                    ? '/api'
+                                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                                const res = await fetch(`${apiBase}/trainees/${(trainee as any).id}/lmp`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        traineeFullName: traineeName,
+                                        lmpType,
+                                        events: lmpEvents,
+                                        completedEventIds,
+                                    }),
+                                });
+                                if (res.ok) {
+                                    console.log(`[LMP] ✅ Updated DB Individual LMP for ${traineeName}: ${completedEventIds.length} events complete`);
+                                } else {
+                                    console.warn(`[LMP] Failed to update DB LMP for ${traineeName}`);
+                                }
+                            } catch (err) {
+                                console.warn(`[LMP] Error updating DB LMP for ${traineeName}:`, err);
+                            }
+                        });
                     }}
                     isConflict={unavailabilityConflicts.has(selectedEvent.id) || (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id)}
                     onNeoClick={handleNeoClick}
@@ -9664,7 +12444,7 @@ updates.forEach(update => {
                     onClose={() => setShowUnavailabilityReport(false)}
                     date={date}
                     instructors={instructorsData}
-                    trainees={traineesData}
+                    trainees={allTraineesData}
                     events={eventsForDate}
                 />
             )}
@@ -9672,12 +12452,44 @@ updates.forEach(update => {
                 <SctRequestFlyout
                     instructor={instructorForSct}
                     onClose={() => setShowSctRequest(false)}
-                    onSave={(request) => {
+                    onSave={async (request) => {
+                        console.log('[SCT] SctRequestFlyout onSave called with request:', request);
                         // Add the SCT request to the appropriate list
                         if (request.event.includes('FTD')) {
                             setSctFtds(prev => [...prev, request]);
                         } else {
                             setSctFlights(prev => [...prev, request]);
+                        }
+                        // Persist to DB using robust userId lookup
+                        const flyoutUserId = getCurrentUserId();
+                        if (flyoutUserId) {
+                            try {
+                                const requestType = request.event.includes('FTD') ? 'ftd' : 'flight';
+                                const payload = { ...request, userId: flyoutUserId, requestType };
+                                console.log('[SCT] POST from SctRequestFlyout:', JSON.stringify(payload));
+                                const res = await fetch('/api/sct-requests', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (res.ok) {
+                                    const saved = await res.json();
+                                    console.log('[SCT] Saved from Flyout:', saved.id, 'userId:', saved.userId);
+                                    // Update local state with DB-assigned id
+                                    if (request.event.includes('FTD')) {
+                                        setSctFtds(prev => prev.map(r => r.id === request.id ? { ...r, id: saved.id } : r));
+                                    } else {
+                                        setSctFlights(prev => prev.map(r => r.id === request.id ? { ...r, id: saved.id } : r));
+                                    }
+                                } else {
+                                    const errData = await res.json().catch(() => ({}));
+                                    console.error('[SCT] Failed to save from Flyout:', res.status, errData);
+                                }
+                            } catch (err) {
+                                console.error('[SCT] Error saving from Flyout:', err);
+                            }
+                        } else {
+                            console.warn('[SCT] No userId available from any source - Flyout request NOT saved to DB');
                         }
                         setShowSctRequest(false);
                         // Show success message
@@ -9705,33 +12517,27 @@ updates.forEach(update => {
 
             {/* Change Password Modal */}
             {showChangePassword && authUser && (
-                <>
-                    {console.log('Rendering ChangePasswordModal')}
-                    <ChangePasswordModal
-                        sessionToken={authSessionToken}
-                        userId={authUser.userId}
-                        isMandatory={authUser.mustChangePassword}
-                        onSuccess={() => {
-                            setShowChangePassword(false);
-                            if (authUser) {
-                                setAuthUser({ ...authUser, mustChangePassword: false });
-                            }
-                        }}
-                        onCancel={authUser.mustChangePassword ? undefined : () => setShowChangePassword(false)}
-                    />
-                </>
+                <ChangePasswordModal
+                    sessionToken={authSessionToken}
+                    userId={authUser.userId}
+                    isMandatory={authUser.mustChangePassword}
+                    onSuccess={() => {
+                        setShowChangePassword(false);
+                        if (authUser) {
+                            setAuthUser({ ...authUser, mustChangePassword: false });
+                        }
+                    }}
+                    onCancel={authUser.mustChangePassword ? undefined : () => setShowChangePassword(false)}
+                />
             )}
 
             {/* Admin Panel */}
             {showAdminPanel && authUser && (
-                <>
-                    {console.log('Rendering AdminPanel')}
-                    <AdminPanel
-                        sessionToken={authSessionToken}
-                        currentUserId={authUser.userId}
-                        onClose={() => setShowAdminPanel(false)}
-                    />
-                </>
+                <AdminPanel
+                    sessionToken={authSessionToken}
+                    currentUserId={authUser.userId}
+                    onClose={() => setShowAdminPanel(false)}
+                />
             )}
         </div>
 
