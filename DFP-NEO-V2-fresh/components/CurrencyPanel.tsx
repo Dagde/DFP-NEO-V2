@@ -151,11 +151,30 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
       .finally(() => setIsLoading(false));
   }, [resolvedId, personType]);
 
-  // All visible currency definitions (masters + primitives), sorted by name
+  // All visible currency definitions (masters + primitives)
+  // Sorted: active currencies alphabetically first, then inactive currencies alphabetically at the bottom
+  // Uses saved currencyStatus isInactive flag for sort order (editedInactive used only per-row in render)
   const visibleCurrencyDefinitions = useMemo(() => {
-    return [...masterCurrencies.filter(c => c.isVisible), ...currencyRequirements.filter(c => c.isVisible)]
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [masterCurrencies, currencyRequirements]);
+    const all = [...masterCurrencies.filter(c => c.isVisible), ...currencyRequirements.filter(c => c.isVisible)];
+    return all.sort((a, b) => {
+      const aInactive = !!currencyStatus.find(s => s.currencyName === a.name)?.isInactive;
+      const bInactive = !!currencyStatus.find(s => s.currencyName === b.name)?.isInactive;
+      if (aInactive !== bInactive) return aInactive ? 1 : -1; // active first
+      return a.name.localeCompare(b.name); // then alphabetical within each group
+    });
+  }, [masterCurrencies, currencyRequirements, currencyStatus]);
+
+  // Sorted list for rendering — in edit mode, re-sort using editedInactive so toggling
+  // immediately moves rows to active/inactive section without needing to save first
+  const sortedCurrencyDefinitions = useMemo(() => {
+    if (!isEditing || editedInactive.size === 0) return visibleCurrencyDefinitions;
+    return [...visibleCurrencyDefinitions].sort((a, b) => {
+      const aInactive = !!editedInactive.get(a.name);
+      const bInactive = !!editedInactive.get(b.name);
+      if (aInactive !== bInactive) return aInactive ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [visibleCurrencyDefinitions, isEditing, editedInactive]);
 
   const getCurrencyStatus = (currencyName: string): PersonCurrencyStatus | undefined => {
     return currencyStatus.find(c => c.currencyName === currencyName);
@@ -460,10 +479,16 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
             </tr>
           </thead>
           <tbody className="bg-gray-800 divide-y divide-gray-700/60">
-            {visibleCurrencyDefinitions.map(def => {
+            {sortedCurrencyDefinitions.map((def, idx) => {
               const record = getCurrencyStatus(def.name);
               // In edit mode, use editedInactive map; otherwise use saved record
               const isInactive = isEditing ? !!editedInactive.get(def.name) : !!record?.isInactive;
+
+              // Show a divider row before the first inactive currency
+              const prevIsInactive = idx > 0
+                ? (isEditing ? !!editedInactive.get(sortedCurrencyDefinitions[idx - 1].name) : !!currencyStatus.find(s => s.currencyName === sortedCurrencyDefinitions[idx - 1].name)?.isInactive)
+                : false;
+              const showDivider = isInactive && !prevIsInactive && idx > 0;
               const periodInDays = 'validityDays' in def ? def.validityDays : null;
               const periodText = getPeriodText(periodInDays);
               const validityDays = periodInDays ?? 365;
@@ -478,20 +503,32 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
               const expiryDate = expiryDateStr ? parseDate(expiryDateStr) : null;
               const daysRemaining = (!isInactive && expiryDateStr) ? getDaysRemaining(expiryDateStr) : null;
 
-              const dotColor = isInactive ? 'bg-gray-600' : getStatusDotColor(daysRemaining);
-              const daysColor = isInactive ? 'text-gray-500' : (daysRemaining !== null ? getDaysColor(daysRemaining) : 'text-gray-500');
-              const rowClass = isInactive ? 'opacity-40 hover:bg-gray-700/40 transition-colors' : 'hover:bg-gray-700/40 transition-colors';
+              const dotColor = isInactive ? 'bg-gray-500' : getStatusDotColor(daysRemaining);
+              const daysColor = isInactive ? 'text-gray-400' : (daysRemaining !== null ? getDaysColor(daysRemaining) : 'text-gray-500');
+              const rowClass = isInactive ? 'bg-gray-800/40 hover:bg-gray-700/40 transition-colors' : 'hover:bg-gray-700/40 transition-colors';
 
               return (
-                <tr key={def.name} className={rowClass}>
+                <React.Fragment key={def.name}>
+                  {showDivider && (
+                    <tr>
+                      <td colSpan={isEditing ? 7 : 6} className="px-2 py-1 bg-gray-700/30">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-px bg-gray-600/60" />
+                          <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Inactive Currencies</span>
+                          <div className="flex-1 h-px bg-gray-600/60" />
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                <tr className={rowClass}>
                   {/* Status dot */}
                   <td className="px-2 py-1.5 text-center">
                     <div className={`w-2.5 h-2.5 rounded-sm mx-auto ${dotColor}`} />
                   </td>
                   {/* Currency name */}
                   <td className="px-2 py-1.5 font-medium max-w-[160px]">
-                    <span className={`block truncate ${isInactive ? 'text-gray-500' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
-                    {isInactive && <span className="text-[9px] text-gray-600 font-normal">Inactive</span>}
+                    <span className={`block truncate ${isInactive ? 'text-gray-300' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
+                    {isInactive && <span className="text-[9px] text-gray-400 font-normal">Inactive</span>}
                   </td>
                   {/* Period */}
                   <td className="px-2 py-1.5 text-center text-gray-400 whitespace-nowrap">{periodText}</td>
@@ -538,12 +575,13 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                           }`}
                         />
                       </button>
-                      <div className={`text-[9px] mt-0.5 font-medium ${isInactive ? 'text-gray-500' : 'text-sky-400'}`}>
+                      <div className={`text-[9px] mt-0.5 font-medium ${isInactive ? 'text-gray-400' : 'text-sky-400'}`}>
                         {isInactive ? 'Inactive' : 'Active'}
                       </div>
                     </td>
                   )}
                 </tr>
+                </React.Fragment>
               );
             })}
           </tbody>
