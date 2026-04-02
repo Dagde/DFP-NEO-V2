@@ -527,9 +527,9 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
                   </td>
                   {/* Currency name */}
                   <td className="px-2 py-1.5 font-medium max-w-[160px]">
-                    <div className="flex items-center">
+                    <div className="flex flex-row items-center">
                       <span className={`${isInactive ? 'text-gray-400' : 'text-gray-200'}`} title={def.name}>{def.name}</span>
-                      {isInactive && <span className="ml-2 text-[9px] text-gray-400 font-normal">Inactive</span>}
+                      {isInactive && <span className="ml-2 text-[9px] text-orange-400 font-normal whitespace-nowrap">Inactive</span>}
                     </div>
                   </td>
                   {/* Period */}
