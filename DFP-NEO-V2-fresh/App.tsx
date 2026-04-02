@@ -89,6 +89,7 @@ import TraineeProfileFlyout from './components/TraineeProfileFlyout';
 import PublishConfirmationFlyout from './components/PublishConfirmationFlyout';
 import CurrencyView from './components/CurrencyView';
 import CurrencyStatusPage from './components/CurrencyStatusPage';
+import { savedCurrencyCache } from './components/CurrencyPanel';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
@@ -11928,7 +11929,9 @@ updates.forEach(update => {
                                                         (t as any).id === dbId ? { ...t, currencyStatus: updatedStatus } : t
                                                     ));
                                                 }
-                                                console.log(`[PostFlight] ✅ Currency updated for ${person.name}`);
+                                                // Invalidate the CurrencyPanel cache so next open fetches fresh DB data
+                                                savedCurrencyCache.delete(dbId);
+                                                console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
                                             } catch (err) {
                                                 console.warn(`[PostFlight] ⚠️ Currency update failed for ${person.name}:`, err);
                                             }

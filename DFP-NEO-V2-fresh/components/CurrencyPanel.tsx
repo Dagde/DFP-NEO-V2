@@ -3,7 +3,9 @@ import { MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../ty
 
 // Module-level cache: survives component unmount/remount
 // Key: resolvedId (UUID or idNumber string), Value: last successfully saved currency status
-const savedCurrencyCache = new Map<string, PersonCurrencyStatus[]>();
+// Exported so external saves (e.g. Post Flight) can invalidate the cache
+// ensuring CurrencyPanel always fetches fresh data after an external update
+export const savedCurrencyCache = new Map<string, PersonCurrencyStatus[]>();
 
 interface CurrencyPanelProps {
   personId: string | undefined;        // DB string UUID (Personnel.id or Trainee.id) — falls back to idNumber
@@ -121,14 +123,10 @@ const CurrencyPanel: React.FC<CurrencyPanelProps> = ({
   useEffect(() => {
     if (!resolvedId) return;
 
-    // If we have a cached save for this person, skip the API fetch entirely
-    // The cache is populated after every successful PATCH save
-    if (savedCurrencyCache.has(resolvedId)) {
-      console.log(`[CurrencyPanel] Using cached saved status for ${resolvedId} (${savedCurrencyCache.get(resolvedId)!.length} records) — skipping API fetch`);
-      setCurrencyStatus(savedCurrencyCache.get(resolvedId)!);
-      return;
-    }
-
+    // Always fetch fresh from the API — this ensures Post Flight saves
+    // (and any other external saves) are always reflected.
+    // The cache is used only to pre-populate state immediately (no flicker)
+    // but we still fetch to get the latest DB data.
     const endpoint = personType === 'instructor'
       ? `/api/personnel/${resolvedId}/currencies`
       : `/api/trainees/${resolvedId}/currencies`;
