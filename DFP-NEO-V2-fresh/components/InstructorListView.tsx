@@ -135,7 +135,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     if (selectedPersonForProfile) {
         // Try to find element, though in grid it might be scrolled out. 
         // If not found, originRect is null, which flyout handles gracefully (fades in center)
-        const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.idNumber}`);
+        const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
         if (matchingElement) {
             setOriginRect(matchingElement.getBoundingClientRect());
         }
@@ -148,7 +148,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   useEffect(() => {
     if (selectedInstructor) {
-        const updatedInstructor = instructorsData.find(i => i.idNumber === selectedInstructor.idNumber);
+        const updatedInstructor = instructorsData.find(i => i.name === selectedInstructor.name);
         if (updatedInstructor && JSON.stringify(updatedInstructor) !== JSON.stringify(selectedInstructor)) {
             // Preserve any locally-edited currencyStatus so a background instructorsData refresh
             // doesn't overwrite currency saves that haven't propagated back to the master array yet
@@ -430,7 +430,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   };
   
   const handleInstructorClick = (e: React.MouseEvent<HTMLLIElement>, instructor: Instructor) => {
-    if (selectedInstructor?.idNumber === instructor.idNumber) {
+    if (selectedInstructor?.name === instructor.name) {
         handleCloseProfile();
     } else {
         setIsArchiveMode(false);
@@ -484,9 +484,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     <ul className="space-y-2">
       {instructors.map((instructor, index) => (
         <li 
-          id={`instructor-row-${instructor.idNumber}`}
-          key={instructor.idNumber} 
-          className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.idNumber === instructor.idNumber ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
+          id={`instructor-row-${instructor.name}`}
+          key={instructor.name}
+          className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
           onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
           onMouseLeave={handleMouseLeave}
           onClick={(e) => {

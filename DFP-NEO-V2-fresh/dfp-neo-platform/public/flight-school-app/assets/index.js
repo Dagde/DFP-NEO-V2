@@ -36825,7 +36825,7 @@ const InstructorListView = ({
   const [showArchivedFlyout, setShowArchivedFlyout] = reactExports.useState(false);
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
-      const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.idNumber}`);
+      const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
       if (matchingElement) {
         setOriginRect(matchingElement.getBoundingClientRect());
       }
@@ -36837,7 +36837,7 @@ const InstructorListView = ({
   }, [selectedPersonForProfile, onProfileOpened]);
   reactExports.useEffect(() => {
     if (selectedInstructor) {
-      const updatedInstructor = instructorsData.find((i) => i.idNumber === selectedInstructor.idNumber);
+      const updatedInstructor = instructorsData.find((i) => i.name === selectedInstructor.name);
       if (updatedInstructor && JSON.stringify(updatedInstructor) !== JSON.stringify(selectedInstructor)) {
         setSelectedInstructor({
           ...updatedInstructor,
@@ -37058,7 +37058,7 @@ const InstructorListView = ({
     setFlyoutPosition(null);
   };
   const handleInstructorClick = (e, instructor) => {
-    if (selectedInstructor?.idNumber === instructor.idNumber) {
+    if (selectedInstructor?.name === instructor.name) {
       handleCloseProfile();
     } else {
       setIsArchiveMode(false);
@@ -37105,8 +37105,8 @@ const InstructorListView = ({
   const renderInstructorList = (instructors) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: instructors.map((instructor, index) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     "li",
     {
-      id: `instructor-row-${instructor.idNumber}`,
-      className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.idNumber === instructor.idNumber ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
+      id: `instructor-row-${instructor.name}`,
+      className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
       onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
       onMouseLeave: handleMouseLeave,
       onClick: (e) => {
@@ -37156,7 +37156,7 @@ const InstructorListView = ({
         }, void 0)
       ]
     },
-    instructor.idNumber,
+    instructor.name,
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/InstructorListView.tsx",
@@ -89249,20 +89249,10 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   const dbInstructorNames = /* @__PURE__ */ new Set();
   const dbByIdNumber = /* @__PURE__ */ new Map();
   dbInstructors.forEach((instructor) => {
-    if (mockByName.has(instructor.name)) {
+    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
       const mockMatch = mockByName.get(instructor.name);
-      if (!instructor.permissions || instructor.permissions.length === 0) {
-        instructor = { ...instructor, permissions: mockMatch.permissions || [] };
-        console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
-      }
-      if (instructor.unit === "1FTS" && mockMatch.unit && mockMatch.unit !== "1FTS") {
-        console.log(`  ✅ Inherited unit for ${instructor.name} from mockData: ${mockMatch.unit} (was: ${instructor.unit})`);
-        instructor = { ...instructor, unit: mockMatch.unit };
-      }
-      if (!instructor.location && mockMatch.location) {
-        console.log(`  ✅ Inherited location for ${instructor.name} from mockData: ${mockMatch.location}`);
-        instructor = { ...instructor, location: mockMatch.location };
-      }
+      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
+      console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
     }
     const mapKey = instructor.idNumber != null ? instructor.idNumber : instructor.id || instructor.name;
     if (dbInstructorMap.has(mapKey)) {

@@ -36,24 +36,11 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
   // Separate map keyed by idNumber (only for non-null idNumbers) used for mockdata dedup
   const dbByIdNumber = new Map();
   dbInstructors.forEach((instructor: any) => {
-    if (mockByName.has(instructor.name)) {
+    // If DB instructor has empty permissions, inherit from mockData by name
+    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
       const mockMatch = mockByName.get(instructor.name);
-      // Inherit permissions from mockData if DB record has none
-      if (!instructor.permissions || instructor.permissions.length === 0) {
-        instructor = { ...instructor, permissions: mockMatch.permissions || [] };
-        console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
-      }
-      // Inherit unit from mockData if DB record has the default '1FTS'
-      // (restored records were all seeded with '1FTS', but mockData has the correct unit)
-      if (instructor.unit === '1FTS' && mockMatch.unit && mockMatch.unit !== '1FTS') {
-        console.log(`  ✅ Inherited unit for ${instructor.name} from mockData: ${mockMatch.unit} (was: ${instructor.unit})`);
-        instructor = { ...instructor, unit: mockMatch.unit };
-      }
-      // Inherit location from mockData if DB record has no location
-      if (!instructor.location && mockMatch.location) {
-        console.log(`  ✅ Inherited location for ${instructor.name} from mockData: ${mockMatch.location}`);
-        instructor = { ...instructor, location: mockMatch.location };
-      }
+      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
+      console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
     }
     
     // Use idNumber as key if available, otherwise use CUID (id) to avoid null-key collisions
