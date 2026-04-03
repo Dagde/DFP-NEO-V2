@@ -220,8 +220,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   let displayStudentNameForRender = studentName;
 
   if (isStbyEvent) {
-    // Show "TBA" for instructor position
-    displayPicNameForRender = 'TBA';
+    // Show actual instructor name if assigned, otherwise "TBA"
+    displayPicNameForRender = picName && picName !== '' && picName !== 'TBA' ? picName : 'TBA';
     // Ensure trainee name is displayed from student or pilot field
     displayStudentNameForRender = event.student || event.pilot || studentName || '';
   }
