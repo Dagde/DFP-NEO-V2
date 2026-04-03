@@ -1,12 +1,17 @@
-# Fix Staff Profile - Only 2 Staff Showing
+# DFP-NEO STBY Instructor Fix
 
-## Root Cause
-`mergeInstructorData()` in `lib/dataService.ts` uses `instructor.idNumber` as the Map key.
-All 102 restored DB staff have `idNumber: null` → they all map to the same `null` key,
-overwriting each other. Only the last one + Burns (real idNumber) survive → 2 staff.
+## Root Cause Identified & Fixed
+`isInstructorAvailableForEvent` used 1.25h pre-brief + 0.5h post-brief windows.
+An instructor with 2 flights in the main build had booking windows spanning the entire
+flying day (e.g. 6:45-13:00), blocking ALL STBY slots.
+
+## Fix Applied (commit b7ff518a)
+Added `isInstructorAvailableForStby()` that uses actual flight time + turnaround buffer only.
+STBY is overflow — instructors are already at work and briefed. Only the actual flight
+duration + turnaround needs to be conflict-free, not the full 1.25h brief window.
 
 ## Tasks
-- [x] Fix `mergeInstructorData` to use `id` (CUID) as key when `idNumber` is null
-- [x] Also fix mock instructor deduplication check (uses idNumber to skip mockdata duplicates)
-- [x] Build, commit, push (commit 9837454b)
-- [x] Verified Railway deployed new commit (9837454 live)
+- [x] Add `isInstructorAvailableForStby` function (actual flight time + turnaround only)
+- [x] Use it in `findBestInstructorForStby` instead of `isInstructorAvailableForEvent`
+- [x] Build bundle
+- [x] Commit and push (b7ff518a)

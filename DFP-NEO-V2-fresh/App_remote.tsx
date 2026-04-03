@@ -786,13 +786,12 @@ function analyzeBuildResults(
     syllabusDetails: SyllabusDetail[],
     publishedSchedules: Map<string, Omit<ScheduleEvent, 'date'>[]>
 ): BuildAnalysis {
-    // Filter out Duty Sup events and STBY events from analytics.
-    // STBY events are not shown in build analytics until moved to the active Daily schedule.
-    const scheduledEvents = events.filter(e => {
-        if (e.flightNumber.includes('Duty Sup')) return false;
-        if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
-        return true;
-    });
+    // Filter out non-scheduled events (Duty Sup, STBY)
+    const scheduledEvents = events.filter(e => 
+        !e.flightNumber.includes('Duty Sup') && 
+        !e.resourceId.startsWith('STBY') && 
+        !e.resourceId.startsWith('BNF-STBY')
+    );
     
     const totalEvents = scheduledEvents.length;
     
@@ -3276,7 +3275,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return false; // No violation
     };
     
-    // Helper: Check if instructor is available for entire event duration (uses full brief window)
+    // Helper: Check if instructor is available for entire event duration
     const isInstructorAvailableForEvent = (
         instructorName: string,
         startTime: number,
@@ -3296,35 +3295,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return eventStart < existingBookingWindow.end && eventEnd > existingBookingWindow.start;
         });
     };
-
-    // Helper: Check if instructor is available for a STBY event.
-    // Uses ACTUAL flight time only (startTime to startTime+duration) plus a small turnaround buffer.
-    // This avoids blocking instructors who are already briefed/available but have brief windows
-    // that span the entire flying day (1.25h pre-brief means 2 flights = all day blocked).
-    const isInstructorAvailableForStby = (
-        instructorName: string,
-        startTime: number,
-        duration: number,
-        events: Omit<ScheduleEvent, 'date'>[]
-    ): boolean => {
-        // Use a 20-minute buffer (0.333h) around each flight to avoid back-to-back scheduling.
-        // flightTurnaround is in hours (e.g. 1.2h = 72min) but that is too large here —
-        // STBY uses minimal buffer so instructors with gaps between flights can be assigned.
-        const STBY_BUFFER = 20 / 60; // 20 minutes in hours
-        const eventStart = startTime - STBY_BUFFER;
-        const eventEnd = startTime + duration + STBY_BUFFER;
-
-        return !events.some(e => {
-            if (!getPersonnel(e).includes(instructorName)) return false;
-            // For the existing event, use actual time + same small buffer
-            const existStart = e.startTime - STBY_BUFFER;
-            const existEnd = e.startTime + e.duration + STBY_BUFFER;
-            return eventStart < existEnd && eventEnd > existStart;
-        });
-    };
     
     // Helper: Find best available instructor
-    let _findBestStbyCallCount = 0;
     const findBestInstructorForStby = (
         trainee: Trainee,
         syllabusItem: SyllabusItemDetail,
@@ -3333,22 +3305,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         type: 'flight' | 'ftd',
         events: Omit<ScheduleEvent, 'date'>[]
     ): string | null => {
-        _findBestStbyCallCount++;
-        const _isFirstCall = _findBestStbyCallCount === 1;
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:', config.school);
+        
         // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
-        // Use same fallback-to-unit logic as instructorsData useMemo to handle DB staff with null location
-        const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredInstructors = instructors.filter(i => {
-            if (i.location) return i.location === locationFullName;
-            if (i.unit) {
-                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
-                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
-            }
-            return true; // No location or unit info - include by default
+            const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
+            return i.location === locationFullName;
         });
+        
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         
         if (type === 'ftd') {
             const simIps = locationFilteredInstructors.filter(i => i.role === 'SIM IP');
@@ -3357,55 +3326,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         } else {
             candidates = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
         }
-
-        if (_isFirstCall) {
-            console.log('[STBY FIND1] trainee=' + trainee.fullName + ' unit=' + (trainee.unit||'null') + ' time=' + startTime.toFixed(2) + ' type=' + type);
-            console.log('[STBY FIND1] totalInstr=' + instructors.length + ' locFiltered=' + locationFilteredInstructors.length + ' roleCandidates=' + candidates.length + ' sharing=' + staffSharingEnabled);
-            candidates.slice(0, 5).forEach(function(ip) { console.log('[STBY FIND1 CAND] ' + ip.name + ' unit=' + (ip.unit||'null') + ' role=' + ip.role + ' isQFI=' + ip.isQFI); });
-        }
         
-        // Apply unit eligibility check (respects staffSharingEnabled setting)
-        const afterUnitFilter = candidates.filter(ip => isInstructorEligibleByUnit(ip, trainee));
-
-        if (_isFirstCall) {
-            console.log('[STBY FIND1] afterUnitFilter=' + afterUnitFilter.length + ' (staffSharingEnabled=' + staffSharingEnabled + ')');
-            if (afterUnitFilter.length === 0 && candidates.length > 0) {
-                console.log('[STBY FIND1] UNIT FILTER BLOCKED ALL - checking each:');
-                candidates.slice(0, 5).forEach(function(ip) {
-                    const tu = (trainee.unit||'').split('/')[0];
-                    const iu = (ip.unit||'').split('/')[0];
-                    console.log('[STBY FIND1 UNIT] instr=' + ip.name + ' instrUnit="' + iu + '" traineeUnit="' + tu + '" match=' + (iu===tu));
-                });
-            }
-        }
-        candidates = afterUnitFilter;
-
-        // Filter to only available instructors using STBY-specific availability check.
-        // Uses actual flight time + turnaround only (not full 1.25h brief window) so that
-        // instructors who already have 2 flights in the main build are not blocked for STBY.
-        const available = candidates.filter(ip =>
-            isInstructorAvailableForStby(ip.name, startTime, duration, events)
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
+        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Event type:', type);
+        
+        // Filter to only available instructors
+        const available = candidates.filter(ip => 
+            isInstructorAvailableForEvent(ip.name, startTime, duration, syllabusItem, events)
         );
-
-        if (_isFirstCall) {
-            const _STBY_BUF = 20/60;
-            console.log('[STBY FIND1] afterAvailFilter=' + available.length + ' (stby_buffer=' + _STBY_BUF.toFixed(3) + 'h=20min)');
-            if (available.length === 0 && candidates.length > 0) {
-                console.log('[STBY FIND1] AVAIL FILTER BLOCKED ALL - checking each:');
-                candidates.slice(0, 5).forEach(function(ip) {
-                    const buf = 20/60;
-                    const es = startTime - buf;
-                    const ee = startTime + duration + buf;
-                    const conflict = events.find(function(e) {
-                        if (!getPersonnel(e).includes(ip.name)) return false;
-                        const xs = e.startTime - buf;
-                        const xe = e.startTime + e.duration + buf;
-                        return es < xe && ee > xs;
-                    });
-                    console.log('[STBY FIND1 AVAIL] instr=' + ip.name + ' conflict=' + (conflict ? conflict.flightNumber + '@' + conflict.startTime.toFixed(2) + '-' + (conflict.startTime+conflict.duration).toFixed(2) + ' res=' + conflict.resourceId : 'NONE'));
-                });
-            }
-        }
         
         if (available.length === 0) return null;
         
@@ -3480,72 +3408,42 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     });
     
     console.log('Trainees needing STBY flights:', traineesNeedingStby.length);
-
-    // STBY DIAGNOSTIC BLOCK - helps identify why instructors not being found
-    const _stbyDiagLoc = config.school === 'ESL' ? 'East Sale' : 'Pearce';
-    const _stbyLocFiltered = instructors.filter(i => {
-        if (i.location) return i.location === _stbyDiagLoc;
-        if (i.unit) {
-            if (i.unit.startsWith('2FTS')) return _stbyDiagLoc === 'Pearce';
-            if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return _stbyDiagLoc === 'East Sale';
-        }
-        return true;
-    });
-    const _stbyQFIs = _stbyLocFiltered.filter(i => i.role === 'QFI' || i.isQFI === true);
-    console.log('[STBY DIAG] school=' + config.school + ' loc=' + _stbyDiagLoc + ' totalInstr=' + instructors.length + ' locFiltered=' + _stbyLocFiltered.length + ' QFIs=' + _stbyQFIs.length + ' sharing=' + staffSharingEnabled);
-    _stbyQFIs.slice(0, 10).forEach(function(i) { console.log('[STBY QFI] ' + i.name + ' unit=' + (i.unit||'null') + ' loc=' + (i.location||'null') + ' role=' + i.role + ' isQFI=' + i.isQFI); });
-    if (traineesNeedingStby.length > 0) {
-        const _st = traineesNeedingStby[0];
-        const _elig = _stbyQFIs.filter(function(ip) { return isInstructorEligibleByUnit(ip, _st); });
-        console.log('[STBY TRAINEE] ' + _st.fullName + ' unit=' + (_st.unit||'null') + ' eligQFIs=' + _elig.length);
-        _elig.slice(0, 5).forEach(function(i) { console.log('[STBY ELIG] ' + i.name + ' unit=' + (i.unit||'null')); });
-        if (_elig.length === 0) {
-            console.log('[STBY ELIG NONE] Checking each QFI unit match:');
-            _stbyQFIs.slice(0, 5).forEach(function(ip) {
-                const tu = (_st.unit||'').split('/')[0];
-                const iu = (ip.unit||'').split('/')[0];
-                console.log('[STBY UNIT CHK] instr=' + ip.name + ' instrUnit=' + iu + ' traineeUnit=' + tu + ' match=' + (iu===tu));
-            });
-        }
-    }
-
+    
     // TWO-PASS APPROACH: Maximize instructor-allocated STBY events
     const timeIncrement = 5 / 60; // 5 minutes
     const scheduledTrainees = new Set<string>();
-
+    
     // PASS 1: Schedule STBY events ONLY where instructor is available
     console.log('PASS 1: Scheduling STBY with instructors available...');
-    console.log('Flying window: ' + flyingStartTime.toFixed(2) + ' to ' + flyingEndTime.toFixed(2));
+    console.log(`Flying window: ${flyingStartTime.toFixed(2)} to ${flyingEndTime.toFixed(2)}`);
     
-    // Log first 3 trainees needing STBY for diagnosis
-    traineesNeedingStby.slice(0, 3).forEach(function(t) {
-        const nx = traineeNextEventMap.get(t.fullName);
-        console.log('[STBY PASS1 TRAINEE] ' + t.fullName + ' unit=' + (t.unit||'null') + ' next=' + (nx && nx.next ? nx.next.id : 'null') + ' _ds=' + (t as any)._dataSource);
-    });
-
     for (const trainee of traineesNeedingStby) {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next) continue;
         
         let placed = false;
-        let _diagChecked = 0, _diagNoSlot = 0, _diagNo8Rule = 0, _diagNoWindow = 0, _diagNoInstr = 0;
         // Try to find a time slot where an instructor IS available
         for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
-            _diagChecked++;
+            // Debug logging for 10:00-10:20 window
+            const isDebugWindow = time >= 10.0 && time <= 10.33;
+            
             // Check if flight already starts at this time
             if (hasFlightStartTime(time, generatedEvents)) {
-                _diagNoSlot++; continue;
+                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Flight already exists`);
+                continue;
             }
             
             // Check if flight block time fits within flying window
             const flightEndTime = time + next.duration;
             if (flightEndTime > flyingEndTime) {
-                _diagNoWindow++; continue;
+                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Would exceed flying window`);
+                continue;
             }
             
             // Check "8 flights per hour" rule
             if (wouldViolate8PerHourRule(time, generatedEvents)) {
-                _diagNo8Rule++; continue;
+                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Would violate 8-per-hour rule`);
+                continue;
             }
             
             // Try to find available instructor
@@ -3553,7 +3451,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             
             // ONLY schedule if instructor is available (skip TBA for now)
             if (!instructor) {
-                _diagNoInstr++;
+                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: No instructor available`);
                 continue;
             }
             
@@ -3586,7 +3484,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
         
         if (!placed) {
-            console.log('[STBY PASS1 FAIL] ' + trainee.fullName + ' unit=' + (trainee.unit||'null') + ' checked=' + _diagChecked + ' noSlot=' + _diagNoSlot + ' noWindow=' + _diagNoWindow + ' no8Rule=' + _diagNo8Rule + ' noInstr=' + _diagNoInstr);
+            console.log(`PASS 1: Could not place ${trainee.fullName} anywhere in flying window`);
         }
     }
     
@@ -5969,10 +5867,7 @@ useEffect(() => {
     }, [eventsForDate]);
     
     const nextDayEventsForStaffTraineeSchedule = useMemo(() => {
-        // Include ALL events including STBY in the staff/trainee schedule view.
-        // STBY events show the trainee (and instructor if assigned) their upcoming commitment.
-        // STBY events are still excluded from build analytics until moved to the active Daily schedule.
-        return nextDayBuildEvents;
+        return nextDayBuildEvents.filter(e => !e.resourceId.startsWith('STBY'));
     }, [nextDayBuildEvents]);
 
     const eventSegmentsForDate = useMemo(() => {
