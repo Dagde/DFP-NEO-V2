@@ -3225,6 +3225,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // NEW STBY SCHEDULING PASS - "8 Flights Per Hour" Rule
     // STBY flights are extra flights added on top of the main DFP when aircraft run out
     setProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
+    console.error('🔴🔴🔴 [STBY-SECTION] REACHED STBY SECTION. generatedEvents=' + generatedEvents.length + ' stby events before pass=' + generatedEvents.filter(e => e.resourceId && e.resourceId.startsWith('STBY')).length);
     
     // Helper: Check if a flight start time already exists (aircraft or STBY flights only)
     const hasFlightStartTime = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
