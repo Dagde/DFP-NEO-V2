@@ -3300,28 +3300,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
 
     // Helper: Check if instructor is available for a STBY event.
-    // Uses ACTUAL flight time only (startTime to startTime+duration) plus a small turnaround buffer.
-    // This avoids blocking instructors who are already briefed/available but have brief windows
-    // that span the entire flying day (1.25h pre-brief means 2 flights = all day blocked).
+    // Respects pre/post flight times of both the proposed STBY event and all existing events,
+    // so e.g. an instructor finishing a flight with 45min post-flight cannot be assigned to a
+    // STBY event with 60min pre-flight unless there is at least 105 minutes between them.
     const isInstructorAvailableForStby = (
         instructorName: string,
         startTime: number,
         duration: number,
+        syllabusItem: SyllabusItemDetail,
         events: Omit<ScheduleEvent, 'date'>[]
     ): boolean => {
-        // Use a 20-minute buffer (0.333h) around each flight to avoid back-to-back scheduling.
-        // flightTurnaround is in hours (e.g. 1.2h = 72min) but that is too large here —
-        // STBY uses minimal buffer so instructors with gaps between flights can be assigned.
-        const STBY_BUFFER = 20 / 60; // 20 minutes in hours
-        const eventStart = startTime - STBY_BUFFER;
-        const eventEnd = startTime + duration + STBY_BUFFER;
+        const preTime = syllabusItem.preFlightTime || 0;
+        const postTime = syllabusItem.postFlightTime || 0;
+        const stbyStart = startTime - preTime;
+        const stbyEnd = startTime + duration + postTime;
 
         return !events.some(e => {
             if (!getPersonnel(e).includes(instructorName)) return false;
-            // For the existing event, use actual time + same small buffer
-            const existStart = e.startTime - STBY_BUFFER;
-            const existEnd = e.startTime + e.duration + STBY_BUFFER;
-            return eventStart < existEnd && eventEnd > existStart;
+            // Use full booking window (pre+post) of the existing event
+            const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
         });
     };
     
@@ -3362,10 +3360,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         candidates = afterUnitFilter;
 
         // Filter to only available instructors using STBY-specific availability check.
-        // Uses actual flight time + turnaround only (not full 1.25h brief window) so that
-        // instructors who already have 2 flights in the main build are not blocked for STBY.
+        // Respects pre/post flight times of both the STBY event and all existing events.
         const available = candidates.filter(ip =>
-            isInstructorAvailableForStby(ip.name, startTime, duration, events)
+            isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
         );
         
         if (available.length === 0) return null;
