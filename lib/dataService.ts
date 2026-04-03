@@ -39,9 +39,23 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
       console.log(`  \u2705 Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
     }
     
-    // Check for duplicate idNumbers
+    // Extract currencyStatus from qualifications JSON field if present
+    if (instructor.qualifications && typeof instructor.qualifications === 'object' && (instructor.qualifications as any).currencyStatus) {
+      instructor = { ...instructor, currencyStatus: (instructor.qualifications as any).currencyStatus };
+    }
+
+    // Check for duplicate idNumbers - prefer the one with currencyStatus data
     if (dbInstructorMap.has(instructor.idNumber)) {
-      console.log(`  \u26a0\ufe0f DUPLICATE IDNUMBER: ${instructor.idNumber} - ${instructor.name} overwrites ${dbInstructorMap.get(instructor.idNumber).name}`);
+      const existing = dbInstructorMap.get(instructor.idNumber);
+      const existingHasData = existing.currencyStatus && existing.currencyStatus.length > 0;
+      const newHasData = instructor.currencyStatus && instructor.currencyStatus.length > 0;
+      if (!existingHasData && newHasData) {
+        console.log(`  Replacing duplicate idNumber: ${instructor.idNumber} with record that has currencyStatus data`);
+      } else {
+        console.log(`  Skipping duplicate idNumber: ${instructor.idNumber}`);
+        dbInstructorNames.add(instructor.name);
+        return; // Skip this duplicate
+      }
     }
     
     // Tag with dataSource
@@ -155,17 +169,31 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
   // Tag each database record with _dataSource: 'database'
   // Use idNumber as dedup key since it's unique (name could have duplicates)
   const dbTraineeMap = new Map();
-  const taggedDbTrainees = dbTrainees.map((trainee: any) => ({
-    ...trainee,
-    _dataSource: 'database' as const
-  }));
-
-  taggedDbTrainees.forEach((trainee: any) => {
-    dbTraineeMap.set(trainee.idNumber, trainee);
+  const taggedDbTrainees = dbTrainees.map((trainee: any) => {
+    // Extract currencyStatus from qualifications JSON field if present
+    let extracted = { ...trainee, _dataSource: 'database' as const };
+    if (trainee.qualifications && typeof trainee.qualifications === 'object' && (trainee.qualifications as any).currencyStatus) {
+      extracted = { ...extracted, currencyStatus: (trainee.qualifications as any).currencyStatus };
+    }
+    return extracted;
   });
 
-  // Start with database trainees (already tagged)
-  const merged = [...taggedDbTrainees];
+  taggedDbTrainees.forEach((trainee: any) => {
+    const existing = dbTraineeMap.get(trainee.idNumber);
+    if (!existing) {
+      dbTraineeMap.set(trainee.idNumber, trainee);
+    } else {
+      // Prefer record with currencyStatus data
+      const existingHasData = existing.currencyStatus && existing.currencyStatus.length > 0;
+      const newHasData = trainee.currencyStatus && trainee.currencyStatus.length > 0;
+      if (!existingHasData && newHasData) {
+        dbTraineeMap.set(trainee.idNumber, trainee);
+      }
+    }
+  });
+
+  // Start with database trainees (already tagged, deduped, currencyStatus extracted)
+  const merged = Array.from(dbTraineeMap.values());
 
   // Only add mock trainees if includeMockData is true
   if (includeMockData) {

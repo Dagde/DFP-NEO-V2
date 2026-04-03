@@ -1,6 +1,5 @@
-console.log("🔥🔥🔥 FORCED REDEPLOY V4 🔥🔥🔥");
-console.log("🚨🚨🚨 NEW BUILD V3 LOADED 🚨🚨🚨");
-console.log("🔴🔴🔴 APP.TSX LOADED v3 🔴🔴🔴");
+console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
+console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTheme } from './context/ThemeContext';
@@ -11,7 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
-import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData } from './utils/settingsService';
+import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -89,6 +88,8 @@ import { InstructorProfileFlyout } from './components/InstructorProfileFlyout';
 import TraineeProfileFlyout from './components/TraineeProfileFlyout';
 import PublishConfirmationFlyout from './components/PublishConfirmationFlyout';
 import CurrencyView from './components/CurrencyView';
+import CurrencyStatusPage from './components/CurrencyStatusPage';
+import { savedCurrencyCache } from './components/CurrencyPanel';
 // FIX: Corrected import to be a named import as per module export.
 import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
 import UnsavedChangesWarning from './components/UnsavedChangesWarning';
@@ -1960,7 +1961,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // Track this instructor for night assignments
                 intendedNightStaff.add(nfi.name);
 
-                const instructorToUpdate = instructors.find(i => i.idNumber === nfi.idNumber);
+                const instructorToUpdate = instructors.find(i => i.name === nfi.name);
                 if (instructorToUpdate) {
                     const reservationPeriod: UnavailabilityPeriod = {
                         id: `night-res-${nfi.idNumber}`,
@@ -4062,37 +4063,36 @@ useEffect(() => {
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
-    const instructorsData = (() => {
+    // Also filters by location (ESL = East Sale, PEA = Pearce) to prevent wrong-location staff entering the build
+    const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
-        console.log(`🏫 [INSTRUCTORS DEBUG] school=${school}, allInstructorsData.length=${allInstructorsData.length}, mockOn=${mockOn}, dbOn=${dbOn}`);
-        if (!mockOn && !dbOn) {
-            console.log(`🏫 [INSTRUCTORS DEBUG] Both OFF - returning empty array`);
-            return [];
-        }
-        if (mockOn && dbOn) {
-            const locations = [...new Set(allInstructorsData.map((i: any) => i.location))];
-            console.log(`🏫 [INSTRUCTORS DEBUG] Both ON - returning all ${allInstructorsData.length} instructors. Locations: ${locations.join(', ')}`);
-            return allInstructorsData;
-        }
-        if (mockOn && !dbOn) {
-            const mockOnly = allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
-            console.log(`🏫 [INSTRUCTORS DEBUG] Mock only - ${mockOnly.length} instructors`);
-            return mockOnly;
-        }
-        const dbOnly = allInstructorsData.filter(i => (i as any)._dataSource === 'database');
-        console.log(`🏫 [INSTRUCTORS DEBUG] DB only - ${dbOnly.length} instructors. Locations: ${[...new Set(dbOnly.map((i: any) => i.location))].join(', ')}`);
-        return dbOnly;
-    })();
+        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
 
-    const traineesData = (() => {
+        // Location filter: same logic as traineesData
+        const locationFiltered = allInstructorsData.filter((i: any) => {
+            // If no location and no unit info, include by default (don't exclude unknowns)
+            if (!i.location && !i.unit) return true;
+            if (i.location) return i.location === locationFullName;
+            if (i.unit) {
+                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true;
+        });
+
+        if (!mockOn && !dbOn) return [];
+        if (mockOn && dbOn) return locationFiltered;
+        if (mockOn && !dbOn) return locationFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
+        return locationFiltered.filter((i: any) => (i as any)._dataSource === 'database');
+    }, [allInstructorsData, dataSourceSettings, school]);
+
+    const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
 
         // Filter by location (ESL = East Sale, PEA = Pearce)
         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredTrainees = allTraineesData.filter(t => {
-            if (t.location) {
-                return t.location === locationFullName;
-            }
+            if (t.location) return t.location === locationFullName;
             if (t.unit) {
                 if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                 if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
@@ -4100,33 +4100,16 @@ useEffect(() => {
             return true;
         });
 
-        let result: Trainee[];
+        if (!mockOn && !dbOn) return [];
+        if (mockOn && !dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
+        if (!mockOn && dbOn) return locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
 
-        if (!mockOn && !dbOn) {
-            // Both OFF → empty
-            result = [];
-        } else if (mockOn && !dbOn) {
-            // Mock ONLY — explicit _dataSource === 'mockdata' check
-            result = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata');
-        } else if (!mockOn && dbOn) {
-            // DB ONLY — explicit _dataSource === 'database' check, no unknowns slip through
-            result = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
-        } else {
-            // Both ON → DB records take precedence: exclude mock trainees for courses that have DB records
-            const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
-            const dbCourses = new Set(dbTrainees.map(t => t.course));
-            const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
-            result = [...mockTrainees, ...dbTrainees];
-        }
-
-        // Required output log
-        const dbCount = result.filter(t => (t as any)._dataSource === 'database').length;
-        const mockCount = result.filter(t => (t as any)._dataSource === 'mockdata').length;
-        const unknownCount = result.filter(t => !['database', 'mockdata'].includes((t as any)._dataSource)).length;
-        console.log(`[traineesData] total=${result.length}, db=${dbCount}, mock=${mockCount}, unknown=${unknownCount} | mockOn=${mockOn}, dbOn=${dbOn}`);
-
-        return result;
-    })();
+        // Both ON → DB records take precedence
+        const dbTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'database');
+        const dbCourses = new Set(dbTrainees.map(t => t.course));
+        const mockTrainees = locationFilteredTrainees.filter(t => (t as any)._dataSource === 'mockdata' && !dbCourses.has(t.course));
+        return [...mockTrainees, ...dbTrainees];
+    }, [allTraineesData, dataSourceSettings, school]);
     
     // ============================================================
     // AUTHENTICATION STATE
@@ -4171,6 +4154,12 @@ useEffect(() => {
         const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
         setCurrentUser(auditUserString);
         console.log('[AUDIT] setCurrentUser ->', auditUserString);
+
+        // Feed the real rank back into sessionUser so the bottom-right display shows correct rank
+        if (rank) {
+            setSessionUser(prev => prev ? { ...prev, militaryRank: rank } : prev);
+            console.log('[RANK] Updated sessionUser.militaryRank ->', rank);
+        }
     };
 
     // Check for existing session on app load
@@ -5397,6 +5386,7 @@ useEffect(() => {
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
+    const [profileInitialTab, setProfileInitialTab] = useState<'currency' | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showAddGroundEvent, setShowAddGroundEvent] = useState(false);
     const [cptConflict, setCptConflict] = useState<Conflict | null>(null);
@@ -5413,6 +5403,7 @@ useEffect(() => {
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
     const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
+    const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
     const [eventForAuth, setEventForAuth] = useState<ScheduleEvent | null>(null);
     const [showPostFlightView, setShowPostFlightView] = useState(false);
@@ -6635,10 +6626,10 @@ useEffect(() => {
         handleNavigation('TraineeLMP');
     };
     
-    const handleViewLogbook = (person: Instructor | Trainee) => {
+    const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForLogbook(person);
         handleNavigation('Logbook');
-    };
+    }, []);
 
     const handleOpenAddRemedialPackage = (trainee: Trainee) => {
         setSelectedTraineeForRemedial(trainee);
@@ -8839,6 +8830,46 @@ updates.forEach(update => {
         });
     }, []);
 
+    // Callbacks for StaffView/InstructorListView to prevent render loop
+    const handleCloseStaffView = useCallback(() => {
+        handleNavigation('Program Schedule');
+    }, []);
+
+    const handleProfileOpened = useCallback(() => {
+        setSelectedPersonForProfile(null);
+    }, []);
+
+    const handleProfileTabConsumed = useCallback(() => {
+        setProfileInitialTab(null);
+    }, []);
+
+    const handleRequestSct = useCallback((instructor: Instructor) => {
+        setInstructorForSct(instructor);
+        setShowSctRequest(true);
+    }, []);
+
+    const handleArchiveInstructor = useCallback((id: number) => {
+        setInstructorsData(prev => {
+            const instructorToArchive = prev.find(i => i.idNumber === id);
+            if (instructorToArchive) {
+                setArchivedInstructorsData(archived => [...archived, instructorToArchive]);
+                return prev.filter(i => i.idNumber !== id);
+            }
+            return prev;
+        });
+    }, []);
+
+    const handleRestoreInstructor = useCallback((id: number) => {
+        setArchivedInstructorsData(prev => {
+            const instructorToRestore = prev.find(i => i.idNumber === id);
+            if (instructorToRestore) {
+                setInstructorsData(instructors => [...instructors, instructorToRestore]);
+                return prev.filter(i => i.idNumber !== id);
+            }
+            return prev;
+        });
+    }, []);
+
     const handleReplaceInstructors = useCallback((newInstructors: Instructor[]) => {
         setInstructorsData(newInstructors);
         setSuccessMessage('Instructors successfully replaced!');
@@ -8871,6 +8902,9 @@ updates.forEach(update => {
                 const personnelData = await personnelRes.json();
                 const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
                     ...p,
+                    // Extract qualifications.currencyStatus to top-level so Post Flight
+                    // and other in-memory reads can find it at person.currencyStatus
+                    currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
                 }));
                 
@@ -9815,6 +9849,8 @@ updates.forEach(update => {
         const newReqs = allCurrencies.filter(c => c.type === 'primitive') as CurrencyRequirement[];
         setMasterCurrencies(newMasters);
         setCurrencyRequirements(newReqs);
+        // Save directly to dedicated /api/currencies endpoint for reliable persistence
+        saveCurrenciesToDB(newMasters, newReqs, sessionUser?.userId);
         setSuccessMessage('Currency rules saved!');
     };
     
@@ -10115,15 +10151,20 @@ updates.forEach(update => {
         }
     };
 
-    const handleNavigateToCurrency = (person: Instructor | Trainee) => {
+    const handleNavigateToCurrency = useCallback((person: Instructor | Trainee) => {
         setSelectedPersonForCurrency(person);
+        // Detect whether this person is a trainee (has 'course' field) or instructor
+        const pType: 'instructor' | 'trainee' = 'course' in person ? 'trainee' : 'instructor';
+        setSelectedPersonForCurrencyType(pType);
         handleNavigation('Currency');
-    };
+    }, []);
 
     const handleSelectMyCurrency = () => {
         const user = instructorsData.find(i => i.name === currentUserName);
         if (user) {
-            handleNavigateToCurrency(user);
+            setSelectedPersonForProfile(user);
+            setProfileInitialTab('currency');
+            handleNavigation('Instructors');
         }
     };
 
@@ -10607,6 +10648,10 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectTrainee={handleSelectTraineeFromSchedule}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'CourseRoster':
                 return <CourseRosterView 
@@ -10730,6 +10775,10 @@ updates.forEach(update => {
                                     changes: `${trainee.rank} ${trainee.name} moved from ${trainee.course} to ${newCourse}`
                                 });
                             }}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {
@@ -11340,7 +11389,7 @@ updates.forEach(update => {
             case 'Staff':
                 console.log(`🏫 [STAFF VIEW] Rendering StaffView with instructorsData.length=${instructorsData.length}, school=${school}`);
                 return <StaffView
-                            onClose={() => handleNavigation('Program Schedule')}
+                            onClose={handleCloseStaffView}
                             events={events}
                             traineesData={traineesData}
                             instructorsData={instructorsData}
@@ -11400,20 +11449,8 @@ updates.forEach(update => {
                             }}
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onBulkUpdateInstructors={handleBulkUpdateInstructors}
-                            onArchiveInstructor={(id) => {
-                                const instructorToArchive = instructorsData.find(i => i.idNumber === id);
-                                if (instructorToArchive) {
-                                    setInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setArchivedInstructorsData(prev => [...prev, instructorToArchive]);
-                                }
-                            }}
-                            onRestoreInstructor={(id) => {
-                                const instructorToRestore = archivedInstructorsData.find(i => i.idNumber === id);
-                                if (instructorToRestore) {
-                                    setArchivedInstructorsData(prev => prev.filter(i => i.idNumber !== id));
-                                    setInstructorsData(prev => [...prev, instructorToRestore]);
-                                }
-                            }}
+                            onArchiveInstructor={handleArchiveInstructor}
+                            onRestoreInstructor={handleRestoreInstructor}
                             date={date}
                             onDateChange={handleDateChange}
                             eventSegmentsForDate={eventSegmentsForDate}
@@ -11427,15 +11464,18 @@ updates.forEach(update => {
                             onSelectEvent={handleOpenModal}
                             onUpdateEvent={handleScheduleUpdate}
                             onSelectInstructor={handleSelectInstructorFromSchedule}
-                            onRequestSct={(instructor) => {
-                                setInstructorForSct(instructor);
-                                setShowSctRequest(true);
-                            }}
+                            onRequestSct={handleRequestSct}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            onProfileOpened={handleProfileOpened}
                             onViewLogbook={handleViewLogbook}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            profileInitialTab={profileInitialTab}
+                            onProfileTabConsumed={handleProfileTabConsumed}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
             case 'Instructors':
                 return <InstructorListView 
@@ -11517,6 +11557,8 @@ updates.forEach(update => {
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Instructor | null}
                             onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            profileInitialTab={profileInitialTab}
+                            onProfileTabConsumed={() => setProfileInitialTab(null)}
                             onViewLogbook={handleViewLogbook}
                             onRequestSct={(instructor) => {
                                 setInstructorForSct(instructor);
@@ -11525,6 +11567,10 @@ updates.forEach(update => {
                             onNavigateToTrainee={(trainee) => {
                                 setSelectedPersonForProfile(trainee);
                             }}
+                            masterCurrencies={masterCurrencies}
+                            currencyRequirements={currencyRequirements}
+                            currentUserId={getCurrentUserId() ?? undefined}
+                            currentUserName={currentUserName}
                         />;
                 case 'Trainees':
                     return <TraineeListView 
@@ -11608,21 +11654,12 @@ updates.forEach(update => {
                 return <div>Error: Could not load trainee LMP.</div>;
              case 'Currency':
                 if (selectedPersonForCurrency) {
-                    return <CurrencyView
+                    return <CurrencyStatusPage
                                 person={selectedPersonForCurrency}
+                                personType={selectedPersonForCurrencyType}
                                 masterCurrencies={masterCurrencies}
                                 currencyRequirements={currencyRequirements}
-                                allEvents={events}
-                                syllabusDetails={syllabusDetails}
                                 onClose={handleCurrencyBack}
-                                onUpdateCurrencyStatus={(personId, newStatus) => {
-                                    const isInstructor = 'role' in selectedPersonForCurrency;
-                                    if (isInstructor) {
-                                        setInstructorsData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));
-                                    } else {
-                                        setTraineesData(prev => prev.map(p => p.idNumber === personId ? {...p, currencyStatus: newStatus} : p));
-                                    }
-                                }}
                                 registerDirtyCheck={registerDirtyCheck}
                            />;
                 }
@@ -11821,8 +11858,133 @@ updates.forEach(update => {
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                 }}
-                                onSave={(data) => {
+                                onSave={async (data) => {
                                     console.log('Post flight data saved:', data);
+                                    
+                                    // Persist currency updates to person's currency records
+                                    if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
+                                        const event = eventForPostFlight;
+                                        const targetPersons: Array<{ person: any; personType: 'instructor' | 'trainee' }> = [];
+                                        
+                                        if (event?.student) {
+                                            const trainee = traineesData.find(t => t.name === event.student || t.fullName === event.student);
+                                            if (trainee) targetPersons.push({ person: trainee, personType: 'trainee' });
+                                        }
+                                        if (event?.instructor) {
+                                            const instructor = instructorsData.find(i => i.name === event.instructor);
+                                            if (instructor) targetPersons.push({ person: instructor, personType: 'instructor' });
+                                        }
+                                        
+                                        for (const { person, personType } of targetPersons) {
+                                            const dbId = (person as any).id;
+                                            if (!dbId) continue;
+                                            
+                                            // Fetch the LATEST currency status from DB before merging
+                                            // This ensures we don't overwrite currencies saved via the profile tab
+                                            let existingStatus: PersonCurrencyStatus[] = person.currencyStatus || (person as any).qualifications?.currencyStatus || [];
+                                            try {
+                                                const freshEndpoint = personType === 'instructor'
+                                                    ? `/api/personnel/${dbId}/currencies`
+                                                    : `/api/trainees/${dbId}/currencies`;
+                                                const freshRes = await fetch(freshEndpoint, { credentials: 'include' });
+                                                if (freshRes.ok) {
+                                                    const freshData = await freshRes.json();
+                                                    if (Array.isArray(freshData.currencyStatus)) {
+                                                        existingStatus = freshData.currencyStatus;
+                                                        console.log(`[PostFlight] Fetched fresh currency for ${person.name}: ${existingStatus.length} records`);
+                                                    }
+                                                }
+                                            } catch (fetchErr) {
+                                                console.warn(`[PostFlight] Could not fetch fresh currency for ${person.name}, using in-memory:`, fetchErr);
+                                            }
+                                            
+                                            const allCurrencyDefs = [...masterCurrencies, ...currencyRequirements];
+                                            const updatedStatus = [...existingStatus];
+                                            
+                                            for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                                                if (!value || value === 'false') continue;
+                                                // fieldKey may be "id__inputType" (e.g. "abc123__date") when
+                                                // a currency has multiple input types — strip the suffix before lookup
+                                                const baseCurrencyId = currencyId.includes('__') ? currencyId.split('__')[0] : currencyId;
+                                                const def = allCurrencyDefs.find(c => c.id === baseCurrencyId);
+                                                if (!def) continue;
+                                                
+                                                // value is a date string for date inputs
+                                                const dateValue = typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/) ? value : null;
+                                                if (!dateValue) continue;
+                                                
+                                                const validityDays = 'validityDays' in def ? def.validityDays : 365;
+                                                const expiryDate = new Date(dateValue + 'T00:00:00Z');
+                                                expiryDate.setDate(expiryDate.getDate() + validityDays);
+                                                const expStr = expiryDate.toISOString().slice(0, 10);
+                                                const today = new Date();
+                                                today.setHours(0,0,0,0);
+                                                const isCurrent = expiryDate > today;
+                                                
+                                                const idx = updatedStatus.findIndex(s => s.currencyName === def.name || s.currencyName === def.id);
+                                                const newRecord: PersonCurrencyStatus = {
+                                                    currencyName: def.name,
+                                                    lastEventDate: dateValue,
+                                                    calculatedExpiry: expStr,
+                                                    isCurrent,
+                                                };
+                                                if (idx >= 0) {
+                                                    updatedStatus[idx] = newRecord;
+                                                } else {
+                                                    updatedStatus.push(newRecord);
+                                                }
+                                            }
+                                            
+                                            const endpoint = personType === 'instructor'
+                                                ? `/api/personnel/${dbId}/currencies`
+                                                : `/api/trainees/${dbId}/currencies`;
+                                            
+                                            try {
+                                                await fetch(endpoint, {
+                                                    method: 'PATCH',
+                                                    credentials: 'include',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ currencyStatus: updatedStatus }),
+                                                });
+                                                // Update local state
+                                                if (personType === 'instructor') {
+                                                    setInstructorsData(prev => prev.map(i => 
+                                                        (i as any).id === dbId ? { ...i, currencyStatus: updatedStatus } : i
+                                                    ));
+                                                } else {
+                                                    setTraineesData(prev => prev.map(t => 
+                                                        (t as any).id === dbId ? { ...t, currencyStatus: updatedStatus } : t
+                                                    ));
+                                                }
+                                                // Invalidate the CurrencyPanel cache so next open fetches fresh DB data
+                                                savedCurrencyCache.delete(dbId);
+                                                console.log(`[PostFlight] ✅ Currency updated for ${person.name}, cache invalidated for ${dbId}`);
+                                                // Log to audit trail — describe what currencies were updated
+                                                const auditChangeParts: string[] = [];
+                                                for (const [currencyId, value] of Object.entries(data.currencyUpdates)) {
+                                                    if (!value || value === 'false') continue;
+                                                    const baseCId = currencyId.includes('__') ? currencyId.split('__')[0] : currencyId;
+                                                    const allCDefs2 = [...masterCurrencies, ...currencyRequirements];
+                                                    const cDef = allCDefs2.find(c => c.id === baseCId);
+                                                    if (cDef && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                                        const [yr, mo, dy] = value.split('-');
+                                                        auditChangeParts.push(`${cDef.name}: date set to ${dy}/${mo}/${yr}`);
+                                                    }
+                                                }
+                                                if (auditChangeParts.length > 0) {
+                                                    logAudit(
+                                                        'Currency Status',
+                                                        'Edit',
+                                                        `Post Flight currency update for ${person.name}`,
+                                                        auditChangeParts.join('; ')
+                                                    );
+                                                }
+                                            } catch (err) {
+                                                console.warn(`[PostFlight] ⚠️ Currency update failed for ${person.name}:`, err);
+                                            }
+                                        }
+                                    }
+                                    
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');
                                     setSuccessMessage('Post-flight data saved!');

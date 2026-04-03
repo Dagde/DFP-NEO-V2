@@ -127,10 +127,14 @@ export const mergeWithInitialCurrencies = (
         const migratedTypes: PostFlightInputType[] | undefined =
             dbCur.postFlightInputTypes ??
             (legacy.postFlightInputType ? [legacy.postFlightInputType as PostFlightInputType] : undefined);
+        // Explicitly preserve showInPostFlight from DB - coerce to boolean to handle JSONB serialisation edge cases
+        const showInPostFlight = dbCur.showInPostFlight !== undefined && dbCur.showInPostFlight !== null
+            ? Boolean(dbCur.showInPostFlight)
+            : false;
         return {
-            showInPostFlight: false,
             postFlightInputTypes: initial?.postFlightInputTypes ?? (dbCur.expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date']),
             ...dbCur,
+            showInPostFlight,
             ...(migratedTypes ? { postFlightInputTypes: migratedTypes } : {}),
         } as CurrencyRequirement;
     });
@@ -140,10 +144,14 @@ export const mergeWithInitialCurrencies = (
         const migratedTypes: PostFlightInputType[] | undefined =
             dbCur.postFlightInputTypes ??
             (legacy.postFlightInputType ? [legacy.postFlightInputType as PostFlightInputType] : undefined);
+        // Explicitly preserve showInPostFlight from DB - coerce to boolean
+        const showInPostFlight = dbCur.showInPostFlight !== undefined && dbCur.showInPostFlight !== null
+            ? Boolean(dbCur.showInPostFlight)
+            : false;
         return {
-            showInPostFlight: false,
             postFlightInputTypes: ['checkbox'] as PostFlightInputType[],
             ...dbCur,
+            showInPostFlight,
             ...(migratedTypes ? { postFlightInputTypes: migratedTypes } : {}),
         } as MasterCurrency;
     });

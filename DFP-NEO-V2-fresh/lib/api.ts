@@ -42,7 +42,13 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<Fet
 export async function fetchInstructors(): Promise<any[]> {
   const result = await fetchAPI<{ personnel: any[] }>('/personnel');
   if (result.success && result.data?.personnel) {
-    return result.data.personnel;
+    // Extract qualifications.currencyStatus into top-level currencyStatus
+    // so that in-memory instructor objects always have currencyStatus available
+    // (the DB stores it nested inside the qualifications JSON field)
+    return result.data.personnel.map((p: any) => ({
+      ...p,
+      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+    }));
   }
   return [];
 }

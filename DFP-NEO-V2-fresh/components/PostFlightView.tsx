@@ -960,20 +960,20 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
             {/* Footer */}
             <div className="flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end">
-                <div className="flex" style={{ gap: '0px' }}>
+                <div className="flex" style={{ gap: '2px' }}>
                     <button
                         onClick={handleManualSave}
                         className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
-                        style={{ borderRadius: '6px 0 0 6px', borderRightWidth: '1px', borderRightColor: '#6b7280' }}
+                        style={{ borderRadius: '6px' }}
                     >Save</button>
                     <button
                         onClick={handleAttemptReturn}
                         className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
-                        style={{ borderRadius: '0', borderLeftWidth: '0', borderRightWidth: '1px', borderRightColor: '#6b7280' }}
+                        style={{ borderRadius: '6px' }}
                     >Back</button>
                     <AuditButton
                         pageName="Post-Flight"
-                        style={{ borderRadius: '0 6px 6px 0', borderLeftWidth: '0' }}
+                        style={{ borderRadius: '6px' }}
                     />
                 </div>
             </div>

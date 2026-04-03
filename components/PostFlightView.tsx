@@ -840,7 +840,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
+            <div className="flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end" style={{ gap: '2px' }}>
                 <button onClick={handleManualSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">Save & Return</button>
                 <button onClick={handleAttemptReturn} className="px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm">Return</button>
                    <AuditButton pageName="Post-Flight" />

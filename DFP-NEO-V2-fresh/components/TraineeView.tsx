@@ -33,6 +33,10 @@ interface TraineeViewProps {
   onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
   onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
   onBackcourseTrainee?: (trainee: any, newCourse: string) => void;
+  masterCurrencies?: any[];
+  currencyRequirements?: any[];
+  currentUserId?: string;
+  currentUserName?: string;
   
   // Props for TraineeScheduleView
   date: string;
@@ -124,6 +128,10 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onUpdateCourseNumber={props.onUpdateCourseNumber}
             onUpdateCourseUnit={props.onUpdateCourseUnit}
             onBackcourseTrainee={props.onBackcourseTrainee}
+            masterCurrencies={props.masterCurrencies}
+            currencyRequirements={props.currencyRequirements}
+            currentUserId={props.currentUserId}
+            currentUserName={props.currentUserName}
           />
         )}
         {activeTab === 'schedule' && (

@@ -2,13 +2,15 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import CurrencyPanel from './CurrencyPanel';
+import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
@@ -34,6 +36,10 @@ interface TraineeProfileFlyoutProps {
   isCreating?: boolean;
   activeCourses?: string[];
   onOpenInstructorProfile?: (instructorName: string) => void;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -245,7 +251,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onViewLogbook,
   isCreating = false,
   activeCourses = [],
-  onOpenInstructorProfile
+  onOpenInstructorProfile,
+  masterCurrencies = [],
+  currencyRequirements = [],
+  currentUserId,
+  currentUserName,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -257,9 +267,28 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     // Tab state — null means no tab open
     const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | null>(null);
+    // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
+    const [currencyEditState, setCurrencyEditState] = useState<{
+      isEditing: boolean; isSaving: boolean;
+      onEdit: () => void; onSave: () => void; onCancel: () => void;
+    } | null>(null);
+    // Local currency status override — updated after successful save without triggering full onUpdateTrainee
+    const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+    const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
+    // Audit flyout visibility
+    const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
-    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
+    // Ref for scrollable content area - used to scroll to top when a tab opens
+    const contentScrollRef = useRef<HTMLDivElement>(null);
+
+    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
+      const next = prev === tab ? null : tab;
+      if (next !== null) {
+        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+      }
+      return next;
+    });
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
     
@@ -819,7 +848,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* MAIN CONTENT — scrollable */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+                  <div ref={contentScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 relative">
                     {/* Transparent freeze overlay — blocks all interaction with content */}
                     {isFrozen && (
                       <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -827,21 +856,81 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                     {/* ── TAB PANELS (shown inline above profile when a tab is active) ── */}
                     {activeTab === 'currency' && (
-                      <div className={card3d + " p-4"} style={card3dStyle}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-bold text-white">Currency — {trainee.name}</h4>
-                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                      <div className={card3d + " p-3"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-bold text-white">Currency &mdash; {trainee.name}</h4>
+                          <div className="flex items-center gap-[1px]">
+                            {currencyEditState && !currencyEditState.isEditing && (
+                              <button
+                                onClick={currencyEditState.onEdit}
+                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                title="Edit currency dates"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {currencyEditState && currencyEditState.isEditing && (
+                              <>
+                                <button
+                                  onClick={currencyEditState.onCancel}
+                                  disabled={currencyEditState.isSaving}
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                  title="Cancel editing"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={currencyEditState.onSave}
+                                  disabled={currencyEditState.isSaving}
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50"
+                                  title="Save currency dates"
+                                >
+                                  {currencyEditState.isSaving ? 'Saving\u2026' : 'Save'}
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => setActiveTab(null)}
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                              title="Close currency panel"
+                            >
+                              Close
+                            </button>
+                            <button
+                              onClick={() => setShowCurrencyAudit(true)}
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                              title="View currency audit log"
+                            >
+                              Audit
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-gray-400 text-xs italic mb-4">Currency records for this trainee.</p>
-                        <div className="space-y-2">
-                          {(trainee.currencyStatus || []).length > 0 ? (trainee.currencyStatus || []).map((cs: any) => (
-                            <div key={cs.currencyId} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
-                              <span className="text-white font-medium">{cs.currencyId}</span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cs.status === 'Current' ? 'bg-green-600 text-white' : cs.status === 'Expiring' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}`}>{cs.status}</span>
-                            </div>
-                          )) : <p className="text-gray-500 text-xs italic text-center py-4">No currency records found.</p>}
-                        </div>
+                        <CurrencyPanel
+                          key={`currency-panel-${trainee.idNumber}`}
+                          personId={(trainee as any).id}
+                          idNumber={trainee.idNumber}
+                          personType="trainee"
+                          personName={trainee.name}
+                          masterCurrencies={masterCurrencies}
+                          currencyRequirements={currencyRequirements}
+                          initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus}
+                          onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
+                            localCurrencyStatusRef.current = newStatus;
+                            setLocalCurrencyStatus(newStatus);
+                          }}
+                          onEditStateChange={setCurrencyEditState}
+                          currentUserId={currentUserId}
+                          currentUserName={currentUserName}
+                        />
                       </div>
+                    )}
+
+                    {showCurrencyAudit && (
+                      <CurrencyAuditFlyout
+                        personId={String((trainee as any).id || trainee.idNumber)}
+                        personName={trainee.name}
+                        onClose={() => setShowCurrencyAudit(false)}
+                      />
                     )}
 
                     {activeTab === 'unavailable' && (

@@ -26,11 +26,15 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
     mockByName.set(instructor.name, instructor);
   });
 
-  // Create a map of database instructors by idNumber for deduplication
-  // Also create a set of DB instructor names for name-based deduplication
+  // Create a map of database instructors for deduplication
+  // Key: use idNumber when non-null, otherwise fall back to the Prisma CUID (id field)
+  // This prevents all null-idNumber records from collapsing to a single map entry.
+  // Also create a set of DB instructor names for name-based mockdata deduplication.
   // Tag each database record with _dataSource: 'database'
   const dbInstructorMap = new Map();
   const dbInstructorNames = new Set<string>();
+  // Separate map keyed by idNumber (only for non-null idNumbers) used for mockdata dedup
+  const dbByIdNumber = new Map();
   dbInstructors.forEach((instructor: any) => {
     // If DB instructor has empty permissions, inherit from mockData by name
     if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
@@ -39,15 +43,24 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
       console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
     }
     
-    // Check for duplicate idNumbers
-    if (dbInstructorMap.has(instructor.idNumber)) {
-      console.log(`  ⚠️ DUPLICATE IDNUMBER: ${instructor.idNumber} - ${instructor.name} overwrites ${dbInstructorMap.get(instructor.idNumber).name}`);
+    // Use idNumber as key if available, otherwise use CUID (id) to avoid null-key collisions
+    // All 102 restored staff have idNumber=null — without this fix they'd all overwrite each other
+    const mapKey = instructor.idNumber != null ? instructor.idNumber : (instructor.id || instructor.name);
+    
+    // Check for duplicate keys
+    if (dbInstructorMap.has(mapKey)) {
+      console.log(`  ⚠️ DUPLICATE KEY: ${mapKey} - ${instructor.name} overwrites ${dbInstructorMap.get(mapKey).name}`);
     }
     
     // Tag with dataSource
     const taggedInstructor = { ...instructor, _dataSource: 'database' as const };
-    dbInstructorMap.set(instructor.idNumber, taggedInstructor);
+    dbInstructorMap.set(mapKey, taggedInstructor);
     dbInstructorNames.add(instructor.name);
+    
+    // Track by idNumber for mockdata deduplication (only when non-null)
+    if (instructor.idNumber != null) {
+      dbByIdNumber.set(instructor.idNumber, taggedInstructor);
+    }
   });
   
   // Start with database instructors (already tagged)
@@ -58,7 +71,7 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
   // Only add mock instructors if includeMockData is true
   if (includeMockData) {
     mockInstructors.forEach((instructor: any) => {
-      if (dbInstructorMap.has(instructor.idNumber)) {
+      if (instructor.idNumber != null && dbByIdNumber.has(instructor.idNumber)) {
         skippedByIdNumber++;
         console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
       } else if (dbInstructorNames.has(instructor.name)) {

@@ -83,6 +83,7 @@ export interface PersonCurrencyStatus {
   lastEventDate: string; // For manual overrides or legacy data
   calculatedExpiry?: string;
   isCurrent?: boolean;
+  isInactive?: boolean;
 }
 
 export interface LogbookExperience {

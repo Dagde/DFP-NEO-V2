@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience } from '../types';
+import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -41,6 +41,10 @@ interface CourseRosterViewProps {
     onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
     onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
     onBackcourseTrainee?: (trainee: Trainee, newCourse: string) => void;
+    masterCurrencies?: MasterCurrency[];
+    currencyRequirements?: CurrencyRequirement[];
+    currentUserId?: string;
+    currentUserName?: string;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -97,7 +101,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onOpenInstructorProfile,
     onUpdateCourseNumber,
     onUpdateCourseUnit,
-    onBackcourseTrainee
+    onBackcourseTrainee,
+    masterCurrencies = [],
+    currencyRequirements = [],
+    currentUserId,
+    currentUserName,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -151,8 +159,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
 
             // Update the state only if the data has actually changed to avoid an infinite loop.
+            // Preserve any locally-edited currencyStatus so a background traineesData refresh
+            // doesn't overwrite currency saves that haven't propagated back to the master array yet.
             if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
-                setSelectedTrainee(updatedTrainee);
+                setSelectedTrainee({
+                  ...updatedTrainee,
+                  currencyStatus: selectedTrainee.currencyStatus ?? updatedTrainee.currencyStatus,
+                });
             }
         }
     }, [traineesData, selectedTrainee, isCreatingNew]);
@@ -405,6 +418,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onOpenInstructorProfile={onOpenInstructorProfile}
                     isCreating={isCreatingNew}
                     activeCourses={activeCourseNumbers}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (

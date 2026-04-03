@@ -8,6 +8,324 @@ import CancelEventFlyout from './CancelEventFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
 
+// ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
+
+const parseJ = (raw: any, fallback: any) => {
+  if (!raw) return fallback;
+  if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return fallback; } }
+  return raw;
+};
+
+const parseProgressionFull = (raw: any): { grades: number[]; labels: string[] } => {
+  const arr = parseJ(raw, []);
+  if (!Array.isArray(arr)) return { grades: [], labels: [] };
+  const filtered = arr
+    .map((item: any, i: number) => {
+      const grade = typeof item === 'number' ? item
+        : (item && typeof item === 'object') ? (item.grade ?? item.score ?? item.avgGrade ?? 0) : 0;
+      const label = (item && typeof item === 'object' && item.event) ? String(item.event) : `#${i + 1}`;
+      return { grade, label };
+    })
+    .filter(x => x.grade > 0);
+  return {
+    grades: filtered.map(x => x.grade),
+    labels: filtered.map(x => x.label),
+  };
+};
+
+const safeN = (n: number | undefined | null): number => {
+  if (n === undefined || n === null || isNaN(Number(n))) return 0;
+  return Number(n);
+};
+
+const safe = (n: number | undefined | null, d = 2): string => {
+  if (n === undefined || n === null || isNaN(Number(n))) return '\u2014';
+  return Number(n).toFixed(d);
+};
+
+const gradeColor = (v: number): string => {
+  if (v >= 4.5) return 'text-emerald-400';
+  if (v >= 3.5) return 'text-green-400';
+  if (v >= 3.0) return 'text-yellow-400';
+  if (v >= 2.5) return 'text-orange-400';
+  return 'text-red-400';
+};
+
+const trendIcon = (dir: string): string => {
+  if (dir === 'improving') return '\u2191';
+  if (dir === 'worsening') return '\u2193';
+  return '\u2192';
+};
+
+const trendColor = (dir: string): string => {
+  if (dir === 'improving') return 'text-emerald-400';
+  if (dir === 'worsening') return 'text-red-400';
+  return 'text-gray-400';
+};
+
+interface TraineeGradeSparkLineProps {
+  data: number[];
+  labels?: string[];
+  width?: number;
+  height?: number;
+  color?: string;
+  interactive?: boolean;
+}
+
+const TraineeGradeSparkLine: React.FC<TraineeGradeSparkLineProps> = ({
+  data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false
+}) => {
+  const [tooltip, setTooltip] = React.useState<{ i: number; pageX: number; pageY: number } | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
+
+  if (!data || data.length < 2) return <span className="text-gray-600 text-xs">\u2014</span>;
+
+  const YMIN = 0, YMAX = 5;
+  const PAD_TOP = 8, PAD_BOT = 8;
+  const usableH = height - PAD_TOP - PAD_BOT;
+
+  const getX = (i: number) => (data.length === 1 ? width / 2 : (i / (data.length - 1)) * width);
+  const getY = (v: number) => PAD_TOP + usableH * (1 - Math.max(0, Math.min(1, (v - YMIN) / (YMAX - YMIN))));
+
+  const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
+  const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
+  const gc = (v: number) => v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
+  const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
+
+  return (
+    <div className="relative" style={{ display: 'inline-block', overflow: 'visible' }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        className="overflow-visible"
+        style={{ cursor: interactive ? 'crosshair' : 'default', display: 'block' }}
+      >
+        {gridLines.map(v => {
+          const y = getY(v);
+          return (
+            <line key={v} x1={0} y1={y} x2={width} y2={y}
+              stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
+          );
+        })}
+        <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 2 : 1.5} strokeLinejoin="round" />
+        {interactive && (
+          <polygon
+            points={`0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`}
+            fill={color} fillOpacity={0.07}
+          />
+        )}
+        {data.map((v, i) => {
+          const x = getX(i);
+          const y = getY(v);
+          const isHov = tooltip?.i === i;
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={interactive ? (isHov ? 6 : 4) : 2} fill={color}
+                stroke={isHov ? '#fff' : 'none'} strokeWidth={1.5} />
+              {interactive && (
+                <circle
+                  cx={x} cy={y} r={14} fill="transparent"
+                  onMouseEnter={(e) => {
+                    const rect = svgRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      setTooltip({ i, pageX: rect.left + x * (rect.width / width), pageY: rect.top + y * (rect.height / height) });
+                    }
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      {tooltip !== null && hoveredVal !== null && (
+        <div
+          className="fixed z-[9999] pointer-events-none px-2 py-1 rounded bg-gray-900 border border-gray-600 text-xs shadow-xl"
+          style={{ left: tooltip.pageX + 12, top: tooltip.pageY - 32 }}
+        >
+          <span className="text-gray-400">{labels?.[tooltip.i] ?? `#${tooltip.i + 1}`}: </span>
+          <span className="font-bold" style={{ color: gc(hoveredVal) }}>{hoveredVal.toFixed(2)}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface TraineeScoresModalProps {
+  trainee: { fullName: string; course?: string };
+  onClose: () => void;
+}
+
+const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClose }) => {
+  const [loading, setLoading] = React.useState(true);
+  const [tieData, setTieData] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Strip course suffix from fullName (format: "Evans, Linda – ADF302" -> "Evans, Linda")
+  const traineeNameOnly = trainee.fullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        let found: any = null;
+
+        // Strategy 1: Use course-based endpoint (same as Build Intelligence) if course is known
+        if (trainee.course) {
+          try {
+            const courseRes = await fetch(`/api/tie/trainees/${encodeURIComponent(trainee.course)}`);
+            if (courseRes.ok) {
+              const courseRows = await courseRes.json();
+              if (Array.isArray(courseRows)) {
+                // Match by traineeFullName - stored as "Edwards, Luna – ADF302"
+                found = courseRows.find((r: any) => {
+                  const namePart = (r.traineeFullName || '').split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+                  return namePart.toLowerCase() === traineeNameOnly.toLowerCase();
+                }) || null;
+              }
+            }
+          } catch (e) { /* fall through to strategy 2 */ }
+        }
+
+        // Strategy 2: Use single trainee endpoint with LIKE matching
+        if (!found) {
+          const encodedName = encodeURIComponent(traineeNameOnly);
+          const res = await fetch(`/api/tie/trainee/${encodedName}`);
+          if (res.ok) {
+            const rows = await res.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              found = rows[0];
+            }
+          }
+        }
+
+        // Parse gradeProgression if it's a string (JSONB might come back as string)
+        if (found && typeof found.gradeProgression === 'string') {
+          try { found.gradeProgression = JSON.parse(found.gradeProgression); } catch (e) {}
+        }
+
+        setTieData(found);
+      } catch (e: any) {
+        setError(e.message || 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [traineeNameOnly, trainee.course]);
+
+  const progression = tieData ? parseProgressionFull(tieData.gradeProgression) : { grades: [], labels: [] };
+  const { grades, labels } = progression;
+  const trend = tieData?.overallTrend || 'stable';
+  const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
+  const avgVal = grades.length > 0 ? grades.reduce((s: number, v: number) => s + v, 0) / grades.length : 0;
+  const minVal = grades.length > 0 ? Math.min(...grades) : 0;
+  const maxVal = grades.length > 0 ? Math.max(...grades) : 0;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4"
+        style={{ maxWidth: '860px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-white font-bold text-lg">{traineeNameOnly} &mdash; Grade Progression</h3>
+            {tieData && (
+              <p className="text-gray-400 text-sm mt-0.5">
+                {grades.length} assessments &middot; Course: {tieData.courseName || 'N/A'} &middot; hover over a point to see details
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+        </div>
+
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-gray-400 text-sm">Loading grade progression data...</div>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-red-400 text-sm">Error loading data: {error}</div>
+          </div>
+        )}
+
+        {!loading && !error && !tieData && (
+          <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <div className="text-gray-400 text-sm">No TIE analytics data found for {traineeNameOnly}</div>
+            <div className="text-gray-600 text-xs">Run Build Intelligence analytics to generate grade progression data</div>
+          </div>
+        )}
+
+        {!loading && tieData && grades.length < 2 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <div className="text-gray-400 text-sm">Insufficient grade data to display progression chart</div>
+            <div className="text-gray-600 text-xs">At least 2 assessments are required</div>
+          </div>
+        )}
+
+        {!loading && tieData && grades.length >= 2 && (
+          <>
+            <div className="bg-gray-800 rounded-xl p-5">
+              <div className="flex gap-3">
+                <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
+                  <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span>
+                </div>
+                <div className="flex-1 overflow-x-auto">
+                  <TraineeGradeSparkLine
+                    data={grades}
+                    labels={labels}
+                    width={Math.max(760, grades.length * 48)}
+                    height={220}
+                    color={color}
+                    interactive={true}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-2 ml-9 px-1">
+                <span>Assessment 1</span>
+                <span>Assessment {grades.length}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 mt-4">
+              {([
+                { label: 'Minimum', value: minVal },
+                { label: 'Average', value: avgVal },
+                { label: 'Maximum', value: maxVal },
+              ] as Array<{label: string; value: number}>).map((s) => (
+                <div key={s.label} className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{s.label}</p>
+                  <p className={`text-xl font-bold font-mono ${gradeColor(s.value)}`}>{s.value.toFixed(2)}</p>
+                </div>
+              ))}
+              <div className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Trend</p>
+                <p className={`text-base font-bold ${trendColor(trend)}`}>{trendIcon(trend)} {trend || 'stable'}</p>
+              </div>
+            </div>
+
+            {tieData.narrativeSummary && (
+              <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Analytics Summary</p>
+                <p className="text-gray-300 text-sm">{tieData.narrativeSummary}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        <p className="text-gray-600 text-xs mt-3 text-center">Click outside or &times; to close</p>
+      </div>
+    </div>
+  );
+};
+
 interface EventDetailModalProps {
   event: ScheduleEvent;
   onClose: () => void;
@@ -227,6 +545,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     
     // Oracle state
     const [syllabusSelectionError, setSyllabusSelectionError] = useState(false);
+    const [showTraineeScoresModal, setShowTraineeScoresModal] = useState(false);
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
     const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map(t => t.trainee.fullName) : trainees;
@@ -1203,8 +1522,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     
     const handleTraineeScoresClick = () => {
         if (traineeObject) {
-            onNavigateToHateSheet(traineeObject);
-            onClose();
+            setShowTraineeScoresModal(true);
         }
     };
 
@@ -1510,6 +1828,13 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
 
     return (
         <>
+            {/* Trainee Scores Modal */}
+            {showTraineeScoresModal && traineeObject && (
+                <TraineeScoresModal
+                    trainee={{ fullName: traineeObject.fullName, course: traineeObject.course }}
+                    onClose={() => setShowTraineeScoresModal(false)}
+                />
+            )}
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
                 <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
                     <div className={`py-[5px] px-2 border-b border-gray-700 flex justify-center items-center relative ${event.color} flex-shrink-0 min-h-[65px]`}>

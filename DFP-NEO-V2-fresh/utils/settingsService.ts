@@ -290,3 +290,60 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     version: SETTINGS_VERSION,
   };
 };
+/**
+ * Save currencies directly to the dedicated /api/currencies endpoint
+ * This is MORE RELIABLE than relying on the general settings save
+ * because it's an isolated atomic operation
+ */
+export const saveCurrenciesToDB = async (
+  masterCurrencies: any[],
+  currencyRequirements: any[],
+  userId?: string
+): Promise<boolean> => {
+  try {
+    const apiBase = getApiBase();
+    const url = `${apiBase}/currencies`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orgId: ORG_ID,
+        masterCurrencies,
+        currencyRequirements,
+        updatedBy: userId || null,
+      }),
+    });
+    if (!res.ok) {
+      console.error('[Currencies] Failed to save:', res.status);
+      return false;
+    }
+    console.log('[Currencies] ✅ Saved directly to /api/currencies');
+    return true;
+  } catch (error) {
+    console.error('[Currencies] Error saving:', error);
+    return false;
+  }
+};
+
+/**
+ * Load currencies directly from the dedicated /api/currencies endpoint
+ */
+export const loadCurrenciesFromDB = async (): Promise<{
+  masterCurrencies: any[];
+  currencyRequirements: any[];
+} | null> => {
+  try {
+    const apiBase = getApiBase();
+    const url = `${apiBase}/currencies?orgId=${ORG_ID}`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return {
+      masterCurrencies: json.masterCurrencies || [],
+      currencyRequirements: json.currencyRequirements || [],
+    };
+  } catch (error) {
+    console.error('[Currencies] Error loading:', error);
+    return null;
+  }
+};

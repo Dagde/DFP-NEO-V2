@@ -118,6 +118,71 @@ app.post('/api/settings', async (req, res) => {
   }
 });
 
+// GET /api/currencies - Load currency settings (dedicated endpoint for reliability)
+app.get('/api/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const orgId = req.query.orgId || 'default';
+    // Try dedicated currency storage first (most recent)
+    const rows = await db.$queryRawUnsafe(
+      `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+      orgId
+    );
+    if (!rows || rows.length === 0) {
+      return res.json({ masterCurrencies: [], currencyRequirements: [] });
+    }
+    const data = rows[0].data;
+    return res.json({
+      masterCurrencies: data.masterCurrencies || [],
+      currencyRequirements: data.currencyRequirements || [],
+    });
+  } catch (error) {
+    console.error('[Currencies] GET error:', error);
+    res.status(500).json({ error: 'Failed to load currencies', details: error.message });
+  }
+});
+
+// POST /api/currencies - Save currency settings (dedicated endpoint for reliability)
+app.post('/api/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { orgId = 'default', masterCurrencies, currencyRequirements, updatedBy } = req.body;
+    if (!masterCurrencies && !currencyRequirements) {
+      return res.status(400).json({ error: 'Missing currency data' });
+    }
+    const now = new Date().toISOString();
+    // Load existing settings first to merge
+    let existingData = {};
+    try {
+      const rows = await db.$queryRawUnsafe(
+        `SELECT data FROM "AppSettings" WHERE "orgId" = $1 LIMIT 1`,
+        orgId
+      );
+      if (rows && rows.length > 0) existingData = rows[0].data || {};
+    } catch (e) {}
+    // Merge currencies into existing settings
+    const updatedData = {
+      ...existingData,
+      masterCurrencies: masterCurrencies || existingData.masterCurrencies || [],
+      currencyRequirements: currencyRequirements || existingData.currencyRequirements || [],
+    };
+    const settingsJson = JSON.stringify(updatedData);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "AppSettings" ("id", "orgId", "data", "updatedBy", "updatedAt", "createdAt")
+      VALUES (gen_random_uuid()::text, $1, $2::jsonb, $3, $4::timestamp, $4::timestamp)
+      ON CONFLICT ("orgId") DO UPDATE SET
+        "data" = $2::jsonb,
+        "updatedBy" = $3,
+        "updatedAt" = $4::timestamp
+    `, orgId, settingsJson, updatedBy || null, now);
+    console.log(`[Currencies] ✅ Saved currencies for orgId=${orgId} — masters: ${(masterCurrencies||[]).length}, reqs: ${(currencyRequirements||[]).length}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Currencies] POST error:', error);
+    res.status(500).json({ error: 'Failed to save currencies', details: error.message });
+  }
+});
+
 // GET /api/personnel
 app.get('/api/personnel', async (req, res) => {
   try {
@@ -199,6 +264,389 @@ app.post('/api/personnel', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/personnel error:', error);
     res.status(500).json({ error: 'Failed to create personnel', details: error.message });
+  }
+});
+
+// PATCH /api/personnel/:id - Update a personnel (instructor) record
+app.patch('/api/personnel/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'Personnel ID is required' });
+    }
+
+    const existing = await db.personnel.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Personnel not found' });
+    }
+
+    const updated = await db.personnel.update({
+      where: { id },
+      data: updates
+    });
+
+    console.log(`✅ PATCH /api/personnel/${id} - updated: ${updated.name}`);
+    res.json({ success: true, personnel: updated });
+  } catch (error) {
+    console.error('❌ PATCH /api/personnel error:', error);
+    res.status(500).json({ error: 'Failed to update personnel', details: error.message });
+  }
+});
+
+// GET /api/personnel/:id/currencies - Get currency status for an instructor
+// :id can be a UUID string (DB id) or a numeric idNumber
+app.get('/api/personnel/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    let record = null;
+    const numericId = parseInt(id, 10);
+    console.log(`GET /api/personnel/${id}/currencies -- numericId=${numericId}, isNumeric=${!isNaN(numericId)}`);
+    if (!isNaN(numericId)) {
+      // Order by updatedAt desc -- consistently get the most recently updated record
+      // Also prefer records that already have currency data
+      const records = await db.personnel.findMany({ where: { idNumber: numericId }, orderBy: { updatedAt: 'desc' } });
+      console.log(`   Found ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => ({ id: r.id, name: r.name, hasCurrency: !!(r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length) })));
+      record = records.find(r => r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length > 0) || records[0] || null;
+      console.log(`   Using record id=${record && record.id}, name=${record && record.name}`);
+    } else {
+      // UUID lookup — but also check all records with the same idNumber so we get the most complete data.
+      // This handles the case where duplicates exist and the "best" record (with currency data) differs
+      // from the specific UUID record being queried.
+      const uuidRecord = await db.personnel.findUnique({ where: { id } });
+      console.log(`   UUID lookup -- found: id=${uuidRecord && uuidRecord.id}, name=${uuidRecord && uuidRecord.name}`);
+      if (uuidRecord && uuidRecord.idNumber) {
+        // Check if any sibling record with the same idNumber has more currency data
+        const siblings = await db.personnel.findMany({ where: { idNumber: uuidRecord.idNumber }, orderBy: { updatedAt: 'desc' } });
+        console.log(`   UUID lookup -- found ${siblings.length} sibling record(s) for idNumber ${uuidRecord.idNumber}`);
+        // Prefer the record that has currency data; otherwise use the UUID record itself
+        record = siblings.find(r => r.qualifications && r.qualifications.currencyStatus && r.qualifications.currencyStatus.length > 0) || uuidRecord;
+        console.log(`   UUID lookup -- using record id=${record.id} (has ${record.qualifications && record.qualifications.currencyStatus ? record.qualifications.currencyStatus.length : 0} currency entries)`);
+      } else {
+        record = uuidRecord;
+      }
+    }
+    if (!record) return res.status(404).json({ error: 'Personnel not found' });
+    const currencies = record.qualifications ? (record.qualifications.currencyStatus || []) : [];
+    console.log(`   Returning ${currencies.length} currency record(s):`, JSON.stringify(currencies));
+    res.json({ currencyStatus: currencies });
+  } catch (error) {
+    console.error('GET /api/personnel/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to fetch personnel currencies', details: error.message });
+  }
+});
+
+// PATCH /api/personnel/:id/currencies - Update currency status for an instructor
+// :id can be a UUID string (DB id) or a numeric idNumber
+app.patch('/api/personnel/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const { currencyStatus } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Personnel ID is required' });
+
+    console.log(`PATCH /api/personnel/${id}/currencies -- saving ${currencyStatus && currencyStatus.length} items:`, JSON.stringify(currencyStatus));
+
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      // Update ALL records with this idNumber to keep duplicates in sync
+      const records = await db.personnel.findMany({ where: { idNumber: numericId } });
+      if (!records.length) return res.status(404).json({ error: 'Personnel not found' });
+      console.log(`   Updating ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => r.id));
+      await Promise.all(records.map(existing => {
+        const currentQual = existing.qualifications || {};
+        return db.personnel.update({
+          where: { id: existing.id },
+          data: {
+            qualifications: {
+              ...(typeof currentQual === 'object' ? currentQual : {}),
+              currencyStatus: currencyStatus || []
+            }
+          }
+        });
+      }));
+      console.log(`   PATCH /api/personnel/${id}/currencies - updated ${records.length} record(s) for: ${records[0].name}`);
+      res.json({ success: true, currencyStatus });
+    } else {
+      const existing = await db.personnel.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ error: 'Personnel not found' });
+      // Also update ALL records with the same idNumber to keep duplicates in sync
+      // This mirrors the numeric-idNumber PATCH behaviour
+      if (existing.idNumber) {
+        const allRecords = await db.personnel.findMany({ where: { idNumber: existing.idNumber } });
+        console.log(`   UUID PATCH -- updating ${allRecords.length} record(s) for idNumber ${existing.idNumber}:`, allRecords.map(r => r.id));
+        await Promise.all(allRecords.map(rec => {
+          const currentQual = rec.qualifications || {};
+          return db.personnel.update({
+            where: { id: rec.id },
+            data: {
+              qualifications: {
+                ...(typeof currentQual === 'object' ? currentQual : {}),
+                currencyStatus: currencyStatus || []
+              }
+            }
+          });
+        }));
+        console.log(`   PATCH /api/personnel/${id}/currencies - updated ${allRecords.length} record(s) for: ${existing.name}`);
+      } else {
+        // No idNumber — just update the single record
+        const currentQual = existing.qualifications || {};
+        await db.personnel.update({
+          where: { id: existing.id },
+          data: {
+            qualifications: {
+              ...(typeof currentQual === 'object' ? currentQual : {}),
+              currencyStatus: currencyStatus || []
+            }
+          }
+        });
+        console.log(`   PATCH /api/personnel/${id}/currencies - updated single record for: ${existing.name}`);
+      }
+      res.json({ success: true, currencyStatus });
+    }
+  } catch (error) {
+    console.error('PATCH /api/personnel/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to update personnel currencies', details: error.message });
+  }
+});
+
+// GET /api/trainees/:id/currencies - Get currency status for a trainee
+// :id can be a UUID/cuid string (DB id) or a numeric idNumber
+app.get('/api/trainees/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    let record = null;
+    const numericId = parseInt(id, 10);
+    console.log(`GET /api/trainees/${id}/currencies -- numericId=${numericId}, isNumeric=${!isNaN(numericId)}`);
+    if (!isNaN(numericId)) {
+      // Order by updatedAt desc -- prefer most recently updated record
+      // Also prefer records that already have currency data
+      const records = await db.trainee.findMany({ where: { idNumber: numericId }, orderBy: { updatedAt: 'desc' } });
+      console.log(`   Found ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => ({ id: r.id, name: r.name, hasCurrency: !!(r.currencyStatus && r.currencyStatus.length) })));
+      record = records.find(r => r.currencyStatus && Array.isArray(r.currencyStatus) && r.currencyStatus.length > 0) || records[0] || null;
+      console.log(`   Using record id=${record && record.id}, name=${record && record.name}`);
+    } else {
+      // UUID lookup — but also check all records with the same idNumber so we get the most complete data.
+      const uuidRecord = await db.trainee.findUnique({ where: { id } });
+      console.log(`   UUID lookup -- found: id=${uuidRecord && uuidRecord.id}, name=${uuidRecord && uuidRecord.name}`);
+      if (uuidRecord && uuidRecord.idNumber) {
+        const siblings = await db.trainee.findMany({ where: { idNumber: uuidRecord.idNumber }, orderBy: { updatedAt: 'desc' } });
+        console.log(`   UUID lookup -- found ${siblings.length} sibling record(s) for idNumber ${uuidRecord.idNumber}`);
+        record = siblings.find(r => r.currencyStatus && Array.isArray(r.currencyStatus) && r.currencyStatus.length > 0) || uuidRecord;
+        console.log(`   UUID lookup -- using record id=${record.id} (has ${Array.isArray(record.currencyStatus) ? record.currencyStatus.length : 0} currency entries)`);
+      } else {
+        record = uuidRecord;
+      }
+    }
+    if (!record) return res.status(404).json({ error: 'Trainee not found' });
+    let currencies = [];
+    if (record.currencyStatus) {
+      currencies = Array.isArray(record.currencyStatus) ? record.currencyStatus : [];
+    }
+    console.log(`   Returning ${currencies.length} currency record(s):`, JSON.stringify(currencies));
+    res.json({ currencyStatus: currencies });
+  } catch (error) {
+    console.error('GET /api/trainees/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to fetch trainee currencies', details: error.message });
+  }
+});
+
+// PATCH /api/trainees/:id/currencies - Update currency status for a trainee
+// :id can be a UUID/cuid string (DB id) or a numeric idNumber
+app.patch('/api/trainees/:id/currencies', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const { currencyStatus } = req.body;
+
+    if (!id) return res.status(400).json({ error: 'Trainee ID is required' });
+
+    console.log(`PATCH /api/trainees/${id}/currencies -- saving ${currencyStatus && currencyStatus.length} items:`, JSON.stringify(currencyStatus));
+
+    const numericId = parseInt(id, 10);
+    if (!isNaN(numericId)) {
+      // Update ALL records with this idNumber to keep duplicates in sync
+      const records = await db.trainee.findMany({ where: { idNumber: numericId } });
+      if (!records.length) return res.status(404).json({ error: 'Trainee not found' });
+      console.log(`   Updating ${records.length} record(s) for idNumber ${numericId}:`, records.map(r => r.id));
+      await Promise.all(records.map(existing =>
+        db.trainee.update({
+          where: { id: existing.id },
+          data: { currencyStatus: currencyStatus || [] }
+        })
+      ));
+      console.log(`   PATCH /api/trainees/${id}/currencies - updated ${records.length} record(s) for: ${records[0].name}`);
+      res.json({ success: true, currencyStatus });
+    } else {
+      const existing = await db.trainee.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ error: 'Trainee not found' });
+      // Also update ALL records with the same idNumber to keep duplicates in sync
+      if (existing.idNumber) {
+        const allRecords = await db.trainee.findMany({ where: { idNumber: existing.idNumber } });
+        console.log(`   UUID PATCH -- updating ${allRecords.length} record(s) for idNumber ${existing.idNumber}:`, allRecords.map(r => r.id));
+        await Promise.all(allRecords.map(rec =>
+          db.trainee.update({
+            where: { id: rec.id },
+            data: { currencyStatus: currencyStatus || [] }
+          })
+        ));
+        console.log(`   PATCH /api/trainees/${id}/currencies - updated ${allRecords.length} record(s) for: ${existing.name}`);
+      } else {
+        await db.trainee.update({
+          where: { id: existing.id },
+          data: { currencyStatus: currencyStatus || [] }
+        });
+        console.log(`   PATCH /api/trainees/${id}/currencies - updated single record for: ${existing.name}`);
+      }
+      res.json({ success: true, currencyStatus });
+    }
+  } catch (error) {
+    console.error('PATCH /api/trainees/:id/currencies error:', error);
+    res.status(500).json({ error: 'Failed to update trainee currencies', details: error.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CURRENCY AUDIT ENDPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /api/audit/currency - Write a currency audit entry to the DB AuditLog table
+// Body: { personId, personName, personType, userId, userName, changes: [{currencyName, oldDate, newDate}] }
+app.post('/api/audit/currency', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { personId, personName, personType, userId, userName, changes } = req.body;
+
+    if (!changes || changes.length === 0) {
+      return res.status(400).json({ error: 'No changes provided' });
+    }
+
+    // Build a human-readable summary
+    const summary = changes.map(c => {
+      const parts = [];
+      if (c.activeChanged) {
+        parts.push(`${c.currencyName}: ${c.isNowInactive ? 'set Inactive' : 'set Active'}`);
+      }
+      if (c.oldDate !== c.newDate) {
+        if (!c.oldDate && c.newDate) parts.push(`${c.currencyName}: date set to ${c.newDate}`);
+        else if (c.oldDate && !c.newDate) parts.push(`${c.currencyName}: date cleared (was ${c.oldDate})`);
+        else if (!c.activeChanged) parts.push(`${c.currencyName}: ${c.oldDate} → ${c.newDate}`);
+      }
+      return parts.join(', ') || `${c.currencyName}: updated`;
+    }).join('; ');
+
+    // Resolve the DB User for the audit entry
+    // User.userId = PMKEYS string (what frontend sends), User.id = UUID primary key (what AuditLog needs)
+    let dbUserId = null;
+
+    // 1. Try by User.userId field (PMKEYS number sent from frontend)
+    if (userId) {
+      const user = await db.user.findFirst({ where: { userId: String(userId) } });
+      if (user) {
+        dbUserId = user.id;
+        console.log(`[Audit] Resolved user by userId/PMKEYS: ${userId} → dbUserId=${dbUserId}`);
+      }
+    }
+
+    // 2. Try matching by username or name fragments
+    if (!dbUserId && userName) {
+      const nameParts = userName.split(/[,\s]+/).filter(Boolean);
+      const user = await db.user.findFirst({
+        where: {
+          OR: [
+            { username: { contains: userName, mode: 'insensitive' } },
+            nameParts[0] ? { lastName: { contains: nameParts[0], mode: 'insensitive' } } : undefined,
+            nameParts[1] ? { firstName: { contains: nameParts[1], mode: 'insensitive' } } : undefined,
+          ].filter(Boolean),
+        }
+      });
+      if (user) {
+        dbUserId = user.id;
+        console.log(`[Audit] Resolved user by name match: "${userName}" → dbUserId=${dbUserId}`);
+      }
+    }
+
+    // 3. Last resort: use the first active admin/system user so audit is NEVER silently dropped
+    if (!dbUserId) {
+      const fallbackUser = await db.user.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (fallbackUser) {
+        dbUserId = fallbackUser.id;
+        console.warn(`[Audit] Could not match user (userId=${userId}, userName=${userName}). Using fallback user ${dbUserId}. Recording audit anyway.`);
+      }
+    }
+
+    // If absolutely no user exists in DB at all, we cannot create an AuditLog record (FK constraint)
+    if (!dbUserId) {
+      console.warn(`[Audit] No users in DB at all. Cannot log audit for userId=${userId}, userName=${userName}.`);
+      return res.json({ success: true, warning: 'Audit entry skipped: no users in DB', summary });
+    }
+
+    const auditEntry = await db.auditLog.create({
+      data: {
+        userId: dbUserId,
+        action: 'UPDATE',
+        entityType: 'currency',
+        entityId: String(personId),
+        changes: {
+          personName,
+          personType,
+          userName,
+          summary,
+          details: changes,
+        },
+      }
+    });
+
+    console.log(`✅ POST /api/audit/currency - logged currency change for ${personName} by ${userName}`);
+    res.json({ success: true, auditId: auditEntry.id, summary });
+  } catch (error) {
+    console.error('❌ POST /api/audit/currency error:', error);
+    res.status(500).json({ error: 'Failed to log currency audit', details: error.message });
+  }
+});
+
+// GET /api/audit/currency/:personId - Get currency audit history for a person
+// personId can be UUID or numeric idNumber
+app.get('/api/audit/currency/:personId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { personId } = req.params;
+
+    const entries = await db.auditLog.findMany({
+      where: {
+        entityType: 'currency',
+        entityId: String(personId),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        User: {
+          select: { firstName: true, lastName: true, username: true, userId: true }
+        }
+      }
+    });
+
+    const result = entries.map(e => ({
+      id: e.id,
+      createdAt: e.createdAt,
+      userName: e.changes?.userName || (e.User ? `${e.User.firstName || ''} ${e.User.lastName || ''}`.trim() || e.User.username : 'Unknown'),
+      summary: e.changes?.summary || '',
+      details: e.changes?.details || [],
+      personName: e.changes?.personName || '',
+    }));
+
+    res.json({ auditEntries: result });
+  } catch (error) {
+    console.error('❌ GET /api/audit/currency error:', error);
+    res.status(500).json({ error: 'Failed to fetch currency audit', details: error.message });
   }
 });
 
@@ -1469,24 +1917,19 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
 // regardless of which URL the app is accessed from.
 const staticPath = path.join(__dirname, 'dfp-neo-platform/public/flight-school-app');
 if (fs.existsSync(staticPath)) {
-  // Force no-cache for JS/CSS assets so browsers always fetch the latest build
-  app.use('/assets', (req, res, next) => {
+  // Force no-cache for ALL assets and HTML so browsers always fetch the latest build
+  // This prevents stale JS/CSS being served after a deployment
+  const noCacheMiddleware = (req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     next();
-  });
+  };
+  app.use(noCacheMiddleware);
   app.use(express.static(staticPath));
-  app.use('/flight-school-app', (req, res, next) => {
-    if (req.path.startsWith('/assets')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    }
-    next();
-  });
+  app.use('/flight-school-app', noCacheMiddleware);
   app.use('/flight-school-app', express.static(staticPath));
-  console.log(`✅ Serving static files from: ${staticPath} (at / and /flight-school-app/) with no-cache headers for assets`);
+  console.log(`✅ Serving static files from: ${staticPath} (at / and /flight-school-app/) with no-cache headers for all assets`);
 }
 
 // ============================================================
@@ -3780,36 +4223,39 @@ app.get('/api/tie/trainee/:name', async (req, res) => {
     const name = decodeURIComponent(req.params.name);
     let rows = [];
     try {
+      // traineeFullName in DB may include course suffix e.g. "Edwards, Luna – ADF302"
+      // Match by exact name OR name that starts with the given name followed by space/dash
       rows = await db.$queryRawUnsafe(`
         SELECT ts.*
         FROM "TIETraineeSummary" ts
         JOIN "TIEAnalyticsRun" r ON r.id = ts."runId"
-        WHERE ts."traineeName" = $1::text AND r.status = 'complete'
+        WHERE (
+          ts."traineeFullName" = $1::text
+          OR ts."traineeFullName" LIKE $2::text
+          OR ts."traineeFullName" ILIKE $3::text
+        )
+        AND r.status = 'complete'
         ORDER BY r."completedAt" DESC
         LIMIT 5
-      `, name);
-    } catch (e) { /* no data */ }
+      `, name, `${name} –%`, `${name} -%`);
+    } catch (e) {
+      console.error('[TIE] trainee query error:', e.message);
+    }
 
     for (const row of rows) {
       try { row.skillFamilyScores = JSON.parse(row.skillFamilyScores || '{}'); } catch(e) {}
       try { row.weakElements = JSON.parse(row.weakElements || '[]'); } catch(e) {}
       try { row.strongElements = JSON.parse(row.strongElements || '[]'); } catch(e) {}
+      // Parse gradeProgression if it's a string
+      if (typeof row.gradeProgression === 'string') {
+        try { row.gradeProgression = JSON.parse(row.gradeProgression); } catch(e) {}
+      }
     }
 
-    // Also fetch findings for this trainee
-    let findings = [];
-    try {
-      findings = await db.$queryRawUnsafe(`
-        SELECT f.*
-        FROM "TIEFinding" f
-        JOIN "TIEAnalyticsRun" r ON r.id = f."runId"
-        WHERE f."subjectKey" = $1::text AND f.level = 'trainee' AND r.status = 'complete'
-        ORDER BY r."completedAt" DESC
-        LIMIT 20
-      `, name);
-    } catch (e) { /* no findings */ }
+    console.log(`[TIE] GET /api/tie/trainee/${name} -> ${rows.length} rows found`);
 
-    res.json({ summaries: rows, findings });
+    // Return array directly (frontend expects array)
+    res.json(rows);
   } catch (error) {
     console.error('❌ GET /api/tie/trainee error:', error);
     res.status(500).json({ error: 'Failed to fetch trainee detail', details: error.message });

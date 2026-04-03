@@ -6,6 +6,14 @@ export type ExpiryRuleType = 'ROLLING_WINDOW' | 'LAST_EVENT_PLUS_PERIOD';
 export type ExpiryCalculation = 'EARLIEST_CHILD' | 'LATEST_CHILD';
 export type LogicOperator = 'AND' | 'OR';
 
+/**
+ * How a currency is entered in the Post-Flight page (can be combined — more than one allowed):
+ * - 'date'     → date picker (for LAST_EVENT_PLUS_PERIOD currencies — date auto-set to flight date when checkbox ticked)
+ * - 'count'    → number input (for ROLLING_WINDOW currencies — "how many did you complete today?")
+ * - 'checkbox' → simple checkbox — "completed this flight" — flight/FTD date is saved as the currency date
+ */
+export type PostFlightInputType = 'date' | 'count' | 'checkbox';
+
 export interface LogicNode {
   operator: LogicOperator;
   children: (string | LogicNode)[]; // Array of currency IDs or nested LogicNodes
@@ -21,6 +29,9 @@ export interface CurrencyRequirement {
   eventCodes: string[]; // syllabus codes that satisfy this
   requiredCount: number; // e.g., 3 for "3 approaches in 90 days"
   expiryRule: ExpiryRuleType;
+  // Post-flight integration
+  showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
+  postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
 }
 
 export interface MasterCurrency {
@@ -31,6 +42,9 @@ export interface MasterCurrency {
   isVisible: boolean;
   logicTree: LogicNode;
   expiryCalculation: ExpiryCalculation;
+  // Post-flight integration
+  showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
+  postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
 }
 
 export type CurrencyDefinition = MasterCurrency | CurrencyRequirement;
@@ -69,6 +83,7 @@ export interface PersonCurrencyStatus {
   lastEventDate: string; // For manual overrides or legacy data
   calculatedExpiry?: string;
   isCurrent?: boolean;
+  isInactive?: boolean;
 }
 
 export interface LogbookExperience {
@@ -251,8 +266,8 @@ export interface Trainee {
   location?: string;
   phoneNumber?: string;
   email?: string;
-  primaryInstructor?: string;
-  secondaryInstructor?: string;
+  primaryInstructor?: string | string[];
+  secondaryInstructor?: string | string[];
   lmpType?: string;
   
      traineeCallsign?: string;
@@ -399,6 +414,7 @@ export interface SctRequest {
     dateRequested?: string;
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
     submitted?: boolean;
+    includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';

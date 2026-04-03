@@ -1,0 +1,4 @@
+2026/04/02-12:37:57.388 2d99 Creating DB /workspace/.browser_data/Default/shared_proto_db since it was missing.
+2026/04/02-12:37:57.418 2d99 Reusing MANIFEST /workspace/.browser_data/Default/shared_proto_db/MANIFEST-000001
+2026/04/02-12:37:57.423 2d99 Recovering log #3
+2026/04/02-12:37:57.427 2d99 Reusing old log /workspace/.browser_data/Default/shared_proto_db/000003.log 
