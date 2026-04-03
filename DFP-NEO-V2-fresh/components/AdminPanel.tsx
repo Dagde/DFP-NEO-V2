@@ -443,41 +443,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ sessionToken, currentUserId, on
                 <p className="text-xs text-amber-200 mt-1">These tools remove confirmed duplicate records. Actions are irreversible. Use with caution.</p>
               </div>
 
-              {/* Step 0 - Delete all fake seeded personnel */}
-              <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-white">Step 0: Delete Fake Seeded Personnel</h3>
-                <p className="text-xs text-gray-400">The database was seeded with ~102 fake/mockdata personnel records (created 2026-01-08 and 2026-03-20 with no linked user). This button deletes all personnel records with no userId that were created before 2026-03-25. Real staff (Burns, etc.) are preserved.</p>
-                <button
-                  onClick={async () => {
-                    setCleanupLoading(true);
-                    setCleanupResult(null);
-                    setCleanupError(null);
-                    try {
-                      const res = await fetch('/api/admin/cleanup-seeded-personnel', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ confirmToken: 'CONFIRM_DELETE_SEEDED_PERSONNEL' }),
-                      });
-                      const data = await res.json();
-                      if (res.ok && data.success) {
-                        setCleanupResult(`✅ Deleted ${data.deleted} fake seeded personnel records.\n\nRemaining real staff (${data.remaining.length}):\n${data.remaining.map((p: any) => `  ${p.name} (${p.rank}) - created ${p.createdAt?.slice(0,10)}`).join('\n')}`);
-                      } else {
-                        setCleanupError(`Failed: ${data.error || JSON.stringify(data)}`);
-                      }
-                    } catch (e: any) {
-                      setCleanupError(`Network error: ${e.message}`);
-                    } finally {
-                      setCleanupLoading(false);
-                    }
-                  }}
-                  disabled={cleanupLoading}
-                  className="w-full py-2.5 rounded-lg text-xs font-semibold text-white bg-purple-800 hover:bg-purple-700 transition-all disabled:opacity-50"
-                >
-                  {cleanupLoading ? 'Running...' : '🧹 Step 0: Delete Fake Seeded Personnel (~102 records)'}
-                </button>
-              </div>
-
               {/* Step 1 - Cleanup duplicate personnel */}
               <div className="space-y-2">
                 <h3 className="text-xs font-semibold text-white">Step 1: Remove Duplicate Personnel Records</h3>

@@ -11184,14 +11184,11 @@ updates.forEach(update => {
                     onNavigateBack={() => handleNavigation('TrainingRecords')}
                 />;
             case 'BuildIntelligence':
-                 // Build Intelligence analytics: only use real database staff, never mockdata
-                 const biInstructors = instructorsData.filter(i => (i as any)._dataSource === 'database');
-                 const biTrainees = traineesData.filter(t => (t as any)._dataSource === 'database');
                  return <BuildIntelligenceView
                             date={buildDfpDate}
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
-                            instructorsData={biInstructors}
-                            traineesData={biTrainees}
+                            instructorsData={instructorsData}
+                            traineesData={traineesData}
                             activeCourses={coursePriorities}
                             onNavigateAndSelectPerson={(name) => {
                                 const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
