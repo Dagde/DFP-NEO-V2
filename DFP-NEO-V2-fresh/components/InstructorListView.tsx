@@ -162,14 +162,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
       return instructorsData
           .filter(i => {
-              // Filter by role/flag
-              const isQFI = i.role === 'QFI' || i.isQFI === true;
+              // Filter by role/flag - include QFI and INSTRUCTOR roles
+              const isQFI = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
               if (!isQFI) return false;
               
               // Filter by location (not unit)
               // ESL = East Sale, PEA = Pearce
+              // Also include staff with no location set (default to ESL)
               const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-              return i.location === locationFullName;
+              const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
+              return i.location === locationFullName || (hasNoLocation && school === 'ESL');
           })
           .sort((a, b) => {
               const rankA = rankOrder[a.rank] || 99;
@@ -293,8 +295,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
         
         const otherStaffCandidates = instructorsData.filter(i => {
-            // Exclude QFIs, SIM IPs, and OFIs
-            const isQfi = i.role === 'QFI' || i.isQFI === true;
+            // Exclude QFIs, INSTRUCTORs, SIM IPs, and OFIs
+            const isQfi = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
             const isSimIp = i.role === 'SIM IP';
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             
