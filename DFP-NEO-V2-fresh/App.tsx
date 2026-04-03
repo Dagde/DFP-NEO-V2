@@ -785,12 +785,13 @@ function analyzeBuildResults(
     syllabusDetails: SyllabusDetail[],
     publishedSchedules: Map<string, Omit<ScheduleEvent, 'date'>[]>
 ): BuildAnalysis {
-    // Filter out non-scheduled events (Duty Sup, STBY)
-    const scheduledEvents = events.filter(e => 
-        !e.flightNumber.includes('Duty Sup') && 
-        !e.resourceId.startsWith('STBY') && 
-        !e.resourceId.startsWith('BNF-STBY')
-    );
+    // Filter out Duty Sup events and STBY events from analytics.
+    // STBY events are not shown in build analytics until moved to the active Daily schedule.
+    const scheduledEvents = events.filter(e => {
+        if (e.flightNumber.includes('Duty Sup')) return false;
+        if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
+        return true;
+    });
     
     const totalEvents = scheduledEvents.length;
     
@@ -5876,7 +5877,12 @@ useEffect(() => {
     }, [eventsForDate]);
     
     const nextDayEventsForStaffTraineeSchedule = useMemo(() => {
-        return nextDayBuildEvents.filter(e => !e.resourceId.startsWith('STBY'));
+        // Exclude ALL STBY events from the staff/trainee schedule view.
+        // STBY events are not shown until they are moved into the active Daily schedule.
+        return nextDayBuildEvents.filter(e => {
+            if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
+            return true;
+        });
     }, [nextDayBuildEvents]);
 
     const eventSegmentsForDate = useMemo(() => {
