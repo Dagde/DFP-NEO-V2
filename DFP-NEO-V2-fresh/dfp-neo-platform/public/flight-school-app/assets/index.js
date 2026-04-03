@@ -89233,25 +89233,30 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   });
   const dbInstructorMap = /* @__PURE__ */ new Map();
   const dbInstructorNames = /* @__PURE__ */ new Set();
+  const dbByIdNumber = /* @__PURE__ */ new Map();
   dbInstructors.forEach((instructor) => {
     if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
       const mockMatch = mockByName.get(instructor.name);
       instructor = { ...instructor, permissions: mockMatch.permissions || [] };
       console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
     }
-    if (dbInstructorMap.has(instructor.idNumber)) {
-      console.log(`  ⚠️ DUPLICATE IDNUMBER: ${instructor.idNumber} - ${instructor.name} overwrites ${dbInstructorMap.get(instructor.idNumber).name}`);
+    const mapKey = instructor.idNumber != null ? instructor.idNumber : instructor.id || instructor.name;
+    if (dbInstructorMap.has(mapKey)) {
+      console.log(`  ⚠️ DUPLICATE KEY: ${mapKey} - ${instructor.name} overwrites ${dbInstructorMap.get(mapKey).name}`);
     }
     const taggedInstructor = { ...instructor, _dataSource: "database" };
-    dbInstructorMap.set(instructor.idNumber, taggedInstructor);
+    dbInstructorMap.set(mapKey, taggedInstructor);
     dbInstructorNames.add(instructor.name);
+    if (instructor.idNumber != null) {
+      dbByIdNumber.set(instructor.idNumber, taggedInstructor);
+    }
   });
   const merged = Array.from(dbInstructorMap.values());
   let skippedByIdNumber = 0;
   let skippedByName = 0;
   {
     mockInstructors.forEach((instructor) => {
-      if (dbInstructorMap.has(instructor.idNumber)) {
+      if (instructor.idNumber != null && dbByIdNumber.has(instructor.idNumber)) {
         skippedByIdNumber++;
         console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
       } else if (dbInstructorNames.has(instructor.name)) {
