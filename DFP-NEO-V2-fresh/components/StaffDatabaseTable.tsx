@@ -48,6 +48,18 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
 
   const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
+  // Detect duplicate names — mark records with same name as potential duplicates
+  const duplicateNames = useMemo(() => {
+    const nameCounts = new Map<string, number>();
+    staffData.forEach(s => {
+      const key = (s.name || '').trim().toLowerCase();
+      nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+    });
+    const dupes = new Set<string>();
+    nameCounts.forEach((count, name) => { if (count > 1) dupes.add(name); });
+    return dupes;
+  }, [staffData]);
+
   useEffect(() => {
     fetchDatabaseStaff();
   }, []);
@@ -339,7 +351,15 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
                   className={rowBackgroundColor}
                 >
                   <td className="px-4 py-3 text-sm text-white">
-                    {staff.name}
+                    <span className="flex items-center gap-1">
+                      {staff.name}
+                      {duplicateNames.has((staff.name || '').trim().toLowerCase()) && (
+                        <span
+                          title="⚠️ Duplicate name detected — this record may be a duplicate. Consider deleting one via the Admin panel."
+                          className="text-amber-400 font-bold cursor-help ml-1"
+                        >*</span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.rank || 'N/A'}

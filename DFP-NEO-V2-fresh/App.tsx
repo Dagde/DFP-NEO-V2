@@ -4138,6 +4138,12 @@ useEffect(() => {
         const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
         setCurrentUser(auditUserString);
         console.log('[AUDIT] setCurrentUser ->', auditUserString);
+
+        // Feed the real rank back into sessionUser so the bottom-right display shows correct rank
+        if (rank) {
+            setSessionUser(prev => prev ? { ...prev, militaryRank: rank } : prev);
+            console.log('[RANK] Updated sessionUser.militaryRank ->', rank);
+        }
     };
 
     // Check for existing session on app load
