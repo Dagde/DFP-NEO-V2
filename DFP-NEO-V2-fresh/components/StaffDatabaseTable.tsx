@@ -48,6 +48,33 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
 
   const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
+  // Track the Personnel ID linked to the currently logged-in user
+  const [myPersonnelId, setMyPersonnelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch the current session to determine which Personnel record belongs to the logged-in user
+    const fetchMyPersonnel = async () => {
+      try {
+        const sessionRes = await fetch('/api/auth/session', { credentials: 'include' });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          const userId = sessionData?.user?.id || sessionData?.userId;
+          if (userId) {
+            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
+            if (personnelRes.ok) {
+              const data = await personnelRes.json();
+              const linked = (data.personnel || []).find((p: any) => p.userId === userId);
+              if (linked) setMyPersonnelId(linked.id);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[StaffDB] Could not determine current user personnel ID:', e);
+      }
+    };
+    fetchMyPersonnel();
+  }, []);
+
   // Detect duplicate names — mark records with same name as potential duplicates
   const duplicateNames = useMemo(() => {
     const nameCounts = new Map<string, number>();
@@ -351,11 +378,23 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPerm
                   className={rowBackgroundColor}
                 >
                   <td className="px-4 py-3 text-sm text-white">
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 flex-wrap">
                       {staff.name}
-                      {duplicateNames.has((staff.name || '').trim().toLowerCase()) && (
+                      {myPersonnelId && staff.id === myPersonnelId && (
                         <span
-                          title="⚠️ Duplicate name detected — this record may be a duplicate. Consider deleting one via the Admin panel."
+                          title="This is YOUR profile — do not delete this one."
+                          className="text-xs bg-green-700 text-green-100 px-1.5 py-0.5 rounded font-semibold ml-1"
+                        >YOU</span>
+                      )}
+                      {duplicateNames.has((staff.name || '').trim().toLowerCase()) && myPersonnelId && staff.id !== myPersonnelId && (
+                        <span
+                          title="⚠️ Duplicate name — this is NOT your active profile. Safe to delete."
+                          className="text-xs bg-red-800 text-red-200 px-1.5 py-0.5 rounded font-semibold ml-1 cursor-help"
+                        >* DELETE?</span>
+                      )}
+                      {duplicateNames.has((staff.name || '').trim().toLowerCase()) && !myPersonnelId && (
+                        <span
+                          title="⚠️ Duplicate name detected — one of these may be safe to delete."
                           className="text-amber-400 font-bold cursor-help ml-1"
                         >*</span>
                       )}
