@@ -15,6 +15,16 @@ const generateRandomIdNumber = (): number => {
     return Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000;
 };
 
+// Unit to location mapping: which school each unit belongs to
+const UNIT_LOCATION: Record<string, string> = {
+    '1FTS': 'ESL',
+    'CFS':  'ESL',
+    '2FTS': 'PEA',
+};
+
+// Unit display sort order in Staff Profile
+const UNIT_SORT_ORDER: Record<string, number> = { '1FTS': 1, 'CFS': 2, '2FTS': 3 };
+
 const generateNewInstructorTemplate = (): Instructor => ({
     idNumber: generateRandomIdNumber(),
     name: '',
@@ -188,15 +198,26 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       const groups: { [key: string]: Instructor[] } = {};
       qfis.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
+          // Only include unit if it belongs to the selected school location
+          // Units with no mapping (e.g. 'Unassigned') default to ESL
+          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
+          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [qfis]);
+  }, [qfis, school]);
 
-  const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
+  const sortedUnits = useMemo(() =>
+      Object.keys(qfisByUnit).sort((a, b) => {
+          const orderA = UNIT_SORT_ORDER[a] ?? 99;
+          const orderB = UNIT_SORT_ORDER[b] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+      }),
+  [qfisByUnit]);
 
   const simIps = useMemo(() => {
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
@@ -206,8 +227,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             
             // Filter by location (not unit)
             // ESL = East Sale, PEA = Pearce
+            // Also include staff with no location set (default to ESL)
             const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-            const isValid = i.location === locationFullName;
+            const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
+            const isValid = i.location === locationFullName || (hasNoLocation && school === 'ESL');
             if (isSimIp && isValid) {
                 console.log(`🔍 [SIM IP FILTER] Found ${school} SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
             }
@@ -343,47 +366,56 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         });
     }, [instructorsData, school]);
 
-  const simIpsByUnit = useMemo(() => {
-      const groups: { [key: string]: Instructor[] } = {};
-      simIps.forEach(instructor => {
-          const unit = instructor.unit || 'Unassigned';
-          if (!groups[unit]) {
-              groups[unit] = [];
-          }
-          groups[unit].push(instructor);
-      });
-      return groups;
-  }, [simIps]);
-
-  const sortedSimIpUnits = useMemo(() => Object.keys(simIpsByUnit).sort(), [simIpsByUnit]);
+  // SIM IPs are shown as a single combined section (not split by unit)
+  // simIps is already sorted by unit → rank → name from the simIps useMemo above
 
   const ofisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
       ofis.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
+          // Only include unit if it belongs to the selected school location
+          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
+          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [ofis]);
+  }, [ofis, school]);
 
-  const sortedOfiUnits = useMemo(() => Object.keys(ofisByUnit).sort(), [ofisByUnit]);
+  const sortedOfiUnits = useMemo(() =>
+      Object.keys(ofisByUnit).sort((a, b) => {
+          const orderA = UNIT_SORT_ORDER[a] ?? 99;
+          const orderB = UNIT_SORT_ORDER[b] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+      }),
+  [ofisByUnit]);
 
   const otherStaffByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
       otherStaff.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
+          // Only include unit if it belongs to the selected school location
+          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
+          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [otherStaff]);
+  }, [otherStaff, school]);
 
-  const sortedOtherStaffUnits = useMemo(() => Object.keys(otherStaffByUnit).sort(), [otherStaffByUnit]);
+  const sortedOtherStaffUnits = useMemo(() =>
+      Object.keys(otherStaffByUnit).sort((a, b) => {
+          const orderA = UNIT_SORT_ORDER[a] ?? 99;
+          const orderB = UNIT_SORT_ORDER[b] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+      }),
+  [otherStaffByUnit]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 
@@ -525,7 +557,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                         <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                             <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
                                 <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} QFIs</span>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} Staff</span>
                             </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
                                 {renderInstructorList(qfisByUnit[unit])}
@@ -533,21 +565,18 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                         </div>
                     ))}
                     
-                    {/* SIM IPs */}
-                    {sortedSimIpUnits.map(unit => (
-                        <div key={`simip-${unit}`} className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                    {/* SIM IPs - single combined card regardless of unit */}
+                    {simIps.length > 0 && (
+                        <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                             <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <div>
-                                    <h3 className="text-lg font-bold text-teal-400">SIM IPs</h3>
-                                    <p className="text-xs text-gray-400">{unit}</p>
-                                </div>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIpsByUnit[unit].length}</span>
+                                <h3 className="text-lg font-bold text-teal-400">SIM IP</h3>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
                             </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(simIpsByUnit[unit])}
+                                {renderInstructorList(simIps)}
                             </div>
                         </div>
-                    ))}
+                    )}
 
                        {/* OFIs */}
                        {sortedOfiUnits.map(unit => (
