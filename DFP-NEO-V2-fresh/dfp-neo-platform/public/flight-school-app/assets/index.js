@@ -89249,10 +89249,20 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   const dbInstructorNames = /* @__PURE__ */ new Set();
   const dbByIdNumber = /* @__PURE__ */ new Map();
   dbInstructors.forEach((instructor) => {
-    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
+    if (mockByName.has(instructor.name)) {
       const mockMatch = mockByName.get(instructor.name);
-      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
-      console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
+      if (!instructor.permissions || instructor.permissions.length === 0) {
+        instructor = { ...instructor, permissions: mockMatch.permissions || [] };
+        console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
+      }
+      if (instructor.unit === "1FTS" && mockMatch.unit && mockMatch.unit !== "1FTS") {
+        console.log(`  ✅ Inherited unit for ${instructor.name} from mockData: ${mockMatch.unit} (was: ${instructor.unit})`);
+        instructor = { ...instructor, unit: mockMatch.unit };
+      }
+      if (!instructor.location && mockMatch.location) {
+        console.log(`  ✅ Inherited location for ${instructor.name} from mockData: ${mockMatch.location}`);
+        instructor = { ...instructor, location: mockMatch.location };
+      }
     }
     const mapKey = instructor.idNumber != null ? instructor.idNumber : instructor.id || instructor.name;
     if (dbInstructorMap.has(mapKey)) {
