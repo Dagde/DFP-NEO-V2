@@ -3309,16 +3309,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:', config.school);
-        
         // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
+        // Use same fallback-to-unit logic as instructorsData useMemo to handle DB staff with null location
+        const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredInstructors = instructors.filter(i => {
-            const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
-            return i.location === locationFullName;
+            if (i.location) return i.location === locationFullName;
+            if (i.unit) {
+                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true; // No location or unit info - include by default
         });
-        
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         
         if (type === 'ftd') {
             const simIps = locationFilteredInstructors.filter(i => i.role === 'SIM IP');
@@ -3328,10 +3329,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             candidates = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
         }
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Event type:', type);
+        // Apply unit eligibility check (respects staffSharingEnabled setting)
+        candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, trainee));
         
-        // Filter to only available instructors
+        // Filter to only available instructors (time overlap check)
         const available = candidates.filter(ip => 
             isInstructorAvailableForEvent(ip.name, startTime, duration, syllabusItem, events)
         );
@@ -5868,12 +5869,10 @@ useEffect(() => {
     }, [eventsForDate]);
     
     const nextDayEventsForStaffTraineeSchedule = useMemo(() => {
-        // Exclude ALL STBY events from the staff/trainee schedule view.
-        // STBY events are not shown until they are moved into the active Daily schedule.
-        return nextDayBuildEvents.filter(e => {
-            if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
-            return true;
-        });
+        // Include ALL events including STBY in the staff/trainee schedule view.
+        // STBY events show the trainee (and instructor if assigned) their upcoming commitment.
+        // STBY events are still excluded from build analytics until moved to the active Daily schedule.
+        return nextDayBuildEvents;
     }, [nextDayBuildEvents]);
 
     const eventSegmentsForDate = useMemo(() => {
