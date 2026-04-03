@@ -3225,7 +3225,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // NEW STBY SCHEDULING PASS - "8 Flights Per Hour" Rule
     // STBY flights are extra flights added on top of the main DFP when aircraft run out
     setProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
-    console.error('🔴🔴🔴 [STBY-SECTION] REACHED STBY SECTION. generatedEvents=' + generatedEvents.length + ' stby events before pass=' + generatedEvents.filter(e => e.resourceId && e.resourceId.startsWith('STBY')).length);
+    
+    // STBY Diagnostic - save to localStorage for download
+    const _stbyDiagLines: string[] = [];
+    const _stbyLog = (msg: string) => { _stbyDiagLines.push(msg); console.log(msg); };
+    const _stbyError = (msg: string) => { _stbyDiagLines.push('ERROR: ' + msg); console.error(msg); };
+    
+    _stbyError('🔴🔴🔴 [STBY-SECTION] REACHED STBY SECTION. generatedEvents=' + generatedEvents.length + ' stby events before pass=' + generatedEvents.filter(e => e.resourceId && e.resourceId.startsWith('STBY')).length);
     
     // Helper: Check if a flight start time already exists (aircraft or STBY flights only)
     const hasFlightStartTime = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
@@ -3481,7 +3487,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         (!e.instructor || e.instructor === '' || e.instructor === 'TBA')
     );
 
-    console.log('[STBY PASS] Found ' + unassignedStbyFlights.length + ' unassigned STBY flight events to process');
+    _stbyLog('[STBY PASS] Found ' + unassignedStbyFlights.length + ' unassigned STBY flight events to process');
 
     // STBY DIAGNOSTIC BLOCK
     const _stbyDiagLoc = config.school === 'ESL' ? 'East Sale' : 'Pearce';
@@ -3494,7 +3500,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return true;
     });
     const _stbyQFIs = _stbyLocFiltered.filter(i => i.role === 'QFI' || i.isQFI === true);
-    console.log('[STBY DIAG] school=' + config.school + ' loc=' + _stbyDiagLoc + ' totalInstr=' + instructors.length + ' locFiltered=' + _stbyLocFiltered.length + ' QFIs=' + _stbyQFIs.length + ' sharing=' + staffSharingEnabled);
+    _stbyLog('[STBY DIAG] school=' + config.school + ' loc=' + _stbyDiagLoc + ' totalInstr=' + instructors.length + ' locFiltered=' + _stbyLocFiltered.length + ' QFIs=' + _stbyQFIs.length + ' sharing=' + staffSharingEnabled);
+    _stbyQFIs.slice(0, 5).forEach(function(i) { _stbyLog('[STBY QFI] ' + i.name + ' unit=' + (i.unit||'null') + ' role=' + i.role + ' isQFI=' + i.isQFI); });
 
     // PASS 1: Try to assign a real instructor to each unassigned STBY event
     let stbyWithInstructor = 0;
@@ -3505,6 +3512,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Find the trainee object for this event
         const trainee = (config.trainees as Trainee[]).find(t => t.fullName === stbyEvent.student);
         if (!trainee) {
+            _stbyLog('[STBY PASS1 NO-TRAINEE] student=' + stbyEvent.student + ' not found in config.trainees');
             stbyEvent.instructor = 'TBA';
             stbyWithTBA++;
             continue;
@@ -3513,6 +3521,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Find the syllabus item for this event
         const syllabusItem = syllabusDetails.find(s => s.id === stbyEvent.flightNumber);
         if (!syllabusItem) {
+            _stbyLog('[STBY PASS1 NO-SYLLABUS] flightNumber=' + stbyEvent.flightNumber + ' not found in syllabusDetails');
             stbyEvent.instructor = 'TBA';
             stbyWithTBA++;
             continue;
@@ -3532,21 +3541,22 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             generatedEvents
         );
 
-        // Re-add the event
-        generatedEvents.splice(eventIdx, 0, stbyEvent);
+        // Re-add the event (use 0 if splice removed it, otherwise use original position)
+        const reinsertIdx = eventIdx !== -1 ? eventIdx : generatedEvents.length;
+        generatedEvents.splice(reinsertIdx, 0, stbyEvent);
 
         if (instructor) {
             stbyEvent.instructor = instructor;
             stbyWithInstructor++;
-            console.log('[STBY PASS1] Assigned ' + instructor + ' to ' + stbyEvent.student + ' (' + stbyEvent.flightNumber + ') at t=' + stbyEvent.startTime.toFixed(2));
+            _stbyLog('[STBY PASS1] Assigned ' + instructor + ' to ' + stbyEvent.student + ' (' + stbyEvent.flightNumber + ') at t=' + stbyEvent.startTime.toFixed(2));
         } else {
             stbyEvent.instructor = 'TBA';
             stbyWithTBA++;
-            console.log('[STBY PASS1 TBA] No instructor for ' + stbyEvent.student + ' (' + stbyEvent.flightNumber + ') at t=' + stbyEvent.startTime.toFixed(2));
+            _stbyLog('[STBY PASS1 TBA] No instructor for ' + stbyEvent.student + ' (' + stbyEvent.flightNumber + ') at t=' + stbyEvent.startTime.toFixed(2));
         }
     }
 
-    console.log('[STBY PASS] Complete: ' + stbyWithInstructor + ' assigned instructor, ' + stbyWithTBA + ' TBA out of ' + unassignedStbyFlights.length + ' STBY events');
+    _stbyLog('[STBY PASS] Complete: ' + stbyWithInstructor + ' assigned instructor, ' + stbyWithTBA + ' TBA out of ' + unassignedStbyFlights.length + ' STBY events');
 
     // Also handle trainees in nextEventLists.flight who have NO STBY event yet at all
     // (e.g. trainees not caught by hardModeStby but still without a scheduled flight)
@@ -3561,8 +3571,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         );
     });
 
+    _stbyLog('[STBY EXTRA] traineesNeedingStby (no event at all) count=' + traineesNeedingStby.length);
+
     if (traineesNeedingStby.length > 0) {
-        console.log('[STBY EXTRA] ' + traineesNeedingStby.length + ' trainees with no STBY event at all - scheduling now');
         const timeIncrement = 5 / 60;
         for (const trainee of traineesNeedingStby) {
             const { next } = traineeNextEventMap.get(trainee.fullName)!;
@@ -3597,15 +3608,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     postEnd: next.postFlightTime
                 });
 
-                console.log('[STBY EXTRA] Placed ' + trainee.fullName + ' at t=' + time.toFixed(2) + ' instr=' + (instructor || 'TBA'));
+                _stbyLog('[STBY EXTRA] Placed ' + trainee.fullName + ' at t=' + time.toFixed(2) + ' instr=' + (instructor || 'TBA'));
                 placed = true;
                 break;
             }
             if (!placed) {
-                console.log('[STBY EXTRA FAIL] Could not place ' + trainee.fullName);
+                _stbyLog('[STBY EXTRA FAIL] Could not place ' + trainee.fullName);
             }
         }
     }
+
+    // Save STBY diagnostic to localStorage for download
+    try {
+        localStorage.setItem('stby_diag_report', _stbyDiagLines.join('\n'));
+        console.error('🔴 [STBY DIAG SAVED] ' + _stbyDiagLines.length + ' lines saved to localStorage key "stby_diag_report". Run: copy(localStorage.getItem("stby_diag_report")) in console to copy it.');
+    } catch(e) { /* ignore */ }
     
     
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
