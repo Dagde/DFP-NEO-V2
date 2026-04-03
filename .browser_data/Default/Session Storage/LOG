@@ -1,0 +1,4 @@
+2026/04/02-12:37:57.396 2db5 Creating DB /workspace/.browser_data/Default/Session Storage since it was missing.
+2026/04/02-12:37:57.436 2db5 Reusing MANIFEST /workspace/.browser_data/Default/Session Storage/MANIFEST-000001
+2026/04/02-12:37:57.438 2db5 Recovering log #3
+2026/04/02-12:37:57.443 2db5 Reusing old log /workspace/.browser_data/Default/Session Storage/000003.log 

@@ -1960,7 +1960,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // Track this instructor for night assignments
                 intendedNightStaff.add(nfi.name);
 
-                const instructorToUpdate = instructors.find(i => i.idNumber === nfi.idNumber);
+                const instructorToUpdate = instructors.find(i => i.name === nfi.name);
                 if (instructorToUpdate) {
                     const reservationPeriod: UnavailabilityPeriod = {
                         id: `night-res-${nfi.idNumber}`,
@@ -4062,13 +4062,28 @@ useEffect(() => {
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
+    // Also filters by location (ESL = East Sale, PEA = Pearce) to prevent wrong-location staff entering the build
     const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
+        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+
+        // Location filter: same logic as traineesData
+        const locationFiltered = allInstructorsData.filter((i: any) => {
+            // If no location and no unit info, include by default (don't exclude unknowns)
+            if (!i.location && !i.unit) return true;
+            if (i.location) return i.location === locationFullName;
+            if (i.unit) {
+                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true;
+        });
+
         if (!mockOn && !dbOn) return [];
-        if (mockOn && dbOn) return allInstructorsData;
-        if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
-        return allInstructorsData.filter(i => (i as any)._dataSource === 'database');
-    }, [allInstructorsData, dataSourceSettings]);
+        if (mockOn && dbOn) return locationFiltered;
+        if (mockOn && !dbOn) return locationFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
+        return locationFiltered.filter((i: any) => (i as any)._dataSource === 'database');
+    }, [allInstructorsData, dataSourceSettings, school]);
 
     const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;

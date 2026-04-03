@@ -1,0 +1,4 @@
+2026/04/02-12:37:57.385 2d92 Creating DB /workspace/.browser_data/Default/Extension Scripts since it was missing.
+2026/04/02-12:37:57.418 2d92 Reusing MANIFEST /workspace/.browser_data/Default/Extension Scripts/MANIFEST-000001
+2026/04/02-12:37:57.423 2d92 Recovering log #3
+2026/04/02-12:37:57.426 2d92 Reusing old log /workspace/.browser_data/Default/Extension Scripts/000003.log 

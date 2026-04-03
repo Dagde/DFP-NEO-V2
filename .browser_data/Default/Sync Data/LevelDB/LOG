@@ -1,0 +1,4 @@
+2026/04/02-12:37:57.319 2d8d Creating DB /workspace/.browser_data/Default/Sync Data/LevelDB since it was missing.
+2026/04/02-12:37:57.321 2d8d Reusing MANIFEST /workspace/.browser_data/Default/Sync Data/LevelDB/MANIFEST-000001
+2026/04/02-12:37:57.321 2d8d Recovering log #3
+2026/04/02-12:37:57.322 2d8d Reusing old log /workspace/.browser_data/Default/Sync Data/LevelDB/000003.log 
