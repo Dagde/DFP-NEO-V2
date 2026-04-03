@@ -3466,22 +3466,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return Math.max(4, lineEvents.size) + 1;
     };
     
-    // Build list of trainees who need STBY flights (unscheduled on aircraft)
-    const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
-        if (!next) return false;
-        // Check if this trainee's next flight was scheduled on an aircraft
-        return !generatedEvents.some(e => 
-            e.student === trainee.fullName && 
-            e.flightNumber === next.id &&
-            e.type === 'flight' &&
-            !e.resourceId.startsWith('STBY')
-        );
-    });
-    
-    console.log('Trainees needing STBY flights:', traineesNeedingStby.length);
+    // STBY INSTRUCTOR ASSIGNMENT
+    // Strategy: STBY events already exist in generatedEvents (placed by scheduleList via hardModeStby
+    // with instructor='', or placed by prior STBY logic). We need to:
+    //   PASS 1: Try to assign a real instructor to each existing STBY flight event (in-place update)
+    //   PASS 2: Any remaining STBY events without an instructor get 'TBA'
+    // We do NOT create duplicate STBY events — we only update existing ones.
 
-    // STBY DIAGNOSTIC BLOCK - helps identify why instructors not being found
+    // Find all existing STBY flight events that have no instructor assigned yet
+    const unassignedStbyFlights = generatedEvents.filter(e =>
+        e.type === 'flight' &&
+        e.resourceId.startsWith('STBY') &&
+        (!e.instructor || e.instructor === '' || e.instructor === 'TBA')
+    );
+
+    console.log('[STBY PASS] Found ' + unassignedStbyFlights.length + ' unassigned STBY flight events to process');
+
+    // STBY DIAGNOSTIC BLOCK
     const _stbyDiagLoc = config.school === 'ESL' ? 'East Sale' : 'Pearce';
     const _stbyLocFiltered = instructors.filter(i => {
         if (i.location) return i.location === _stbyDiagLoc;
@@ -3493,153 +3494,117 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     });
     const _stbyQFIs = _stbyLocFiltered.filter(i => i.role === 'QFI' || i.isQFI === true);
     console.log('[STBY DIAG] school=' + config.school + ' loc=' + _stbyDiagLoc + ' totalInstr=' + instructors.length + ' locFiltered=' + _stbyLocFiltered.length + ' QFIs=' + _stbyQFIs.length + ' sharing=' + staffSharingEnabled);
-    _stbyQFIs.slice(0, 10).forEach(function(i) { console.log('[STBY QFI] ' + i.name + ' unit=' + (i.unit||'null') + ' loc=' + (i.location||'null') + ' role=' + i.role + ' isQFI=' + i.isQFI); });
-    if (traineesNeedingStby.length > 0) {
-        const _st = traineesNeedingStby[0];
-        const _elig = _stbyQFIs.filter(function(ip) { return isInstructorEligibleByUnit(ip, _st); });
-        console.log('[STBY TRAINEE] ' + _st.fullName + ' unit=' + (_st.unit||'null') + ' eligQFIs=' + _elig.length);
-        _elig.slice(0, 5).forEach(function(i) { console.log('[STBY ELIG] ' + i.name + ' unit=' + (i.unit||'null')); });
-        if (_elig.length === 0) {
-            console.log('[STBY ELIG NONE] Checking each QFI unit match:');
-            _stbyQFIs.slice(0, 5).forEach(function(ip) {
-                const tu = (_st.unit||'').split('/')[0];
-                const iu = (ip.unit||'').split('/')[0];
-                console.log('[STBY UNIT CHK] instr=' + ip.name + ' instrUnit=' + iu + ' traineeUnit=' + tu + ' match=' + (iu===tu));
-            });
+
+    // PASS 1: Try to assign a real instructor to each unassigned STBY event
+    let stbyWithInstructor = 0;
+    let stbyWithTBA = 0;
+    _findBestStbyCallCount = 0; // Reset diagnostic counter for pass 1
+
+    for (const stbyEvent of unassignedStbyFlights) {
+        // Find the trainee object for this event
+        const trainee = (config.trainees as Trainee[]).find(t => t.fullName === stbyEvent.student);
+        if (!trainee) {
+            stbyEvent.instructor = 'TBA';
+            stbyWithTBA++;
+            continue;
+        }
+
+        // Find the syllabus item for this event
+        const syllabusItem = syllabusDetails.find(s => s.id === stbyEvent.flightNumber);
+        if (!syllabusItem) {
+            stbyEvent.instructor = 'TBA';
+            stbyWithTBA++;
+            continue;
+        }
+
+        // Temporarily remove this event from generatedEvents so it doesn't block the instructor check
+        const eventIdx = generatedEvents.indexOf(stbyEvent);
+        if (eventIdx !== -1) generatedEvents.splice(eventIdx, 1);
+
+        // Try to find an available instructor for this STBY event at its scheduled time
+        const instructor = findBestInstructorForStby(
+            trainee,
+            syllabusItem,
+            stbyEvent.startTime,
+            stbyEvent.duration,
+            'flight',
+            generatedEvents
+        );
+
+        // Re-add the event
+        generatedEvents.splice(eventIdx, 0, stbyEvent);
+
+        if (instructor) {
+            stbyEvent.instructor = instructor;
+            stbyWithInstructor++;
+            console.log('[STBY PASS1] Assigned ' + instructor + ' to ' + stbyEvent.student + ' (' + stbyEvent.flightNumber + ') at t=' + stbyEvent.startTime.toFixed(2));
+        } else {
+            stbyEvent.instructor = 'TBA';
+            stbyWithTBA++;
+            console.log('[STBY PASS1 TBA] No instructor for ' + stbyEvent.student + ' (' + stbyEvent.flightNumber + ') at t=' + stbyEvent.startTime.toFixed(2));
         }
     }
 
-    // TWO-PASS APPROACH: Maximize instructor-allocated STBY events
-    const timeIncrement = 5 / 60; // 5 minutes
-    const scheduledTrainees = new Set<string>();
+    console.log('[STBY PASS] Complete: ' + stbyWithInstructor + ' assigned instructor, ' + stbyWithTBA + ' TBA out of ' + unassignedStbyFlights.length + ' STBY events');
 
-    // PASS 1: Schedule STBY events ONLY where instructor is available
-    console.log('PASS 1: Scheduling STBY with instructors available...');
-    console.log('Flying window: ' + flyingStartTime.toFixed(2) + ' to ' + flyingEndTime.toFixed(2));
-    
-    // Log first 3 trainees needing STBY for diagnosis
-    traineesNeedingStby.slice(0, 3).forEach(function(t) {
-        const nx = traineeNextEventMap.get(t.fullName);
-        console.log('[STBY PASS1 TRAINEE] ' + t.fullName + ' unit=' + (t.unit||'null') + ' next=' + (nx && nx.next ? nx.next.id : 'null') + ' _ds=' + (t as any)._dataSource);
+    // Also handle trainees in nextEventLists.flight who have NO STBY event yet at all
+    // (e.g. trainees not caught by hardModeStby but still without a scheduled flight)
+    const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
+        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        if (!next) return false;
+        // Check if this trainee has ANY flight event (aircraft or STBY)
+        return !generatedEvents.some(e =>
+            e.student === trainee.fullName &&
+            e.flightNumber === next.id &&
+            e.type === 'flight'
+        );
     });
 
-    for (const trainee of traineesNeedingStby) {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
-        if (!next) continue;
-        
-        let placed = false;
-        let _diagChecked = 0, _diagNoSlot = 0, _diagNo8Rule = 0, _diagNoWindow = 0, _diagNoInstr = 0;
-        // Try to find a time slot where an instructor IS available
-        for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
-            _diagChecked++;
-            // Check if flight already starts at this time
-            if (hasFlightStartTime(time, generatedEvents)) {
-                _diagNoSlot++; continue;
+    if (traineesNeedingStby.length > 0) {
+        console.log('[STBY EXTRA] ' + traineesNeedingStby.length + ' trainees with no STBY event at all - scheduling now');
+        const timeIncrement = 5 / 60;
+        for (const trainee of traineesNeedingStby) {
+            const { next } = traineeNextEventMap.get(trainee.fullName)!;
+            if (!next) continue;
+
+            // Try to find a slot with an instructor
+            let placed = false;
+            for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+                if (hasFlightStartTime(time, generatedEvents)) continue;
+                const flightEndTime = time + next.duration;
+                if (flightEndTime > flyingEndTime) continue;
+                if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
+
+                const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
+                const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
+
+                generatedEvents.push({
+                    id: uuidv4(),
+                    type: 'flight',
+                    instructor: instructor || 'TBA',
+                    student: trainee.fullName,
+                    flightNumber: next.id,
+                    duration: next.duration,
+                    startTime: time,
+                    resourceId: `STBY ${stbyLine}`,
+                    color: courseColors[trainee.course] || 'bg-gray-500',
+                    flightType: 'Dual',
+                    locationType: 'Local',
+                    origin: school,
+                    destination: school,
+                    preStart: next.preFlightTime,
+                    postEnd: next.postFlightTime
+                });
+
+                console.log('[STBY EXTRA] Placed ' + trainee.fullName + ' at t=' + time.toFixed(2) + ' instr=' + (instructor || 'TBA'));
+                placed = true;
+                break;
             }
-            
-            // Check if flight block time fits within flying window
-            const flightEndTime = time + next.duration;
-            if (flightEndTime > flyingEndTime) {
-                _diagNoWindow++; continue;
+            if (!placed) {
+                console.log('[STBY EXTRA FAIL] Could not place ' + trainee.fullName);
             }
-            
-            // Check "8 flights per hour" rule
-            if (wouldViolate8PerHourRule(time, generatedEvents)) {
-                _diagNo8Rule++; continue;
-            }
-            
-            // Try to find available instructor
-            const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
-            
-            // ONLY schedule if instructor is available (skip TBA for now)
-            if (!instructor) {
-                _diagNoInstr++;
-                continue;
-            }
-            
-            // Find available STBY line
-            const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
-            
-            // Create STBY flight event with instructor
-            generatedEvents.push({
-                id: uuidv4(),
-                type: 'flight',
-                instructor: instructor,
-                student: trainee.fullName,
-                flightNumber: next.id,
-                duration: next.duration,
-                startTime: time,
-                resourceId: `STBY ${stbyLine}`,
-                color: courseColors[trainee.course] || 'bg-gray-500',
-                flightType: 'Dual',
-                locationType: 'Local',
-                origin: school,
-                destination: school,
-                preStart: next.preFlightTime,
-                postEnd: next.postFlightTime
-            });
-            
-            console.log(`PASS 1: STBY at ${time.toFixed(2)} for ${trainee.fullName}, instructor: ${instructor}`);
-            scheduledTrainees.add(trainee.fullName);
-            placed = true;
-            break; // Move to next trainee
-        }
-        
-        if (!placed) {
-            console.log('[STBY PASS1 FAIL] ' + trainee.fullName + ' unit=' + (trainee.unit||'null') + ' checked=' + _diagChecked + ' noSlot=' + _diagNoSlot + ' noWindow=' + _diagNoWindow + ' no8Rule=' + _diagNo8Rule + ' noInstr=' + _diagNoInstr);
         }
     }
-    
-    console.log(`PASS 1 complete: ${scheduledTrainees.size} STBY flights with instructors`);
-    
-    // PASS 2: Go back to beginning and schedule remaining trainees with TBA
-    // This ensures we fill ALL available slots, starting from the beginning of the day
-    console.log('PASS 2: Going back to beginning to schedule remaining STBY with TBA...');
-    const remainingTrainees = traineesNeedingStby.filter(t => !scheduledTrainees.has(t.fullName));
-    console.log(`Remaining trainees needing STBY: ${remainingTrainees.length}`);
-    
-    // Restart from beginning of flying window for Pass 2
-    for (const trainee of remainingTrainees) {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
-        if (!next) continue;
-        
-        // Scan from START of flying window (not where Pass 1 left off)
-        for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
-            if (hasFlightStartTime(time, generatedEvents)) continue;
-            
-            const flightEndTime = time + next.duration;
-            if (flightEndTime > flyingEndTime) continue;
-            
-            if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
-            
-            const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
-            
-            // Create STBY flight event with TBA (no instructor available)
-            generatedEvents.push({
-                id: uuidv4(),
-                type: 'flight',
-                instructor: 'TBA',
-                student: trainee.fullName,
-                flightNumber: next.id,
-                duration: next.duration,
-                startTime: time,
-                resourceId: `STBY ${stbyLine}`,
-                color: courseColors[trainee.course] || 'bg-gray-500',
-                flightType: 'Dual',
-                locationType: 'Local',
-                origin: school,
-                destination: school,
-                preStart: next.preFlightTime,
-                postEnd: next.postFlightTime
-            });
-            
-            console.log(`PASS 2: STBY at ${time.toFixed(2)} for ${trainee.fullName}, instructor: TBA`);
-            scheduledTrainees.add(trainee.fullName);
-            break; // Move to next trainee
-        }
-    }
-    
-    console.log(`PASS 2 complete: Total STBY flights: ${scheduledTrainees.size} (Pass 1: ${scheduledTrainees.size - remainingTrainees.length}, Pass 2: ${remainingTrainees.length})`);
     
     
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
