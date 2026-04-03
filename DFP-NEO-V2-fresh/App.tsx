@@ -3276,7 +3276,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return false; // No violation
     };
     
-    // Helper: Check if instructor is available for entire event duration
+    // Helper: Check if instructor is available for entire event duration (uses full brief window)
     const isInstructorAvailableForEvent = (
         instructorName: string,
         startTime: number,
@@ -3294,6 +3294,30 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (!getPersonnel(e).includes(instructorName)) return false;
             const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
             return eventStart < existingBookingWindow.end && eventEnd > existingBookingWindow.start;
+        });
+    };
+
+    // Helper: Check if instructor is available for a STBY event.
+    // Uses ACTUAL flight time only (startTime to startTime+duration) plus a small turnaround buffer.
+    // This avoids blocking instructors who are already briefed/available but have brief windows
+    // that span the entire flying day (1.25h pre-brief means 2 flights = all day blocked).
+    const isInstructorAvailableForStby = (
+        instructorName: string,
+        startTime: number,
+        duration: number,
+        events: Omit<ScheduleEvent, 'date'>[]
+    ): boolean => {
+        // Use turnaround time as the only buffer (typically 20-30 min)
+        const turnaround = flightTurnaround / 60; // convert minutes to hours
+        const eventStart = startTime - turnaround;
+        const eventEnd = startTime + duration + turnaround;
+
+        return !events.some(e => {
+            if (!getPersonnel(e).includes(instructorName)) return false;
+            // For the existing event, also use actual time + turnaround (not full brief window)
+            const existStart = e.startTime - turnaround;
+            const existEnd = e.startTime + e.duration + turnaround;
+            return eventStart < existEnd && eventEnd > existStart;
         });
     };
     
@@ -3331,10 +3355,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         
         // Apply unit eligibility check (respects staffSharingEnabled setting)
         candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, trainee));
-        
-        // Filter to only available instructors (time overlap check)
-        const available = candidates.filter(ip => 
-            isInstructorAvailableForEvent(ip.name, startTime, duration, syllabusItem, events)
+
+        // Filter to only available instructors using STBY-specific availability check.
+        // Uses actual flight time + turnaround only (not full 1.25h brief window) so that
+        // instructors who already have 2 flights in the main build are not blocked for STBY.
+        const available = candidates.filter(ip =>
+            isInstructorAvailableForStby(ip.name, startTime, duration, events)
         );
         
         if (available.length === 0) return null;
