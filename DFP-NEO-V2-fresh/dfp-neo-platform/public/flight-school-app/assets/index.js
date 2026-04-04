@@ -83028,7 +83028,11 @@ const CoursesManagementView = ({
     setCourseToDelete(null);
   };
   const CourseCard = ({ course }) => {
-    const totalStudents = traineesData ? traineesData.filter((t) => t.course === course.name).length : course.raafStart + course.navyStart + course.armyStart;
+    const courseTrainees = traineesData ? traineesData.filter((t) => t.course === course.name) : [];
+    const totalStudents = traineesData ? courseTrainees.length : course.raafStart + course.navyStart + course.armyStart;
+    const raafCount = traineesData ? courseTrainees.filter((t) => t.service === "RAAF").length : course.raafStart;
+    const navyCount = traineesData ? courseTrainees.filter((t) => t.service === "RAN").length : course.navyStart;
+    const armyCount = traineesData ? courseTrainees.filter((t) => t.service === "ARA").length : course.armyStart;
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
@@ -83171,7 +83175,7 @@ const CoursesManagementView = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
                 "RAAF: ",
-                course.raafStart
+                raafCount
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
                 lineNumber: 189,
@@ -83179,7 +83183,7 @@ const CoursesManagementView = ({
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
                 "Navy: ",
-                course.navyStart
+                navyCount
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
                 lineNumber: 190,
@@ -83187,7 +83191,7 @@ const CoursesManagementView = ({
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
                 "Army: ",
-                course.armyStart
+                armyCount
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
                 lineNumber: 191,
