@@ -94369,7 +94369,7 @@ ${"=".repeat(60)}`);
     };
     setCourses((prev) => [...prev, newCourse]);
     try {
-      await fetch("/api/courses", { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newCourse, status: "ACTIVE" }) });
+      await fetch("/api/courses", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newCourse, status: "ACTIVE" }) });
     } catch (e) { console.error("Failed to save course to DB:", e); }
     setSuccessMessage(`Course ${data.number} added successfully!`);
   };
@@ -94413,7 +94413,7 @@ ${"=".repeat(60)}`);
     const restoredCourse = { name: courseName, color, startDate: "", gradDate: "", raafStart: 0, navyStart: 0, armyStart: 0 };
     setCourses((prev) => [...prev, restoredCourse]);
     try {
-      await fetch("/api/courses", { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...restoredCourse, status: "ACTIVE" }) });
+      await fetch("/api/courses", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...restoredCourse, status: "ACTIVE" }) });
     } catch (e) { console.error("Failed to restore course to DB:", e); }
     setSuccessMessage(`Course ${courseName} unarchived successfully!`);
   };
