@@ -120,6 +120,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
 import { initializeData } from './lib/dataService';
+import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
@@ -6851,11 +6852,11 @@ useEffect(() => {
     // Published schedules are cleared in changeSchool() which is the correct behaviour.
 
     // Training Records Handlers
-    const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
-        // Add to courseColors
+    const handleAddCourseFromTrainingRecords = async (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
+        // Add to courseColors (local state)
         setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
         
-        // Add to courses array
+        // Add to courses array (local state)
         const newCourse: Course = {
             name: data.number,
             color: data.color,
@@ -6866,6 +6867,26 @@ useEffect(() => {
             armyStart: data.armyStart
         };
         setCourses(prev => [...prev, newCourse]);
+        
+        // Save to database
+        try {
+            const result = await saveCourseToDB({
+                name: data.number,
+                color: data.color,
+                startDate: data.startDate,
+                gradDate: data.gradDate,
+                raafStart: data.raafStart,
+                navyStart: data.navyStart,
+                armyStart: data.armyStart,
+                status: 'ACTIVE',
+                location: school === 'ESL' ? 'East Sale' : 'Pearce'
+            });
+            if (!result.success) {
+                console.error('Failed to save course to DB:', result.error);
+            }
+        } catch (error) {
+            console.error('Error saving course to DB:', error);
+        }
         
         setSuccessMessage(`Course ${data.number} added successfully!`);
     };
@@ -6884,6 +6905,16 @@ useEffect(() => {
             // Remove from courses array
             setCourses(prev => prev.filter(c => c.name !== courseName));
             
+            // Delete from database (since archived courses no longer exist in DB for now)
+            try {
+                const result = await deleteCourseFromDB(courseName);
+                if (!result.success) {
+                    console.error('Failed to delete course from DB:', result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting course from DB:', error);
+            }
+            
             setSuccessMessage(`Course ${courseName} archived successfully!`);
         } else {
             // Permanently delete the course
@@ -6893,6 +6924,16 @@ useEffect(() => {
             
             // Remove from courses array
             setCourses(prev => prev.filter(c => c.name !== courseName));
+            
+            // Delete from database
+            try {
+                const result = await deleteCourseFromDB(courseName);
+                if (!result.success) {
+                    console.error('Failed to delete course from DB:', result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting course from DB:', error);
+            }
             
             setSuccessMessage(`Course ${courseName} deleted permanently!`);
         }
@@ -6936,6 +6977,26 @@ useEffect(() => {
             armyStart: 0,
         };
         setCourses(prev => [...prev, restoredCourse]);
+        
+        // Save back to database
+        try {
+            const result = await saveCourseToDB({
+                name: courseName,
+                color: color,
+                startDate: '',
+                gradDate: '',
+                raafStart: 0,
+                navyStart: 0,
+                armyStart: 0,
+                status: 'ACTIVE',
+                location: school === 'ESL' ? 'East Sale' : 'Pearce'
+            });
+            if (!result.success) {
+                console.error('Failed to save unarchived course to DB:', result.error);
+            }
+        } catch (error) {
+            console.error('Error saving unarchived course to DB:', error);
+        }
 
         setSuccessMessage(`Course ${courseName} unarchived successfully!`);
     };
@@ -6948,6 +7009,16 @@ useEffect(() => {
 
         // Remove from courses array if it exists there
         setCourses(prev => prev.filter(c => c.name !== courseName));
+
+        // Delete from database if it exists there
+        try {
+            const result = await deleteCourseFromDB(courseName);
+            if (!result.success) {
+                console.error('Failed to delete course from DB:', result.error);
+            }
+        } catch (error) {
+            console.error('Error deleting course from DB:', error);
+        }
 
         setSuccessMessage(`Course ${courseName} deleted permanently!`);
     };
