@@ -89447,12 +89447,30 @@ async function initializeData() {
       scores: Object.keys(scores).length,
       events: events.length
     });
+    let dbCourses = [];
+    try {
+      const cr = await fetch("/api/courses", { credentials: "include" });
+      if (cr.ok) {
+        const cd = await cr.json();
+        dbCourses = Array.isArray(cd.courses) ? cd.courses.map((c) => ({
+          name: c.name,
+          color: c.color || "#6366f1",
+          startDate: c.startDate || "",
+          gradDate: c.endDate || "",
+          raafStart: c.raafCount || 0,
+          navyStart: c.navyCount || 0,
+          armyStart: c.armyCount || 0
+        })) : [];
+        console.log("\u2705 Courses DB loaded:", dbCourses.length);
+      }
+    } catch (e) { console.error("Failed to fetch courses:", e); }
     return {
       instructors,
       trainees,
       aircraft,
       scores,
-      events
+      events,
+      courses: dbCourses
     };
   } catch (error) {
     console.error("❌ Failed to load data from API:", error);
@@ -89462,7 +89480,8 @@ async function initializeData() {
       trainees: ESL_DATA.trainees,
       aircraft: ESL_DATA.aircraft || [],
       scores: {},
-      events: ESL_DATA.events || []
+      events: ESL_DATA.events || [],
+      courses: []
     };
   }
 }
@@ -92472,6 +92491,12 @@ const App = () => {
         setInstructorsData(data.instructors);
         setTraineesData(data.trainees);
         setEvents(data.events);
+        if (data.courses && data.courses.length > 0) {
+          console.log("\u2705 Setting courses from DB:", data.courses.length);
+          setCourses(data.courses);
+        } else {
+          console.log("\u26a0\ufe0f No DB courses, keeping mock courses");
+        }
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
           try {
@@ -94352,7 +94377,6 @@ ${"=".repeat(60)}`);
   reactExports.useEffect(() => {
     const initialData = school === "ESL" ? ESL_DATA : PEA_DATA;
     setEvents(initialData.events);
-    setCourses(initialData.courses);
     const todayStr = getLocalDateString();
     setPublishedSchedules({ [todayStr]: initialData.events.filter((e) => e.date === todayStr) });
   }, [school]);
