@@ -89458,11 +89458,13 @@ async function initializeData() {
       events: events.length
     });
     let dbCourses = [];
+    let dbArchivedCourses = {};
     try {
       const cr = await fetch("/api/courses", { credentials: "include" });
       if (cr.ok) {
         const cd = await cr.json();
-        dbCourses = Array.isArray(cd.courses) ? cd.courses.map((c) => ({
+        const allCourses = Array.isArray(cd.courses) ? cd.courses : [];
+        dbCourses = allCourses.filter((c) => c.status !== "ARCHIVED").map((c) => ({
           name: c.name,
           color: c.color || "#6366f1",
           startDate: c.startDate || "",
@@ -89470,8 +89472,12 @@ async function initializeData() {
           raafStart: c.raafStart || c.raafCount || 0,
           navyStart: c.navyStart || c.navyCount || 0,
           armyStart: c.armyStart || c.armyCount || 0
-        })) : [];
-        console.log("\u2705 Courses DB loaded:", dbCourses.length);
+        }));
+        dbArchivedCourses = allCourses.filter((c) => c.status === "ARCHIVED").reduce((acc, c) => {
+          acc[c.name] = c.color || "#6366f1";
+          return acc;
+        }, {});
+        console.log("\u2705 Courses DB loaded:", dbCourses.length, "active,", Object.keys(dbArchivedCourses).length, "archived");
       }
     } catch (e) { console.error("Failed to fetch courses:", e); }
     return {
@@ -89480,7 +89486,8 @@ async function initializeData() {
       aircraft,
       scores,
       events,
-      courses: dbCourses
+      courses: dbCourses,
+      archivedCourses: dbArchivedCourses
     };
   } catch (error) {
     console.error("❌ Failed to load data from API:", error);
@@ -92511,6 +92518,9 @@ const App = () => {
         } else {
           console.log("\u26a0\ufe0f No DB courses, keeping mock courses");
         }
+        if (data.archivedCourses && Object.keys(data.archivedCourses).length > 0) {
+          setArchivedCourses((prev) => ({ ...prev, ...data.archivedCourses }));
+        }
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
           try {
@@ -94421,8 +94431,8 @@ ${"=".repeat(60)}`);
       setArchivedCourses((prev) => ({ ...prev, [courseName]: color }));
       setCourses((prev) => prev.filter((c) => c.name !== courseName));
       try {
-        await fetch(`/api/courses/${encodeURIComponent(courseName)}`, { method: "DELETE", credentials: "include" });
-      } catch (e) { console.error("Failed to delete course from DB:", e); }
+        await fetch("/api/courses", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: courseName, color, status: "ARCHIVED" }) });
+      } catch (e) { console.error("Failed to archive course in DB:", e); }
       setSuccessMessage(`Course ${courseName} archived successfully!`);
     } else {
       const newActive = { ...courseColors };
