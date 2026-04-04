@@ -32,6 +32,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
     const [pinInput, setPinInput] = useState('');
     const [showPinDialog, setShowPinDialog] = useState(false);
+    const [showChoiceDialog, setShowChoiceDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
 
     // Group courses by type (only active courses, not archived)
@@ -106,20 +107,28 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
 
         if (!courseToDelete) return;
 
-        const archiveChoice = await showDarkConfirm(
-            'Delete Course',
-            `Do you want to archive or permanently delete "${courseToDelete}"?\n\nClick "Archive" to archive the course (can be restored later).\nClick "Delete" to permanently delete the course.`,
-            'warning',
-            'Archive',
-            'Delete'
-        );
-
-        const shouldArchive = archiveChoice === true;
-        onDeleteCourse(courseToDelete, shouldArchive);
-
-        // Reset state
+        // PIN is correct — close PIN dialog and show the Archive/Delete choice dialog
         setShowPinDialog(false);
         setPinInput('');
+        setShowChoiceDialog(true);
+    };
+
+    const handleArchiveCourse = () => {
+        if (!courseToDelete) return;
+        onDeleteCourse(courseToDelete, true); // archive = true
+        setShowChoiceDialog(false);
+        setCourseToDelete(null);
+    };
+
+    const handleDeleteCoursePermanently = () => {
+        if (!courseToDelete) return;
+        onDeleteCourse(courseToDelete, false); // archive = false — permanent delete
+        setShowChoiceDialog(false);
+        setCourseToDelete(null);
+    };
+
+    const handleCancelChoice = () => {
+        setShowChoiceDialog(false);
         setCourseToDelete(null);
     };
 
@@ -307,6 +316,42 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                             >
                                 Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive / Delete Choice Dialog */}
+            {showChoiceDialog && courseToDelete && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-yellow-600/50">
+                        <h3 className="text-xl font-semibold text-yellow-400 mb-2">Archive or Delete Course?</h3>
+                        <p className="text-gray-300 mb-6">
+                            What would you like to do with <span className="font-semibold text-sky-400">{courseToDelete}</span>?
+                        </p>
+                        <div className="text-sm text-gray-400 mb-6 space-y-2">
+                            <p><span className="text-amber-400 font-medium">Archive</span> — hides the course but keeps all data. Can be restored later.</p>
+                            <p><span className="text-red-400 font-medium">Delete</span> — permanently removes the course. This cannot be undone.</p>
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={handleCancelChoice}
+                                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleArchiveCourse}
+                                className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
+                            >
+                                Archive
+                            </button>
+                            <button
+                                onClick={handleDeleteCoursePermanently}
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                            >
+                                Delete
                             </button>
                         </div>
                     </div>
