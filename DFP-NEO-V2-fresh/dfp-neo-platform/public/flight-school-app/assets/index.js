@@ -92482,6 +92482,7 @@ const App = () => {
     const loadInitialData = async () => {
       console.log("🔄 Starting to load initial data...");
       try {
+                console.log("🟢 About to call initializeData()...");
         const data = await initializeData();
         console.log("📦 Data received from initializeData:", {
           instructorsCount: data.instructors.length,
