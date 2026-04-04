@@ -36,12 +36,9 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
   // Separate map keyed by idNumber (only for non-null idNumbers) used for mockdata dedup
   const dbByIdNumber = new Map();
   dbInstructors.forEach((instructor: any) => {
-    // If DB instructor has empty permissions, inherit from mockData by name
-    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
-      const mockMatch = mockByName.get(instructor.name);
-      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
-      console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
-    }
+    // NOTE: Permissions are NOT inherited from mock data.
+    // Real DB instructors keep their own permissions (even if empty).
+    // Empty permissions = no permissions assigned yet, which is correct.
     
     // Use idNumber as key if available, otherwise use CUID (id) to avoid null-key collisions
     // All 102 restored staff have idNumber=null — without this fix they'd all overwrite each other
@@ -260,12 +257,12 @@ export async function initializeData() {
            console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
          });
 
-         // Always merge both DB and mock data with _dataSource tags
-         // App.tsx filtering will decide what to show based on toggle state
-         // Merge both ESL and PEA mock instructors so both locations are available
+         // Merge DB and mock instructor data based on the staff mock data toggle setting.
+         // Real DB data always takes priority. Mock data is only added if the toggle is ON.
          const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-         instructors = mergeInstructorData(instructors, allMockInstructors, true);
-         console.log('🔄 Loaded all staff (DB + mock) with _dataSource tags for UI filtering');
+         const includeStaffMockData = dataSourceSettings.staff !== false;
+         instructors = mergeInstructorData(instructors, allMockInstructors, includeStaffMockData);
+         console.log('🔄 Loaded staff - DB always included, mock data:', includeStaffMockData ? 'ENABLED' : 'DISABLED');
    
 
          // Fetch trainees - ALWAYS load all data regardless of toggle settings
@@ -347,14 +344,15 @@ export async function initializeData() {
     
   } catch (error) {
     console.error('❌ Failed to load data from API:', error);
-    console.log('⚠️ Falling back to mock data');
+    console.log('⚠️ Falling back to mock data (tagged with _dataSource: mockdata)');
     
+    // Tag all fallback mock data so the UI filtering still works correctly
     return {
-      instructors: ESL_DATA.instructors,
-      trainees: ESL_DATA.trainees,
+      instructors: ESL_DATA.instructors.map((i: any) => ({ ...i, _dataSource: 'mockdata' as const })),
+      trainees: ESL_DATA.trainees.map((t: any) => ({ ...t, _dataSource: 'mockdata' as const })),
       aircraft: ESL_DATA.aircraft || [],
       scores: {},
-      events: ESL_DATA.events || [],
+      events: (ESL_DATA.events || []).map((e: any) => ({ ...e, _dataSource: 'mockdata' as const })),
     };
   }
 }
