@@ -82930,7 +82930,8 @@ const CoursesManagementView = ({
   onDeleteCourse,
   onNavigateToCourseRoster,
   onNavigateToArchivedCourses,
-  onUpdateCourseDates
+  onUpdateCourseDates,
+  traineesData
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -83027,7 +83028,7 @@ const CoursesManagementView = ({
     setCourseToDelete(null);
   };
   const CourseCard = ({ course }) => {
-    const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+    const totalStudents = traineesData ? traineesData.filter((t) => t.course === course.name).length : course.raafStart + course.navyStart + course.armyStart;
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
@@ -86266,7 +86267,8 @@ const TrainingRecordsView = ({
           onDeleteCourse,
           onNavigateToCourseRoster,
           onNavigateToArchivedCourses,
-          onUpdateCourseDates
+          onUpdateCourseDates,
+          traineesData
         },
         void 0,
         false,
