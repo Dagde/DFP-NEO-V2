@@ -10152,6 +10152,7 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     };
   };
   const convertTailwindToHex = (tailwindClass) => {
+    if (tailwindClass && tailwindClass.startsWith("#")) return tailwindClass;
     const colorMap = {
       "bg-sky-400/50": "#38BDF8",
       "bg-purple-400/50": "#C084FC",
@@ -14057,7 +14058,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1082,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || "bg-gray-500"}`, children: trainee.course }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold px-1 rounded text-white text-[10px] " + (courseColors[trainee.course] && courseColors[trainee.course].startsWith("#") ? "" : (courseColors[trainee.course] || "bg-gray-500")), style: courseColors[trainee.course] && courseColors[trainee.course].startsWith("#") ? { backgroundColor: courseColors[trainee.course] } : {}, children: trainee.course }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1082,
                       columnNumber: 99
@@ -15671,6 +15672,7 @@ const CourseEditFlyout = ({
     }
   };
   const courseColor = courseColors[courseName] || "bg-gray-500";
+  const courseColorIsHex = courseColor && courseColor.startsWith("#");
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 pt-8", onClick: onClose, children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
@@ -15678,7 +15680,7 @@ const CourseEditFlyout = ({
         className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden border border-gray-600",
         onClick: (e) => e.stopPropagation(),
         children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${courseColor} px-6 py-4 flex justify-between items-center`, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: courseColorIsHex ? "px-6 py-4 flex justify-between items-center" : `${courseColor} px-6 py-4 flex justify-between items-center`, style: courseColorIsHex ? { backgroundColor: courseColor } : {}, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: [
               "Edit Course: ",
               courseName
@@ -82969,6 +82971,8 @@ const CoursesManagementView = ({
     Object.keys(groups).forEach((key) => {
       if (groups[key].length === 0) {
         delete groups[key];
+      } else {
+        groups[key].sort((a, b) => a.name.localeCompare(b.name));
       }
     });
     return groups;
@@ -83032,7 +83036,7 @@ const CoursesManagementView = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-start mb-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${courseColors[course.name] || "bg-gray-400/50"}` }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-4 h-4 rounded " + (courseColors[course.name] && courseColors[course.name].startsWith("#") ? "" : (courseColors[course.name] || "bg-gray-400/50")), style: courseColors[course.name] && courseColors[course.name].startsWith("#") ? { backgroundColor: courseColors[course.name] } : {} }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
                 lineNumber: 142,
                 columnNumber: 25
@@ -89456,10 +89460,10 @@ async function initializeData() {
           name: c.name,
           color: c.color || "#6366f1",
           startDate: c.startDate || "",
-          gradDate: c.endDate || "",
-          raafStart: c.raafCount || 0,
-          navyStart: c.navyCount || 0,
-          armyStart: c.armyCount || 0
+          gradDate: c.gradDate || c.endDate || "",
+          raafStart: c.raafStart || c.raafCount || 0,
+          navyStart: c.navyStart || c.navyCount || 0,
+          armyStart: c.armyStart || c.armyCount || 0
         })) : [];
         console.log("\u2705 Courses DB loaded:", dbCourses.length);
       }
