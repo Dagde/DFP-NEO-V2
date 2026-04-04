@@ -709,6 +709,26 @@ app.put('/api/courses', async (req, res) => {
   }
 });
 
+// DELETE /api/courses/:name - Delete a course by name
+app.delete('/api/courses/:name', async (req, res) => {
+  try {
+    const name = decodeURIComponent(req.params.name);
+    console.log(`📡 DELETE /api/courses/${name} called`);
+    const db = await getPrisma();
+    const existing = await db.course.findFirst({ where: { name } });
+    if (!existing) {
+      console.log(`⚠️ DELETE /api/courses - course not found: ${name}`);
+      return res.json({ success: true, message: 'Course not found (already deleted)' });
+    }
+    await db.course.delete({ where: { id: existing.id } });
+    console.log(`✅ DELETE /api/courses - deleted course: ${name}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to delete course', details: error.message });
+  }
+});
+
 // ============================================================
 // AIRCRAFT AVAILABILITY HISTORY ENDPOINTS
 // ============================================================

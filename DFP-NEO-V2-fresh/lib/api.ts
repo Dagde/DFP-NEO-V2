@@ -135,7 +135,7 @@ export async function fetchCourses(): Promise<any[]> {
 // Save a course to the database
 export async function saveCourse(course: any): Promise<{ success: boolean; error?: string }> {
   const result = await fetchAPI<{ success: boolean }>('/courses', {
-    method: 'POST',
+    method: 'PUT',
     body: JSON.stringify(course),
   });
   return result.success ? { success: true } : { success: false, error: result.error };

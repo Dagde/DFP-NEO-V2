@@ -94356,7 +94356,7 @@ ${"=".repeat(60)}`);
     const todayStr = getLocalDateString();
     setPublishedSchedules({ [todayStr]: initialData.events.filter((e) => e.date === todayStr) });
   }, [school]);
-  const handleAddCourseFromTrainingRecords = (data) => {
+  const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
     const newCourse = {
       name: data.number,
@@ -94368,6 +94368,9 @@ ${"=".repeat(60)}`);
       armyStart: data.armyStart
     };
     setCourses((prev) => [...prev, newCourse]);
+    try {
+      await fetch("/api/courses", { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newCourse, status: "ACTIVE" }) });
+    } catch (e) { console.error("Failed to save course to DB:", e); }
     setSuccessMessage(`Course ${data.number} added successfully!`);
   };
   const handleDeleteCourseFromTrainingRecords = async (courseName, archive) => {
@@ -94379,12 +94382,18 @@ ${"=".repeat(60)}`);
       setCourseColors(newActive);
       setArchivedCourses((prev) => ({ ...prev, [courseName]: color }));
       setCourses((prev) => prev.filter((c) => c.name !== courseName));
+      try {
+        await fetch(`/api/courses/${encodeURIComponent(courseName)}`, { method: "DELETE", credentials: "include" });
+      } catch (e) { console.error("Failed to delete course from DB:", e); }
       setSuccessMessage(`Course ${courseName} archived successfully!`);
     } else {
       const newActive = { ...courseColors };
       delete newActive[courseName];
       setCourseColors(newActive);
       setCourses((prev) => prev.filter((c) => c.name !== courseName));
+      try {
+        await fetch(`/api/courses/${encodeURIComponent(courseName)}`, { method: "DELETE", credentials: "include" });
+      } catch (e) { console.error("Failed to delete course from DB:", e); }
       setSuccessMessage(`Course ${courseName} deleted permanently!`);
     }
   };
@@ -94401,10 +94410,11 @@ ${"=".repeat(60)}`);
     delete newArchived[courseName];
     setArchivedCourses(newArchived);
     setCourseColors((prev) => ({ ...prev, [courseName]: color }));
-    const courseFromMockData = ESL_DATA.courses.find((c) => c.name === courseName);
-    if (courseFromMockData) {
-      setCourses((prev) => [...prev, courseFromMockData]);
-    }
+    const restoredCourse = { name: courseName, color, startDate: "", gradDate: "", raafStart: 0, navyStart: 0, armyStart: 0 };
+    setCourses((prev) => [...prev, restoredCourse]);
+    try {
+      await fetch("/api/courses", { method: "PUT", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...restoredCourse, status: "ACTIVE" }) });
+    } catch (e) { console.error("Failed to restore course to DB:", e); }
     setSuccessMessage(`Course ${courseName} unarchived successfully!`);
   };
   const handleDeleteCourseFromArchivedView = async (courseName) => {
@@ -94412,6 +94422,9 @@ ${"=".repeat(60)}`);
     delete newArchived[courseName];
     setArchivedCourses(newArchived);
     setCourses((prev) => prev.filter((c) => c.name !== courseName));
+    try {
+      await fetch(`/api/courses/${encodeURIComponent(courseName)}`, { method: "DELETE", credentials: "include" });
+    } catch (e) { console.error("Failed to delete archived course from DB:", e); }
     setSuccessMessage(`Course ${courseName} deleted permanently!`);
   };
   const handleDateChange = (increment) => {
