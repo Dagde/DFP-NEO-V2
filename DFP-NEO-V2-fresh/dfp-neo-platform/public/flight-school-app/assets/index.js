@@ -99903,3 +99903,4 @@ root.render(
   }, void 0)
 );
 //# sourceMappingURL=index.js.map
+// FIC211 color fix: courseColors should load from DB including restored courses
