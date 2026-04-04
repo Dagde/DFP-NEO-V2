@@ -6833,13 +6833,10 @@ useEffect(() => {
         setPublishedSchedules({}); // Clear published schedules on school change
     };
     
-    useEffect(() => {
-        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;
-        setEvents(initialData.events);
-        setCourses(initialData.courses);
-        const todayStr = getLocalDateString();
-        setPublishedSchedules({ [todayStr]: initialData.events.filter(e => e.date === todayStr) });
-    }, [school]);
+    // NOTE: School switch no longer resets events/courses to mock data.
+    // Real DB data stays in memory when switching schools.
+    // Components filter by the 'school' state to show only relevant data.
+    // Published schedules are cleared in changeSchool() which is the correct behaviour.
 
     // Training Records Handlers
     const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
@@ -6911,11 +6908,22 @@ useEffect(() => {
         // Add back to active courses
         setCourseColors(prev => ({ ...prev, [courseName]: color }));
 
-        // Add back to courses array (recreate from mock data)
-        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
-        if (courseFromMockData) {
-            setCourses(prev => [...prev, courseFromMockData]);
-        }
+        // Add back to courses array using real data we already have.
+        // archivedCourses only stores { name: color } so we reconstruct with
+        // name and color. The other fields (dates, service numbers) were not
+        // preserved on archive - they default to empty/zero here.
+        // TODO: In a future step, store full course details on archive so they
+        // can be fully restored.
+        const restoredCourse: Course = {
+            name: courseName,
+            color: color,
+            startDate: '',
+            gradDate: '',
+            raafStart: 0,
+            navyStart: 0,
+            armyStart: 0,
+        };
+        setCourses(prev => [...prev, restoredCourse]);
 
         setSuccessMessage(`Course ${courseName} unarchived successfully!`);
     };
