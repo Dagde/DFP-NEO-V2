@@ -92494,6 +92494,10 @@ const App = () => {
         if (data.courses && data.courses.length > 0) {
           console.log("\u2705 Setting courses from DB:", data.courses.length);
           setCourses(data.courses);
+          const dbColors = {};
+          data.courses.forEach((c) => { dbColors[c.name] = c.color || "#6366f1"; });
+          console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
+          setCourseColors((prev) => ({ ...prev, ...dbColors }));
         } else {
           console.log("\u26a0\ufe0f No DB courses, keeping mock courses");
         }
