@@ -3982,7 +3982,7 @@ const App: React.FC = () => {
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => getLocalDateString());
-    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+    const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
     const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
@@ -4034,7 +4034,7 @@ const App: React.FC = () => {
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
-    const [allInstructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
+    const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
     
     // Monitor allInstructorsData for duplicates
     useEffect(() => {
@@ -4064,7 +4064,7 @@ useEffect(() => {
 }, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [allTraineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees.map(t => ({ ...t, _dataSource: 'mockdata' as const })));
+    const [allTraineesData, setTraineesData] = useState<Trainee[]>([]);
     const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
@@ -4406,6 +4406,18 @@ useEffect(() => {
                 setInstructorsData(data.instructors);
                 setTraineesData(data.trainees);
                 setEvents(data.events);
+
+                // Load courses from DB if any exist
+                if (data.courses && data.courses.length > 0) {
+                    console.log('🎓 Loading', data.courses.length, 'courses from DB');
+                    setCourses(data.courses);
+                    // Rebuild courseColors from loaded courses
+                    const colors: { [key: string]: string } = {};
+                    data.courses.forEach((c: any) => { if (c.name && c.color) colors[c.name] = c.color; });
+                    setCourseColors(prev => ({ ...prev, ...colors }));
+                } else {
+                    console.log('🎓 No courses in DB yet - keeping existing course state');
+                }
 
                 // --- Individual LMP Sync ---
                 // For each trainee, read their completed PT-051 Score records from DB,
@@ -4861,15 +4873,15 @@ useEffect(() => {
     const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
     const combinedPermissions = [...authUserPermissions, ...(currentUser?.permissions || [])];
     const currentUserPermission = getHighestPermission(combinedPermissions);
-    const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
-    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
-    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
-    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
-    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
-    const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
-    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(ESL_DATA.coursePercentages);
+    const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
+    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>({});
+    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
+    const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
+    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
-    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(ESL_DATA.traineeLMPs);
+    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
     
     // Event Limits State (Lifted from SettingsView)
     const [eventLimits, setEventLimits] = useState<EventLimits>({

@@ -183,6 +183,86 @@ app.post('/api/currencies', async (req, res) => {
   }
 });
 
+// GET /api/courses - Fetch all courses from the database
+app.get('/api/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const courses = await db.course.findMany({
+      orderBy: { startDate: 'asc' },
+    });
+    // Map DB fields to the App's Course interface
+    const mapped = courses.map(c => ({
+      name: c.name,
+      color: c.color || '#6366f1',
+      startDate: c.startDate || '',
+      gradDate: c.endDate || '',
+      raafStart: c.raafCount || 0,
+      navyStart: c.navyCount || 0,
+      armyStart: c.armyCount || 0,
+      status: c.status || 'ACTIVE',
+      location: c.location || '',
+      code: c.code || c.name,
+    }));
+    res.json({ courses: mapped });
+  } catch (error) {
+    console.error('❌ GET /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+// POST /api/courses - Create or update a course in the database
+app.post('/api/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, status } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const course = await db.course.upsert({
+      where: { code: name },
+      update: {
+        color: color || '#6366f1',
+        startDate: startDate || '',
+        endDate: gradDate || '',
+        raafCount: raafStart || 0,
+        navyCount: navyStart || 0,
+        armyCount: armyStart || 0,
+        location: location || '',
+        status: status || 'ACTIVE',
+        updatedAt: new Date(),
+      },
+      create: {
+        name,
+        code: name,
+        color: color || '#6366f1',
+        startDate: startDate || '',
+        endDate: gradDate || '',
+        raafCount: raafStart || 0,
+        navyCount: navyStart || 0,
+        armyCount: armyStart || 0,
+        location: location || '',
+        unit: '',
+        status: status || 'ACTIVE',
+      },
+    });
+    res.json({ success: true, course });
+  } catch (error) {
+    console.error('❌ POST /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to save course' });
+  }
+});
+
+// DELETE /api/courses/:name - Delete a course from the database
+app.delete('/api/courses/:name', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const name = decodeURIComponent(req.params.name);
+    await db.course.deleteMany({ where: { code: name } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to delete course' });
+  }
+});
+
 // GET /api/personnel
 app.get('/api/personnel', async (req, res) => {
   try {

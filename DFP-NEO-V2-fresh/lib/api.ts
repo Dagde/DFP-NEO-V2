@@ -123,6 +123,32 @@ export async function migratePersonnelToDatabase(personnelList: any[]): Promise<
   return { success: false, error: result.error || 'Migration failed' };
 }
 
+// Fetch courses from API
+export async function fetchCourses(): Promise<any[]> {
+  const result = await fetchAPI<{ courses: any[] }>('/courses');
+  if (result.success && result.data?.courses) {
+    return result.data.courses;
+  }
+  return [];
+}
+
+// Save a course to the database
+export async function saveCourse(course: any): Promise<{ success: boolean; error?: string }> {
+  const result = await fetchAPI<{ success: boolean }>('/courses', {
+    method: 'POST',
+    body: JSON.stringify(course),
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
+}
+
+// Delete a course from the database
+export async function deleteCourse(name: string): Promise<{ success: boolean; error?: string }> {
+  const result = await fetchAPI<{ success: boolean }>(`/courses/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
+}
+
 // Fetch schedule from API
 export async function fetchSchedule(startDate?: string, endDate?: string): Promise<any[]> {
   let endpoint = '/schedule';

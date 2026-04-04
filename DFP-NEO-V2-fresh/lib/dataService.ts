@@ -1,7 +1,7 @@
 // Data Service - Loads data from API with fallback to mock data
 // Returns plain objects for React compatibility
 
-import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule } from './api';
+import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule, fetchCourses } from './api';
 import { ESL_DATA, PEA_DATA } from '../mockData';
 import { assignTraineesToInstructors } from './traineeAssignmentService';
 
@@ -309,6 +309,11 @@ export async function initializeData() {
     console.log('📅 Fetching schedule from API...');
     events = await fetchSchedule();
     console.log('✅ Schedule loaded:', events.length);
+
+    // Fetch courses
+    console.log('🎓 Fetching courses from API...');
+    const courses = await fetchCourses();
+    console.log('✅ Courses loaded:', courses.length);
     
     // If API returned no data, fallback to mock data (always tagged with _dataSource)
     if (instructors.length === 0) {
@@ -332,6 +337,7 @@ export async function initializeData() {
       aircraft: aircraft.length,
       scores: Object.keys(scores).length,
       events: events.length,
+      courses: courses.length,
     });
     
     return {
@@ -340,6 +346,7 @@ export async function initializeData() {
       aircraft,
       scores,
       events,
+      courses,
     };
     
   } catch (error) {
@@ -353,6 +360,7 @@ export async function initializeData() {
       aircraft: ESL_DATA.aircraft || [],
       scores: {},
       events: (ESL_DATA.events || []).map((e: any) => ({ ...e, _dataSource: 'mockdata' as const })),
+      courses: [],
     };
   }
 }
