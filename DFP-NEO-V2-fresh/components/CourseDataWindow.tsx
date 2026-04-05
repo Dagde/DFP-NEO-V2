@@ -22,10 +22,6 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
     onShowFullGraph
 }) => {
     const { name: courseName, color: courseColor, gradDate, startDate } = course;
-    // Support both Tailwind class names (e.g. 'bg-orange-400/50') and raw hex colors (e.g. '#F97316')
-    const isHexColor = courseColor?.startsWith('#');
-    const courseColorClass = isHexColor ? '' : (courseColor || '');
-    const courseColorStyle = isHexColor ? { backgroundColor: courseColor } : {};
 
     const getCompletedCount = (traineeScores: Score[]) => {
         // Exclude non-progress events like Mass Briefs and remedial packages
@@ -135,7 +131,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
 
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit">
-            <div className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`} style={courseColorStyle}>
+            <div className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColor}`}>
                  <h2 className="text-lg font-bold text-white text-center mb-2">{courseName}</h2>
                  <div className="flex justify-between items-center text-xs">
                      <div className="flex items-center space-x-1">
@@ -188,8 +184,8 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
                         </div>
                         <div className="w-full bg-gray-700 rounded-full h-1.5">
                             <div
-                                className={`${courseColorClass} h-1.5 rounded-full`}
-                                style={{ width: `${percentage}%`, ...courseColorStyle }}
+                                className={`${courseColor} h-1.5 rounded-full`}
+                                style={{ width: `${percentage}%` }}
                             ></div>
                         </div>
                     </div>

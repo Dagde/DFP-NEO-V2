@@ -88,14 +88,11 @@ const ArchivedCoursesView: React.FC<ArchivedCoursesViewProps> = ({
     };
 
     const ArchivedCourseCard: React.FC<{ courseName: string; color: string }> = ({ courseName, color }) => {
-        const isHexColor = color?.startsWith('#');
-        const swatchClass = isHexColor ? 'w-4 h-4 rounded' : `w-4 h-4 rounded ${color}`;
-        const swatchStyle = isHexColor ? { backgroundColor: color } : {};
         return (
             <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className={swatchClass} style={swatchStyle}></div>
+                        <div className={`w-4 h-4 rounded ${color}`}></div>
                         <h3 className="text-lg font-semibold text-gray-300">
                             {courseName}
                         </h3>
