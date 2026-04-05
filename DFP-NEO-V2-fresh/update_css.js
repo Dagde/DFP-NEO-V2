@@ -36,17 +36,10 @@ function updateCSS(content) {
 }
 
 function addCacheBust(content) {
-  // Add a build timestamp query string to index.js so browsers never serve stale cache
-  const ts = Date.now();
-  content = content.replace(
-    /(<script[^>]+src="\.\/assets\/index\.js)(")/,
-    `$1?v=${ts}$2`
-  );
-  // Also bust already-stamped versions (replace existing ?v=xxxxx)
-  content = content.replace(
-    /(<script[^>]+src="\.\/assets\/index\.js\?v=)\d+(")/,
-    `$1${ts}$2`
-  );
+  // Content-hashed bundles (e.g. index-D3048PZa.js) are already cache-busted by
+  // their hash — no query string needed. This function is a no-op so that
+  // the build pipeline remains intact. If a fixed-name bundle is ever reintroduced,
+  // add cache-busting logic here.
   return content;
 }
 
