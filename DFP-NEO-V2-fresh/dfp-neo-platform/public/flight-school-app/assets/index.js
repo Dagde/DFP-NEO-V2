@@ -6679,7 +6679,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#6B3A2A" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor }) : style),
+      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor }) : style),
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
