@@ -75070,17 +75070,17 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
   return events;
 };
 const eslCourses = [
-  { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
-  { name: "ADF302", color: "bg-purple-400/50", startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
-  { name: "ADF303", color: "bg-yellow-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
-  { name: "FIC 210", color: "bg-pink-400/50", startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "bg-orange-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF301", color: "#7DD3FC"      , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
+  { name: "ADF302", color: "#C084FC"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
+  { name: "ADF303", color: "#FACC15"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
+  { name: "FIC 210", color: "#F472B6"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "#FB923C"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const peaCourses = [
-  { name: "ADF304", color: "bg-teal-400/50", startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
-  { name: "ADF305", color: "bg-indigo-400/50", startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
-  { name: "IFF 6", color: "bg-cyan-400/50", startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "bg-orange-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF304", color: "#2DD4BF"        , startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
+  { name: "ADF305", color: "#818CF8"          , startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
+  { name: "IFF 6", color: "#22D3EE"        , startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "#FB923C"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const generateDataSet = (location) => {
   const isESL = location === "ESL";
@@ -95830,7 +95830,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return { ...prev, [date]: newScheduleForDate };
     });
     updates.forEach((update) => {
-      const event = currentScheduleForDate.find((e) => e.id === update.eventId);
+      const event = (publishedSchedules[date] || []).find((e) => e.id === update.eventId);
       if (event) {
         const originalStartTime = event.startTime;
         const originalResourceId = event.resourceId;
@@ -95857,10 +95857,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
     updates.forEach((update) => {
       if (update.newResourceId && update.newResourceId.startsWith("Deployed")) {
-        const event = currentScheduleForDate.find((e) => e.id === update.eventId);
+        const event = (publishedSchedules[date] || []).find((e) => e.id === update.eventId);
         if (event && event.type === "flight") {
           const flightEndTime = (update.newStartTime ?? event.startTime) + event.duration;
-          const deploymentEvent = currentScheduleForDate.find(
+          const deploymentEvent = (publishedSchedules[date] || []).find(
             (e) => e.type === "deployment" && e.resourceId === update.newResourceId
           );
           const deployEndTime = deploymentEvent?.deploymentEndTime || "0800";
