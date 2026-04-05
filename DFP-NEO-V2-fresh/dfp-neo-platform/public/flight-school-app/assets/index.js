@@ -4107,6 +4107,18 @@ const showDarkConfirm = (message, title = "Confirm Action", variant = "info") =>
     root2.render(modalElement);
   });
 };
+const DataLoadingMonitor = ({ isStaffLoaded, isTraineeLoaded, isCoursesLoaded }) => {
+  const [isVisible, setIsVisible] = clientExports.useState(true);
+  const allLoaded = isStaffLoaded && isTraineeLoaded && isCoursesLoaded;
+  clientExports.useEffect(() => {
+    if (allLoaded) {
+      const timer = setTimeout(() => setIsVisible(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [allLoaded]);
+  if (!isVisible || allLoaded) return null;
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-lg px-6 py-4 shadow-lg z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-8 h-8 animate-spin", fill: "none", viewBox: "0 0 24 24", style: { color: "#fb923c" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 2L8 8H4l4 4-1.5 6L12 15l5.5 3L16 12l4-4h-4z", fill: "currentColor" }, void 0, false, {}, void 0) }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: "Please wait while the engine warms up" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3 text-xs", children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 " + (isStaffLoaded ? "text-green-400" : "text-gray-400"), children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full " + (isStaffLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse") }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Staff" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 " + (isTraineeLoaded ? "text-green-400" : "text-gray-400"), children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full " + (isTraineeLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse") }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Trainees" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 " + (isCoursesLoaded ? "text-green-400" : "text-gray-400"), children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full " + (isCoursesLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse") }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Courses" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0)] }, void 0, true, {}, void 0)] }, void 0, true, {}, void 0) }, void 0, false, {}, void 0);
+};
 const SystemFreezeBanner = () => {
   const { freezeState, unfreezeSystem } = useSystemFreeze$1();
   if (!freezeState.isFrozen) return null;
@@ -16356,11 +16368,6 @@ const CourseRosterView = ({
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ViewToggleButton, { label: "Active Courses", value: "active" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
             lineNumber: 275,
-            columnNumber: 25
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ViewToggleButton, { label: "Archived Courses", value: "archived" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 276,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83234,7 +83241,7 @@ const CoursesManagementView = ({
         lineNumber: 203,
         columnNumber: 21
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-3", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-[1px]", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "button",
           {
@@ -92504,7 +92511,9 @@ const App = () => {
           console.log("✅ No duplicates found in initializeData() result");
         }
         setInstructorsData(data.instructors);
+        setIsStaffLoaded(true);
         setTraineesData(data.trainees);
+        setIsTraineeLoaded(true);
         setEvents(data.events);
         if (data.courses && data.courses.length > 0) {
           console.log("\u2705 Setting courses from DB:", data.courses.length);
@@ -92513,8 +92522,10 @@ const App = () => {
           data.courses.forEach((c) => { dbColors[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1"); });
           console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
           setCourseColors((prev) => ({ ...prev, ...dbColors }));
+          setIsCoursesLoaded(true);
         } else {
           console.log("\u26a0\ufe0f No DB courses, keeping mock courses");
+          setIsCoursesLoaded(true);
         }
         if (data.archivedCourses && Object.keys(data.archivedCourses).length > 0) {
           setArchivedCourses((prev) => ({ ...prev, ...data.archivedCourses }));
@@ -92927,6 +92938,9 @@ const App = () => {
   const [ftdTurnaround, setFtdTurnaround] = reactExports.useState(0.5);
   const [cptTurnaround, setCptTurnaround] = reactExports.useState(0.5);
   const [isBuildingDfp, setIsBuildingDfp] = reactExports.useState(false);
+  const [isStaffLoaded, setIsStaffLoaded] = reactExports.useState(false);
+  const [isTraineeLoaded, setIsTraineeLoaded] = reactExports.useState(false);
+  const [isCoursesLoaded, setIsCoursesLoaded] = reactExports.useState(false);
   const [dfpBuildProgress, setDfpBuildProgress] = reactExports.useState({ message: "", percentage: 0 });
   const [showDateWarning, setShowDateWarning] = reactExports.useState(false);
   const [unavailabilityNotifications, setUnavailabilityNotifications] = reactExports.useState([]);
@@ -99010,6 +99024,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       lineNumber: 12079,
       columnNumber: 9
     }, void 0),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DataLoadingMonitor, { isStaffLoaded, isTraineeLoaded, isCoursesLoaded }, void 0, false, {}, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         Sidebar,
