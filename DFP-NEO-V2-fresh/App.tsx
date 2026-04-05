@@ -5502,12 +5502,7 @@ useEffect(() => {
                 if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
                 if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
                 if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
-                if (saved.courseColors && Object.keys(saved.courseColors).length) {
-                    // Merge saved colors with any already-loaded DB colors (from loadInitialData).
-                    // saved.courseColors is the base; prev (from loadInitialData) takes priority
-                    // so newly restored courses like FIC211 always show their correct color.
-                    setCourseColors((prev: { [key: string]: string }) => ({ ...saved.courseColors, ...prev }));
-                }
+                if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
