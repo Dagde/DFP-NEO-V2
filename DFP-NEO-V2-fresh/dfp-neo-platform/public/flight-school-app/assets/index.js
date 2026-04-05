@@ -95906,13 +95906,20 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           staffNames.forEach((personName) => {
             const instructor = instructorsData.find((i) => i.name === personName || i.fullName === personName);
             if (instructor) {
-              const updated = { ...instructor, unavailability: [...(instructor.unavailability || []), unavailPeriod] };
-              setInstructorsData((prev) => prev.map((i) => i.idNumber === instructor.idNumber ? updated : i));
+              const instrName = instructor.name;
+              setInstructorsData((prev) => prev.map((i) => {
+                if (i.name !== instrName) return i;
+                return { ...i, unavailability: [...(i.unavailability || []), unavailPeriod] };
+              }));
             }
             const trainee = traineesData.find((t) => t.name === personName || t.fullName === personName);
             if (trainee) {
-              const updated = { ...trainee, unavailability: [...(trainee.unavailability || []), unavailPeriod] };
-              setTraineesData((prev) => prev.map((t) => t.idNumber === trainee.idNumber ? updated : t));
+              const traineeName = trainee.name;
+              const traineeFullName = trainee.fullName;
+              setTraineesData((prev) => prev.map((t) => {
+                if (t.name !== traineeName && t.fullName !== traineeFullName) return t;
+                return { ...t, unavailability: [...(t.unavailability || []), unavailPeriod] };
+              }));
             }
           });
         }
