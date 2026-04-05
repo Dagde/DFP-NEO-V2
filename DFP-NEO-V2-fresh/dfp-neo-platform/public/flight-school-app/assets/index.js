@@ -92516,7 +92516,18 @@ const App = () => {
           console.log("\u2705 Setting courses from DB:", data.courses.length);
           setCourses(data.courses);
           const dbColors = {};
-          data.courses.forEach((c) => { dbColors[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1"); });
+          data.courses.forEach((c) => {
+            const twToHex2 = {
+              "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC",
+              "bg-yellow-400/50": "#FACC15", "bg-pink-400/50": "#F472B6",
+              "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8",
+              "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA",
+              "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C",
+              "bg-red-400/50": "#F87171", "bg-gray-400/50": "#9CA3AF"
+            };
+            const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1");
+            dbColors[c.name] = twToHex2[rawColor] || rawColor;
+          });
           console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
           setCourseColors((prev) => ({ ...prev, ...dbColors }));
           setIsCoursesLoaded(true);
@@ -93410,7 +93421,21 @@ ${"=".repeat(60)}`);
         if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
         if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
         if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
-        if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+        if (saved.courseColors && Object.keys(saved.courseColors).length) {
+          const twToHex = {
+            "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC",
+            "bg-yellow-400/50": "#FACC15", "bg-pink-400/50": "#F472B6",
+            "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8",
+            "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA",
+            "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C",
+            "bg-red-400/50": "#F87171", "bg-gray-400/50": "#9CA3AF"
+          };
+          const migratedColors = {};
+          Object.entries(saved.courseColors).forEach(([k, v]) => {
+            migratedColors[k] = twToHex[v] || v;
+          });
+          setCourseColors(migratedColors);
+        }
         if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
         if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
         {
@@ -95867,9 +95892,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const deployEndHour = parseInt(deployEndTime.toString().replace(":", "").padStart(4, "0").slice(0, 2)) +
             parseInt(deployEndTime.toString().replace(":", "").padStart(4, "0").slice(2, 4)) / 60;
           const flightEndHour = Math.round(flightEndTime * 100) / 100;
+          const unavailDate = event.date || date;
           const unavailPeriod = {
             id: `deployed-${update.eventId}-${Date.now()}`,
-            date: event.date || date,
+            startDate: unavailDate,
+            endDate: deploymentEvent?.deploymentEndDate || unavailDate,
             startTime: `${String(Math.floor(flightEndHour)).padStart(2, "0")}:${String(Math.round((flightEndHour % 1) * 60)).padStart(2, "0")}`,
             endTime: `${String(Math.floor(deployEndHour)).padStart(2, "0")}:${String(Math.round((deployEndHour % 1) * 60)).padStart(2, "0")}`,
             reason: "Deployed",
