@@ -13,8 +13,13 @@ const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-eng
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON bodies — 10mb limit needed because the settings payload includes
+// syllabusDetails (entire syllabus) which exceeds Express's default 100kb limit.
+// Without this, POST /api/settings returns 413 PayloadTooLargeError on every
+// deployment, leaving DB settings stale and causing staff/trainees/courses to
+// appear empty after a fresh build.
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // CORS headers for all requests
 app.use((req, res, next) => {
