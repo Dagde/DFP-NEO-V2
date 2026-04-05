@@ -10163,7 +10163,7 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     const colorMap = {
       "bg-sky-400/50": "#38BDF8",
       "bg-purple-400/50": "#C084FC",
-      "bg-yellow-400/50": "#FACC15",
+      "bg-yellow-400/50": "#6B8E23",
       "bg-pink-400/50": "#F472B6",
       "bg-teal-400/50": "#2DD4BF",
       "bg-indigo-400/50": "#818CF8",
@@ -75072,7 +75072,7 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
 const eslCourses = [
   { name: "ADF301", color: "#7DD3FC"      , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
   { name: "ADF302", color: "#C084FC"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
-  { name: "ADF303", color: "#FACC15"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
+  { name: "ADF303", color: "#6B8E23"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
   { name: "FIC 210", color: "#F472B6"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
   { name: "FIC211", color: "#FB923C"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
@@ -92519,7 +92519,7 @@ const App = () => {
           data.courses.forEach((c) => {
             const twToHex2 = {
               "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC",
-              "bg-yellow-400/50": "#FACC15", "bg-pink-400/50": "#F472B6",
+              "bg-yellow-400/50": "#6B8E23", "bg-pink-400/50": "#F472B6",
               "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8",
               "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA",
               "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C",
@@ -93424,7 +93424,7 @@ ${"=".repeat(60)}`);
         if (saved.courseColors && Object.keys(saved.courseColors).length) {
           const twToHex = {
             "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC",
-            "bg-yellow-400/50": "#FACC15", "bg-pink-400/50": "#F472B6",
+            "bg-yellow-400/50": "#6B8E23", "bg-pink-400/50": "#F472B6",
             "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8",
             "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA",
             "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C",
@@ -95880,8 +95880,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         );
       }
     });
+    const processedDeployedEvents = new Set();
     updates.forEach((update) => {
       if (update.newResourceId && update.newResourceId.startsWith("Deployed")) {
+        if (processedDeployedEvents.has(update.eventId)) return;
+        processedDeployedEvents.add(update.eventId);
         const event = (publishedSchedules[date] || []).find((e) => e.id === update.eventId);
         if (event && event.type === "flight") {
           const flightEndTime = (update.newStartTime ?? event.startTime) + event.duration;
