@@ -6574,7 +6574,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const LEGACY_COLOR_MAP = { "#FACC15": "#6B8E23", "#38BDF8": "#7DD3FC" };
+  const LEGACY_COLOR_MAP = { "#FACC15": "#6B8E23", "#38BDF8": "#7DD3FC", "bg-yellow-400/50": "#6B8E23", "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC", "bg-pink-400/50": "#F472B6", "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8", "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA", "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C", "bg-red-400/50": "#F87171", "bg-gray-400/50": "#9CA3AF" };
   const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
   const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
   const ringClass = getDynamicRingClass();
@@ -6582,7 +6582,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
   if (isPreview) {
-    finalClasses.push(event.color && event.color.startsWith("#") ? "" : (event.color || ""));
+    finalClasses.push(tileColor && tileColor.startsWith("#") ? "" : (tileColor || ""));
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
