@@ -6574,7 +6574,9 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (event.color && event.color.startsWith("#") ? "" : event.color);
+  const LEGACY_COLOR_MAP = { "#FACC15": "#6B8E23", "#38BDF8": "#7DD3FC" };
+  const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
+  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
@@ -6677,7 +6679,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style: event.color && event.color.startsWith("#") ? Object.assign({}, style, { backgroundColor: event.color }) : style,
+      style: tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor }) : style,
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
@@ -95912,6 +95914,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               const instrName = instructor.name;
               setInstructorsData((prev) => prev.map((i) => {
                 if (i.name !== instrName) return i;
+                const alreadyExists = (i.unavailability || []).some(
+                  (u) => u.reason === "Deployed" && u.startDate === unavailPeriod.startDate && u.startTime === unavailPeriod.startTime && u.endTime === unavailPeriod.endTime
+                );
+                if (alreadyExists) return i;
                 return { ...i, unavailability: [...(i.unavailability || []), unavailPeriod] };
               }));
             }
@@ -95921,6 +95927,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               const traineeFullName = trainee.fullName;
               setTraineesData((prev) => prev.map((t) => {
                 if (t.name !== traineeName && t.fullName !== traineeFullName) return t;
+                const alreadyExists = (t.unavailability || []).some(
+                  (u) => u.reason === "Deployed" && u.startDate === unavailPeriod.startDate && u.startTime === unavailPeriod.startTime && u.endTime === unavailPeriod.endTime
+                );
+                if (alreadyExists) return t;
                 return { ...t, unavailability: [...(t.unavailability || []), unavailPeriod] };
               }));
             }
