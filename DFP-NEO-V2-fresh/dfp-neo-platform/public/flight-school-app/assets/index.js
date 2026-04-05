@@ -6567,13 +6567,13 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : event.color;
+  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (event.color && event.color.startsWith("#") ? "" : event.color);
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
   if (isPreview) {
-    finalClasses.push(event.color);
+    finalClasses.push(event.color && event.color.startsWith("#") ? "" : (event.color || ""));
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
@@ -6670,7 +6670,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style,
+      style: event.color && event.color.startsWith("#") ? Object.assign({}, style, { backgroundColor: event.color }) : style,
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
@@ -74913,7 +74913,7 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
   const newEvents = [];
   const personnelSchedule = {};
   const areas = ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"];
-  const courseColors = Object.fromEntries(courses.map((c) => [c.name, c.color]));
+  const courseColors = Object.fromEntries(courses.map((c) => [c.name, (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : c.color]));
   const isAvailable = (personName, startTime, duration) => {
     if (!personnelSchedule[personName]) {
       return true;
@@ -75112,7 +75112,7 @@ const generateDataSet = (location) => {
   const coursePercentages = /* @__PURE__ */ new Map();
   const archivedCourses = {};
   courses.forEach((c, idx) => {
-    courseColors[c.name] = c.color;
+    courseColors[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : c.color;
     coursePriorities.push(c.name);
     coursePercentages.set(c.name, Math.floor(100 / courses.length));
   });
@@ -89466,7 +89466,7 @@ async function initializeData() {
         const allCourses = Array.isArray(cd.courses) ? cd.courses : [];
         dbCourses = allCourses.filter((c) => c.status !== "ARCHIVED").map((c) => ({
           name: c.name,
-          color: c.color || "#6366f1",
+          color: ((c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1")),
           startDate: c.startDate || "",
           gradDate: c.gradDate || c.endDate || "",
           raafStart: c.raafStart || c.raafCount || 0,
@@ -89474,7 +89474,7 @@ async function initializeData() {
           armyStart: c.armyStart || c.armyCount || 0
         }));
         dbArchivedCourses = allCourses.filter((c) => c.status === "ARCHIVED").reduce((acc, c) => {
-          acc[c.name] = c.color || "#6366f1";
+          acc[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1");
           return acc;
         }, {});
         console.log("\u2705 Courses DB loaded:", dbCourses.length, "active,", Object.keys(dbArchivedCourses).length, "archived");
@@ -92513,7 +92513,7 @@ const App = () => {
           console.log("\u2705 Setting courses from DB:", data.courses.length);
           setCourses(data.courses);
           const dbColors = {};
-          data.courses.forEach((c) => { dbColors[c.name] = c.color || "#6366f1"; });
+          data.courses.forEach((c) => { dbColors[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1"); });
           console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
           setCourseColors((prev) => ({ ...prev, ...dbColors }));
         } else {
@@ -94406,10 +94406,11 @@ ${"=".repeat(60)}`);
     setPublishedSchedules({ [todayStr]: initialData.events.filter((e) => e.date === todayStr) });
   }, [school]);
   const handleAddCourseFromTrainingRecords = async (data) => {
-    setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
+    const _addColor = (data.color === "#F97316" || data.color === "#f97316") ? "#D4722A" : data.color;
+    setCourseColors((prev) => ({ ...prev, [data.number]: _addColor }));
     const newCourse = {
       name: data.number,
-      color: data.color,
+      color: _addColor,
       startDate: data.startDate,
       gradDate: data.gradDate,
       raafStart: data.raafStart,
