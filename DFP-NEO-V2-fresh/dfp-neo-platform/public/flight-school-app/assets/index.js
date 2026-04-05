@@ -99316,11 +99316,21 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return null;
       case "AUTH":
-        return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12023,
-          columnNumber: 24
-        }, void 0);
+        return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {
+            instructorsData,
+            traineesData,
+            date,
+            events,
+            onOpenAuth: (e) => {
+              const latestEvent = events.find((ev) => ev.id === e.id) || e;
+              setEventForAuth(latestEvent);
+              setShowAuthFlyout(true);
+            }
+          }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
+            lineNumber: 12023,
+            columnNumber: 24
+          }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
