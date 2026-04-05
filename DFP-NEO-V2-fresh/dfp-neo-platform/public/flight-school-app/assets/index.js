@@ -15064,10 +15064,7 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300", children: [
       "Are you sure you want to restore ",
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: [
-        "ADF",
-        courseNumber
-      ] }, void 0, true, {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: courseNumber }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/RestoreCourseConfirmation.tsx",
         lineNumber: 21,
         columnNumber: 83
@@ -16274,7 +16271,7 @@ const CourseRosterView = ({
       }
     }
   }, [traineesData, selectedTrainee, isCreatingNew]);
-  const activeCourseNumbers = Object.keys(groupedTrainees).sort((a, b) => a.localeCompare(b));
+  const activeCourseNumbers = Object.keys(groupedTrainees).filter((course) => Object.prototype.hasOwnProperty.call(courseColors, course)).sort((a, b) => a.localeCompare(b));
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
   const coursesToDisplay = view2 === "active" ? activeCourseNumbers : archivedCourseNumbers;
   const courseColorMap = view2 === "active" ? courseColors : archivedCourses;

@@ -1,10 +1,8 @@
-# Currency Post-Flight Fix Todo
+# STBY Tile Instructor Display Fix
 
 ## Tasks
-- [x] Fix CurrencyBuilderView.tsx: Replace radio buttons with multi-select checkboxes for postFlightInputTypes
-- [x] Fix PostFlightView.tsx: 
-      - Replace GO/NO GO radio buttons with simple checkbox (when ticked, flight date = currency date)
-      - Update getEffectiveInputTypes to use postFlightInputTypes array
-      - Redesign currency panel as neat aligned grid
-- [x] Build project (npm run build)
-- [x] Commit and push to GitHub
+- [x] Investigate how FTD STBY event tiles render instructor names in the schedule view
+- [x] Find the specific field checked for instructor display on STBY tiles
+- [x] Fix the display bug so instructor names show instead of TBA
+- [x] Verify STBY events appear in staff/trainee schedule view but NOT in analytics
+- [x] Clean up all diagnostic logging once fix is confirmed

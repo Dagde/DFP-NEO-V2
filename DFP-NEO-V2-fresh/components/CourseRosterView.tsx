@@ -172,7 +172,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     // Only show courses that have trainees (from groupedTrainees), not all courses in courseColors
     // This ensures courses without trainees at the selected location are not displayed
-    const activeCourseNumbers = Object.keys(groupedTrainees).sort((a, b) => a.localeCompare(b));
+    // Also filter out archived courses - only show courses that are in the active courseColors map
+    const activeCourseNumbers = Object.keys(groupedTrainees)
+        .filter(course => courseColors.hasOwnProperty(course))
+        .sort((a, b) => a.localeCompare(b));
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
 
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
