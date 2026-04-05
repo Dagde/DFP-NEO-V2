@@ -6574,7 +6574,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
+  const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
   const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
   const backgroundClass = isDutySup ? "" : event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
   const ringClass = getDynamicRingClass();
@@ -92527,7 +92527,7 @@ const App = () => {
               "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5",
               "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
               "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
-              "#FB923C": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
+              "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
               "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
               "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
             };
@@ -93436,7 +93436,7 @@ ${"=".repeat(60)}`);
             "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5",
             "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
             "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
-            "#FB923C": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
+            "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
             "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
             "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
           };
