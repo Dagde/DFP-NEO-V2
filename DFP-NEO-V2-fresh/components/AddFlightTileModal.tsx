@@ -983,9 +983,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [locationType, setLocationType] = useState<'Local' | 'Land Away'>('Local');
   const [isDeploy, setIsDeploy] = useState(false);
   const [deploymentStartDate, setDeploymentStartDate] = useState(date);
-  const [deploymentStartTime, setDeploymentStartTime] = useState('');
+  const [deploymentStartTime, setDeploymentStartTime] = useState('08:00');
   const [deploymentEndDate, setDeploymentEndDate] = useState(date);
-  const [deploymentEndTime, setDeploymentEndTime] = useState('');
+  const [deploymentEndTime, setDeploymentEndTime] = useState('08:00');
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
   const [callsign, setCallsign] = useState('CALLSGN');
   const [notes, setNotes] = useState('');
@@ -1017,6 +1017,19 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       const n = String(i + 1).padStart(3, '0');
       return { value: n, label: n };
     }), []);
+
+  // Time options with 30-minute intervals for deployment (0000 to 2330)
+  const deploymentTimeOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [];
+    for (let h = 0; h <= 23; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const hours = String(h).padStart(2, '0');
+        const minutes = String(m).padStart(2, '0');
+        opts.push({ value: `${hours}:${minutes}`, label: `${hours}:${minutes}` });
+      }
+    }
+    return opts;
+  }, []);
 
   const timeOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [];
@@ -1492,31 +1505,34 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-          {/* Event Category */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(categoryLabels).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setEventCategory(key as any)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    eventCategory === key
-                      ? 'bg-sky-600 text-white ring-2 ring-sky-400'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+          {/* Event Category - hidden when deployment is checked */}
+          {!isDeploy && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(categoryLabels).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setEventCategory(key as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      eventCategory === key
+                        ? 'bg-sky-600 text-white ring-2 ring-sky-400'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Flight Tile label + tile */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Flight Tile</label>
-            <FlightTilePreview
+          {/* Flight Tile label + tile - hidden when deployment is checked */}
+          {!isDeploy && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Flight Tile</label>
+              <FlightTilePreview
               flightType={flightType}
               startTime={startTime}
               picName={picName}
@@ -1567,11 +1583,32 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               onShowEventDropdownChange={setShowEventDropdown}
               onHoveredCourseChange={setHoveredCourse}
             />
-          </div>
+            </div>
+          )}
 
           {/* Additional Fields */}
           <div className="border-t border-gray-700 pt-4">
-            {/* Flight Type Toggle and Deployment Checkbox */}
+            {/* Deployment Checkbox - ALWAYS VISIBLE */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer py-2">
+                <input
+                  type="checkbox"
+                  checked={isDeploy}
+                  onChange={e => {
+                    const checked = e.target.checked;
+                    setIsDeploy(checked);
+                    if (checked) {
+                      setLocationType('Land Away');
+                    }
+                  }}
+                  className="h-5 w-5 accent-sky-500 bg-gray-600 rounded border-gray-500 focus:ring-sky-500"
+                />
+                <span className="text-sm text-white">Add Deployment Tile</span>
+              </label>
+            </div>
+
+            {/* Flight-related fields - HIDDEN when deployment is checked */}
+            {!isDeploy && (
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
@@ -1600,26 +1637,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   </button>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Options</label>
-                <label className="flex items-center gap-2 cursor-pointer py-2">
-                  <input
-                    type="checkbox"
-                    checked={isDeploy}
-                    onChange={e => {
-                      const checked = e.target.checked;
-                      setIsDeploy(checked);
-                      if (checked) {
-                        setLocationType('Land Away');
-                      }
-                    }}
-                    className="h-5 w-5 accent-sky-500 bg-gray-600 rounded border-gray-500 focus:ring-sky-500"
-                  />
-                  <span className="text-sm text-white">Add Deployment Tile</span>
-                </label>
-              </div>
             </div>
-
+            )}
+            
             {/* Deployment Fields (shown when isDeploy is checked) */}
             {isDeploy && (
               <div className="bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600">
@@ -1631,7 +1651,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       type="date"
                       value={deploymentStartDate}
                       onChange={e => setDeploymentStartDate(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm"
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
                     />
                   </div>
                   <div>
@@ -1640,7 +1660,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       type="time"
                       value={deploymentStartTime}
                       onChange={e => setDeploymentStartTime(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm"
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
                     />
                   </div>
                   <div>
@@ -1649,7 +1669,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       type="date"
                       value={deploymentEndDate}
                       onChange={e => setDeploymentEndDate(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm"
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
                     />
                   </div>
                   <div>
@@ -1658,7 +1678,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                       type="time"
                       value={deploymentEndTime}
                       onChange={e => setDeploymentEndTime(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm"
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
                     />
                   </div>
                   <div className="col-span-2">
@@ -1676,6 +1696,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
               </div>
             )}
 
+            {/* Flight-related fields continued - HIDDEN when deployment is checked */}
+            {!isDeploy && (
+            <>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
@@ -1706,8 +1729,9 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                 className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 resize-none"
               />
             </div>
+            </>
+            )}
           </div>
-
           {/* Errors */}
           {errors.length > 0 && (
             <div className="bg-red-900/30 border border-red-700 rounded-lg p-3">
