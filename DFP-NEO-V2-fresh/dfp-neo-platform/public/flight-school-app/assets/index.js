@@ -6264,15 +6264,10 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || "") : displayStudentNameForRender;
     const isGroundEventFromName = event.flightNumber.includes("CPT") || event.flightNumber.includes("MB") || event.flightNumber.includes("TUT") || event.flightNumber.includes("QUIZ");
     if (event.type === "deployment") {
-      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white/80 font-medium text-sm", children: "DEPLOYMENT" }, void 0, false, {
+      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center whitespace-nowrap", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white/80 font-medium text-sm", children: "DEPLOYMENT • deployed" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
           lineNumber: 403,
-          columnNumber: 21
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/60 truncate", children: "deployed" }, void 0, false, {
-          fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 406,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-white/50 mt-1", children: [
@@ -11352,7 +11347,7 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
   const [reason, setReason] = reactExports.useState("Appointment");
   const [validation, setValidation] = reactExports.useState(null);
   const [showErrors, setShowErrors] = reactExports.useState(false);
-  const unavailabilityReasons = ["TMUF", "TMUF - Ground Duties only", "Leave", "Appointment", "Other"];
+  const unavailabilityReasons = ["TMUF", "TMUF - Ground Duties only", "Leave", "Appointment", "Other", "Deployed"];
   const clearForm = () => {
     setStartDate("");
     setEndDate("");
@@ -19484,9 +19479,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         isDeploy: eventType === "flight" && locationType === "Land Away" ? isDeploy : void 0,
         // Explicit Deployment Period
         deploymentStartDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentStartDate : void 0,
-        deploymentStartTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentStartTime : void 0,
+        deploymentStartTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? (deploymentStartTime || "0800") : void 0,
         deploymentEndDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentEndDate : void 0,
-        deploymentEndTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentEndTime : void 0,
+        deploymentEndTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? (deploymentEndTime || "0800") : void 0,
         deploymentAircraftCount: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentAircraftCount : void 0,
         // Save event category for LMP Currency handling
         eventCategory
@@ -95858,6 +95853,42 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           },
           logAudit
         );
+      }
+    });
+    updates.forEach((update) => {
+      if (update.newResourceId && update.newResourceId.startsWith("Deployed")) {
+        const event = currentScheduleForDate.find((e) => e.id === update.eventId);
+        if (event && event.type === "flight") {
+          const flightEndTime = (update.newStartTime ?? event.startTime) + event.duration;
+          const deploymentEvent = currentScheduleForDate.find(
+            (e) => e.type === "deployment" && e.resourceId === update.newResourceId
+          );
+          const deployEndTime = deploymentEvent?.deploymentEndTime || "0800";
+          const deployEndHour = parseInt(deployEndTime.toString().replace(":", "").padStart(4, "0").slice(0, 2)) +
+            parseInt(deployEndTime.toString().replace(":", "").padStart(4, "0").slice(2, 4)) / 60;
+          const flightEndHour = Math.round(flightEndTime * 100) / 100;
+          const unavailPeriod = {
+            id: `deployed-${update.eventId}-${Date.now()}`,
+            date: event.date || date,
+            startTime: `${String(Math.floor(flightEndHour)).padStart(2, "0")}:${String(Math.round((flightEndHour % 1) * 60)).padStart(2, "0")}`,
+            endTime: `${String(Math.floor(deployEndHour)).padStart(2, "0")}:${String(Math.round((deployEndHour % 1) * 60)).padStart(2, "0")}`,
+            reason: "Deployed",
+            allDay: false
+          };
+          const staffNames = [event.instructor, event.pilot, event.student].filter(Boolean);
+          staffNames.forEach((personName) => {
+            const instructor = instructorsData.find((i) => i.name === personName || i.fullName === personName);
+            if (instructor) {
+              const updated = { ...instructor, unavailability: [...(instructor.unavailability || []), unavailPeriod] };
+              setInstructorsData((prev) => prev.map((i) => i.idNumber === instructor.idNumber ? updated : i));
+            }
+            const trainee = traineesData.find((t) => t.name === personName || t.fullName === personName);
+            if (trainee) {
+              const updated = { ...trainee, unavailability: [...(trainee.unavailability || []), unavailPeriod] };
+              setTraineesData((prev) => prev.map((t) => t.idNumber === trainee.idNumber ? updated : t));
+            }
+          });
+        }
       }
     });
   };
