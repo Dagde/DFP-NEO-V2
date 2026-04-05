@@ -35,6 +35,8 @@ const TraineeColumn: React.FC<TraineeColumnProps> = ({ trainees, rowHeight, onRo
       'bg-red-400/50': '#F87171',
       'bg-gray-400/50': '#9CA3AF',
     };
+    // Pass through raw hex values directly
+    if (tailwindClass.startsWith('#')) return tailwindClass;
     return colorMap[tailwindClass] || '#9CA3AF';
   };
 
