@@ -4948,7 +4948,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: allCourses.map(([courseName, color]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "py-1 flex items-center justify-center", children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0` }, void 0, false, {
+            /* @__PURE__ */ color.startsWith("#") ? jsxDevRuntimeExports.jsxDEV("span", { className: "h-3 w-3 rounded-full mr-2 flex-shrink-0", style: { backgroundColor: color } }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx", lineNumber: 221, columnNumber: 21 }) : jsxDevRuntimeExports.jsxDEV("span", { className: `h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
               lineNumber: 221,
               columnNumber: 21
@@ -16424,7 +16424,7 @@ const CourseRosterView = ({
         const activeCount = courseTrainees.filter((t) => !t.isPaused).length;
         const pausedCount = courseTrainees.filter((t) => t.isPaused).length;
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `px-4 py-2 text-white font-bold text-lg ${color.startsWith("#") ? "" : color} flex justify-between items-center`, style: color.startsWith("#") ? { backgroundColor: color } : {}, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: courseName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
@@ -81483,7 +81483,7 @@ const CourseDataWindow = ({
     };
   }, [courseName, allTrainees, scores, traineeLMPs, gradDate]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColor}`, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColor && courseColor.startsWith("#") ? "" : (courseColor || "")}`, style: courseColor && courseColor.startsWith("#") ? { backgroundColor: courseColor } : {}, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
         lineNumber: 135,
@@ -81670,8 +81670,8 @@ const CourseDataWindow = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-gray-700 rounded-full h-1.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "div",
         {
-          className: `${courseColor} h-1.5 rounded-full`,
-          style: { width: `${percentage}%` }
+          className: `${courseColor && courseColor.startsWith("#") ? "" : (courseColor || "")} h-1.5 rounded-full`,
+          style: { width: `${percentage}%`, ...(courseColor && courseColor.startsWith("#") ? { backgroundColor: courseColor } : {}) }
         },
         void 0,
         false,
@@ -86386,7 +86386,7 @@ const ArchivedCoursesView = ({
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-lg p-4 border border-gray-600", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-start mb-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${color}` }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${color && color.startsWith("#") ? "" : (color || "")}`, style: color && color.startsWith("#") ? { backgroundColor: color } : {} }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
             lineNumber: 95,
             columnNumber: 25

@@ -13,8 +13,9 @@ const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-eng
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON bodies - increased limit to handle large settings/syllabus payloads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // CORS headers for all requests
 app.use((req, res, next) => {
