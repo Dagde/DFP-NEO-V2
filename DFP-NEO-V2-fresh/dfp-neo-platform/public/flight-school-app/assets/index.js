@@ -6574,7 +6574,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#8B4000", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#8B4000", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
+  const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
   const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
   const backgroundClass = isDutySup ? "" : event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
   const ringClass = getDynamicRingClass();
@@ -10172,7 +10172,7 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
       "bg-cyan-400/50": "#0A7A94",
       "bg-blue-400/50": "#1D4E8A",
       "bg-green-400/50": "#1A6B2E",
-      "bg-orange-400/50": "#8B4000",
+      "bg-orange-400/50": "#4F46E5",
       "bg-red-400/50": "#B02020",
       "bg-gray-400/50": "#4B5563"
     };
@@ -75076,13 +75076,13 @@ const eslCourses = [
   { name: "ADF302", color: "#6B3FA0"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
   { name: "ADF303", color: "#4A6218"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
   { name: "FIC 210", color: "#9D2B6B"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#8B4000"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "FIC211", color: "#4F46E5"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const peaCourses = [
   { name: "ADF304", color: "#0E7A6E"        , startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
   { name: "ADF305", color: "#3D4CB5"          , startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
   { name: "IFF 6", color: "#0A7A94"        , startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#8B4000"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "FIC211", color: "#4F46E5"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const generateDataSet = (location) => {
   const isESL = location === "ESL";
@@ -92524,14 +92524,14 @@ const App = () => {
               "bg-yellow-400/50": "#4A6218", "bg-pink-400/50": "#9D2B6B",
               "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5",
               "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A",
-              "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#8B4000",
+              "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5",
               "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
               "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
-              "#FB923C": "#8B4000", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
+              "#FB923C": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
               "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
               "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
             };
-            const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#8B4000" : (c.color || "#4B5563");
+            const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#4B5563");
             dbColors[c.name] = twToHex2[rawColor] || rawColor;
           });
           console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
@@ -93433,10 +93433,10 @@ ${"=".repeat(60)}`);
             "bg-yellow-400/50": "#4A6218", "bg-pink-400/50": "#9D2B6B",
             "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5",
             "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A",
-            "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#8B4000",
+            "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5",
             "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
             "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
-            "#FB923C": "#8B4000", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
+            "#FB923C": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
             "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
             "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
           };
