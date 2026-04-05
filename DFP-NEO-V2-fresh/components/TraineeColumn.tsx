@@ -21,8 +21,6 @@ const TraineeColumn: React.FC<TraineeColumnProps> = ({ trainees, rowHeight, onRo
   };
 
   const convertTailwindToHex = (tailwindClass: string) => {
-    // If already a hex color, pass through directly
-    if (tailwindClass.startsWith('#')) return tailwindClass;
     const colorMap: { [key: string]: string } = {
       'bg-sky-400/50': '#38BDF8',
       'bg-purple-400/50': '#C084FC',

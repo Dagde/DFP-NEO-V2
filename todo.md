@@ -1,19 +1,15 @@
-# FIC211 Color Display Fix
-
-## Current Issue
-FIC211 color (#F97316) is not displaying in:
-- Trainee Roster page
-- Daily Schedule color legend (bottom left)
-
-## Context
-- FIC211 was restored via API with correct color `#F97316`
-- API returns course data correctly (verified via curl)
-- Console shows only LMP init logs, no `initializeData` or `loadInitialData` logs
-- This suggests the new bundle with debug logs may not be deployed
+# Option A - Fix vite.config + Color Fixes
 
 ## Tasks
-- [ ] Verify Railway URL from screenshots to ensure we're deploying to the correct location
-- [ ] Check current deployed bundle contains our latest patches
-- [ ] Test if FIC211 color appears after forcing browser refresh (Ctrl+Shift+R)
-- [ ] If still broken, add more aggressive debugging to trace color data flow
-- [ ] Verify courseColors state is being set correctly at runtime
+- [x] Review current state of repo (at 42c167c2)
+- [x] Check vite.config.ts - still has manualChunks/fixed filenames
+- [x] Check all 5 component files for color fix locations
+- [x] Step 1: Fix vite.config.ts (remove rollupOptions/manualChunks, keep minify:false)
+- [x] Step 2: Fix update_css.js (handle content-hashed bundle filenames)
+- [x] Step 3: Fix Sidebar.tsx - line 221 (hex color support for color swatch)
+- [x] Step 4: Fix TraineeColumn.tsx - convertTailwindToHex hex passthrough
+- [x] Step 5: Fix CourseDataWindow.tsx - courseColor used as className in 2 places
+- [x] Step 6: Fix CourseRosterView.tsx - color used as className for card header
+- [x] Step 7: Fix ArchivedCoursesView.tsx - color used as className for swatch
+- [x] Step 8: Run npm run build to verify - SUCCESS
+- [x] Step 9: Commit and push - eb2641cb pushed

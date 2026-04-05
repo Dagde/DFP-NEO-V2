@@ -51,7 +51,29 @@ export default defineConfig({
     // Variable/function names are kept as-is; only whitespace/dead code is removed.
     // The bundle is served over HTTPS with gzip so size is still acceptable.
     minify: false,
-    outDir: 'dfp-neo-platform/public/flight-school-app',
-    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Fixed filenames prevent hash mismatch between local build and Railway build.
+        // Railway rebuilds from source so the commit hash baked in differs, changing
+        // the content hash and therefore the filename. Using fixed names ensures
+        // index.html always references the correct bundle regardless of build environment.
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
+        manualChunks(id) {
+          // React and React-DOM in their own isolated chunk
+          if (id.includes('node_modules/react/') || 
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/scheduler/')) {
+            return 'vendor-react';
+          }
+          // jsPDF and html2canvas in their own chunk
+          if (id.includes('node_modules/jspdf') || 
+              id.includes('node_modules/html2canvas')) {
+            return 'vendor-pdf';
+          }
+        },
+      },
+    },
   }
 });
