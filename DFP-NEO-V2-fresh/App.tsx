@@ -120,7 +120,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 // --- MOCK DATA ---
 import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
 import { initializeData } from './lib/dataService';
-import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
+import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB, fetchCourses } from './lib/api';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
@@ -5502,7 +5502,31 @@ useEffect(() => {
                 if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
                 if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
                 if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
-                if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+                if (saved.courseColors && Object.keys(saved.courseColors).length) {
+                    // Apply saved colors as base, but immediately fetch fresh colors from courses DB
+                    // to ensure newly added/restored courses (like FIC211) always show their colors
+                    setCourseColors(saved.courseColors);
+                    // Fetch fresh course colors from DB and merge on top of saved colors
+                    // This ensures course DB colors always win over stale saved settings
+                    fetchCourses().then((freshCourses: any[]) => {
+                        if (freshCourses && freshCourses.length > 0) {
+                            const freshColors: { [key: string]: string } = {};
+                            freshCourses.forEach((c: any) => { if (c.name && c.color) freshColors[c.name] = c.color; });
+                            console.log('[Settings] 🎨 Merging fresh course colors from DB:', Object.keys(freshColors));
+                            setCourseColors((prev: { [key: string]: string }) => ({ ...prev, ...freshColors }));
+                        }
+                    }).catch((e: any) => console.warn('[Settings] ⚠️ Could not fetch fresh course colors:', e));
+                } else {
+                    // No saved colors - fetch directly from courses DB
+                    fetchCourses().then((freshCourses: any[]) => {
+                        if (freshCourses && freshCourses.length > 0) {
+                            const freshColors: { [key: string]: string } = {};
+                            freshCourses.forEach((c: any) => { if (c.name && c.color) freshColors[c.name] = c.color; });
+                            console.log('[Settings] 🎨 Setting course colors from DB (no saved colors):', Object.keys(freshColors));
+                            setCourseColors((prev: { [key: string]: string }) => ({ ...prev, ...freshColors }));
+                        }
+                    }).catch((e: any) => console.warn('[Settings] ⚠️ Could not fetch fresh course colors:', e));
+                }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present

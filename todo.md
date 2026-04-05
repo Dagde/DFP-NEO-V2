@@ -12,8 +12,10 @@ FIC211 color (#F97316) is not displaying in:
 - This suggests the new bundle with debug logs may not be deployed
 
 ## Tasks
-- [ ] Verify Railway URL from screenshots to ensure we're deploying to the correct location
-- [ ] Check current deployed bundle contains our latest patches
-- [ ] Test if FIC211 color appears after forcing browser refresh (Ctrl+Shift+R)
-- [ ] If still broken, add more aggressive debugging to trace color data flow
-- [ ] Verify courseColors state is being set correctly at runtime
+- [x] Verify current bundle contains debug logs (confirmed present in local bundle)
+- [x] Push changes to trigger Railway rebuild
+- [x] Force Railway rebuild with .gitignore change
+- [ ] Wait for Railway deployment to complete (monitor logs)
+- [ ] User to perform hard refresh (Ctrl+Shift+R) to clear browser cache
+- [ ] Check console for debug logs and verify courseColors state
+- [ ] If still broken, investigate Railway build cache issue
