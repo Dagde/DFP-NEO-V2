@@ -218,10 +218,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
               <div className="flex-1 min-w-0">
                 {allCourses.map(([courseName, color]) => (
                   <div key={courseName} className="py-1 flex items-center justify-center">
-                    <span
-                      className={`h-3 w-3 rounded-full mr-2 flex-shrink-0 ${color.startsWith('#') ? '' : color}`}
-                      style={color.startsWith('#') ? { backgroundColor: color } : {}}
-                    ></span>
+                    <span className={`h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0`}></span>
                     <span className="text-[9px] text-gray-300">{formatCourseName(courseName)}</span>
                   </div>
                 ))}

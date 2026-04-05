@@ -298,7 +298,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             {coursesToDisplay.map(courseName => {
                                 const courseTrainees = groupedTrainees[courseName] || [];
                                 const color = courseColorMap[courseName] || 'bg-gray-500';
-                                const isHexColor = color.startsWith('#');
                                 
                                 // Calculate active and paused counts
                                 const activeCount = courseTrainees.filter(t => !t.isPaused).length;
@@ -306,7 +305,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
-                                        <div className={`px-4 py-2 text-white font-bold text-lg ${isHexColor ? '' : color} flex justify-between items-center`} style={isHexColor ? { backgroundColor: color } : {}}>
+                                        <div className={`px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`}>
                                             <div>
                                                 <span>{courseName}</span>
                                                 {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
