@@ -6574,7 +6574,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const LEGACY_COLOR_MAP = { "#FACC15": "#6B8E23", "#38BDF8": "#7DD3FC", "bg-yellow-400/50": "#6B8E23", "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC", "bg-pink-400/50": "#F472B6", "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8", "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA", "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C", "bg-red-400/50": "#F87171", "bg-gray-400/50": "#9CA3AF" };
+  const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#C45A0A", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#C45A0A", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
   const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
   const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
   const ringClass = getDynamicRingClass();
@@ -10163,20 +10163,20 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
   const convertTailwindToHex = (tailwindClass) => {
     if (tailwindClass && tailwindClass.startsWith("#")) return tailwindClass;
     const colorMap = {
-      "bg-sky-400/50": "#38BDF8",
-      "bg-purple-400/50": "#C084FC",
-      "bg-yellow-400/50": "#6B8E23",
-      "bg-pink-400/50": "#F472B6",
-      "bg-teal-400/50": "#2DD4BF",
-      "bg-indigo-400/50": "#818CF8",
-      "bg-cyan-400/50": "#22D3EE",
-      "bg-blue-400/50": "#60A5FA",
-      "bg-green-400/50": "#4ADE80",
-      "bg-orange-400/50": "#FB923C",
-      "bg-red-400/50": "#F87171",
-      "bg-gray-400/50": "#9CA3AF"
+      "bg-sky-400/50": "#1E6B9E",
+      "bg-purple-400/50": "#6B3FA0",
+      "bg-yellow-400/50": "#4A6218",
+      "bg-pink-400/50": "#9D2B6B",
+      "bg-teal-400/50": "#0E7A6E",
+      "bg-indigo-400/50": "#3D4CB5",
+      "bg-cyan-400/50": "#0A7A94",
+      "bg-blue-400/50": "#1D4E8A",
+      "bg-green-400/50": "#1A6B2E",
+      "bg-orange-400/50": "#C45A0A",
+      "bg-red-400/50": "#B02020",
+      "bg-gray-400/50": "#4B5563"
     };
-    return colorMap[tailwindClass] || "#9CA3AF";
+    return colorMap[tailwindClass] || "#4B5563";
   };
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { children: trainees.map((fullName, index) => {
     const { name, course } = parseTraineeName(fullName);
@@ -75072,17 +75072,17 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
   return events;
 };
 const eslCourses = [
-  { name: "ADF301", color: "#7DD3FC"      , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
-  { name: "ADF302", color: "#C084FC"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
-  { name: "ADF303", color: "#6B8E23"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
-  { name: "FIC 210", color: "#F472B6"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#FB923C"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF301", color: "#1E6B9E"      , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
+  { name: "ADF302", color: "#6B3FA0"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
+  { name: "ADF303", color: "#4A6218"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
+  { name: "FIC 210", color: "#9D2B6B"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "#C45A0A"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const peaCourses = [
-  { name: "ADF304", color: "#2DD4BF"        , startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
-  { name: "ADF305", color: "#818CF8"          , startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
-  { name: "IFF 6", color: "#22D3EE"        , startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#FB923C"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF304", color: "#0E7A6E"        , startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
+  { name: "ADF305", color: "#3D4CB5"          , startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
+  { name: "IFF 6", color: "#0A7A94"        , startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "#C45A0A"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const generateDataSet = (location) => {
   const isESL = location === "ESL";
@@ -92520,14 +92520,18 @@ const App = () => {
           const dbColors = {};
           data.courses.forEach((c) => {
             const twToHex2 = {
-              "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC",
-              "bg-yellow-400/50": "#6B8E23", "bg-pink-400/50": "#F472B6",
-              "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8",
-              "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA",
-              "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C",
-              "bg-red-400/50": "#F87171", "bg-gray-400/50": "#9CA3AF"
+              "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0",
+              "bg-yellow-400/50": "#4A6218", "bg-pink-400/50": "#9D2B6B",
+              "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5",
+              "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A",
+              "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#C45A0A",
+              "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
+              "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
+              "#FB923C": "#C45A0A", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
+              "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
+              "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
             };
-            const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#D4722A" : (c.color || "#6366f1");
+            const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#C45A0A" : (c.color || "#4B5563");
             dbColors[c.name] = twToHex2[rawColor] || rawColor;
           });
           console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
@@ -93425,12 +93429,16 @@ ${"=".repeat(60)}`);
         if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
         if (saved.courseColors && Object.keys(saved.courseColors).length) {
           const twToHex = {
-            "bg-sky-400/50": "#7DD3FC", "bg-purple-400/50": "#C084FC",
-            "bg-yellow-400/50": "#6B8E23", "bg-pink-400/50": "#F472B6",
-            "bg-teal-400/50": "#2DD4BF", "bg-indigo-400/50": "#818CF8",
-            "bg-cyan-400/50": "#22D3EE", "bg-blue-400/50": "#60A5FA",
-            "bg-green-400/50": "#4ADE80", "bg-orange-400/50": "#FB923C",
-            "bg-red-400/50": "#F87171", "bg-gray-400/50": "#9CA3AF"
+            "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0",
+            "bg-yellow-400/50": "#4A6218", "bg-pink-400/50": "#9D2B6B",
+            "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5",
+            "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A",
+            "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#C45A0A",
+            "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
+            "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
+            "#FB923C": "#C45A0A", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
+            "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
+            "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
           };
           const migratedColors = {};
           Object.entries(saved.courseColors).forEach(([k, v]) => {
