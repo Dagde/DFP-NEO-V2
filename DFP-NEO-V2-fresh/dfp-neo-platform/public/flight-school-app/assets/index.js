@@ -4108,9 +4108,9 @@ const showDarkConfirm = (message, title = "Confirm Action", variant = "info") =>
   });
 };
 const DataLoadingMonitor = ({ isStaffLoaded, isTraineeLoaded, isCoursesLoaded }) => {
-  const [isVisible, setIsVisible] = clientExports.useState(true);
+  const [isVisible, setIsVisible] = reactExports.useState(true);
   const allLoaded = isStaffLoaded && isTraineeLoaded && isCoursesLoaded;
-  clientExports.useEffect(() => {
+  reactExports.useEffect(() => {
     if (allLoaded) {
       const timer = setTimeout(() => setIsVisible(false), 1000);
       return () => clearTimeout(timer);
