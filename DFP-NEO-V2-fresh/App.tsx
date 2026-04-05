@@ -18,6 +18,7 @@ import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 import DarkMessageModal from './components/DarkMessageModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
+import DataLoadingMonitor from './components/DataLoadingMonitor';
 
 
 // Import types
@@ -4405,7 +4406,9 @@ useEffect(() => {
                 }
                 
                 setInstructorsData(data.instructors);
+                setIsStaffLoaded(true);
                 setTraineesData(data.trainees);
+                setIsTraineeLoaded(true);
                 setEvents(data.events);
 
                 // Load courses from DB if any exist
@@ -4417,7 +4420,9 @@ useEffect(() => {
                     data.courses.forEach((c: any) => { if (c.name && c.color) colors[c.name] = c.color; });
                     setCourseColors(prev => ({ ...prev, ...colors }));
                 } else {
+                    setIsCoursesLoaded(true);
                     console.log('🎓 No courses in DB yet - keeping existing course state');
+                    setIsCoursesLoaded(true);
                 }
 
                 // --- Individual LMP Sync ---
@@ -4944,6 +4949,9 @@ useEffect(() => {
     const [ftdTurnaround, setFtdTurnaround] = useState(0.5);
     const [cptTurnaround, setCptTurnaround] = useState(0.5);
     const [isBuildingDfp, setIsBuildingDfp] = useState(false);
+    const [isStaffLoaded, setIsStaffLoaded] = useState(false);
+    const [isTraineeLoaded, setIsTraineeLoaded] = useState(false);
+    const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
     const [dfpBuildProgress, setDfpBuildProgress] = useState({ message: '', percentage: 0 });
     const [showDateWarning, setShowDateWarning] = useState(false);
     const [unavailabilityNotifications, setUnavailabilityNotifications] = useState<string[]>([]);
@@ -12168,6 +12176,11 @@ updates.forEach(update => {
     return (
     <>
         <SystemFreezeBanner />
+        <DataLoadingMonitor 
+            isStaffLoaded={isStaffLoaded}
+            isTraineeLoaded={isTraineeLoaded}
+            isCoursesLoaded={isCoursesLoaded}
+        />
         <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}

@@ -213,7 +213,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                         <h2 className="text-2xl font-bold text-white">Courses Management</h2>
                         <p className="text-sm text-gray-400">Manage active and archived courses</p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-[1px]">
                         <button
                             onClick={onNavigateToArchivedCourses}
                             className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"

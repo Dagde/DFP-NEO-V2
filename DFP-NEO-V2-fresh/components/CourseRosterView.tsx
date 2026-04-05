@@ -276,7 +276,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     </div>
                     <div className="flex items-center gap-[1px]">
                         <ViewToggleButton label="Active Courses" value="active" />
-                        <ViewToggleButton label="Archived Courses" value="archived" />
                         <button
                             onClick={handleAddTraineeClick}
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
