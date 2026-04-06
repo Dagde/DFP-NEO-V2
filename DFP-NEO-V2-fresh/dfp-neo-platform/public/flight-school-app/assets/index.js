@@ -6679,7 +6679,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B", filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor, filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto" }) : Object.assign({}, style, { filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto" })),
+      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B", filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto", transition: isDragging ? "none" : void 0, zIndex: isDragging ? 100 : void 0 }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor, filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto", transition: isDragging ? "none" : void 0, zIndex: isDragging ? 100 : void 0 }) : Object.assign({}, style, { filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto", transition: isDragging ? "none" : void 0, zIndex: isDragging ? 100 : void 0 })),
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
@@ -8015,9 +8015,10 @@ const ScheduleView = ({
       }
     };
     const handleGlobalMouseUp = (e) => {
-      
       if (draggingState) {
-
+        if (draggingState.currentUpdates && draggingState.currentUpdates.length > 0) {
+          onUpdateEvent(draggingState.currentUpdates);
+        }
         document.body.classList.remove("no-select");
         setDraggingState(null);
         setRealtimeConflict(null);
@@ -8089,8 +8090,6 @@ const ScheduleView = ({
   }, [syllabusDetails]);
   const handleMouseDown = async (e, event) => {
 
-    console.log("Event target:", e.target);
-    console.log("Current target:", e.currentTarget);
     if (e.button !== 0) return;
     let frozenNoDrag = false;
     if (event) {
@@ -8125,15 +8124,11 @@ const ScheduleView = ({
       const originalResourceIds = /* @__PURE__ */ new Map();
       const processEvent = (ev) => {
 
-        console.log("🐍 Available resources:", resources);
         const rowIndex = resources.indexOf(ev.resourceId);
-        console.log("🐍 Found row index:", rowIndex);
         if (rowIndex !== -1) {
           initialPositions.set(ev.id, { startTime: ev.startTime, rowIndex });
           originalResourceIds.set(ev.id, ev.resourceId);
-          console.log("🐍 Event added to initialPositions");
         } else {
-          console.log("🐍 Event NOT added - resourceId not found in resources");
         }
       };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
@@ -8146,7 +8141,6 @@ const ScheduleView = ({
       }
       if (initialPositions.size > 0 && !frozenNoDrag) {
         
-        console.log("initialPositions:", initialPositions);
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -8168,156 +8162,155 @@ const ScheduleView = ({
       setSelectionRect({ x, y, width: 0, height: 0 });
     }
   };
-  const _dragRafId = { current: null };
+  const _dragRafId = reactExports.useRef(null);
+  const _lastMouseEvent = reactExports.useRef(null);
   const handleMouseMove = (e) => {
     if (!scheduleGridRef.current) {
       return;
     }
     didDragRef.current = true;
-    const gridRect = scheduleGridRef.current.getBoundingClientRect();
-    const xInGrid = e.clientX - gridRect.left;
-    const yInGrid = e.clientY - gridRect.top;
-    if (showValidation || showDepartureDensityOverlay) {
-      const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
-      setValidateOverlayTime(mouseTimeInHours);
-    }
-    if (isOracleMode && oraclePreviewEvent) {
-      
-      const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
-      const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$5)] || resources[0];
-      onOracleMouseMove(startTime, resourceId);
-    } else {
-      if (selectionStartPoint.current) {
-        
-        const currentX = e.clientX - gridRect.left;
-        const currentY = e.clientY - gridRect.top;
-        const x = Math.min(selectionStartPoint.current.x, currentX);
-        const y = Math.min(selectionStartPoint.current.y, currentY);
-        const width = Math.abs(currentX - selectionStartPoint.current.x);
-        const height = Math.abs(currentY - selectionStartPoint.current.y);
-        setSelectionRect({ x, y, width, height });
-        const rectLeft = x;
-        const rectRight = x + width;
-        const rectTop = y;
-        const rectBottom = y + height;
-        const newSelectedIds = /* @__PURE__ */ new Set();
-        events.forEach((ev) => {
-          const rowIndex = resources.indexOf(ev.resourceId);
-          if (rowIndex === -1) return;
-          const tileTop = rowIndex * ROW_HEIGHT$5;
-          const tileBottom = tileTop + ROW_HEIGHT$5;
-          const tileLeft = (ev.startTime - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-          const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$5 * zoomLevel;
-          if (rectLeft < tileRight && rectRight > tileLeft && rectTop < tileBottom && rectBottom > tileTop) {
-            newSelectedIds.add(ev.id);
+    _lastMouseEvent.current = e;
+    if (_dragRafId.current) return;
+    _dragRafId.current = requestAnimationFrame(() => {
+      _dragRafId.current = null;
+      const _e = _lastMouseEvent.current;
+      if (!_e || !scheduleGridRef.current) return;
+      const gridRect = scheduleGridRef.current.getBoundingClientRect();
+      const xInGrid = _e.clientX - gridRect.left;
+      const yInGrid = _e.clientY - gridRect.top;
+      if (showValidation || showDepartureDensityOverlay) {
+        const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
+        setValidateOverlayTime(mouseTimeInHours);
+      }
+      if (isOracleMode && oraclePreviewEvent) {
+        const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
+        const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$5)] || resources[0];
+        onOracleMouseMove(startTime, resourceId);
+      } else {
+        if (selectionStartPoint.current) {
+          const currentX = _e.clientX - gridRect.left;
+          const currentY = _e.clientY - gridRect.top;
+          const x = Math.min(selectionStartPoint.current.x, currentX);
+          const y = Math.min(selectionStartPoint.current.y, currentY);
+          const width = Math.abs(currentX - selectionStartPoint.current.x);
+          const height = Math.abs(currentY - selectionStartPoint.current.y);
+          setSelectionRect({ x, y, width, height });
+          const rectLeft = x;
+          const rectRight = x + width;
+          const rectTop = y;
+          const rectBottom = y + height;
+          const newSelectedIds = /* @__PURE__ */ new Set();
+          events.forEach((ev) => {
+            const rowIndex = resources.indexOf(ev.resourceId);
+            if (rowIndex === -1) return;
+            const tileTop = rowIndex * ROW_HEIGHT$5;
+            const tileBottom = tileTop + ROW_HEIGHT$5;
+            const tileLeft = (ev.startTime - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+            const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$5 * zoomLevel;
+            if (rectLeft < tileRight && rectRight > tileLeft && rectTop < tileBottom && rectBottom > tileTop) {
+              newSelectedIds.add(ev.id);
+            }
+          });
+          setSelectedEventIds(newSelectedIds);
+          return;
+        }
+        if (!draggingState) {
+          return;
+        }
+        const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
+        if (!mainEventInitialPos) return;
+        const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 - mainEventInitialPos.startTime;
+        const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
+        const updates = [];
+        const tempEvents = [...events];
+        let resourceConflictId = null;
+        let tempCptConflict = null;
+        for (const [id, initialPos] of draggingState.initialPositions.entries()) {
+          const eventData = events.find((ev) => ev.id === id);
+          if (!eventData) continue;
+          let newStartTime = initialPos.startTime + timeShift;
+          let newRowIndex = initialPos.rowIndex + rowShift;
+          if (newRowIndex < 0) newRowIndex = 0;
+          if (newRowIndex >= resources.length) newRowIndex = resources.length - 1;
+          if (newStartTime < START_HOUR$5) newStartTime = START_HOUR$5;
+          if (newStartTime + eventData.duration > END_HOUR$5) newStartTime = END_HOUR$5 - eventData.duration;
+          const snappedStartTime = Math.round(newStartTime * 12) / 12;
+          const newResourceId = resources[newRowIndex];
+          updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
+          const tempEventIndex = tempEvents.findIndex((e2) => e2.id === id);
+          if (tempEventIndex !== -1) {
+            tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
           }
-        });
-        setSelectedEventIds(newSelectedIds);
-        return;
-      }
-      if (!draggingState) {
-        
-        return;
-      }
-      const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
-      if (!mainEventInitialPos) return;
-      const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 - mainEventInitialPos.startTime;
-      const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
-      
-      const updates = [];
-      const tempEvents = [...events];
-      let resourceConflictId = null;
-      let tempCptConflict = null;
-      for (const [id, initialPos] of draggingState.initialPositions.entries()) {
-        const eventData = events.find((ev) => ev.id === id);
-        if (!eventData) continue;
-        let newStartTime = initialPos.startTime + timeShift;
-        let newRowIndex = initialPos.rowIndex + rowShift;
-        if (newRowIndex < 0) newRowIndex = 0;
-        if (newRowIndex >= resources.length) newRowIndex = resources.length - 1;
-        if (newStartTime < START_HOUR$5) newStartTime = START_HOUR$5;
-        if (newStartTime + eventData.duration > END_HOUR$5) newStartTime = END_HOUR$5 - eventData.duration;
-        const snappedStartTime = Math.round(newStartTime * 12) / 12;
-        const newResourceId = resources[newRowIndex];
-        updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-        const tempEventIndex = tempEvents.findIndex((e2) => e2.id === id);
-        if (tempEventIndex !== -1) {
-          tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
+          const conflictingEvent = events.find(
+            (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
+          );
+          if (conflictingEvent) {
+            resourceConflictId = conflictingEvent.id;
+          }
         }
-        const conflictingEvent = events.find(
-          (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
-        );
-        if (conflictingEvent) {
-          resourceConflictId = conflictingEvent.id;
-        }
-      }
-      const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
-      if (mainUpdate) {
-        const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
-        const otherEvents = tempEvents.filter((e2) => !draggingState.initialPositions.has(e2.id));
-        let conflictResult = null;
-        if (detectConflictsForEvent) {
-          conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-          
-          if (conflictResult.hasConflict) {
-            setRealtimeConflict({
-              conflictingEventId: conflictResult.conflictingEventId,
-              conflictedPersonName: conflictResult.conflictedPersonnel || ""
-            });
-            if (mainEvent.flightNumber.includes("CPT") && conflictResult.conflictType === "personnel") {
-              const conflictingEvent = otherEvents.find((e2) => e2.id === conflictResult.conflictingEventId);
-              if (conflictingEvent) {
+        const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
+        if (mainUpdate) {
+          const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
+          const otherEvents = tempEvents.filter((e2) => !draggingState.initialPositions.has(e2.id));
+          let conflictResult = null;
+          if (detectConflictsForEvent) {
+            conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
+            if (conflictResult.hasConflict) {
+              setRealtimeConflict({
+                conflictingEventId: conflictResult.conflictingEventId,
+                conflictedPersonName: conflictResult.conflictedPersonnel || ""
+              });
+              if (mainEvent.flightNumber.includes("CPT") && conflictResult.conflictType === "personnel") {
+                const conflictingEvent = otherEvents.find((e2) => e2.id === conflictResult.conflictingEventId);
+                if (conflictingEvent) {
+                  tempCptConflict = {
+                    conflictingEvent,
+                    newEvent: mainEvent,
+                    conflictedPerson: "trainee"
+                  };
+                }
+              }
+            } else {
+              setRealtimeConflict(null);
+            }
+          } else {
+            const conflict = findConflict([mainEvent], otherEvents);
+            if (conflict) {
+              setRealtimeConflict({
+                conflictingEventId: conflict.conflictingEvent.id,
+                conflictedPersonName: conflict.personName
+              });
+              if (mainEvent.flightNumber.includes("CPT")) {
                 tempCptConflict = {
-                  conflictingEvent,
+                  conflictingEvent: conflict.conflictingEvent,
                   newEvent: mainEvent,
-                  conflictedPerson: "trainee"
+                  conflictedPerson: "trainee",
+                  personName: conflict.personName
                 };
               }
+            } else {
+              setRealtimeConflict(null);
             }
-          } else {
-            setRealtimeConflict(null);
-          }
-        } else {
-          const conflict = findConflict([mainEvent], otherEvents);
-          if (conflict) {
-            setRealtimeConflict({
-              conflictingEventId: conflict.conflictingEvent.id,
-              conflictedPersonName: conflict.personName
-            });
-            if (mainEvent.flightNumber.includes("CPT")) {
-              tempCptConflict = {
-                conflictingEvent: conflict.conflictingEvent,
-                newEvent: mainEvent,
-                conflictedPerson: "trainee",
-                personName: conflict.personName
-              };
-            }
-          } else {
-            setRealtimeConflict(null);
           }
         }
+        setRealtimeResourceConflictId(resourceConflictId);
+        setDraggedCptConflict(tempCptConflict);
+        setDraggingState((prev) => prev ? { ...prev, currentUpdates: updates } : prev);
       }
-      setRealtimeResourceConflictId(resourceConflictId);
-      setDraggedCptConflict(tempCptConflict);
-      
-      
-      onUpdateEvent(updates);
-    }
+    });
   };
+
   const handleMouseUp = (e) => {
-    
-    if (draggingState) {
-      
-      return;
-    }
     document.body.classList.remove("no-select");
+    if (draggingState && draggingState.currentUpdates && draggingState.currentUpdates.length > 0) {
+      onUpdateEvent(draggingState.currentUpdates);
+    }
     if (isOracleMode) {
       onOracleMouseUp();
     }
     if (draggedCptConflict) {
       onCptConflict(draggedCptConflict);
     }
-    
     setDraggingState(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
@@ -8717,10 +8710,20 @@ const ScheduleView = ({
         }
         const isSelected = selectedEventIds.has(event.id);
         const isChanged = checkIsChanged(event, baselineEvents);
+        let dragRow = rowIndex;
+        let dragStartTime = event.startTime;
+        if (isDraggedTile && draggingState.currentUpdates) {
+          const upd = draggingState.currentUpdates.find((u) => u.eventId === event.id);
+          if (upd) {
+            const newRowIdx = resources.indexOf(upd.newResourceId);
+            if (newRowIdx !== -1) dragRow = newRowIdx;
+            dragStartTime = upd.newStartTime;
+          }
+        }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           FlightTile,
           {
-            event,
+            event: isDraggedTile ? { ...event, startTime: dragStartTime } : event,
             traineesData,
             onSelectEvent: () => {
               if (!didDragRef.current) {
@@ -8745,7 +8748,7 @@ const ScheduleView = ({
             pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
             rowHeight: ROW_HEIGHT$5,
             startHour: START_HOUR$5,
-            row: rowIndex,
+            row: isDraggedTile ? dragRow : rowIndex,
             isDragging: isDraggedTile,
             isConflicting,
             isUnavailabilityConflict: isUnavailability,
@@ -9387,7 +9390,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   console.log("  - Function props:");
   console.log("    - onDateChange type:", typeof onDateChange);
   console.log("    - onSelectEvent type:", typeof onSelectEvent);
-  console.log("    - onUpdateEvent type:", typeof onUpdateEvent);
+
   console.log("    - onSelectInstructor type:", typeof onSelectInstructor);
   try {
     const testAccess = seatConfigs;
