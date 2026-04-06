@@ -375,7 +375,7 @@ const LoginModal = ({ onLoginSuccess }) => {
         {
           type: "submit",
           disabled: loading || !userId || !password,
-          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
           style: { background: loading ? "#3b82f6" : "linear-gradient(135deg, #3b82f6, #2563eb)" },
           children: loading ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "animate-spin w-4 h-4", fill: "none", viewBox: "0 0 24 24", children: [
@@ -501,7 +501,7 @@ const LoginModal = ({ onLoginSuccess }) => {
         {
           type: "submit",
           disabled: forgotLoading || !forgotUserId,
-          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
           style: { background: "linear-gradient(135deg, #3b82f6, #2563eb)" },
           children: forgotLoading ? "Sending..." : "Send Reset Link"
         },
@@ -883,7 +883,7 @@ const ChangePasswordModal = ({
           {
             type: "submit",
             disabled: loading || !currentPassword || !newPassword || !confirmPassword || !passwordsMatch || passwordErrors.length > 0,
-            className: "flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+            className: "flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
             style: { background: "linear-gradient(135deg, #3b82f6, #2563eb)" },
             children: loading ? "Changing..." : "Change Password"
           },
@@ -6573,7 +6573,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     }, void 0);
   };
   const shadowClass = "shadow-none";
-  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
+  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-opacity duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
   const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#D4722A": "#4F46E5", "#d4722a": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
   const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
   const backgroundClass = isDutySup ? "" : event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
@@ -6581,12 +6581,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
+  const matteOverlay = "after:content-[''] after:absolute after:inset-0 after:bg-black/10 after:opacity-30 after:pointer-events-none";
   if (isPreview) {
     finalClasses.push(tileColor && tileColor.startsWith("#") ? "" : (tileColor || ""));
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
     finalClasses.push("ring-0");
+    finalClasses.push(matteOverlay);
     finalClasses.push(dutySupBorderClass);
     finalClasses.push(multiSelectRingClass);
   }
@@ -16953,7 +16955,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
             draggable: true,
             onDragStart: handleDragStart,
             onDragEnd: handleDragEnd,
-            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-all duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
+            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-opacity duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
             title: "Drag and drop to insert PT-051 assessment",
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 mr-2", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z" }, void 0, false, {
@@ -17030,7 +17032,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
             "tr",
             {
               onClick: () => handleRowClick(item),
-              className: `hover:bg-gray-700/50 transition-all duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
+              className: `hover:bg-gray-700/50 transition-opacity duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
               onDragOver: (e) => handleDragOver(e, index),
               onDragLeave: handleDragLeave,
               onDrop: (e) => handleDrop(e, index),
@@ -18996,7 +18998,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           value,
           onChange: (e) => onChange(e.target.value),
           disabled,
-          className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${highlight ? "ring-2 ring-red-500" : ""}`,
+          className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-opacity duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${highlight ? "ring-2 ring-red-500" : ""}`,
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: "Select a trainee" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
@@ -20437,7 +20439,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     setLocalHighlight(null);
                   },
                   disabled: isDeploy,
-                  className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === "startTime" ? "ring-2 ring-red-500" : ""}`,
+                  className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-opacity duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === "startTime" ? "ring-2 ring-red-500" : ""}`,
                   children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                     lineNumber: 2038,
@@ -26466,13 +26468,13 @@ const AvailabilityCard = ({
     }, void 0) : trainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
-        className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md hover:bg-gray-600/60 transition-all duration-200 ease-in-out group cursor-pointer",
+        className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md hover:bg-gray-600/60 transition-opacity duration-200 ease-in-out group cursor-pointer",
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               "div",
               {
-                className: `w-4 h-4 rounded-full transition-all duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
+                className: `w-4 h-4 rounded-full transition-opacity duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
                 style: courseColors[trainee.course] ? { backgroundColor: courseColors[trainee.course] } : {}
               },
               void 0,
@@ -33294,7 +33296,7 @@ const BuildIntelligenceView = (props) => {
       {
         onClick: () => setActiveTab(tab.id),
         className: `
-                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
+                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-opacity duration-200
                     ${activeTab === tab.id ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}
                   `,
         children: tab.label
@@ -37089,7 +37091,7 @@ const InstructorListView = ({
     "li",
     {
       id: `instructor-row-${instructor.name}`,
-      className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
+      className: `group p-2 rounded-md transition-opacity duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
       onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
       onMouseLeave: handleMouseLeave,
       onClick: (e) => {
@@ -37554,7 +37556,7 @@ const StaffView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("profile"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Staff Profile"
         },
         void 0,
@@ -37570,7 +37572,7 @@ const StaffView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("schedule"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Staff Schedule"
         },
         void 0,
@@ -37685,7 +37687,7 @@ const TraineeView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("profile"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Trainee Profile"
         },
         void 0,
@@ -37701,7 +37703,7 @@ const TraineeView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("schedule"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Trainee Schedule"
         },
         void 0,
@@ -57748,7 +57750,7 @@ This action cannot be undone.`;
                   columnNumber: 37
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 flex space-x-4", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-opacity duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
                       lineNumber: 1002,
@@ -57764,7 +57766,7 @@ This action cannot be undone.`;
                     lineNumber: 997,
                     columnNumber: 41
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-opacity duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
                       lineNumber: 1010,
@@ -76985,7 +76987,7 @@ const AppearanceSettings = () => {
           "button",
           {
             onClick: () => setTheme(opt.value),
-            className: `relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+            className: `relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-opacity duration-200 cursor-pointer
                                     ${isSelected ? "border-sky-500 bg-sky-500/10" : "border-gray-700 bg-gray-800 hover:border-gray-500 hover:bg-gray-700/60"}`,
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -78384,7 +78386,7 @@ const SettingsViewWithMenu = (props) => {
             "button",
             {
               onClick: () => setActiveSection(section),
-              className: `group relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5 bg-gradient-to-br ${gradFrom} ${gradTo} border ${borderC} rounded-xl sm:rounded-2xl hover:scale-[1.04] hover:shadow-xl hover:shadow-black/40 active:scale-95 transition-all duration-200 cursor-pointer min-h-[90px] sm:min-h-[110px] lg:min-h-[130px]`,
+              className: `group relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5 bg-gradient-to-br ${gradFrom} ${gradTo} border ${borderC} rounded-xl sm:rounded-2xl hover:scale-[1.04] hover:shadow-xl hover:shadow-black/40 active:scale-95 transition-opacity duration-200 cursor-pointer min-h-[90px] sm:min-h-[110px] lg:min-h-[130px]`,
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${textC} w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 flex-shrink-0 group-hover:scale-110 transition-transform duration-200`, children: sectionIcons[section] }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/SettingsViewWithMenu.tsx",
