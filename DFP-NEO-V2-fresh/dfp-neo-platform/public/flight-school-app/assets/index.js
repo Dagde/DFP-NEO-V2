@@ -78770,266 +78770,41 @@ const SettingsViewWithMenu = (props) => {
   }, void 0);
 };
 const AuthorisationView = ({ instructorsData, traineesData, date, events, onOpenAuth }) => {
-  const flightsNeedingAuth = reactExports.useMemo(() => {
+  reactExports.useEffect(() => {
     const nowInHours = (new Date()).getHours() + (new Date()).getMinutes() / 60;
-    return events.filter(
+    const flightsNeedingAuth = events.filter(
       (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
     ).sort((a, b) => a.startTime - b.startTime);
-  }, [events]);
-  const formatTime = (time) => {
-    const hours = Math.floor(time);
-    const minutes = Math.round(time % 1 * 60);
-    return hours.toString().padStart(2, "0") + ":" + minutes.toString().padStart(2, "0");
-  };
+    
+    if (flightsNeedingAuth.length > 0) {
+      // Open auth flyout for the first flight
+      onOpenAuth(flightsNeedingAuth[0]);
+    }
+  }, [events, date, onOpenAuth]);
+  
   return jsxDevRuntimeExports.jsxDEV(
-    "div", {
-      className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto",
-      children: [
-        jsxDevRuntimeExports.jsxDEV(
-          Header,
-          {
-            title: "Flight Authorisation",
-            subtitle: "Authorise scheduled flights for today"
-          },
-          void 0,
-          false,
-          {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-            lineNumber: 28,
-            columnNumber: 10
-          },
-          void 0
-        ),
-        jsxDevRuntimeExports.jsxDEV(
-          "div",
-          {
-            className: "p-6 space-y-6 max-w-7xl mx-auto w-full",
-            children: flightsNeedingAuth.length > 0 ? [
-              jsxDevRuntimeExports.jsxDEV(
-                "p",
-                { className: "text-gray-400 mb-4", children: flightsNeedingAuth.length + " flight" + (flightsNeedingAuth.length !== 1 ? "s" : "") + " awaiting authorisation" },
-                void 0,
-                false,
-                {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                  lineNumber: 36,
-                  columnNumber: 12
-                },
-                void 0
-              ),
-              jsxDevRuntimeExports.jsxDEV(
-                "div",
-                {
-                  className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700",
-                  children: jsxDevRuntimeExports.jsxDEV(
-                    "table",
-                    { className: "w-full divide-y divide-gray-700", children: [
-                      jsxDevRuntimeExports.jsxDEV(
-                        "thead",
-                        { className: "bg-gray-900/50", children: jsxDevRuntimeExports.jsxDEV(
-                          "tr",
-                          { children: [
-                            jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold text-gray-300", children: "Time" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 47,
-                              columnNumber: 22
-                            }, void 0),
-                            jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold text-gray-300", children: "Flight" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 48,
-                              columnNumber: 22
-                            }, void 0),
-                            jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold text-gray-300", children: "Instructor" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 49,
-                              columnNumber: 22
-                            }, void 0),
-                            jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold text-gray-300", children: "Student/Pilot" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 50,
-                              columnNumber: 22
-                            }, void 0),
-                            jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-left text-sm font-semibold text-gray-300", children: "Status" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 51,
-                              columnNumber: 22
-                            }, void 0),
-                            jsxDevRuntimeExports.jsxDEV("th", { className: "px-4 py-3 text-center text-sm font-semibold text-gray-300", children: "Actions" }, void 0, false, {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 52,
-                              columnNumber: 22
-                            }, void 0)
-                          ] },
-                          void 0,
-                          true,
-                          {
-                            fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                            lineNumber: 46,
-                            columnNumber: 20
-                          },
-                          void 0
-                        ) },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                          lineNumber: 45,
-                          columnNumber: 18
-                        },
-                        void 0
-                      ),
-                      jsxDevRuntimeExports.jsxDEV(
-                        "tbody",
-                        {
-                          className: "divide-y divide-gray-700",
-                          children: flightsNeedingAuth.map((event) => jsxDevRuntimeExports.jsxDEV(
-                            "tr",
-                            { className: "hover:bg-gray-700/50", children: [
-                              jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 font-mono text-sm text-gray-300", children: formatTime(event.startTime) }, void 0, false, {
-                                fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                lineNumber: 62,
-                                columnNumber: 24
-                              }, void 0),
-                              jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm font-semibold text-white", children: event.flightNumber }, void 0, false, {
-                                fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                lineNumber: 63,
-                                columnNumber: 24
-                              }, void 0),
-                              jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-gray-300", children: event.instructor?.split(",")[0] }, void 0, false, {
-                                fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                lineNumber: 64,
-                                columnNumber: 24
-                              }, void 0),
-                              jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm text-gray-300", children: (event.student?.split(",")[0] || event.pilot?.split(",")[0]) }, void 0, false, {
-                                fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                lineNumber: 65,
-                                columnNumber: 24
-                              }, void 0),
-                              jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-sm", children: [
-                                event.authoSignedBy ? jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-green-400", children: "AUTHO" }, void 0, false, {
-                                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                  lineNumber: 69,
-                                  columnNumber: 26
-                                }, void 0) : jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-500", children: "--" }, void 0, false, {
-                                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                  lineNumber: 69,
-                                  columnNumber: 69
-                                }, void 0),
-                                " ",
-                                event.captainSignedBy ? jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-green-400", children: "CAPT" }, void 0, false, {
-                                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                  lineNumber: 70,
-                                  columnNumber: 26
-                                }, void 0) : jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-500", children: "--" }, void 0, false, {
-                                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                  lineNumber: 70,
-                                  columnNumber: 69
-                                }, void 0)
-                              ] }, void 0, true, {
-                                fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                lineNumber: 66,
-                                columnNumber: 24
-                              }, void 0),
-                              jsxDevRuntimeExports.jsxDEV("td", { className: "px-4 py-3 text-center", children: jsxDevRuntimeExports.jsxDEV(
-                                "button",
-                                { onClick: () => onOpenAuth(event), className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Authorise" },
-                                void 0,
-                                false,
-                                {
-                                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                  lineNumber: 73,
-                                  columnNumber: 26
-                                },
-                                void 0
-                              ) }, void 0, false, {
-                                fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                                lineNumber: 72,
-                                columnNumber: 24
-                              }, void 0)
-                            ] },
-                            event.id,
-                            true,
-                            {
-                              fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                              lineNumber: 60,
-                              columnNumber: 22
-                            },
-                            void 0
-                          )) },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                          lineNumber: 58,
-                          columnNumber: 18
-                        },
-                        void 0
-                      )
-                    ] },
-                    void 0,
-                    true,
-                    {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                      lineNumber: 44,
-                      columnNumber: 14
-                    },
-                    void 0
-                  )
-                },
-                void 0,
-                false,
-                {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                  lineNumber: 42,
-                  columnNumber: 12
-                },
-                void 0
-              )
-            ] : jsxDevRuntimeExports.jsxDEV(
-              "div",
-              { className: "text-center py-20", children: [
-                jsxDevRuntimeExports.jsxDEV(
-                  "svg",
-                  { xmlns: "http://www.w3.org/2000/svg", className: "h-20 w-20 text-gray-600 mx-auto mb-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: jsxDevRuntimeExports.jsxDEV(
-                    "path",
-                    { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" },
-                    void 0,
-                    false,
-                    { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 89, columnNumber: 18 },
-                    void 0
-                  ) },
-                  void 0,
-                  false,
-                  { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 88, columnNumber: 16 },
-                  void 0
-                ),
-                jsxDevRuntimeExports.jsxDEV("h3", { className: "text-2xl font-bold text-gray-400 mb-2", children: "All flights authorised" }, void 0, false, {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                  lineNumber: 91,
-                  columnNumber: 16
-                }, void 0),
-                jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500", children: "No flights are currently awaiting authorisation." }, void 0, false, {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
-                  lineNumber: 92,
-                  columnNumber: 16
-                }, void 0)
-              ] },
-              void 0,
-              true,
-              { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 87, columnNumber: 14 },
-              void 0
-            )
-          },
-          void 0,
-          false,
-          { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 41, columnNumber: 10 },
-          void 0
-        )
-      ]
-    },
+    "div",
+    { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto items-center justify-center", children: [
+      jsxDevRuntimeExports.jsxDEV(
+        "div",
+        { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4" },
+        void 0,
+        false,
+        { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 15, columnNumber: 7 },
+        void 0
+      ),
+      jsxDevRuntimeExports.jsxDEV(
+        "p",
+        { className: "text-gray-400", children: "Opening Flight Authorisation..." },
+        void 0,
+        false,
+        { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 16, columnNumber: 7 },
+        void 0
+      )
+    ] },
     void 0,
     true,
-    { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 25, columnNumber: 12 },
+    { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 14, columnNumber: 5 },
     void 0
   );
 };
