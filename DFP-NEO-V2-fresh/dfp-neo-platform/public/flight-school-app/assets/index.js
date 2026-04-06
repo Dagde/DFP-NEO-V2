@@ -93729,6 +93729,24 @@ ${"=".repeat(60)}`);
     }
   }, [remedialRequests, activeView]);
   reactExports.useEffect(() => {
+    if (activeView === "AUTH") {
+      const nowInHours = (new Date()).getHours() + (new Date()).getMinutes() / 60;
+      const flightsNeedingAuth = events.filter(
+        (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
+      ).sort((a, b) => a.startTime - b.startTime);
+      
+      if (flightsNeedingAuth.length > 0) {
+        const latestEvent = events.find((ev) => ev.id === flightsNeedingAuth[0].id) || flightsNeedingAuth[0];
+        setEventForAuth(latestEvent);
+        setShowAuthFlyout(true);
+        handleNavigation("Program Schedule");
+      } else {
+        handleNavigation("Program Schedule");
+      }
+    }
+  }, [activeView, events, date]);
+
+  reactExports.useEffect(() => {
     localStorage.setItem("timezoneOffset", timezoneOffset.toString());
   }, [timezoneOffset]);
   reactExports.useEffect(() => {
@@ -99091,21 +99109,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return null;
       case "AUTH":
-        reactExports.useEffect(() => {
-          const nowInHours = (new Date()).getHours() + (new Date()).getMinutes() / 60;
-          const flightsNeedingAuth = events.filter(
-            (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
-          ).sort((a, b) => a.startTime - b.startTime);
-          
-          if (flightsNeedingAuth.length > 0) {
-            const latestEvent = events.find((ev) => ev.id === flightsNeedingAuth[0].id) || flightsNeedingAuth[0];
-            setEventForAuth(latestEvent);
-            setShowAuthFlyout(true);
-            handleNavigation("Program Schedule");
-          } else {
-            handleNavigation("Program Schedule");
-          }
-        }, [events, date]);
+        
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto items-center justify-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
