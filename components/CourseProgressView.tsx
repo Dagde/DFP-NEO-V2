@@ -41,10 +41,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const activeCourses = useMemo(() => {
         // Filter the full courses list to only include active ones (present in courseColors)
-        // Then sort by gradDate
+        // Then sort alphabetically by course name
         return courses
             .filter(course => courseColors[course.name])
-            .sort((a, b) => new Date(a.gradDate).getTime() - new Date(b.gradDate).getTime());
+            .sort((a, b) => a.name.localeCompare(b.name));
     }, [courses, courseColors]);
 
     return (
