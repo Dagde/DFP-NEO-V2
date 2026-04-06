@@ -6581,14 +6581,12 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
-  const matteOverlay = "after:content-[''] after:absolute after:inset-0 after:bg-black/10 after:opacity-30 after:pointer-events-none";
   if (isPreview) {
     finalClasses.push(tileColor && tileColor.startsWith("#") ? "" : (tileColor || ""));
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
     finalClasses.push("ring-0");
-    finalClasses.push(matteOverlay);
     finalClasses.push(dutySupBorderClass);
     finalClasses.push(multiSelectRingClass);
   }
@@ -6681,7 +6679,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor }) : style),
+      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B", filter: "saturate(0.6) brightness(0.82)" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor, filter: "saturate(0.6) brightness(0.82)" }) : Object.assign({}, style, { filter: "saturate(0.6) brightness(0.82)" })),
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
