@@ -23178,13 +23178,13 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
       columnNumber: 17
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-6", children: [
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md overflow-hidden", style: { height: "530px" }, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
           lineNumber: 64,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-0", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3 overflow-y-auto", style: { maxHeight: "384px" }, children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-0", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3 overflow-y-auto", style: { maxHeight: "460px" }, children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
@@ -23243,7 +23243,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
         lineNumber: 63,
         columnNumber: 21
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md overflow-hidden", style: { height: "530px" }, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Weather (TAF)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
           lineNumber: 103,
