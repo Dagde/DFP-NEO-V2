@@ -23238,7 +23238,6 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
           lineNumber: 67,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
         lineNumber: 63,
