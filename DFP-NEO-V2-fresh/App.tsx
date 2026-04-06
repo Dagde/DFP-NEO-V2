@@ -6956,6 +6956,45 @@ useEffect(() => {
         // Navigate to Archived Courses view
         handleNavigation('ArchivedCourses');
     };
+    const handleUpdateCourseDatesFromTrainingRecords = async (courseName: string, startDate: string, gradDate: string) => {
+        // Update local state
+        setCourses(prevCourses =>
+            prevCourses.map(course =>
+                course.name === courseName ? { ...course, startDate, gradDate } : course
+            )
+        );
+
+        // Update database via API
+        try {
+            const course = courses.find(c => c.name === courseName);
+            if (!course) {
+                console.error('Course not found:', courseName);
+                return;
+            }
+
+            const result = await saveCourseToDB({
+                name: course.name,
+                color: course.color,
+                startDate: startDate,
+                gradDate: gradDate,
+                raafStart: course.raafStart,
+                navyStart: course.navyStart,
+                armyStart: course.armyStart,
+                location: course.location,
+                status: course.status
+            });
+
+            if (result.success) {
+                setSuccessMessage(`Course ${courseName} dates updated successfully!`);
+            } else {
+                console.error('Failed to update course dates in DB:', result.error);
+                setErrorMessage('Failed to save changes to database');
+            }
+        } catch (error) {
+            console.error('Error updating course dates in DB:', error);
+            setErrorMessage('Failed to save changes to database');
+        }
+    };
 
     const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
         const color = archivedCourses[courseName];
@@ -11289,6 +11328,7 @@ updates.forEach(update => {
                     onDeleteCourse={handleDeleteCourseFromTrainingRecords}
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
+                    onUpdateCourseDates={handleUpdateCourseDatesFromTrainingRecords}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}
