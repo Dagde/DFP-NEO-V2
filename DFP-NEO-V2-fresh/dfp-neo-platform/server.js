@@ -617,6 +617,23 @@ app.get('/api/courses', async (req, res) => {
       orderBy: { name: 'asc' }
     });
 
+    // Sort courses by code numerically (FIC210 before FIC211)
+    courses.sort((a, b) => {
+      const aCode = a.code || a.name;
+      const bCode = b.code || b.name;
+      
+      // Extract numeric part from course codes (e.g., "FIC210" -> 210)
+      const aNum = parseInt(aCode.replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt(bCode.replace(/\D/g, ''), 10) || 0;
+      
+      // If both have numeric parts, sort by them
+      if (aNum && bNum) {
+        return aNum - bNum;
+      }
+      
+      // Otherwise, fall back to alphabetical sort
+      return aCode.localeCompare(bCode);
+    });
     console.log(`✅ GET /api/courses - found ${courses.length} courses in database`);
     courses.forEach(c => {
       console.log(`   - ${c.name} (${c.code}): start=${c.startDate}, end=${c.endDate}, color=${c.color}`);

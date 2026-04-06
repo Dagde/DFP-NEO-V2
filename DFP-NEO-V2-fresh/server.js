@@ -191,6 +191,25 @@ app.get('/api/courses', async (req, res) => {
     const courses = await db.course.findMany({
       orderBy: { startDate: 'asc' },
     });
+    
+    // Sort courses by code numerically (FIC210 before FIC211)
+    courses.sort((a, b) => {
+      const aCode = a.code || a.name;
+      const bCode = b.code || b.name;
+      
+      // Extract numeric part from course codes (e.g., "FIC210" -> 210)
+      const aNum = parseInt(aCode.replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt(bCode.replace(/\D/g, ''), 10) || 0;
+      
+      // If both have numeric parts, sort by them
+      if (aNum && bNum) {
+        return aNum - bNum;
+      }
+      
+      // Otherwise, fall back to alphabetical sort
+      return aCode.localeCompare(bCode);
+    });
+    
     // Map DB fields to the App's Course interface
     const mapped = courses.map(c => ({
       name: c.name,
