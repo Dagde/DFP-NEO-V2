@@ -23184,7 +23184,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
           lineNumber: 64,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3 overflow-y-auto", style: { maxHeight: "384px" }, children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-0", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3 overflow-y-auto", style: { maxHeight: "384px" }, children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
