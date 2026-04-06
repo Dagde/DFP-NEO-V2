@@ -2184,14 +2184,14 @@ const eslCourses: Course[] = [
     { name: 'ADF302', color: 'bg-purple-400/50', startDate: '2025-07-01', gradDate: '2026-04-01', raafStart: 18, navyStart: 7, armyStart: 0 },
     { name: 'ADF303', color: 'bg-yellow-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 20, navyStart: 5, armyStart: 0 },
     { name: 'FIC 210', color: 'bg-pink-400/50', startDate: '2025-10-01', gradDate: '2026-04-01', raafStart: 4, navyStart: 0, armyStart: 0 },
-       { name: 'FIC211', color: 'bg-orange-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
+       { name: 'FIC211', color: 'bg-teal-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
    ];
 
 const peaCourses: Course[] = [
     { name: 'ADF304', color: 'bg-teal-400/50', startDate: '2023-02-15', gradDate: '2023-07-20', raafStart: 12, navyStart: 0, armyStart: 0 },
     { name: 'ADF305', color: 'bg-indigo-400/50', startDate: '2023-04-10', gradDate: '2023-10-05', raafStart: 10, navyStart: 2, armyStart: 0 },
     { name: 'IFF 6', color: 'bg-cyan-400/50', startDate: '2023-06-01', gradDate: '2023-08-15', raafStart: 4, navyStart: 0, armyStart: 0 },
-       { name: 'FIC211', color: 'bg-orange-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
+       { name: 'FIC211', color: 'bg-teal-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
 ];
 
 const generateDataSet = (location: 'ESL' | 'PEA') => {

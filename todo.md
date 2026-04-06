@@ -1,25 +1,20 @@
-# Fix Course Dates Save Button
+# Multiple Fix Tasks
 
-## Problem
-The Save Changes button in the Course Management page's Edit dialog doesn't save changes to the database.
+## 1. Fix Course Management Save Button
+- [ ] Find why Save Changes doesn't persist to database
+- [ ] Check built index.js for the actual handler
+- [ ] Fix and rebuild
 
-## Root Cause
-The `onUpdateCourseDates` prop is missing when `TrainingRecordsView` is rendered in App.tsx, and the existing handlers (`handleUpdateGradDate`, `handleUpdateStartDate`) only update local state without calling the API.
+## 2. Fix Course Progress Graphs Not Displaying
+- [ ] Find CourseProgressGraph / CourseDataWindow component
+- [ ] Check what's broken in the rendering
+- [ ] Fix and rebuild
 
-## Solution
+## 3. Make Graph Guidelines Thinner
+- [ ] Find graph rendering code
+- [ ] Reduce gridline thickness
 
-### 1. Create a new handler in App.tsx
-- Create `handleUpdateCourseDatesFromTrainingRecords` that:
-  - Calls the `/api/courses` POST endpoint to save to database
-  - Updates local state with the new dates
-
-### 2. Pass the handler to TrainingRecordsView
-- Add `onUpdateCourseDates={handleUpdateCourseDatesFromTrainingRecords}` to the TrainingRecordsView render
-
-### 3. Verify the fix
-- Test that clicking Save Changes updates both the UI and the database
-
-## Status
-- [ ] Create handler in App.tsx
-- [ ] Pass handler to TrainingRecordsView
-- [ ] Test and verify
+## 4. Fix FIC211 Course Colour
+- [ ] Find how course colours are assigned
+- [ ] Find what colour FIC211 uses in the rest of the app
+- [ ] Apply correct teal/blue colour to FIC211 header in Course Progress page

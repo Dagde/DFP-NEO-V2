@@ -75052,13 +75052,13 @@ const eslCourses = [
   { name: "ADF302", color: "#6B3FA0"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
   { name: "ADF303", color: "#4A6218"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
   { name: "FIC 210", color: "#9D2B6B"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#4F46E5"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "FIC211", color: "#0E7A6E"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const peaCourses = [
   { name: "ADF304", color: "#0E7A6E"        , startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
   { name: "ADF305", color: "#3D4CB5"          , startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
   { name: "IFF 6", color: "#0A7A94"        , startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#4F46E5"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "FIC211", color: "#0E7A6E"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const generateDataSet = (location) => {
   const isESL = location === "ESL";
@@ -81884,14 +81884,11 @@ const FullPageProgressGraph = ({
           }
         }
       }
-      if (!firstEventDate) {
-        console.log(`[ProgressGraph] No first event date found for ${course.name}`);
-        continue;
-      }
+      const effectiveStartDate = firstEventDate || startDate;
       const weeklyProgress = [];
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      let currentWeekStart = new Date(firstEventDate);
+      let currentWeekStart = new Date(effectiveStartDate);
       currentWeekStart.setHours(0, 0, 0, 0);
       while (currentWeekStart <= today) {
         const weekEnd = new Date(currentWeekStart);
@@ -82305,8 +82302,8 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             x2: PADDING.left + CHART_WIDTH,
             y1: tick.y,
             y2: tick.y,
-            stroke: "#4b5563",
-            strokeWidth: "1"
+            stroke: "#374151",
+            strokeWidth: "0.5"
           },
           void 0,
           false,
@@ -82349,8 +82346,8 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             x2: tick.x,
             y1: PADDING.top,
             y2: PADDING.top + CHART_HEIGHT,
-            stroke: "#4b5563",
-            strokeWidth: "1"
+            stroke: "#374151",
+            strokeWidth: "0.5"
           },
           void 0,
           false,
@@ -94522,6 +94519,45 @@ ${"=".repeat(60)}`);
   const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
     handleNavigation("ArchivedCourses");
   };
+  const handleUpdateCourseDatesFromTrainingRecords = async (courseName, startDate2, gradDate2) => {
+    setCourses((prevCourses) =>
+      prevCourses.map((course) =>
+        course.name === courseName ? { ...course, startDate: startDate2, gradDate: gradDate2 } : course
+      )
+    );
+    try {
+      const course = courses.find((c) => c.name === courseName);
+      if (!course) {
+        console.error("Course not found:", courseName);
+        return;
+      }
+      const response = await fetch("/api/courses", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: course.name,
+          color: course.color,
+          startDate: startDate2,
+          gradDate: gradDate2,
+          raafStart: course.raafStart,
+          navyStart: course.navyStart,
+          armyStart: course.armyStart,
+          location: course.location,
+          status: course.status
+        })
+      });
+      if (response.ok) {
+        setSuccessMessage("Course " + courseName + " dates updated successfully!");
+      } else {
+        console.error("Failed to update course dates in DB");
+        setErrorMessage("Failed to save changes to database");
+      }
+    } catch (error2) {
+      console.error("Error updating course dates in DB:", error2);
+      setErrorMessage("Failed to save changes to database");
+    }
+  };
   const handleUnarchiveCourseFromArchivedView = async (courseName) => {
     const color = archivedCourses[courseName];
     if (!color) return;
@@ -98146,6 +98182,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onDeleteCourse: handleDeleteCourseFromTrainingRecords,
             onNavigateToCourseRoster: handleNavigateToCourseRosterFromTrainingRecords,
             onNavigateToArchivedCourses: handleNavigateToArchivedCoursesFromTrainingRecords,
+            onUpdateCourseDates: handleUpdateCourseDatesFromTrainingRecords,
             traineesData,
             instructorsData,
             archivedTraineesData,

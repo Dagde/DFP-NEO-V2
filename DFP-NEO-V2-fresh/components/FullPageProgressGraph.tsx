@@ -406,8 +406,8 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             x2={PADDING.left + CHART_WIDTH} 
                             y1={tick.y} 
                             y2={tick.y} 
-                            stroke="#4b5563" 
-                            strokeWidth="1" 
+                            stroke="#374151" 
+                            strokeWidth="0.5" 
                         />
                         <text 
                             x={PADDING.left - 10} 
@@ -429,8 +429,8 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             x2={tick.x} 
                             y1={PADDING.top} 
                             y2={PADDING.top + CHART_HEIGHT} 
-                            stroke="#4b5563" 
-                            strokeWidth="1" 
+                            stroke="#374151" 
+                            strokeWidth="0.5" 
                         />
                         <text 
                             x={tick.x} 
