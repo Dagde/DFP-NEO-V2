@@ -81864,7 +81864,7 @@ const FullPageProgressGraph = ({
         (item) => (item.type === "Flight" || item.type === "FTD") && !item.isRemedial
       );
       const totalEvents = flightAndFtdEvents.length;
-      if (totalEvents === 0) continue;
+      /* skip removed: show graph even with 0 events */
       const startDate = /* @__PURE__ */ new Date(course.startDate + "T00:00:00Z");
       const endDate = /* @__PURE__ */ new Date(course.gradDate + "T00:00:00Z");
       let firstEventDate = null;
@@ -89474,7 +89474,7 @@ async function initializeData() {
         const allCourses = Array.isArray(cd.courses) ? cd.courses : [];
         dbCourses = allCourses.filter((c) => c.status !== "ARCHIVED").map((c) => ({
           name: c.name,
-          color: ((c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#6366f1")),
+          color: c.name==="FIC211"?"#0E7A6E":((c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#6366f1")),
           startDate: c.startDate || "",
           gradDate: c.gradDate || c.endDate || "",
           raafStart: c.raafStart || c.raafCount || 0,
@@ -92537,7 +92537,7 @@ const App = () => {
               "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
             };
             const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#4B5563");
-            dbColors[c.name] = twToHex2[rawColor] || rawColor;
+            dbColors[c.name] = twToHex2[rawColor] || rawColor; if(c.name==="FIC211")dbColors["FIC211"]="#0E7A6E";
           });
           console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
           setCourseColors((prev) => ({ ...prev, ...dbColors }));
