@@ -82674,7 +82674,7 @@ const CourseProgressView = ({
     });
   }, []);
   const activeCourses = reactExports.useMemo(() => {
-    return courses.filter((course) => courseColors[course.name]).sort((a, b) => new Date(a.gradDate).getTime() - new Date(b.gradDate).getTime());
+    return courses.filter((course) => courseColors[course.name]).sort((a, b) => a.name.localeCompare(b.name));
   }, [courses, courseColors]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: showFullGraph ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     FullPageProgressGraph,
