@@ -23142,11 +23142,9 @@ const formatTime$1 = (time) => {
 };
 const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
-    const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
     return events.filter(
-      (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
-      // Only show flights that haven't ended
-    ).sort((a, b) => a.startTime - b.startTime).slice(0, 5);
+      (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy)
+    ).sort((a, b) => a.startTime - b.startTime);
   }, [events]);
   const activeInstructors = instructorsData.filter((i) => !i.isPaused).length;
   const onLeaveInstructors = instructorsData.filter((i) => i.isPaused).length;
@@ -23186,7 +23184,7 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
           lineNumber: 64,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 space-y-3", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3 overflow-y-auto", style: { maxHeight: "420px" }, children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
@@ -23241,21 +23239,6 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-          "button",
-          {
-            onClick: () => onNavigate("AUTH"),
-            className: "w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed",
-            children: "Go to Flight Authorisation"
-          },
-          void 0,
-          false,
-          {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
-            lineNumber: 92,
-            columnNumber: 29
-          },
-          void 0
-        ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
           lineNumber: 91,
           columnNumber: 26
