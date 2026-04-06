@@ -6573,7 +6573,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     }, void 0);
   };
   const shadowClass = "shadow-none";
-  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-opacity duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
+  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} ${isDragging ? "opacity-80 z-50" : "z-10 transition-opacity duration-150"} ${shadowClass}`;
   const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#D4722A": "#4F46E5", "#d4722a": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
   const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
   const backgroundClass = isDutySup ? "" : event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
@@ -6679,7 +6679,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B", filter: "saturate(0.65)" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor, filter: "saturate(0.65)" }) : Object.assign({}, style, { filter: "saturate(0.65)" })),
+      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B", filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto" }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor, filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto" }) : Object.assign({}, style, { filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto" })),
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
@@ -7246,7 +7246,7 @@ const AircraftAvailabilityOverlay = ({
         valueChanged,
         snapshotsBeforeUpdate: snapshots.length
       });
-      console.log("[LAST_SET] SET TO", snappedCount, "(from drag end)");
+
       lastSetByOverlay.current = snappedCount;
       setCurrentAvailable(snappedCount);
       if (valueChanged) {
@@ -8010,14 +8010,14 @@ const ScheduleView = ({
     }, 1e3);
     const handleGlobalMouseMove = (e) => {
       if (draggingState) {
-        console.log("Global mouse move - drag state active");
+
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
-      console.log("Global mouse up called, draggingState exists:", !!draggingState);
+      
       if (draggingState) {
-        console.log("Global mouse up - ending drag");
+
         document.body.classList.remove("no-select");
         setDraggingState(null);
         setRealtimeConflict(null);
@@ -8088,7 +8088,7 @@ const ScheduleView = ({
     return null;
   }, [syllabusDetails]);
   const handleMouseDown = async (e, event) => {
-    console.log("handleMouseDown called, event:", event?.id, "isMultiSelectMode:", isMultiSelectMode);
+
     console.log("Event target:", e.target);
     console.log("Current target:", e.currentTarget);
     if (e.button !== 0) return;
@@ -8124,7 +8124,7 @@ const ScheduleView = ({
       const initialPositions = /* @__PURE__ */ new Map();
       const originalResourceIds = /* @__PURE__ */ new Map();
       const processEvent = (ev) => {
-        console.log("🐍 Processing event for drag:", ev.id, "resourceId:", ev.resourceId);
+
         console.log("🐍 Available resources:", resources);
         const rowIndex = resources.indexOf(ev.resourceId);
         console.log("🐍 Found row index:", rowIndex);
@@ -8145,7 +8145,7 @@ const ScheduleView = ({
         processEvent(event);
       }
       if (initialPositions.size > 0 && !frozenNoDrag) {
-        console.log("Setting dragging state with", initialPositions.size, "events for event:", event.id);
+        
         console.log("initialPositions:", initialPositions);
         setDraggingState({
           mainEventId: event.id,
@@ -8154,9 +8154,9 @@ const ScheduleView = ({
           initialPositions,
           originalResourceIds
         });
-        console.log("setDraggingState called with:", draggingState);
+        
       } else if (!frozenNoDrag) {
-        console.log("No initial positions - drag state not set");
+
       }
     } else {
       if (!isMultiSelectMode) return;
@@ -8168,10 +8168,9 @@ const ScheduleView = ({
       setSelectionRect({ x, y, width: 0, height: 0 });
     }
   };
+  const _dragRafId = { current: null };
   const handleMouseMove = (e) => {
-    console.log("handleMouseMove called, draggingState exists:", !!draggingState);
     if (!scheduleGridRef.current) {
-      console.log("Early return: no scheduleGridRef");
       return;
     }
     didDragRef.current = true;
@@ -8183,13 +8182,13 @@ const ScheduleView = ({
       setValidateOverlayTime(mouseTimeInHours);
     }
     if (isOracleMode && oraclePreviewEvent) {
-      console.log("Early return: Oracle mode with preview event");
+      
       const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
       const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$5)] || resources[0];
       onOracleMouseMove(startTime, resourceId);
     } else {
       if (selectionStartPoint.current) {
-        console.log("Early return: selectionStartPoint active (marquee selection)");
+        
         const currentX = e.clientX - gridRect.left;
         const currentY = e.clientY - gridRect.top;
         const x = Math.min(selectionStartPoint.current.x, currentX);
@@ -8217,14 +8216,14 @@ const ScheduleView = ({
         return;
       }
       if (!draggingState) {
-        console.log("Early return: no draggingState");
+        
         return;
       }
       const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
       if (!mainEventInitialPos) return;
       const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 - mainEventInitialPos.startTime;
       const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
-      console.log("Drag calculation - timeShift:", timeShift, "rowShift:", rowShift, "xInGrid:", xInGrid, "yInGrid:", yInGrid);
+      
       const updates = [];
       const tempEvents = [...events];
       let resourceConflictId = null;
@@ -8259,11 +8258,7 @@ const ScheduleView = ({
         let conflictResult = null;
         if (detectConflictsForEvent) {
           conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-          console.log("🔍 Drag conflict check:", {
-            eventId: mainEvent.id,
-            hasConflict: conflictResult.hasConflict,
-            conflictType: conflictResult.conflictType
-          });
+          
           if (conflictResult.hasConflict) {
             setRealtimeConflict({
               conflictingEventId: conflictResult.conflictingEventId,
@@ -8304,15 +8299,15 @@ const ScheduleView = ({
       }
       setRealtimeResourceConflictId(resourceConflictId);
       setDraggedCptConflict(tempCptConflict);
-      console.log("🐍 DRAG COMPLETE - Calling onUpdateEvent with", updates.length, "updates:");
-      console.log("🐍 Updates:", updates);
+      
+      
       onUpdateEvent(updates);
     }
   };
   const handleMouseUp = (e) => {
-    console.log("Local handleMouseUp called - ignoring when dragState exists:", !!draggingState);
+    
     if (draggingState) {
-      console.log("Ignoring local mouse up - global handler will manage");
+      
       return;
     }
     document.body.classList.remove("no-select");
@@ -8322,7 +8317,7 @@ const ScheduleView = ({
     if (draggedCptConflict) {
       onCptConflict(draggedCptConflict);
     }
-    console.log("Clearing drag state in local handleMouseUp");
+    
     setDraggingState(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
@@ -16843,8 +16838,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
     }
   };
   const handleDragStart = (e) => {
-    console.log("🟢 DRAG STARTED - PT-051 drag initiated");
-    console.log("🟢 Drag event details:", e.type, e.currentTarget);
+
+
     setIsDragging(true);
     e.dataTransfer.effectAllowed = "copy";
     e.dataTransfer.setData("text/plain", "pt051-new");
@@ -16882,7 +16877,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
     handleDragEnd();
   };
   React.useEffect(() => {
-    console.log("🔍 DEBUG STATE - isDragging:", isDragging, "highlightedIndex:", highlightedIndex);
+
   }, [isDragging, highlightedIndex]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
