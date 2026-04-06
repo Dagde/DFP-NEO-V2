@@ -85,17 +85,15 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
                 }
             }
 
-            if (!firstEventDate) {
-                console.log(`[ProgressGraph] No first event date found for ${course.name}`);
-                continue;
-            }
+            // If no events completed yet, still show graph with empty data
+            const effectiveStartDate = firstEventDate || startDate;
 
             // Calculate weekly progress from first event date to current week
             const weeklyProgress: WeeklyProgress[] = [];
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
-            let currentWeekStart = new Date(firstEventDate);
+            let currentWeekStart = new Date(effectiveStartDate);
             currentWeekStart.setHours(0, 0, 0, 0);
 
             while (currentWeekStart <= today) {
@@ -150,7 +148,7 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
             console.log(`  - Course Start: ${startDate.toLocaleDateString()}`);
             console.log(`  - Course Grad: ${endDate.toLocaleDateString()}`);
             console.log(`  - Total Events: ${totalEvents}`);
-            console.log(`  - First Event Date: ${firstEventDate?.toLocaleDateString()}`);
+            console.log(`  - First Event Date: ${firstEventDate?.toLocaleDateString() || 'No events yet'}`);
             console.log(`  - Weekly Progress Points: ${weeklyProgress.length}`);
             if (weeklyProgress.length > 0) {
                 console.log(`  - Sample Week 1:`, weeklyProgress[0]);
