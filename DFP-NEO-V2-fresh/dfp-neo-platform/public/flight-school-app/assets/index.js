@@ -99091,21 +99091,37 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return null;
       case "AUTH":
-        return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {
-            instructorsData,
-            traineesData,
-            date,
-            events,
-            onOpenAuth: (e) => {
-              const latestEvent = events.find((ev) => ev.id === e.id) || e;
-              setEventForAuth(latestEvent);
-              setShowAuthFlyout(true);
-            }
-          }, void 0, false, {
+        reactExports.useEffect(() => {
+          const nowInHours = (new Date()).getHours() + (new Date()).getMinutes() / 60;
+          const flightsNeedingAuth = events.filter(
+            (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
+          ).sort((a, b) => a.startTime - b.startTime);
+          
+          if (flightsNeedingAuth.length > 0) {
+            const latestEvent = events.find((ev) => ev.id === flightsNeedingAuth[0].id) || flightsNeedingAuth[0];
+            setEventForAuth(latestEvent);
+            setShowAuthFlyout(true);
+            handleNavigation("Program Schedule");
+          } else {
+            handleNavigation("Program Schedule");
+          }
+        }, [events, date]);
+        return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto items-center justify-center", children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
             lineNumber: 12023,
             columnNumber: 24
-          }, void 0);
+          }, void 0),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400", children: "Opening Flight Authorisation..." }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
+            lineNumber: 12024,
+            columnNumber: 24
+          }, void 0)
+        ] }, void 0, true, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
+          lineNumber: 12022,
+          columnNumber: 24
+        }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
