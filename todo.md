@@ -1,30 +1,25 @@
-# Course Ordering Fix
+# Fix Course Dates Save Button
 
-## Summary
-Fixed course ordering issue where FIC211 was appearing before FIC210 on the Course Progress page.
+## Problem
+The Save Changes button in the Course Management page's Edit dialog doesn't save changes to the database.
 
-## Changes Made
+## Root Cause
+The `onUpdateCourseDates` prop is missing when `TrainingRecordsView` is rendered in App.tsx, and the existing handlers (`handleUpdateGradDate`, `handleUpdateStartDate`) only update local state without calling the API.
 
-### 1. Updated server.js (root)
-- Added numeric sorting logic to GET /api/courses endpoint
-- Courses now sort by numeric portion of code (e.g., FIC210 before FIC211)
-- Falls back to alphabetical sorting for non-numeric codes
+## Solution
 
-### 2. Updated dfp-neo-platform/server.js
-- Applied same numeric sorting logic to maintain consistency
-- Ensures both server endpoints return courses in correct order
+### 1. Create a new handler in App.tsx
+- Create `handleUpdateCourseDatesFromTrainingRecords` that:
+  - Calls the `/api/courses` POST endpoint to save to database
+  - Updates local state with the new dates
 
-## How It Works
-The sorting logic:
-1. Extracts numeric portion from course codes using regex
-2. Compares numeric values when both courses have numbers
-3. Falls back to alphabetic comparison for non-matching pattern courses
+### 2. Pass the handler to TrainingRecordsView
+- Add `onUpdateCourseDates={handleUpdateCourseDatesFromTrainingRecords}` to the TrainingRecordsView render
 
-Example:
-- "FIC210" → 210
-- "FIC211" → 211
-- Result: FIC210 comes before FIC211
+### 3. Verify the fix
+- Test that clicking Save Changes updates both the UI and the database
 
 ## Status
-✅ Files modified
-✅ Changes verified
+- [ ] Create handler in App.tsx
+- [ ] Pass handler to TrainingRecordsView
+- [ ] Test and verify
