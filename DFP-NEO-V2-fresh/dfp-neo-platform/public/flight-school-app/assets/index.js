@@ -94520,17 +94520,7 @@ ${"=".repeat(60)}`);
     handleNavigation("ArchivedCourses");
   };
   const handleUpdateCourseDatesFromTrainingRecords = async (courseName, startDate2, gradDate2) => {
-    setCourses((prevCourses) =>
-      prevCourses.map((course) =>
-        course.name === courseName ? { ...course, startDate: startDate2, gradDate: gradDate2 } : course
-      )
-    );
-    try {
-      const course = courses.find((c) => c.name === courseName);
-      if (!course) {
-        console.error("Course not found:", courseName);
-        return;
-      }
+    let courseSnapshot = null;\n    setCourses((prevCourses) => {\n      courseSnapshot = prevCourses.find((c) => c.name === courseName) || null;\n      return prevCourses.map((course) =>\n        course.name === courseName ? { ...course, startDate: startDate2, gradDate: gradDate2 } : course\n      );\n    });\n    try {\n      const course = courseSnapshot;\n      if (!course) {\n        console.error(\"Course not found:\", courseName);\n        return;\n      }
       const response = await fetch("/api/courses", {
         method: "POST",
         credentials: "include",
