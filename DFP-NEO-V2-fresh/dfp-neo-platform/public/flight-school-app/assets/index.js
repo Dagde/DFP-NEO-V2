@@ -82080,7 +82080,10 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
     const x = PADDING.left + elapsed / totalTime * CHART_WIDTH;
     return Math.max(PADDING.left, Math.min(PADDING.left + CHART_WIDTH, x));
   };
-  const eventsToY = (count) => {\n    if (!totalEvents || totalEvents === 0) return PADDING.top + CHART_HEIGHT;\n    return PADDING.top + CHART_HEIGHT - count / totalEvents * CHART_HEIGHT;\n  };
+  const eventsToY = (count) => {
+    if (!totalEvents || totalEvents === 0) return PADDING.top + CHART_HEIGHT;
+    return PADDING.top + CHART_HEIGHT - count / totalEvents * CHART_HEIGHT;
+  };
   const referenceLines = reactExports.useMemo(() => {
     const lines = [];
     const rates = [
@@ -92589,7 +92592,20 @@ const App = () => {
                     lmps.forEach((lmp) => {
                       if (!lmp.completedEventIds || lmp.completedEventIds.length === 0) return;
                       const normalizedIds = lmp.completedEventIds.map((id) => id.replace("*", ""));
-                      const existingScores = merged.get(lmp.traineeFullName) || [];\n                      const existingScoreMap = new Map(existingScores.map((s) => [s.event, s]));\n                      const scoreRecords = normalizedIds.map((eventId) => {\n                        const existing = existingScoreMap.get(eventId);\n                        return {\n                          event: eventId,\n                          score: existing?.score || 3,\n                          date: existing?.date || \"2025-07-01\",\n                          instructor: existing?.instructor || \"\",\n                          notes: existing?.notes || \"\",\n                          details: existing?.details || []\n                        };\n                      });\n                      merged.set(lmp.traineeFullName, scoreRecords);
+                      const existingScores = merged.get(lmp.traineeFullName) || [];
+                      const existingScoreMap = new Map(existingScores.map((s) => [s.event, s]));
+                      const scoreRecords = normalizedIds.map((eventId) => {
+                        const existing = existingScoreMap.get(eventId);
+                        return {
+                          event: eventId,
+                          score: existing?.score || 3,
+                          date: existing?.date || "2025-07-01",
+                          instructor: existing?.instructor || "",
+                          notes: existing?.notes || "",
+                          details: existing?.details || []
+                        };
+                      });
+                      merged.set(lmp.traineeFullName, scoreRecords);
                       console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
                     });
                     console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
