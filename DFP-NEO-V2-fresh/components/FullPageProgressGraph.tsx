@@ -447,7 +447,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                     d={`M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`} 
                     fill="none" 
                     stroke="#6b7280" 
-                    strokeWidth="2" 
+                    strokeWidth="1" 
                 />
 
                 {/* Axis labels */}
@@ -482,7 +482,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                         x2={line.x2} 
                         y2={line.y2} 
                         stroke={line.color} 
-                        strokeWidth="2" 
+                        strokeWidth="0.25" 
                         strokeDasharray={line.dash}
                     />
                 ))}
@@ -493,7 +493,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                         d={averagePath} 
                         fill="none" 
                         stroke="#60a5fa" 
-                        strokeWidth="2.5"
+                        strokeWidth="1.25"
                     />
                 )}
 
@@ -515,10 +515,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             <circle 
                                 cx={x} 
                                 cy={yHigh} 
-                                r="2.5" 
+                                r="1.25" 
                                 fill="#4ade80" 
                                 stroke="#1f2937" 
-                                strokeWidth="1"
+                                strokeWidth="0.5"
                             >
                                 <title>{`Week ${i + 1}: Highest - ${wp.highest} events (${wp.highestTrainee})`}</title>
                             </circle>
@@ -527,10 +527,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             <circle 
                                 cx={x} 
                                 cy={yLow} 
-                                r="2.5" 
+                                r="1.25" 
                                 fill="#f87171" 
                                 stroke="#1f2937" 
-                                strokeWidth="1"
+                                strokeWidth="0.5"
                             >
                                 <title>{`Week ${i + 1}: Lowest - ${wp.lowest} events (${wp.lowestTrainee})`}</title>
                             </circle>
@@ -539,10 +539,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             <circle 
                                 cx={x} 
                                 cy={yAvg} 
-                                r="2" 
+                                r="1" 
                                 fill="#60a5fa" 
                                 stroke="#1f2937" 
-                                strokeWidth="1"
+                                strokeWidth="0.5"
                             >
                                 <title>{`Week ${i + 1}: Average - ${wp.average.toFixed(1)} events`}</title>
                             </circle>
