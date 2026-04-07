@@ -375,7 +375,7 @@ const LoginModal = ({ onLoginSuccess }) => {
         {
           type: "submit",
           disabled: loading || !userId || !password,
-          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
           style: { background: loading ? "#3b82f6" : "linear-gradient(135deg, #3b82f6, #2563eb)" },
           children: loading ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center justify-center gap-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "animate-spin w-4 h-4", fill: "none", viewBox: "0 0 24 24", children: [
@@ -501,7 +501,7 @@ const LoginModal = ({ onLoginSuccess }) => {
         {
           type: "submit",
           disabled: forgotLoading || !forgotUserId,
-          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+          className: "w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
           style: { background: "linear-gradient(135deg, #3b82f6, #2563eb)" },
           children: forgotLoading ? "Sending..." : "Send Reset Link"
         },
@@ -883,7 +883,7 @@ const ChangePasswordModal = ({
           {
             type: "submit",
             disabled: loading || !currentPassword || !newPassword || !confirmPassword || !passwordsMatch || passwordErrors.length > 0,
-            className: "flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
+            className: "flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed",
             style: { background: "linear-gradient(135deg, #3b82f6, #2563eb)" },
             children: loading ? "Changing..." : "Change Password"
           },
@@ -4107,18 +4107,6 @@ const showDarkConfirm = (message, title = "Confirm Action", variant = "info") =>
     root2.render(modalElement);
   });
 };
-const DataLoadingMonitor = ({ isStaffLoaded, isTraineeLoaded, isCoursesLoaded }) => {
-  const [isVisible, setIsVisible] = reactExports.useState(true);
-  const allLoaded = isStaffLoaded && isTraineeLoaded && isCoursesLoaded;
-  reactExports.useEffect(() => {
-    if (allLoaded) {
-      const timer = setTimeout(() => setIsVisible(false), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [allLoaded]);
-  if (!isVisible || allLoaded) return null;
-  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-lg px-6 py-4 shadow-lg z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-8 h-8 animate-spin", fill: "none", viewBox: "0 0 24 24", style: { color: "#fb923c" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 2L8 8H4l4 4-1.5 6L12 15l5.5 3L16 12l4-4h-4z", fill: "currentColor" }, void 0, false, {}, void 0) }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: "Please wait while the engine warms up" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3 text-xs", children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 " + (isStaffLoaded ? "text-green-400" : "text-gray-400"), children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full " + (isStaffLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse") }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Staff" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 " + (isTraineeLoaded ? "text-green-400" : "text-gray-400"), children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full " + (isTraineeLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse") }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Trainees" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 " + (isCoursesLoaded ? "text-green-400" : "text-gray-400"), children: [/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full " + (isCoursesLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse") }, void 0, false, {}, void 0), /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Courses" }, void 0, false, {}, void 0)] }, void 0, true, {}, void 0)] }, void 0, true, {}, void 0)] }, void 0, true, {}, void 0) }, void 0, false, {}, void 0);
-};
 const SystemFreezeBanner = () => {
   const { freezeState, unfreezeSystem } = useSystemFreeze$1();
   if (!freezeState.isFrozen) return null;
@@ -4187,6 +4175,134 @@ const SystemFreezeBanner = () => {
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/SystemFreezeBanner.tsx",
     lineNumber: 20,
+    columnNumber: 9
+  }, void 0);
+};
+const DataLoadingMonitor = ({
+  isStaffLoaded,
+  isTraineeLoaded,
+  isCoursesLoaded
+}) => {
+  const [isVisible, setIsVisible] = reactExports.useState(true);
+  const allLoaded = isStaffLoaded && isTraineeLoaded && isCoursesLoaded;
+  reactExports.useEffect(() => {
+    if (allLoaded) {
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+      }, 1e3);
+      return () => clearTimeout(timer);
+    }
+  }, [allLoaded]);
+  if (!isVisible || allLoaded) {
+    return null;
+  }
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-lg px-6 py-4 shadow-lg z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        "svg",
+        {
+          className: "w-8 h-8 animate-spin",
+          fill: "none",
+          viewBox: "0 0 24 24",
+          style: { color: "#fb923c" },
+          children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+            "path",
+            {
+              strokeLinecap: "round",
+              strokeLinejoin: "round",
+              strokeWidth: 2,
+              d: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+            },
+            void 0,
+            false,
+            {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+              lineNumber: 41,
+              columnNumber: 25
+            },
+            void 0
+          )
+        },
+        void 0,
+        false,
+        {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 35,
+          columnNumber: 21
+        },
+        void 0
+      ),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: "Please wait while the engine warms up" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+        lineNumber: 48,
+        columnNumber: 21
+      }, void 0)
+    ] }, void 0, true, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+      lineNumber: 34,
+      columnNumber: 17
+    }, void 0),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3 text-xs", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `flex items-center gap-1 ${isStaffLoaded ? "text-green-400" : "text-gray-400"}`, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-2 h-2 rounded-full ${isStaffLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse"}` }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 56,
+          columnNumber: 25
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Staff" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 57,
+          columnNumber: 25
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+        lineNumber: 55,
+        columnNumber: 21
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `flex items-center gap-1 ${isTraineeLoaded ? "text-green-400" : "text-gray-400"}`, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-2 h-2 rounded-full ${isTraineeLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse"}` }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 60,
+          columnNumber: 25
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Trainees" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 61,
+          columnNumber: 25
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+        lineNumber: 59,
+        columnNumber: 21
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `flex items-center gap-1 ${isCoursesLoaded ? "text-green-400" : "text-gray-400"}`, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-2 h-2 rounded-full ${isCoursesLoaded ? "bg-green-400" : "bg-gray-400 animate-pulse"}` }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 64,
+          columnNumber: 25
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Courses" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+          lineNumber: 65,
+          columnNumber: 25
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+        lineNumber: 63,
+        columnNumber: 21
+      }, void 0)
+    ] }, void 0, true, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+      lineNumber: 54,
+      columnNumber: 17
+    }, void 0)
+  ] }, void 0, true, {
+    fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+    lineNumber: 33,
+    columnNumber: 13
+  }, void 0) }, void 0, false, {
+    fileName: "/workspace/DFP-NEO-V2-fresh/components/DataLoadingMonitor.tsx",
+    lineNumber: 32,
     columnNumber: 9
   }, void 0);
 };
@@ -4960,7 +5076,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: allCourses.map(([courseName, color]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "py-1 flex items-center justify-center", children: [
-            /* @__PURE__ */ color.startsWith("#") ? jsxDevRuntimeExports.jsxDEV("span", { className: "h-3 w-3 rounded-full mr-2 flex-shrink-0", style: { backgroundColor: color } }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx", lineNumber: 221, columnNumber: 21 }) : jsxDevRuntimeExports.jsxDEV("span", { className: `h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0` }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0` }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
               lineNumber: 221,
               columnNumber: 21
@@ -6264,10 +6380,15 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || "") : displayStudentNameForRender;
     const isGroundEventFromName = event.flightNumber.includes("CPT") || event.flightNumber.includes("MB") || event.flightNumber.includes("TUT") || event.flightNumber.includes("QUIZ");
     if (event.type === "deployment") {
-      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center whitespace-nowrap", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white/80 font-medium text-sm", children: "DEPLOYMENT • deployed" }, void 0, false, {
+      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white/80 font-medium text-sm", children: "DEPLOYMENT" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
           lineNumber: 403,
+          columnNumber: 21
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/60 truncate", children: "deployed" }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+          lineNumber: 406,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-white/50 mt-1", children: [
@@ -6572,21 +6693,19 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       columnNumber: 9
     }, void 0);
   };
-  const shadowClass = "shadow-none";
-  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} ${isDragging ? "opacity-80 z-50" : "z-10 transition-opacity duration-150"} ${shadowClass}`;
-  const LEGACY_COLOR_MAP = { "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#6B8E23": "#4A6218", "#F472B6": "#9D2B6B", "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#D4722A": "#4F46E5", "#d4722a": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5", "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E", "#F87171": "#B02020", "bg-yellow-400/50": "#4A6218", "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0", "bg-pink-400/50": "#9D2B6B", "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5", "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A", "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5", "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563" };
-  const tileColor = event.color && LEGACY_COLOR_MAP[event.color] ? LEGACY_COLOR_MAP[event.color] : event.color;
-  const backgroundClass = isDutySup ? "" : event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (tileColor && tileColor.startsWith("#") ? "" : tileColor);
+  const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
+  const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
+  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : event.color;
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
   if (isPreview) {
-    finalClasses.push(tileColor && tileColor.startsWith("#") ? "" : (tileColor || ""));
+    finalClasses.push(event.color);
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
-    finalClasses.push("ring-0");
+    finalClasses.push(`ring-[0.92px] ${ringClass}`);
     finalClasses.push(dutySupBorderClass);
     finalClasses.push(multiSelectRingClass);
   }
@@ -6679,7 +6798,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     "div",
     {
       "data-is-flight-tile": "true",
-      style: isDutySup ? Object.assign({}, style, { backgroundColor: "#8B5A2B", filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto", transition: isDragging ? "none" : void 0, zIndex: isDragging ? 100 : void 0 }) : (tileColor && tileColor.startsWith("#") ? Object.assign({}, style, { backgroundColor: tileColor, filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto", transition: isDragging ? "none" : void 0, zIndex: isDragging ? 100 : void 0 }) : Object.assign({}, style, { filter: "saturate(0.65)", willChange: isDragging ? "transform" : "auto", transition: isDragging ? "none" : void 0, zIndex: isDragging ? 100 : void 0 })),
+      style,
       className: finalClasses.join(" "),
       onClick: onSelectEvent,
       onMouseDown: (e) => {
@@ -7246,7 +7365,7 @@ const AircraftAvailabilityOverlay = ({
         valueChanged,
         snapshotsBeforeUpdate: snapshots.length
       });
-
+      console.log("[LAST_SET] SET TO", snappedCount, "(from drag end)");
       lastSetByOverlay.current = snappedCount;
       setCurrentAvailable(snappedCount);
       if (valueChanged) {
@@ -8010,15 +8129,14 @@ const ScheduleView = ({
     }, 1e3);
     const handleGlobalMouseMove = (e) => {
       if (draggingState) {
-
+        console.log("Global mouse move - drag state active");
         handleMouseMove(e);
       }
     };
     const handleGlobalMouseUp = (e) => {
+      console.log("Global mouse up called, draggingState exists:", !!draggingState);
       if (draggingState) {
-        if (draggingState.currentUpdates && draggingState.currentUpdates.length > 0) {
-          onUpdateEvent(draggingState.currentUpdates);
-        }
+        console.log("Global mouse up - ending drag");
         document.body.classList.remove("no-select");
         setDraggingState(null);
         setRealtimeConflict(null);
@@ -8089,7 +8207,9 @@ const ScheduleView = ({
     return null;
   }, [syllabusDetails]);
   const handleMouseDown = async (e, event) => {
-
+    console.log("handleMouseDown called, event:", event?.id, "isMultiSelectMode:", isMultiSelectMode);
+    console.log("Event target:", e.target);
+    console.log("Current target:", e.currentTarget);
     if (e.button !== 0) return;
     let frozenNoDrag = false;
     if (event) {
@@ -8123,12 +8243,16 @@ const ScheduleView = ({
       const initialPositions = /* @__PURE__ */ new Map();
       const originalResourceIds = /* @__PURE__ */ new Map();
       const processEvent = (ev) => {
-
+        console.log("🐍 Processing event for drag:", ev.id, "resourceId:", ev.resourceId);
+        console.log("🐍 Available resources:", resources);
         const rowIndex = resources.indexOf(ev.resourceId);
+        console.log("🐍 Found row index:", rowIndex);
         if (rowIndex !== -1) {
           initialPositions.set(ev.id, { startTime: ev.startTime, rowIndex });
           originalResourceIds.set(ev.id, ev.resourceId);
+          console.log("🐍 Event added to initialPositions");
         } else {
+          console.log("🐍 Event NOT added - resourceId not found in resources");
         }
       };
       if (isMultiSelectMode && selectedEventIds.has(event.id)) {
@@ -8140,7 +8264,8 @@ const ScheduleView = ({
         processEvent(event);
       }
       if (initialPositions.size > 0 && !frozenNoDrag) {
-        
+        console.log("Setting dragging state with", initialPositions.size, "events for event:", event.id);
+        console.log("initialPositions:", initialPositions);
         setDraggingState({
           mainEventId: event.id,
           xOffset: (e.clientX - rect.left) / zoomLevel,
@@ -8148,9 +8273,9 @@ const ScheduleView = ({
           initialPositions,
           originalResourceIds
         });
-        
+        console.log("setDraggingState called with:", draggingState);
       } else if (!frozenNoDrag) {
-
+        console.log("No initial positions - drag state not set");
       }
     } else {
       if (!isMultiSelectMode) return;
@@ -8162,155 +8287,161 @@ const ScheduleView = ({
       setSelectionRect({ x, y, width: 0, height: 0 });
     }
   };
-  const _dragRafId = reactExports.useRef(null);
-  const _lastMouseEvent = reactExports.useRef(null);
   const handleMouseMove = (e) => {
+    console.log("handleMouseMove called, draggingState exists:", !!draggingState);
     if (!scheduleGridRef.current) {
+      console.log("Early return: no scheduleGridRef");
       return;
     }
     didDragRef.current = true;
-    _lastMouseEvent.current = e;
-    if (_dragRafId.current) return;
-    _dragRafId.current = requestAnimationFrame(() => {
-      _dragRafId.current = null;
-      const _e = _lastMouseEvent.current;
-      if (!_e || !scheduleGridRef.current) return;
-      const gridRect = scheduleGridRef.current.getBoundingClientRect();
-      const xInGrid = _e.clientX - gridRect.left;
-      const yInGrid = _e.clientY - gridRect.top;
-      if (showValidation || showDepartureDensityOverlay) {
-        const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
-        setValidateOverlayTime(mouseTimeInHours);
+    const gridRect = scheduleGridRef.current.getBoundingClientRect();
+    const xInGrid = e.clientX - gridRect.left;
+    const yInGrid = e.clientY - gridRect.top;
+    if (showValidation || showDepartureDensityOverlay) {
+      const mouseTimeInHours = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
+      setValidateOverlayTime(mouseTimeInHours);
+    }
+    if (isOracleMode && oraclePreviewEvent) {
+      console.log("Early return: Oracle mode with preview event");
+      const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
+      const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$5)] || resources[0];
+      onOracleMouseMove(startTime, resourceId);
+    } else {
+      if (selectionStartPoint.current) {
+        console.log("Early return: selectionStartPoint active (marquee selection)");
+        const currentX = e.clientX - gridRect.left;
+        const currentY = e.clientY - gridRect.top;
+        const x = Math.min(selectionStartPoint.current.x, currentX);
+        const y = Math.min(selectionStartPoint.current.y, currentY);
+        const width = Math.abs(currentX - selectionStartPoint.current.x);
+        const height = Math.abs(currentY - selectionStartPoint.current.y);
+        setSelectionRect({ x, y, width, height });
+        const rectLeft = x;
+        const rectRight = x + width;
+        const rectTop = y;
+        const rectBottom = y + height;
+        const newSelectedIds = /* @__PURE__ */ new Set();
+        events.forEach((ev) => {
+          const rowIndex = resources.indexOf(ev.resourceId);
+          if (rowIndex === -1) return;
+          const tileTop = rowIndex * ROW_HEIGHT$5;
+          const tileBottom = tileTop + ROW_HEIGHT$5;
+          const tileLeft = (ev.startTime - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
+          const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$5 * zoomLevel;
+          if (rectLeft < tileRight && rectRight > tileLeft && rectTop < tileBottom && rectBottom > tileTop) {
+            newSelectedIds.add(ev.id);
+          }
+        });
+        setSelectedEventIds(newSelectedIds);
+        return;
       }
-      if (isOracleMode && oraclePreviewEvent) {
-        const startTime = xInGrid / (PIXELS_PER_HOUR$5 * zoomLevel) + START_HOUR$5;
-        const resourceId = resources[Math.floor(yInGrid / ROW_HEIGHT$5)] || resources[0];
-        onOracleMouseMove(startTime, resourceId);
-      } else {
-        if (selectionStartPoint.current) {
-          const currentX = _e.clientX - gridRect.left;
-          const currentY = _e.clientY - gridRect.top;
-          const x = Math.min(selectionStartPoint.current.x, currentX);
-          const y = Math.min(selectionStartPoint.current.y, currentY);
-          const width = Math.abs(currentX - selectionStartPoint.current.x);
-          const height = Math.abs(currentY - selectionStartPoint.current.y);
-          setSelectionRect({ x, y, width, height });
-          const rectLeft = x;
-          const rectRight = x + width;
-          const rectTop = y;
-          const rectBottom = y + height;
-          const newSelectedIds = /* @__PURE__ */ new Set();
-          events.forEach((ev) => {
-            const rowIndex = resources.indexOf(ev.resourceId);
-            if (rowIndex === -1) return;
-            const tileTop = rowIndex * ROW_HEIGHT$5;
-            const tileBottom = tileTop + ROW_HEIGHT$5;
-            const tileLeft = (ev.startTime - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
-            const tileRight = tileLeft + ev.duration * PIXELS_PER_HOUR$5 * zoomLevel;
-            if (rectLeft < tileRight && rectRight > tileLeft && rectTop < tileBottom && rectBottom > tileTop) {
-              newSelectedIds.add(ev.id);
-            }
+      if (!draggingState) {
+        console.log("Early return: no draggingState");
+        return;
+      }
+      const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
+      if (!mainEventInitialPos) return;
+      const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 - mainEventInitialPos.startTime;
+      const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
+      console.log("Drag calculation - timeShift:", timeShift, "rowShift:", rowShift, "xInGrid:", xInGrid, "yInGrid:", yInGrid);
+      const updates = [];
+      const tempEvents = [...events];
+      let resourceConflictId = null;
+      let tempCptConflict = null;
+      for (const [id, initialPos] of draggingState.initialPositions.entries()) {
+        const eventData = events.find((ev) => ev.id === id);
+        if (!eventData) continue;
+        let newStartTime = initialPos.startTime + timeShift;
+        let newRowIndex = initialPos.rowIndex + rowShift;
+        if (newRowIndex < 0) newRowIndex = 0;
+        if (newRowIndex >= resources.length) newRowIndex = resources.length - 1;
+        if (newStartTime < START_HOUR$5) newStartTime = START_HOUR$5;
+        if (newStartTime + eventData.duration > END_HOUR$5) newStartTime = END_HOUR$5 - eventData.duration;
+        const snappedStartTime = Math.round(newStartTime * 12) / 12;
+        const newResourceId = resources[newRowIndex];
+        updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
+        const tempEventIndex = tempEvents.findIndex((e2) => e2.id === id);
+        if (tempEventIndex !== -1) {
+          tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
+        }
+        const conflictingEvent = events.find(
+          (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
+        );
+        if (conflictingEvent) {
+          resourceConflictId = conflictingEvent.id;
+        }
+      }
+      const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
+      if (mainUpdate) {
+        const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
+        const otherEvents = tempEvents.filter((e2) => !draggingState.initialPositions.has(e2.id));
+        let conflictResult = null;
+        if (detectConflictsForEvent) {
+          conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
+          console.log("🔍 Drag conflict check:", {
+            eventId: mainEvent.id,
+            hasConflict: conflictResult.hasConflict,
+            conflictType: conflictResult.conflictType
           });
-          setSelectedEventIds(newSelectedIds);
-          return;
-        }
-        if (!draggingState) {
-          return;
-        }
-        const mainEventInitialPos = draggingState.initialPositions.get(draggingState.mainEventId);
-        if (!mainEventInitialPos) return;
-        const timeShift = (xInGrid / zoomLevel - draggingState.xOffset) / PIXELS_PER_HOUR$5 - mainEventInitialPos.startTime;
-        const rowShift = Math.floor((yInGrid - draggingState.yOffset + ROW_HEIGHT$5 / 2) / ROW_HEIGHT$5) - mainEventInitialPos.rowIndex;
-        const updates = [];
-        const tempEvents = [...events];
-        let resourceConflictId = null;
-        let tempCptConflict = null;
-        for (const [id, initialPos] of draggingState.initialPositions.entries()) {
-          const eventData = events.find((ev) => ev.id === id);
-          if (!eventData) continue;
-          let newStartTime = initialPos.startTime + timeShift;
-          let newRowIndex = initialPos.rowIndex + rowShift;
-          if (newRowIndex < 0) newRowIndex = 0;
-          if (newRowIndex >= resources.length) newRowIndex = resources.length - 1;
-          if (newStartTime < START_HOUR$5) newStartTime = START_HOUR$5;
-          if (newStartTime + eventData.duration > END_HOUR$5) newStartTime = END_HOUR$5 - eventData.duration;
-          const snappedStartTime = Math.round(newStartTime * 12) / 12;
-          const newResourceId = resources[newRowIndex];
-          updates.push({ eventId: id, newStartTime: snappedStartTime, newResourceId });
-          const tempEventIndex = tempEvents.findIndex((e2) => e2.id === id);
-          if (tempEventIndex !== -1) {
-            tempEvents[tempEventIndex] = { ...tempEvents[tempEventIndex], startTime: snappedStartTime, resourceId: newResourceId };
-          }
-          const conflictingEvent = events.find(
-            (ev) => ev.id !== id && !draggingState.initialPositions.has(ev.id) && ev.resourceId === newResourceId && isOverlapping$2({ ...eventData, startTime: snappedStartTime }, ev)
-          );
-          if (conflictingEvent) {
-            resourceConflictId = conflictingEvent.id;
-          }
-        }
-        const mainUpdate = updates.find((u) => u.eventId === draggingState.mainEventId);
-        if (mainUpdate) {
-          const mainEvent = tempEvents.find((e2) => e2.id === draggingState.mainEventId);
-          const otherEvents = tempEvents.filter((e2) => !draggingState.initialPositions.has(e2.id));
-          let conflictResult = null;
-          if (detectConflictsForEvent) {
-            conflictResult = detectConflictsForEvent(mainEvent, otherEvents);
-            if (conflictResult.hasConflict) {
-              setRealtimeConflict({
-                conflictingEventId: conflictResult.conflictingEventId,
-                conflictedPersonName: conflictResult.conflictedPersonnel || ""
-              });
-              if (mainEvent.flightNumber.includes("CPT") && conflictResult.conflictType === "personnel") {
-                const conflictingEvent = otherEvents.find((e2) => e2.id === conflictResult.conflictingEventId);
-                if (conflictingEvent) {
-                  tempCptConflict = {
-                    conflictingEvent,
-                    newEvent: mainEvent,
-                    conflictedPerson: "trainee"
-                  };
-                }
-              }
-            } else {
-              setRealtimeConflict(null);
-            }
-          } else {
-            const conflict = findConflict([mainEvent], otherEvents);
-            if (conflict) {
-              setRealtimeConflict({
-                conflictingEventId: conflict.conflictingEvent.id,
-                conflictedPersonName: conflict.personName
-              });
-              if (mainEvent.flightNumber.includes("CPT")) {
+          if (conflictResult.hasConflict) {
+            setRealtimeConflict({
+              conflictingEventId: conflictResult.conflictingEventId,
+              conflictedPersonName: conflictResult.conflictedPersonnel || ""
+            });
+            if (mainEvent.flightNumber.includes("CPT") && conflictResult.conflictType === "personnel") {
+              const conflictingEvent = otherEvents.find((e2) => e2.id === conflictResult.conflictingEventId);
+              if (conflictingEvent) {
                 tempCptConflict = {
-                  conflictingEvent: conflict.conflictingEvent,
+                  conflictingEvent,
                   newEvent: mainEvent,
-                  conflictedPerson: "trainee",
-                  personName: conflict.personName
+                  conflictedPerson: "trainee"
                 };
               }
-            } else {
-              setRealtimeConflict(null);
             }
+          } else {
+            setRealtimeConflict(null);
+          }
+        } else {
+          const conflict = findConflict([mainEvent], otherEvents);
+          if (conflict) {
+            setRealtimeConflict({
+              conflictingEventId: conflict.conflictingEvent.id,
+              conflictedPersonName: conflict.personName
+            });
+            if (mainEvent.flightNumber.includes("CPT")) {
+              tempCptConflict = {
+                conflictingEvent: conflict.conflictingEvent,
+                newEvent: mainEvent,
+                conflictedPerson: "trainee",
+                personName: conflict.personName
+              };
+            }
+          } else {
+            setRealtimeConflict(null);
           }
         }
-        setRealtimeResourceConflictId(resourceConflictId);
-        setDraggedCptConflict(tempCptConflict);
-        setDraggingState((prev) => prev ? { ...prev, currentUpdates: updates } : prev);
       }
-    });
-  };
-
-  const handleMouseUp = (e) => {
-    document.body.classList.remove("no-select");
-    if (draggingState && draggingState.currentUpdates && draggingState.currentUpdates.length > 0) {
-      onUpdateEvent(draggingState.currentUpdates);
+      setRealtimeResourceConflictId(resourceConflictId);
+      setDraggedCptConflict(tempCptConflict);
+      console.log("🐍 DRAG COMPLETE - Calling onUpdateEvent with", updates.length, "updates:");
+      console.log("🐍 Updates:", updates);
+      onUpdateEvent(updates);
     }
+  };
+  const handleMouseUp = (e) => {
+    console.log("Local handleMouseUp called - ignoring when dragState exists:", !!draggingState);
+    if (draggingState) {
+      console.log("Ignoring local mouse up - global handler will manage");
+      return;
+    }
+    document.body.classList.remove("no-select");
     if (isOracleMode) {
       onOracleMouseUp();
     }
     if (draggedCptConflict) {
       onCptConflict(draggedCptConflict);
     }
+    console.log("Clearing drag state in local handleMouseUp");
     setDraggingState(null);
     setRealtimeConflict(null);
     setRealtimeResourceConflictId(null);
@@ -8710,20 +8841,10 @@ const ScheduleView = ({
         }
         const isSelected = selectedEventIds.has(event.id);
         const isChanged = checkIsChanged(event, baselineEvents);
-        let dragRow = rowIndex;
-        let dragStartTime = event.startTime;
-        if (isDraggedTile && draggingState.currentUpdates) {
-          const upd = draggingState.currentUpdates.find((u) => u.eventId === event.id);
-          if (upd) {
-            const newRowIdx = resources.indexOf(upd.newResourceId);
-            if (newRowIdx !== -1) dragRow = newRowIdx;
-            dragStartTime = upd.newStartTime;
-          }
-        }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           FlightTile,
           {
-            event: isDraggedTile ? { ...event, startTime: dragStartTime } : event,
+            event,
             traineesData,
             onSelectEvent: () => {
               if (!didDragRef.current) {
@@ -8748,7 +8869,7 @@ const ScheduleView = ({
             pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
             rowHeight: ROW_HEIGHT$5,
             startHour: START_HOUR$5,
-            row: isDraggedTile ? dragRow : rowIndex,
+            row: rowIndex,
             isDragging: isDraggedTile,
             isConflicting,
             isUnavailabilityConflict: isUnavailability,
@@ -9390,7 +9511,7 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
   console.log("  - Function props:");
   console.log("    - onDateChange type:", typeof onDateChange);
   console.log("    - onSelectEvent type:", typeof onSelectEvent);
-
+  console.log("    - onUpdateEvent type:", typeof onUpdateEvent);
   console.log("    - onSelectInstructor type:", typeof onSelectInstructor);
   try {
     const testAccess = seatConfigs;
@@ -10159,22 +10280,21 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     };
   };
   const convertTailwindToHex = (tailwindClass) => {
-    if (tailwindClass && tailwindClass.startsWith("#")) return tailwindClass;
     const colorMap = {
-      "bg-sky-400/50": "#1E6B9E",
-      "bg-purple-400/50": "#6B3FA0",
-      "bg-yellow-400/50": "#4A6218",
-      "bg-pink-400/50": "#9D2B6B",
-      "bg-teal-400/50": "#0E7A6E",
-      "bg-indigo-400/50": "#3D4CB5",
-      "bg-cyan-400/50": "#0A7A94",
-      "bg-blue-400/50": "#1D4E8A",
-      "bg-green-400/50": "#1A6B2E",
-      "bg-orange-400/50": "#4F46E5",
-      "bg-red-400/50": "#B02020",
-      "bg-gray-400/50": "#4B5563"
+      "bg-sky-400/50": "#38BDF8",
+      "bg-purple-400/50": "#C084FC",
+      "bg-yellow-400/50": "#FACC15",
+      "bg-pink-400/50": "#F472B6",
+      "bg-teal-400/50": "#2DD4BF",
+      "bg-indigo-400/50": "#818CF8",
+      "bg-cyan-400/50": "#22D3EE",
+      "bg-blue-400/50": "#60A5FA",
+      "bg-green-400/50": "#4ADE80",
+      "bg-orange-400/50": "#FB923C",
+      "bg-red-400/50": "#F87171",
+      "bg-gray-400/50": "#9CA3AF"
     };
-    return colorMap[tailwindClass] || "#4B5563";
+    return colorMap[tailwindClass] || "#9CA3AF";
   };
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-40 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { children: trainees.map((fullName, index) => {
     const { name, course } = parseTraineeName(fullName);
@@ -11347,7 +11467,7 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
   const [reason, setReason] = reactExports.useState("Appointment");
   const [validation, setValidation] = reactExports.useState(null);
   const [showErrors, setShowErrors] = reactExports.useState(false);
-  const unavailabilityReasons = ["TMUF", "TMUF - Ground Duties only", "Leave", "Appointment", "Other", "Deployed"];
+  const unavailabilityReasons = ["TMUF", "TMUF - Ground Duties only", "Leave", "Appointment", "Other"];
   const clearForm = () => {
     setStartDate("");
     setEndDate("");
@@ -14065,7 +14185,7 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1082,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold px-1 rounded text-white text-[10px] " + (courseColors[trainee.course] && courseColors[trainee.course].startsWith("#") ? "" : (courseColors[trainee.course] || "bg-gray-500")), style: courseColors[trainee.course] && courseColors[trainee.course].startsWith("#") ? { backgroundColor: courseColors[trainee.course] } : {}, children: trainee.course }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || "bg-gray-500"}`, children: trainee.course }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1082,
                       columnNumber: 99
@@ -15676,7 +15796,6 @@ const CourseEditFlyout = ({
     }
   };
   const courseColor = courseColors[courseName] || "bg-gray-500";
-  const courseColorIsHex = courseColor && courseColor.startsWith("#");
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 pt-8", onClick: onClose, children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
@@ -15684,7 +15803,7 @@ const CourseEditFlyout = ({
         className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden border border-gray-600",
         onClick: (e) => e.stopPropagation(),
         children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: courseColorIsHex ? "px-6 py-4 flex justify-between items-center" : `${courseColor} px-6 py-4 flex justify-between items-center`, style: courseColorIsHex ? { backgroundColor: courseColor } : {}, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${courseColor} px-6 py-4 flex justify-between items-center`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: [
               "Edit Course: ",
               courseName
@@ -16278,7 +16397,7 @@ const CourseRosterView = ({
       }
     }
   }, [traineesData, selectedTrainee, isCreatingNew]);
-  const activeCourseNumbers = Object.keys(groupedTrainees).filter((course) => Object.prototype.hasOwnProperty.call(courseColors, course)).sort((a, b) => a.localeCompare(b));
+  const activeCourseNumbers = Object.keys(groupedTrainees).filter((course) => courseColors.hasOwnProperty(course)).sort((a, b) => a.localeCompare(b));
   const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
   const coursesToDisplay = view2 === "active" ? activeCourseNumbers : archivedCourseNumbers;
   const courseColorMap = view2 === "active" ? courseColors : archivedCourses;
@@ -16341,7 +16460,7 @@ const CourseRosterView = ({
     false,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-      lineNumber: 256,
+      lineNumber: 259,
       columnNumber: 9
     },
     void 0
@@ -16352,17 +16471,17 @@ const CourseRosterView = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h1", { className: "text-2xl font-bold text-white", children: "Trainee Roster" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-          lineNumber: 272,
+          lineNumber: 275,
           columnNumber: 25
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-          lineNumber: 271,
+          lineNumber: 274,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-[1px]", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ViewToggleButton, { label: "Active Courses", value: "active" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 275,
+            lineNumber: 278,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -16376,7 +16495,7 @@ const CourseRosterView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 277,
+              lineNumber: 279,
               columnNumber: 25
             },
             void 0
@@ -16392,29 +16511,29 @@ const CourseRosterView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 283,
+              lineNumber: 285,
               columnNumber: 25
             },
             void 0
           ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[5px]" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 289,
+            lineNumber: 291,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Trainee Roster" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 290,
+            lineNumber: 292,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-          lineNumber: 274,
+          lineNumber: 277,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 270,
+        lineNumber: 273,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 md:p-6 pb-16 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: coursesToDisplay.map((courseName) => {
@@ -16423,21 +16542,21 @@ const CourseRosterView = ({
         const activeCount = courseTrainees.filter((t) => !t.isPaused).length;
         const pausedCount = courseTrainees.filter((t) => t.isPaused).length;
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `px-4 py-2 text-white font-bold text-lg ${color.startsWith("#") ? "" : color} flex justify-between items-center`, style: color.startsWith("#") ? { backgroundColor: color } : {}, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: courseName }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 310,
+                lineNumber: 312,
                 columnNumber: 49
               }, void 0),
               courseTrainees.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 311,
+                lineNumber: 313,
                 columnNumber: 79
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 309,
+              lineNumber: 311,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
@@ -16451,11 +16570,11 @@ const CourseRosterView = ({
                   title: "Edit course",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 322,
+                    lineNumber: 324,
                     columnNumber: 61
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 321,
+                    lineNumber: 323,
                     columnNumber: 57
                   }, void 0)
                 },
@@ -16463,7 +16582,7 @@ const CourseRosterView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                  lineNumber: 315,
+                  lineNumber: 317,
                   columnNumber: 53
                 },
                 void 0
@@ -16476,11 +16595,11 @@ const CourseRosterView = ({
                   "aria-label": `Restore course ${courseName}`,
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 333,
+                    lineNumber: 335,
                     columnNumber: 61
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 332,
+                    lineNumber: 334,
                     columnNumber: 57
                   }, void 0)
                 },
@@ -16488,19 +16607,19 @@ const CourseRosterView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                  lineNumber: 327,
+                  lineNumber: 329,
                   columnNumber: 53
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 313,
+              lineNumber: 315,
               columnNumber: 45
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 308,
+            lineNumber: 310,
             columnNumber: 41
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-4 py-1 text-right text-xs text-white opacity-70", children: [
@@ -16509,7 +16628,7 @@ const CourseRosterView = ({
             pausedCount > 0 && `, ${pausedCount} paused`
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 339,
+            lineNumber: 341,
             columnNumber: 41
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
@@ -16523,7 +16642,7 @@ const CourseRosterView = ({
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee.rank }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 355,
+                    lineNumber: 357,
                     columnNumber: 65
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -16537,7 +16656,7 @@ const CourseRosterView = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                      lineNumber: 356,
+                      lineNumber: 358,
                       columnNumber: 65
                     },
                     void 0
@@ -16548,45 +16667,45 @@ const CourseRosterView = ({
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 349,
+                lineNumber: 351,
                 columnNumber: 61
               },
               void 0
             );
           }) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 344,
+            lineNumber: 346,
             columnNumber: 49
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 text-sm italic text-center py-4", children: "No trainees assigned." }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 367,
+            lineNumber: 369,
             columnNumber: 49
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 342,
+            lineNumber: 344,
             columnNumber: 41
           }, void 0)
         ] }, courseName, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-          lineNumber: 307,
+          lineNumber: 309,
           columnNumber: 37
         }, void 0);
       }) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 297,
+        lineNumber: 299,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 296,
+        lineNumber: 298,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 295,
+        lineNumber: 297,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-      lineNumber: 268,
+      lineNumber: 271,
       columnNumber: 13
     }, void 0),
     courseToRestore && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -16600,7 +16719,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 378,
+        lineNumber: 380,
         columnNumber: 17
       },
       void 0
@@ -16619,7 +16738,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 385,
+        lineNumber: 387,
         columnNumber: 17
       },
       void 0
@@ -16661,7 +16780,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 395,
+        lineNumber: 397,
         columnNumber: 17
       },
       void 0
@@ -16678,7 +16797,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 428,
+        lineNumber: 430,
         columnNumber: 17
       },
       void 0
@@ -16719,14 +16838,14 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 436,
+        lineNumber: 438,
         columnNumber: 17
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-    lineNumber: 267,
+    lineNumber: 270,
     columnNumber: 9
   }, void 0);
 };
@@ -16841,8 +16960,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
     }
   };
   const handleDragStart = (e) => {
-
-
+    console.log("🟢 DRAG STARTED - PT-051 drag initiated");
+    console.log("🟢 Drag event details:", e.type, e.currentTarget);
     setIsDragging(true);
     e.dataTransfer.effectAllowed = "copy";
     e.dataTransfer.setData("text/plain", "pt051-new");
@@ -16880,7 +16999,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
     handleDragEnd();
   };
   React.useEffect(() => {
-
+    console.log("🔍 DEBUG STATE - isDragging:", isDragging, "highlightedIndex:", highlightedIndex);
   }, [isDragging, highlightedIndex]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -16951,7 +17070,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
             draggable: true,
             onDragStart: handleDragStart,
             onDragEnd: handleDragEnd,
-            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-opacity duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
+            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-all duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
             title: "Drag and drop to insert PT-051 assessment",
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 mr-2", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z" }, void 0, false, {
@@ -17028,7 +17147,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, userProfi
             "tr",
             {
               onClick: () => handleRowClick(item),
-              className: `hover:bg-gray-700/50 transition-opacity duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
+              className: `hover:bg-gray-700/50 transition-all duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
               onDragOver: (e) => handleDragOver(e, index),
               onDragLeave: handleDragLeave,
               onDrop: (e) => handleDrop(e, index),
@@ -18994,7 +19113,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           value,
           onChange: (e) => onChange(e.target.value),
           disabled,
-          className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-opacity duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${highlight ? "ring-2 ring-red-500" : ""}`,
+          className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${highlight ? "ring-2 ring-red-500" : ""}`,
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: "Select a trainee" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
@@ -19479,9 +19598,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         isDeploy: eventType === "flight" && locationType === "Land Away" ? isDeploy : void 0,
         // Explicit Deployment Period
         deploymentStartDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentStartDate : void 0,
-        deploymentStartTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? (deploymentStartTime || "0800") : void 0,
+        deploymentStartTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentStartTime : void 0,
         deploymentEndDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentEndDate : void 0,
-        deploymentEndTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? (deploymentEndTime || "0800") : void 0,
+        deploymentEndTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentEndTime : void 0,
         deploymentAircraftCount: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentAircraftCount : void 0,
         // Save event category for LMP Currency handling
         eventCategory
@@ -20009,7 +20128,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       },
       void 0
     ),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-center justify-center", onClick: onClose, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-[924px] border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]", onClick: (e) => e.stopPropagation(), children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-center justify-center", onClick: onClose, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `py-[5px] px-2 border-b border-gray-700 flex justify-center items-center relative ${event.color} flex-shrink-0 min-h-[65px]`, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: modalTitle }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
@@ -20219,7 +20338,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-6", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
-          !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-6", children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-6", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 mb-3", children: "Event Category" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
               lineNumber: 1932,
@@ -20322,7 +20441,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             lineNumber: 1931,
             columnNumber: 40
           }, void 0),
-          !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `grid grid-cols-1 ${eventType === "flight" ? "md:grid-cols-4" : "md:grid-cols-3"} gap-4`, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `grid grid-cols-1 ${eventType === "flight" ? "md:grid-cols-4" : "md:grid-cols-3"} gap-4`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Syllabus Item" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
@@ -20435,7 +20554,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     setLocalHighlight(null);
                   },
                   disabled: isDeploy,
-                  className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-opacity duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === "startTime" ? "ring-2 ring-red-500" : ""}`,
+                  className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === "startTime" ? "ring-2 ring-red-500" : ""}`,
                   children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                     lineNumber: 2038,
@@ -20492,7 +20611,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             lineNumber: 1991,
             columnNumber: 37
           }, void 0),
-          eventType === "flight" && !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+          eventType === "flight" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Location" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
               lineNumber: 2057,
@@ -20598,7 +20717,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             lineNumber: 2070,
             columnNumber: 41
           }, void 0),
-          (isDeploy || (eventType === "flight" && locationType === "Land Away")) && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-600 rounded-lg mb-4", children: [
+          eventType === "flight" && locationType === "Land Away" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-600 rounded-lg mb-4", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Deployment Period" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
               lineNumber: 2099,
@@ -20611,8 +20730,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   lineNumber: 2102,
                   columnNumber: 57
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("datalist", { id: "deployStartOpts", children: ["0000","0030","0100","0130","0200","0230","0300","0330","0400","0430","0500","0530","0600","0630","0700","0730","0800","0830","0900","0930","1000","1030","1100","1130","1200","1230","1300","1330","1400","1430","1500","1530","1600","1630","1700","1730","1800","1830","1900","1930","2000","2030","2100","2130","2200","2230","2300","2330"].map((t) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: t }, t, false, {}, void 0)) }, void 0, true, {}, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", list: "deployStartOpts", value: deploymentStartTime || "0800", onChange: (e) => {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", value: deploymentStartTime, onChange: (e) => {
                   const value = e.target.value.replace(/:/g, "").replace(/\D/g, "").slice(0, 4);
                   setDeploymentStartTime(value);
                 }, placeholder: "0800", className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center" }, void 0, false, {
@@ -20631,7 +20749,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   lineNumber: 2110,
                   columnNumber: 57
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", value: deploymentStartDate, onChange: (e) => setDeploymentStartDate(e.target.value), style: { colorScheme: "dark", minWidth: "160px" }, className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm" }, void 0, false, {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", value: deploymentStartDate, onChange: (e) => setDeploymentStartDate(e.target.value), style: { colorScheme: "dark" }, className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                   lineNumber: 2111,
                   columnNumber: 57
@@ -20647,11 +20765,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   lineNumber: 2114,
                   columnNumber: 57
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("datalist", { id: "deployEndOpts", children: ["0000","0030","0100","0130","0200","0230","0300","0330","0400","0430","0500","0530","0600","0630","0700","0730","0800","0830","0900","0930","1000","1030","1100","1130","1200","1230","1300","1330","1400","1430","1500","1530","1600","1630","1700","1730","1800","1830","1900","1930","2000","2030","2100","2130","2200","2230","2300","2330"].map((t) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: t }, t, false, {}, void 0)) }, void 0, true, {}, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", list: "deployEndOpts", value: deploymentEndTime || "0800", onChange: (e) => {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", value: deploymentEndTime, onChange: (e) => {
                   const value = e.target.value.replace(/:/g, "").replace(/\D/g, "").slice(0, 4);
                   setDeploymentEndTime(value);
-                }, placeholder: "0800", className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center" }, void 0, false, {
+                }, placeholder: "1700", className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                   lineNumber: 2115,
                   columnNumber: 57
@@ -20667,7 +20784,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   lineNumber: 2122,
                   columnNumber: 57
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", value: deploymentEndDate, onChange: (e) => setDeploymentEndDate(e.target.value), style: { colorScheme: "dark", minWidth: "160px" }, className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm" }, void 0, false, {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", value: deploymentEndDate, onChange: (e) => setDeploymentEndDate(e.target.value), style: { colorScheme: "dark" }, className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                   lineNumber: 2123,
                   columnNumber: 57
@@ -20726,7 +20843,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             lineNumber: 2097,
             columnNumber: 41
           }, void 0),
-          !isDeploy && flightNumber === "SCT FORM" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-3 bg-gray-900/50 rounded-lg space-y-4", children: [
+          flightNumber === "SCT FORM" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-3 bg-gray-900/50 rounded-lg space-y-4", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "font-semibold text-gray-300", children: "Formation Details" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
               lineNumber: 2145,
@@ -20793,12 +20910,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             lineNumber: 2144,
             columnNumber: 41
           }, void 0),
-          !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: crew.map(renderCrewFields) }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: crew.map(renderCrewFields) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
             lineNumber: 2170,
             columnNumber: 37
           }, void 0),
-          !isDeploy && (eventType === "flight" || eventType === "ftd" || eventType === "cpt") && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-600 pt-6 mt-6", children: [
+          (eventType === "flight" || eventType === "ftd" || eventType === "cpt") && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-600 pt-6 mt-6", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-semibold text-white mb-4", children: "Add to Deployment" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
               lineNumber: 2175,
@@ -23140,9 +23257,11 @@ const formatTime$1 = (time) => {
 };
 const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
+    const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
     return events.filter(
-      (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy)
-    ).sort((a, b) => a.startTime - b.startTime);
+      (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
+      // Only show flights that haven't ended
+    ).sort((a, b) => a.startTime - b.startTime).slice(0, 5);
   }, [events]);
   const activeInstructors = instructorsData.filter((i) => !i.isPaused).length;
   const onLeaveInstructors = instructorsData.filter((i) => i.isPaused).length;
@@ -23176,13 +23295,13 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
       columnNumber: 17
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-6", children: [
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md overflow-hidden", style: { height: "530px" }, children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
           lineNumber: 64,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-0", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3 overflow-y-auto", style: { maxHeight: "460px" }, children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 space-y-3", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
@@ -23236,12 +23355,32 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
           lineNumber: 67,
           columnNumber: 25
         }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            onClick: () => onNavigate("AUTH"),
+            className: "w-full text-center px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed",
+            children: "Go to Flight Authorisation"
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
+            lineNumber: 92,
+            columnNumber: 29
+          },
+          void 0
+        ) }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
+          lineNumber: 91,
+          columnNumber: 26
+        }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
         lineNumber: 63,
         columnNumber: 21
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md overflow-hidden", style: { height: "530px" }, children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Weather (TAF)" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/SupervisorDashboard.tsx",
           lineNumber: 103,
@@ -26464,13 +26603,13 @@ const AvailabilityCard = ({
     }, void 0) : trainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
-        className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md hover:bg-gray-600/60 transition-opacity duration-200 ease-in-out group cursor-pointer",
+        className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md hover:bg-gray-600/60 transition-all duration-200 ease-in-out group cursor-pointer",
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               "div",
               {
-                className: `w-4 h-4 rounded-full transition-opacity duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
+                className: `w-4 h-4 rounded-full transition-all duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
                 style: courseColors[trainee.course] ? { backgroundColor: courseColors[trainee.course] } : {}
               },
               void 0,
@@ -32802,7 +32941,7 @@ const TrainingIntelligenceTab = () => {
   const [showThresholdPanel, setShowThresholdPanel] = reactExports.useState(false);
   const pollRef = React.useRef(null);
   reactExports.useEffect(() => {
-    fetchCourses();
+    fetchCourses2();
     fetchRecentRuns();
     fetchThresholds();
   }, []);
@@ -32829,7 +32968,7 @@ const TrainingIntelligenceTab = () => {
   reactExports.useEffect(() => {
     if (selectedCourse2) loadCourseData(selectedCourse2);
   }, [selectedCourse2]);
-  const fetchCourses = async () => {
+  const fetchCourses2 = async () => {
     try {
       const r = await fetch("/api/tie/courses");
       const data = await r.json();
@@ -32884,7 +33023,7 @@ const TrainingIntelligenceTab = () => {
             setRunProgress("");
             setIsRunning(false);
             fetchRecentRuns();
-            fetchCourses();
+            fetchCourses2();
             if (selectedCourse2) loadCourseData(selectedCourse2);
           }, 2500);
         } else if (data.status === "failed") {
@@ -32921,7 +33060,7 @@ const TrainingIntelligenceTab = () => {
           setRunProgress("");
           setIsRunning(false);
           fetchRecentRuns();
-          fetchCourses();
+          fetchCourses2();
           if (selectedCourse2) loadCourseData(selectedCourse2);
         }, 2500);
       } else {
@@ -33292,7 +33431,7 @@ const BuildIntelligenceView = (props) => {
       {
         onClick: () => setActiveTab(tab.id),
         className: `
-                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-opacity duration-200
+                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
                     ${activeTab === tab.id ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}
                   `,
         children: tab.label
@@ -37087,7 +37226,7 @@ const InstructorListView = ({
     "li",
     {
       id: `instructor-row-${instructor.name}`,
-      className: `group p-2 rounded-md transition-opacity duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
+      className: `group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? "bg-sky-700 text-white" : "bg-gray-700/30 text-gray-300"} ${isArchiveMode ? "hover:bg-red-900/70" : "hover:bg-sky-800 hover:text-white"}`,
       onMouseEnter: (e) => handleMouseEnter(e, instructor.name),
       onMouseLeave: handleMouseLeave,
       onClick: (e) => {
@@ -37552,7 +37691,7 @@ const StaffView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("profile"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Staff Profile"
         },
         void 0,
@@ -37568,7 +37707,7 @@ const StaffView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("schedule"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Staff Schedule"
         },
         void 0,
@@ -37683,7 +37822,7 @@ const TraineeView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("profile"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "profile" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Trainee Profile"
         },
         void 0,
@@ -37699,7 +37838,7 @@ const TraineeView = (props) => {
         "button",
         {
           onClick: () => setActiveTab("schedule"),
-          className: `px-5 py-2.5 text-sm font-semibold transition-opacity duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
+          className: `px-5 py-2.5 text-sm font-semibold transition-all duration-200 rounded-t-lg ${activeTab === "schedule" ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}`,
           children: "Trainee Schedule"
         },
         void 0,
@@ -57746,7 +57885,7 @@ This action cannot be undone.`;
                   columnNumber: 37
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 flex space-x-4", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-opacity duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "P" ? "bg-green-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-green-800/50 text-green-200 hover:bg-green-700/50"} ${overallResult === null ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "radio", name: "overall-result", value: "P", checked: overallResult === "P", onChange: () => setOverallResult("P"), className: "sr-only" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
                       lineNumber: 1002,
@@ -57762,7 +57901,7 @@ This action cannot be undone.`;
                     lineNumber: 997,
                     columnNumber: 41
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-opacity duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: `cursor-pointer rounded-lg p-4 w-1/2 text-center transition-all duration-200 ${overallResult === "F" || showDoubleMarginalWarning ? "bg-red-600 text-white ring-2 ring-white scale-105 shadow-lg" : "bg-red-800/50 text-red-200 hover:bg-red-700/50"} ${overallResult === null && !showDoubleMarginalWarning ? "!bg-gray-700 !text-gray-500 hover:!bg-gray-600" : ""}`, children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "radio", name: "overall-result", value: "F", checked: overallResult === "F", onChange: () => setOverallResult("F"), className: "sr-only" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PT051View.tsx",
                       lineNumber: 1010,
@@ -72967,10 +73106,10 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
     columnNumber: 9
   }, void 0);
 };
-const API_BASE = "/api";
+const API_BASE$1 = "/api";
 async function fetchAPI(endpoint, options) {
   try {
-    const url = `${API_BASE}${endpoint}`;
+    const url = `${API_BASE$1}${endpoint}`;
     console.log("🌐 API Request:", url);
     const response = await fetch(url, {
       ...options,
@@ -73049,6 +73188,26 @@ async function migratePersonnelToDatabase(personnelList) {
     return result.data;
   }
   return { success: false, error: result.error || "Migration failed" };
+}
+async function fetchCourses() {
+  const result = await fetchAPI("/courses");
+  if (result.success && result.data?.courses) {
+    return result.data.courses;
+  }
+  return [];
+}
+async function saveCourse(course) {
+  const result = await fetchAPI("/courses", {
+    method: "POST",
+    body: JSON.stringify(course)
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
+}
+async function deleteCourse(name) {
+  const result = await fetchAPI(`/courses/${encodeURIComponent(name)}`, {
+    method: "DELETE"
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
 }
 async function fetchSchedule(startDate, endDate) {
   let endpoint = "/schedule";
@@ -74319,7 +74478,7 @@ const syllabusItems = [
   createSyllabusItem("B CAT 3", "B Categorisation 3", ["Staff CAT"]),
   createSyllabusItem("B CAT 4", "B Categorisation 4", ["Staff CAT"])
 ];
-const populatePrerequisites = (syllabus) => {
+const populatePrerequisites$1 = (syllabus) => {
   return syllabus.map((item, index, arr) => {
     const hasExplicitPrereqs = item.prerequisites && item.prerequisites.length > 0 || item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
     if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
@@ -74342,198 +74501,7 @@ const populatePrerequisites = (syllabus) => {
     return { ...item, prerequisitesGround, prerequisitesFlying, prerequisites: [...prerequisitesGround, ...prerequisitesFlying] };
   });
 };
-const INITIAL_SYLLABUS_DETAILS = populatePrerequisites(syllabusItems);
-const DEFAULT_PHRASE_BANK = {
-  "Airmanship": {
-    5: [
-      "Operates the aircraft safely and effectively at all times.",
-      "Organised and deals with all situations effectively, under all workloads.",
-      "Handles non-standard situations capably with a high level of confidence.",
-      "Excellent decision making based on situational awareness and prioritised attention."
-    ],
-    4: [
-      "Operates the aircraft safely and effectively.",
-      "Handles most normal situations well.",
-      "Needs occasional help with non-standard routines but does not become confused under moderate workloads.",
-      "Very good decision making based on situational awareness and prioritised attention.",
-      "Sometimes overlooks some considerations but not to the detriment of safety."
-    ],
-    3: [
-      "Operates the aircraft safely.",
-      "Copes with normal situations.",
-      "Occasionally slow to react to new or developing situations.",
-      "Makes basic decisions and applies the basic considerations.",
-      "Adequate confidence and decision making ability."
-    ],
-    2: [
-      "Operates the aircraft safely in familiar situations.",
-      "Slow to react to new or developing situations.",
-      "Makes basic decisions in familiar situations.",
-      "Sometimes unsure in new or more advanced sequences.",
-      "Developing confidence and decision making ability."
-    ],
-    1: [
-      "Just coping with familiar situations.",
-      "Had difficulty applying normal procedures.",
-      "Often deviated from more complex or advanced routines.",
-      "Showed a lack of situational awareness.",
-      "Made basic decisions but was sometimes overwhelmed or task saturated by basic sequences.",
-      "Not confident.",
-      "Uncharacteristic major safety breach."
-    ],
-    0: [
-      "Poor.",
-      "Frequently deviated from normal procedures.",
-      "Not able to cope with familiar situations.",
-      "Demonstrated likelihood of violating aircraft and operational limits.",
-      "Frequently task-saturated by basic sequences.",
-      "Easily confused and often disorganised.",
-      "Excessively under or over confident.",
-      "Repeated safety breaches."
-    ]
-  },
-  "Preparation": {
-    5: [
-      "Always fully prepared.",
-      "An excellent understanding of sortie requirements.",
-      "Focussed and committed to continuous improvement.",
-      "Prepared technique and sequences to a very high standard.",
-      "Enthusiastic and motivated to achieve excellence."
-    ],
-    4: [
-      "Well prepared.",
-      "Researched widely to develop a sound understanding of all sortie aspects.",
-      "Focussed and committed to improvement.",
-      "Prepared technique and sequences to a high standard.",
-      "Enthusiastic and motivated."
-    ],
-    3: [
-      "Adequate understanding of the sortie objectives.",
-      "Some gaps in wider knowledge but not to the detriment of the sortie.",
-      "Made good progress."
-    ],
-    2: [
-      "Just adequate understanding of sortie requirements.",
-      "Gaps in knowledge from previous instruction, to the detriment of the sortie.",
-      "Made some progress."
-    ],
-    1: [
-      "Preparation barely adequate.",
-      "Tried to prepare but had difficulty in discerning the essential aspects of the lessons or sortie objectives.",
-      "Little evidence of desire to succeed.",
-      "Major deficiencies in knowledge from previous instruction.",
-      "Repetitive instruction was necessary to achieve the sortie aims."
-    ],
-    0: [
-      "Didn’t prepare basic sortie points.",
-      "No evidence of further research.",
-      "Ineffectual.",
-      "Did not use appropriate methods to address poor performance.",
-      "Not sufficiently conversant with basics.",
-      "Lacked drive and zeal.",
-      "No evidence of desire to succeed.",
-      "No evidence of any preparation of previously learnt sequences."
-    ]
-  },
-  "Technique": {
-    5: [
-      "Smooth, positive and coordinated.",
-      "Accurately trimmed.",
-      "Correct technique used at all times.",
-      "Errors and minor lapses rarely encountered, but rectified promptly.",
-      "Very good level of accuracy, no prompts necessary.",
-      "Always prioritised work cycles."
-    ],
-    4: [
-      "Positive and coordinated.",
-      "Technique applied correctly and to a very high standard.",
-      "Errors recognised and corrected promptly.",
-      "Strived for good accuracy.",
-      "Consistent use of attitudes to correct.",
-      "Good work cycles."
-    ],
-    3: [
-      "Usually positive and coordinated.",
-      "Applied the basics in a smooth coordinated manner.",
-      "Minor lapses detracted from the overall finesse.",
-      "Errors recognised and corrected.",
-      "Acceptable accuracy with only minor prompts.",
-      "Usually employed attitudes to correct.",
-      "Effective cycles."
-    ],
-    2: [
-      "Normally applied the basic techniques.",
-      "Sometimes abrupt and slow but usually coordinated.",
-      "Errors corrected appropriately.",
-      "Acceptable accuracy but some prompting still required.",
-      "Generally employed attitudes to correct.",
-      "Developing work cycles."
-    ],
-    1: [
-      "Had difficulty applying the basic techniques.",
-      "Responded to instruction, however poor retention.",
-      "Slow to act when errors occur.",
-      "Developing accuracy but frequent prompting required.",
-      "Sometimes weak attitude skills.",
-      "Sometimes work cycles were organised."
-    ],
-    0: [
-      "Uncoordinated, abrupt and slow.",
-      "Seldom trimmed.",
-      "Frequently employed incorrect technique.",
-      "Unable to recognise errors.",
-      "Unacceptable accuracy despite frequent prompts.",
-      "Very weak attitude skills, lapses to performance flying.",
-      "Disorganised work cycles.",
-      "Could not reproduce previously learnt airborne sequences."
-    ]
-  },
-  "Generic Flying Elements": {
-    5: [
-      "Smooth, positive and well-coordinated throughout.",
-      "Demonstrates strong situational awareness.",
-      "Maintains effective work cycles and prioritises tasks effectively.",
-      "Applies technique with confidence and precision, requiring no prompts.",
-      "Easily adapts to changing conditions and workload.",
-      "Shows consistently good scan technique and accurate control inputs."
-    ],
-    4: [
-      "Positive control and well-applied basic technique.",
-      "Good accuracy with only occasional minor lapses.",
-      "Demonstrates effective scan and work cycles most of the time.",
-      "Recognises and corrects errors promptly.",
-      "Manages workload well and maintains situational awareness."
-    ],
-    3: [
-      "Generally smooth and coordinated with acceptable technique.",
-      "Minor lapses evident but do not affect overall safety.",
-      "Adequate scan technique with some prompting required.",
-      "Responds appropriately to instruction and corrects most errors.",
-      "Maintains situational awareness in familiar situations."
-    ],
-    2: [
-      "Basic technique applied but inconsistently.",
-      "Sometimes abrupt or slow to act, requiring moderate prompting.",
-      "Scan technique developing; occasionally fixates.",
-      "Work cycles are present but not always effective.",
-      "Situational awareness varies, especially under higher workload."
-    ],
-    1: [
-      "Difficulty applying basic technique without frequent assistance.",
-      "Ineffective work cycles; task saturation common.",
-      "Slow recognition of errors; corrections often delayed.",
-      "Poor scan discipline with frequent lapses.",
-      "Limited situational awareness; struggles beyond familiar patterns."
-    ],
-    0: [
-      "Uncoordinated and lacking basic control technique.",
-      "Unable to maintain situational awareness even in simple tasks.",
-      "Frequent errors with little or no self-correction.",
-      "Work cycles disorganised or absent.",
-      "Easily overwhelmed; demonstrates unsafe or inconsistent behaviour."
-    ]
-  }
-};
+const INITIAL_SYLLABUS_DETAILS = populatePrerequisites$1(syllabusItems);
 const firstNames = ["Olivia", "Emma", "Amelia", "Ava", "Sophia", "Isabella", "Mia", "Charlotte", "Luna", "Harper", "Liam", "Noah", "Oliver", "Elijah", "James", "William", "Henry", "Lucas", "Benjamin", "Theodore", "Emily", "Michael", "Jessica", "David", "Sarah", "Chris", "Daniel", "Matthew", "Ashley", "Jennifer", "Robert", "John", "Linda", "Barbara", "Susan", "Mary", "Patricia", "Richard", "Joseph", "Thomas", "Charles", "Steven", "Paul", "Mark"];
 const lastNames = ["Smith", "Jones", "Williams", "Brown", "Taylor", "Davies", "Evans", "Thomas", "Roberts", "Johnson", "Walker", "Robinson", "Thompson", "White", "Green", "Harris", "Clark", "Lewis", "Hall", "Baker", "Martin", "Jackson", "Wood", "Turner", "Hill", "Moore", "Scott", "Cooper", "King", "Wright", "Lee", "Mitchell", "Anderson", "Carter", "Parker", "Edwards", "Stewart", "Morris"];
 const usedNames = /* @__PURE__ */ new Set();
@@ -74892,7 +74860,7 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
   const newEvents = [];
   const personnelSchedule = {};
   const areas = ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"];
-  const courseColors = Object.fromEntries(courses.map((c) => [c.name, (c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : c.color]));
+  const courseColors = Object.fromEntries(courses.map((c) => [c.name, c.color]));
   const isAvailable = (personName, startTime, duration) => {
     if (!personnelSchedule[personName]) {
       return true;
@@ -75048,17 +75016,17 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
   return events;
 };
 const eslCourses = [
-  { name: "ADF301", color: "#1E6B9E"      , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
-  { name: "ADF302", color: "#6B3FA0"         , startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
-  { name: "ADF303", color: "#4A6218"         , startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
-  { name: "FIC 210", color: "#9D2B6B"        , startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#0E7A6E"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
+  { name: "ADF302", color: "bg-purple-400/50", startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
+  { name: "ADF303", color: "bg-yellow-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
+  { name: "FIC 210", color: "bg-pink-400/50", startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const peaCourses = [
-  { name: "ADF304", color: "#0E7A6E"        , startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
-  { name: "ADF305", color: "#3D4CB5"          , startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
-  { name: "IFF 6", color: "#0A7A94"        , startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "#0E7A6E"          , startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF304", color: "bg-teal-400/50", startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
+  { name: "ADF305", color: "bg-indigo-400/50", startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
+  { name: "IFF 6", color: "bg-cyan-400/50", startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const generateDataSet = (location) => {
   const isESL = location === "ESL";
@@ -75091,7 +75059,7 @@ const generateDataSet = (location) => {
   const coursePercentages = /* @__PURE__ */ new Map();
   const archivedCourses = {};
   courses.forEach((c, idx) => {
-    courseColors[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : c.color;
+    courseColors[c.name] = c.color;
     coursePriorities.push(c.name);
     coursePercentages.set(c.name, Math.floor(100 / courses.length));
   });
@@ -76983,7 +76951,7 @@ const AppearanceSettings = () => {
           "button",
           {
             onClick: () => setTheme(opt.value),
-            className: `relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-opacity duration-200 cursor-pointer
+            className: `relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
                                     ${isSelected ? "border-sky-500 bg-sky-500/10" : "border-gray-700 bg-gray-800 hover:border-gray-500 hover:bg-gray-700/60"}`,
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -78382,7 +78350,7 @@ const SettingsViewWithMenu = (props) => {
             "button",
             {
               onClick: () => setActiveSection(section),
-              className: `group relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5 bg-gradient-to-br ${gradFrom} ${gradTo} border ${borderC} rounded-xl sm:rounded-2xl hover:scale-[1.04] hover:shadow-xl hover:shadow-black/40 active:scale-95 transition-opacity duration-200 cursor-pointer min-h-[90px] sm:min-h-[110px] lg:min-h-[130px]`,
+              className: `group relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5 bg-gradient-to-br ${gradFrom} ${gradTo} border ${borderC} rounded-xl sm:rounded-2xl hover:scale-[1.04] hover:shadow-xl hover:shadow-black/40 active:scale-95 transition-all duration-200 cursor-pointer min-h-[90px] sm:min-h-[110px] lg:min-h-[130px]`,
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${textC} w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 flex-shrink-0 group-hover:scale-110 transition-transform duration-200`, children: sectionIcons[section] }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/SettingsViewWithMenu.tsx",
@@ -78745,44 +78713,12 @@ const SettingsViewWithMenu = (props) => {
     columnNumber: 9
   }, void 0);
 };
-const AuthorisationView = ({ instructorsData, traineesData, date, events, onOpenAuth }) => {
-  reactExports.useEffect(() => {
-    const nowInHours = (new Date()).getHours() + (new Date()).getMinutes() / 60;
-    const flightsNeedingAuth = events.filter(
-      (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
-    ).sort((a, b) => a.startTime - b.startTime);
-    
-    if (flightsNeedingAuth.length > 0) {
-      // Open auth flyout for the first flight
-      onOpenAuth(flightsNeedingAuth[0]);
-    }
-  }, [events, date, onOpenAuth]);
-  
-  return jsxDevRuntimeExports.jsxDEV(
-    "div",
-    { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto items-center justify-center", children: [
-      jsxDevRuntimeExports.jsxDEV(
-        "div",
-        { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4" },
-        void 0,
-        false,
-        { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 15, columnNumber: 7 },
-        void 0
-      ),
-      jsxDevRuntimeExports.jsxDEV(
-        "p",
-        { className: "text-gray-400", children: "Opening Flight Authorisation..." },
-        void 0,
-        false,
-        { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 16, columnNumber: 7 },
-        void 0
-      )
-    ] },
-    void 0,
-    true,
-    { fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx", lineNumber: 14, columnNumber: 5 },
-    void 0
-  );
+const AuthorisationView = () => {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Authorisation View Component" }, void 0, false, {
+    fileName: "/workspace/DFP-NEO-V2-fresh/components/AuthorisationView.tsx",
+    lineNumber: 4,
+    columnNumber: 10
+  }, void 0);
 };
 const LocalityChangeFlyout = ({ locality }) => {
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in pointer-events-none", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl border border-sky-500 p-12 max-w-2xl text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center space-y-4", children: [
@@ -81494,7 +81430,7 @@ const CourseDataWindow = ({
     };
   }, [courseName, allTrainees, scores, traineeLMPs, gradDate]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColor && courseColor.startsWith("#") ? "" : (courseColor || "")}`, style: courseColor && courseColor.startsWith("#") ? { backgroundColor: courseColor } : {}, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColor}`, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
         lineNumber: 135,
@@ -81681,8 +81617,8 @@ const CourseDataWindow = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-gray-700 rounded-full h-1.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "div",
         {
-          className: `${courseColor && courseColor.startsWith("#") ? "" : (courseColor || "")} h-1.5 rounded-full`,
-          style: { width: `${percentage}%`, ...(courseColor && courseColor.startsWith("#") ? { backgroundColor: courseColor } : {}) }
+          className: `${courseColor} h-1.5 rounded-full`,
+          style: { width: `${percentage}%` }
         },
         void 0,
         false,
@@ -81864,7 +81800,7 @@ const FullPageProgressGraph = ({
         (item) => (item.type === "Flight" || item.type === "FTD") && !item.isRemedial
       );
       const totalEvents = flightAndFtdEvents.length;
-      /* skip removed: show graph even with 0 events */
+      if (totalEvents === 0) continue;
       const startDate = /* @__PURE__ */ new Date(course.startDate + "T00:00:00Z");
       const endDate = /* @__PURE__ */ new Date(course.gradDate + "T00:00:00Z");
       let firstEventDate = null;
@@ -81932,7 +81868,7 @@ const FullPageProgressGraph = ({
       console.log(`  - Course Start: ${startDate.toLocaleDateString()}`);
       console.log(`  - Course Grad: ${endDate.toLocaleDateString()}`);
       console.log(`  - Total Events: ${totalEvents}`);
-      console.log(`  - First Event Date: ${firstEventDate?.toLocaleDateString()}`);
+      console.log(`  - First Event Date: ${firstEventDate?.toLocaleDateString() || "No events yet"}`);
       console.log(`  - Weekly Progress Points: ${weeklyProgress.length}`);
       if (weeklyProgress.length > 0) {
         console.log(`  - Sample Week 1:`, weeklyProgress[0]);
@@ -81965,25 +81901,25 @@ const FullPageProgressGraph = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 184,
+            lineNumber: 182,
             columnNumber: 21
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h1", { className: "text-2xl font-bold text-white", children: "Course Progress Graphs" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 190,
+          lineNumber: 188,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 183,
+        lineNumber: 181,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "text-gray-300 text-sm font-semibold", children: "Filter:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 195,
+          lineNumber: 193,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -81995,12 +81931,12 @@ const FullPageProgressGraph = ({
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "All Courses" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 201,
+                lineNumber: 199,
                 columnNumber: 25
               }, void 0),
               courseGraphData.map((data) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: data.course.name, children: data.course.name }, data.course.name, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 203,
+                lineNumber: 201,
                 columnNumber: 29
               }, void 0))
             ]
@@ -82009,19 +81945,19 @@ const FullPageProgressGraph = ({
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 196,
+            lineNumber: 194,
             columnNumber: 21
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 194,
+        lineNumber: 192,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 182,
+      lineNumber: 180,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -82037,22 +81973,22 @@ const FullPageProgressGraph = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 215,
+        lineNumber: 213,
         columnNumber: 25
       },
       void 0
     )) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 213,
+      lineNumber: 211,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 212,
+      lineNumber: 210,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-    lineNumber: 180,
+    lineNumber: 178,
     columnNumber: 9
   }, void 0);
 };
@@ -82081,7 +82017,6 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
     return Math.max(PADDING.left, Math.min(PADDING.left + CHART_WIDTH, x));
   };
   const eventsToY = (count) => {
-    if (!totalEvents || totalEvents === 0) return PADDING.top + CHART_HEIGHT;
     return PADDING.top + CHART_HEIGHT - count / totalEvents * CHART_HEIGHT;
   };
   const referenceLines = reactExports.useMemo(() => {
@@ -82149,7 +82084,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `mb-4 p-3 rounded-lg ${color}`, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-white text-center", children: course.name }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 365,
+        lineNumber: 363,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-sm text-white/80 mt-2", children: [
@@ -82158,7 +82093,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           startDate.toLocaleDateString("en-GB")
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 367,
+          lineNumber: 365,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -82166,7 +82101,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           totalEvents
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 368,
+          lineNumber: 366,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -82174,125 +82109,125 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           endDate.toLocaleDateString("en-GB")
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 369,
+          lineNumber: 367,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 366,
+        lineNumber: 364,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 364,
+      lineNumber: 362,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-lg p-3 mb-4", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Events Per Week Required:" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 375,
+        lineNumber: 373,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex space-x-6", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3 h-3 bg-green-500 rounded-full mr-2" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 378,
+            lineNumber: 376,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
             "Front Runner: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-green-400", children: frontRunnerStats.eventsPerWeek.toFixed(1) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 379,
+              lineNumber: 377,
               columnNumber: 79
             }, void 0),
             "/wk"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 379,
+            lineNumber: 377,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 377,
+          lineNumber: 375,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3 h-3 bg-blue-500 rounded-full mr-2" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 382,
+            lineNumber: 380,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
             "Course Average: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-blue-400", children: courseAverageStats.eventsPerWeek.toFixed(1) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 383,
+              lineNumber: 381,
               columnNumber: 81
             }, void 0),
             "/wk"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 383,
+            lineNumber: 381,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 381,
+          lineNumber: 379,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3 h-3 bg-red-500 rounded-full mr-2" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 386,
+            lineNumber: 384,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
             "Back Marker: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-red-400", children: backMarkerStats.eventsPerWeek.toFixed(1) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 387,
+              lineNumber: 385,
               columnNumber: 78
             }, void 0),
             "/wk"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 387,
+            lineNumber: 385,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 385,
+          lineNumber: 383,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 376,
+        lineNumber: 374,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 374,
+      lineNumber: 372,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { viewBox: `0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`, className: "w-full h-auto", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("defs", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("pattern", { id: `grid-${course.name}`, width: "40", height: "40", patternUnits: "userSpaceOnUse", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M 40 0 L 0 0 0 40", fill: "none", stroke: "#374151", strokeWidth: "0.5" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 396,
+        lineNumber: 394,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 395,
+        lineNumber: 393,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 394,
+        lineNumber: 392,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("rect", { x: PADDING.left, y: PADDING.top, width: CHART_WIDTH, height: CHART_HEIGHT, fill: `url(#grid-${course.name})` }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 399,
+        lineNumber: 397,
         columnNumber: 17
       }, void 0),
       yAxisTicks.map((tick) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("g", { children: [
@@ -82310,7 +82245,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 404,
+            lineNumber: 402,
             columnNumber: 25
           },
           void 0
@@ -82329,14 +82264,14 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 412,
+            lineNumber: 410,
             columnNumber: 25
           },
           void 0
         )
       ] }, `y-${tick.value}`, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 403,
+        lineNumber: 401,
         columnNumber: 21
       }, void 0)),
       xAxisTicks.map((tick) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("g", { children: [
@@ -82354,7 +82289,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 427,
+            lineNumber: 425,
             columnNumber: 25
           },
           void 0
@@ -82373,14 +82308,14 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 435,
+            lineNumber: 433,
             columnNumber: 25
           },
           void 0
         )
       ] }, `x-${tick.x}`, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 426,
+        lineNumber: 424,
         columnNumber: 21
       }, void 0)),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -82389,13 +82324,13 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           d: `M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`,
           fill: "none",
           stroke: "#6b7280",
-          strokeWidth: "2"
+          strokeWidth: "1"
         },
         void 0,
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 448,
+          lineNumber: 446,
           columnNumber: 17
         },
         void 0
@@ -82416,7 +82351,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 456,
+          lineNumber: 454,
           columnNumber: 17
         },
         void 0
@@ -82436,7 +82371,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 467,
+          lineNumber: 465,
           columnNumber: 17
         },
         void 0
@@ -82449,14 +82384,14 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           x2: line.x2,
           y2: line.y2,
           stroke: line.color,
-          strokeWidth: "2",
+          strokeWidth: "0.25",
           strokeDasharray: line.dash
         },
         `ref-${i}`,
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 480,
+          lineNumber: 478,
           columnNumber: 21
         },
         void 0
@@ -82467,13 +82402,13 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           d: averagePath,
           fill: "none",
           stroke: "#60a5fa",
-          strokeWidth: "2.5"
+          strokeWidth: "1.25"
         },
         void 0,
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 494,
+          lineNumber: 492,
           columnNumber: 21
         },
         void 0
@@ -82492,13 +82427,13 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             {
               cx: x,
               cy: yHigh,
-              r: "2.5",
+              r: "1.25",
               fill: "#4ade80",
               stroke: "#1f2937",
-              strokeWidth: "1",
+              strokeWidth: "0.5",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("title", { children: `Week ${i + 1}: Highest - ${wp.highest} events (${wp.highestTrainee})` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 525,
+                lineNumber: 523,
                 columnNumber: 33
               }, void 0)
             },
@@ -82506,7 +82441,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 517,
+              lineNumber: 515,
               columnNumber: 29
             },
             void 0
@@ -82516,13 +82451,13 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             {
               cx: x,
               cy: yLow,
-              r: "2.5",
+              r: "1.25",
               fill: "#f87171",
               stroke: "#1f2937",
-              strokeWidth: "1",
+              strokeWidth: "0.5",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("title", { children: `Week ${i + 1}: Lowest - ${wp.lowest} events (${wp.lowestTrainee})` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 537,
+                lineNumber: 535,
                 columnNumber: 33
               }, void 0)
             },
@@ -82530,7 +82465,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 529,
+              lineNumber: 527,
               columnNumber: 29
             },
             void 0
@@ -82540,13 +82475,13 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             {
               cx: x,
               cy: yAvg,
-              r: "2",
+              r: "1",
               fill: "#60a5fa",
               stroke: "#1f2937",
-              strokeWidth: "1",
+              strokeWidth: "0.5",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("title", { children: `Week ${i + 1}: Average - ${wp.average.toFixed(1)} events` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 549,
+                lineNumber: 547,
                 columnNumber: 33
               }, void 0)
             },
@@ -82554,101 +82489,101 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 541,
+              lineNumber: 539,
               columnNumber: 29
             },
             void 0
           )
         ] }, `week-${i}`, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 515,
+          lineNumber: 513,
           columnNumber: 25
         }, void 0);
       }),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("g", { transform: `translate(${PADDING.left + 15}, ${PADDING.top - 30})`, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "0", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Reference Lines:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 557,
+          lineNumber: 555,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "100", y1: "-3", x2: "120", y2: "-3", stroke: "#f87171", strokeWidth: "2", strokeDasharray: "8 4" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 559,
+          lineNumber: 557,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "125", y: "0", fontSize: "9", fill: "#9ca3af", children: "3.5/wk" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 560,
+          lineNumber: 558,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "170", y1: "-3", x2: "190", y2: "-3", stroke: "#fbbf24", strokeWidth: "2" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 562,
+          lineNumber: 560,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "195", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.0/wk" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 563,
+          lineNumber: 561,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "240", y1: "-3", x2: "260", y2: "-3", stroke: "#4ade80", strokeWidth: "2", strokeDasharray: "8 4" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 565,
+          lineNumber: 563,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "265", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.5/wk" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 566,
+          lineNumber: 564,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "320", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Progress:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 568,
+          lineNumber: 566,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { cx: "380", cy: "-3", r: "3", fill: "#4ade80", stroke: "#1f2937", strokeWidth: "1.5" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 570,
+          lineNumber: 568,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "385", y: "0", fontSize: "9", fill: "#9ca3af", children: "Highest" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 571,
+          lineNumber: 569,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { cx: "430", cy: "-3", r: "3", fill: "#f87171", stroke: "#1f2937", strokeWidth: "1.5" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 573,
+          lineNumber: 571,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "435", y: "0", fontSize: "9", fill: "#9ca3af", children: "Lowest" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 574,
+          lineNumber: 572,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "480", y1: "-3", x2: "495", y2: "-3", stroke: "#60a5fa", strokeWidth: "2.5" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 576,
+          lineNumber: 574,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "500", y: "0", fontSize: "9", fill: "#9ca3af", children: "Average" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 577,
+          lineNumber: 575,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 556,
+        lineNumber: 554,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 392,
+      lineNumber: 390,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-    lineNumber: 363,
+    lineNumber: 361,
     columnNumber: 9
   }, void 0);
 };
@@ -82939,8 +82874,7 @@ const CoursesManagementView = ({
   onDeleteCourse,
   onNavigateToCourseRoster,
   onNavigateToArchivedCourses,
-  onUpdateCourseDates,
-  traineesData
+  onUpdateCourseDates
 }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   useSystemFreeze();
@@ -82981,8 +82915,6 @@ const CoursesManagementView = ({
     Object.keys(groups).forEach((key) => {
       if (groups[key].length === 0) {
         delete groups[key];
-      } else {
-        groups[key].sort((a, b) => a.name.localeCompare(b.name));
       }
     });
     return groups;
@@ -83037,11 +82969,7 @@ const CoursesManagementView = ({
     setCourseToDelete(null);
   };
   const CourseCard = ({ course }) => {
-    const courseTrainees = traineesData ? traineesData.filter((t) => t.course === course.name) : [];
-    const totalStudents = traineesData ? courseTrainees.length : course.raafStart + course.navyStart + course.armyStart;
-    const raafCount = traineesData ? courseTrainees.filter((t) => t.service === "RAAF").length : course.raafStart;
-    const navyCount = traineesData ? courseTrainees.filter((t) => t.service === "RAN").length : course.navyStart;
-    const armyCount = traineesData ? courseTrainees.filter((t) => t.service === "ARA").length : course.armyStart;
+    const totalStudents = course.raafStart + course.navyStart + course.armyStart;
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
       {
@@ -83050,19 +82978,19 @@ const CoursesManagementView = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-start mb-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-4 h-4 rounded " + (courseColors[course.name] && courseColors[course.name].startsWith("#") ? "" : (courseColors[course.name] || "bg-gray-400/50")), style: courseColors[course.name] && courseColors[course.name].startsWith("#") ? { backgroundColor: courseColors[course.name] } : {} }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${courseColors[course.name] || "bg-gray-400/50"}` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 142,
+                lineNumber: 151,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 143,
+                lineNumber: 152,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 141,
+              lineNumber: 150,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-2", children: [
@@ -83077,11 +83005,11 @@ const CoursesManagementView = ({
                   title: "Edit Course Dates",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 157,
+                    lineNumber: 166,
                     columnNumber: 33
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 156,
+                    lineNumber: 165,
                     columnNumber: 29
                   }, void 0)
                 },
@@ -83089,7 +83017,7 @@ const CoursesManagementView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                  lineNumber: 148,
+                  lineNumber: 157,
                   columnNumber: 25
                 },
                 void 0
@@ -83105,11 +83033,11 @@ const CoursesManagementView = ({
                   title: "Delete Course",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 169,
+                    lineNumber: 178,
                     columnNumber: 33
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 168,
+                    lineNumber: 177,
                     columnNumber: 29
                   }, void 0)
                 },
@@ -83117,103 +83045,103 @@ const CoursesManagementView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                  lineNumber: 160,
+                  lineNumber: 169,
                   columnNumber: 25
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 147,
+              lineNumber: 156,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 140,
+            lineNumber: 149,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2 text-sm text-gray-300", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Start Date:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 177,
+                lineNumber: 186,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: new Date(course.startDate).toLocaleDateString() }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 178,
+                lineNumber: 187,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 176,
+              lineNumber: 185,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Grad Date:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 181,
-                columnNumber: 25
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: new Date(course.gradDate).toLocaleDateString() }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 182,
-                columnNumber: 25
-              }, void 0)
-            ] }, void 0, true, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 180,
-              columnNumber: 21
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Total Students:" }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 185,
-                columnNumber: 25
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: totalStudents }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 186,
-                columnNumber: 25
-              }, void 0)
-            ] }, void 0, true, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 184,
-              columnNumber: 21
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
-                "RAAF: ",
-                raafCount
-              ] }, void 0, true, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 189,
-                columnNumber: 25
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
-                "Navy: ",
-                navyCount
-              ] }, void 0, true, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
                 lineNumber: 190,
                 columnNumber: 25
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
-                "Army: ",
-                armyCount
-              ] }, void 0, true, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: new Date(course.gradDate).toLocaleDateString() }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
                 lineNumber: 191,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 188,
+              lineNumber: 189,
+              columnNumber: 21
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Total Students:" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+                lineNumber: 194,
+                columnNumber: 25
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: totalStudents }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+                lineNumber: 195,
+                columnNumber: 25
+              }, void 0)
+            ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+              lineNumber: 193,
+              columnNumber: 21
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
+                "RAAF: ",
+                course.raafStart
+              ] }, void 0, true, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+                lineNumber: 198,
+                columnNumber: 25
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
+                "Navy: ",
+                course.navyStart
+              ] }, void 0, true, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+                lineNumber: 199,
+                columnNumber: 25
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
+                "Army: ",
+                course.armyStart
+              ] }, void 0, true, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+                lineNumber: 200,
+                columnNumber: 25
+              }, void 0)
+            ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+              lineNumber: 197,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 175,
+            lineNumber: 184,
             columnNumber: 17
           }, void 0)
         ]
@@ -83222,7 +83150,7 @@ const CoursesManagementView = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 136,
+        lineNumber: 145,
         columnNumber: 13
       },
       void 0
@@ -83233,17 +83161,17 @@ const CoursesManagementView = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-white", children: "Courses Management" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 204,
+          lineNumber: 213,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: "Manage active and archived courses" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 205,
+          lineNumber: 214,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 203,
+        lineNumber: 212,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-[1px]", children: [
@@ -83256,13 +83184,13 @@ const CoursesManagementView = ({
               "Archived",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 212,
+                lineNumber: 221,
                 columnNumber: 81
               }, void 0),
               "Courses"
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 212,
+              lineNumber: 221,
               columnNumber: 29
             }, void 0)
           },
@@ -83270,7 +83198,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 208,
+            lineNumber: 217,
             columnNumber: 25
           },
           void 0
@@ -83284,13 +83212,13 @@ const CoursesManagementView = ({
               "+ Add",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 218,
+                lineNumber: 227,
                 columnNumber: 105
               }, void 0),
               "Course"
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 218,
+              lineNumber: 227,
               columnNumber: 29
             }, void 0)
           },
@@ -83298,29 +83226,29 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 214,
+            lineNumber: 223,
             columnNumber: 25
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 207,
+        lineNumber: 216,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 202,
+      lineNumber: 211,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 201,
+      lineNumber: 210,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 p-6 overflow-y-auto", children: Object.keys(groupedCourses).length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-8 text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-lg mb-4", children: "No courses available" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 228,
+        lineNumber: 237,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83334,20 +83262,20 @@ const CoursesManagementView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 229,
+          lineNumber: 238,
           columnNumber: 25
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 227,
+      lineNumber: 236,
       columnNumber: 21
     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-8", children: Object.entries(groupedCourses).map(([type, coursesInGroup]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-white mb-4 flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: type }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 241,
+          lineNumber: 250,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-400", children: [
@@ -83356,34 +83284,34 @@ const CoursesManagementView = ({
           ")"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 242,
+          lineNumber: 251,
           columnNumber: 37
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 240,
+        lineNumber: 249,
         columnNumber: 33
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: coursesInGroup.map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CourseCard, { course }, course.name, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 246,
+        lineNumber: 255,
         columnNumber: 41
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 244,
+        lineNumber: 253,
         columnNumber: 33
       }, void 0)
     ] }, type, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 239,
+      lineNumber: 248,
       columnNumber: 29
     }, void 0)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 237,
+      lineNumber: 246,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 225,
+      lineNumber: 234,
       columnNumber: 13
     }, void 0),
     showAddCourseFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83400,7 +83328,7 @@ const CoursesManagementView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 257,
+        lineNumber: 266,
         columnNumber: 17
       },
       void 0
@@ -83421,7 +83349,7 @@ const CoursesManagementView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 269,
+        lineNumber: 278,
         columnNumber: 17
       },
       void 0
@@ -83429,19 +83357,19 @@ const CoursesManagementView = ({
     showPinDialog && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-white mb-4", children: "Enter PIN to Delete Course" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 285,
+        lineNumber: 294,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
         "You are about to delete ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 287,
+          lineNumber: 296,
           columnNumber: 53
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 286,
+        lineNumber: 295,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83459,7 +83387,7 @@ const CoursesManagementView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 289,
+          lineNumber: 298,
           columnNumber: 25
         },
         void 0
@@ -83476,7 +83404,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 299,
+            lineNumber: 308,
             columnNumber: 29
           },
           void 0
@@ -83492,39 +83420,140 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 305,
+            lineNumber: 314,
             columnNumber: 29
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 298,
+        lineNumber: 307,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 284,
+      lineNumber: 293,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 283,
+      lineNumber: 292,
+      columnNumber: 17
+    }, void 0),
+    showChoiceDialog && courseToDelete && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-yellow-600/50", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-yellow-400 mb-2", children: "Archive or Delete Course?" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+        lineNumber: 329,
+        columnNumber: 25
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-6", children: [
+        "What would you like to do with ",
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+          lineNumber: 331,
+          columnNumber: 60
+        }, void 0),
+        "?"
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+        lineNumber: 330,
+        columnNumber: 25
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm text-gray-400 mb-6 space-y-2", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 font-medium", children: "Archive" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+            lineNumber: 334,
+            columnNumber: 32
+          }, void 0),
+          " — hides the course but keeps all data. Can be restored later."
+        ] }, void 0, true, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+          lineNumber: 334,
+          columnNumber: 29
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400 font-medium", children: "Delete" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+            lineNumber: 335,
+            columnNumber: 32
+          }, void 0),
+          " — permanently removes the course. This cannot be undone."
+        ] }, void 0, true, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+          lineNumber: 335,
+          columnNumber: 29
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+        lineNumber: 333,
+        columnNumber: 25
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-3 justify-end", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            onClick: handleCancelChoice,
+            className: "px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors",
+            children: "Cancel"
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+            lineNumber: 338,
+            columnNumber: 29
+          },
+          void 0
+        ),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            onClick: handleArchiveCourse,
+            className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors",
+            children: "Archive"
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+            lineNumber: 344,
+            columnNumber: 29
+          },
+          void 0
+        ),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+          "button",
+          {
+            onClick: handleDeleteCoursePermanently,
+            className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors",
+            children: "Delete"
+          },
+          void 0,
+          false,
+          {
+            fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+            lineNumber: 350,
+            columnNumber: 29
+          },
+          void 0
+        )
+      ] }, void 0, true, {
+        fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+        lineNumber: 337,
+        columnNumber: 25
+      }, void 0)
+    ] }, void 0, true, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+      lineNumber: 328,
+      columnNumber: 21
+    }, void 0) }, void 0, false, {
+      fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+      lineNumber: 327,
       columnNumber: 17
     }, void 0)
-  ,showChoiceDialog && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-white mb-4", children: "What would you like to do?" }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 315, columnNumber: 25 }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-6", children: ["Choose an action for course ", /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 316, columnNumber: 53 }, void 0)] }, void 0, true, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 316, columnNumber: 25 }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-3", children: [
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-3 justify-end", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelChoice, className: "px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors", children: "Cancel" }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 320, columnNumber: 29 }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleArchiveCourse, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors", children: "Archive Course" }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 321, columnNumber: 29 }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleDeleteCoursePermanently, className: "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors", children: "Delete Permanently" }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 322, columnNumber: 29 }, void 0)
-      ] }, void 0, true, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 319, columnNumber: 25 }, void 0)
-    ] }, void 0, true, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 318, columnNumber: 21 }, void 0)
-  ] }, void 0, true, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 314, columnNumber: 21 }, void 0) }, void 0, false, { fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx", lineNumber: 313, columnNumber: 17 }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-    lineNumber: 199,
+    lineNumber: 208,
     columnNumber: 9
   }, void 0);
 };
@@ -86280,8 +86309,7 @@ const TrainingRecordsView = ({
           onDeleteCourse,
           onNavigateToCourseRoster,
           onNavigateToArchivedCourses,
-          onUpdateCourseDates,
-          traineesData
+          onUpdateCourseDates
         },
         void 0,
         false,
@@ -86395,7 +86423,7 @@ const ArchivedCoursesView = ({
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-lg p-4 border border-gray-600", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-start mb-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${color && color.startsWith("#") ? "" : (color || "")}`, style: color && color.startsWith("#") ? { backgroundColor: color } : {} }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${color}` }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
             lineNumber: 95,
             columnNumber: 25
@@ -89286,11 +89314,6 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   const dbInstructorNames = /* @__PURE__ */ new Set();
   const dbByIdNumber = /* @__PURE__ */ new Map();
   dbInstructors.forEach((instructor) => {
-    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
-      const mockMatch = mockByName.get(instructor.name);
-      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
-      console.log(`  ✅ Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
-    }
     const mapKey = instructor.idNumber != null ? instructor.idNumber : instructor.id || instructor.name;
     if (dbInstructorMap.has(mapKey)) {
       console.log(`  ⚠️ DUPLICATE KEY: ${mapKey} - ${instructor.name} overwrites ${dbInstructorMap.get(mapKey).name}`);
@@ -89305,7 +89328,7 @@ function mergeInstructorData(dbInstructors, mockInstructors, includeMockData) {
   const merged = Array.from(dbInstructorMap.values());
   let skippedByIdNumber = 0;
   let skippedByName = 0;
-  {
+  if (includeMockData) {
     mockInstructors.forEach((instructor) => {
       if (instructor.idNumber != null && dbByIdNumber.has(instructor.idNumber)) {
         skippedByIdNumber++;
@@ -89417,8 +89440,9 @@ async function initializeData() {
       console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
     });
     const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-    instructors = mergeInstructorData(instructors, allMockInstructors, true);
-    console.log("🔄 Loaded all staff (DB + mock) with _dataSource tags for UI filtering");
+    const includeStaffMockData = dataSourceSettings2.staff !== false;
+    instructors = mergeInstructorData(instructors, allMockInstructors, includeStaffMockData);
+    console.log("🔄 Loaded staff - DB always included, mock data:", includeStaffMockData ? "ENABLED" : "DISABLED");
     console.log("👨‍🎓 Fetching trainees from API...");
     trainees = await fetchTrainees();
     console.log("✅ Trainee DB loaded:", trainees.length);
@@ -89447,6 +89471,9 @@ async function initializeData() {
     console.log("📅 Fetching schedule from API...");
     events = await fetchSchedule();
     console.log("✅ Schedule loaded:", events.length);
+    console.log("🎓 Fetching courses from API...");
+    const courses = await fetchCourses();
+    console.log("✅ Courses loaded:", courses.length);
     if (instructors.length === 0) {
       console.log("⚠️ No instructors from API, falling back to mock data");
       instructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors].map((i) => ({ ...i, _dataSource: "mockdata" }));
@@ -89464,53 +89491,333 @@ async function initializeData() {
       trainees: trainees.length,
       aircraft: aircraft.length,
       scores: Object.keys(scores).length,
-      events: events.length
+      events: events.length,
+      courses: courses.length
     });
-    let dbCourses = [];
-    let dbArchivedCourses = {};
-    try {
-      const cr = await fetch("/api/courses", { credentials: "include" });
-      if (cr.ok) {
-        const cd = await cr.json();
-        const allCourses = Array.isArray(cd.courses) ? cd.courses : [];
-        dbCourses = allCourses.filter((c) => c.status !== "ARCHIVED").map((c) => ({
-          name: c.name,
-          color: c.name==="FIC211"?"#0E7A6E":((c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#6366f1")),
-          startDate: c.startDate || "",
-          gradDate: c.gradDate || c.endDate || "",
-          raafStart: c.raafStart || c.raafCount || 0,
-          navyStart: c.navyStart || c.navyCount || 0,
-          armyStart: c.armyStart || c.armyCount || 0
-        }));
-        dbArchivedCourses = allCourses.filter((c) => c.status === "ARCHIVED").reduce((acc, c) => {
-          acc[c.name] = (c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#6366f1");
-          return acc;
-        }, {});
-        console.log("\u2705 Courses DB loaded:", dbCourses.length, "active,", Object.keys(dbArchivedCourses).length, "archived");
-      }
-    } catch (e) { console.error("Failed to fetch courses:", e); }
     return {
       instructors,
       trainees,
       aircraft,
       scores,
       events,
-      courses: dbCourses,
-      archivedCourses: dbArchivedCourses
+      courses
     };
   } catch (error) {
     console.error("❌ Failed to load data from API:", error);
-    console.log("⚠️ Falling back to mock data");
+    console.log("⚠️ Falling back to mock data (tagged with _dataSource: mockdata)");
     return {
-      instructors: ESL_DATA.instructors,
-      trainees: ESL_DATA.trainees,
+      instructors: ESL_DATA.instructors.map((i) => ({ ...i, _dataSource: "mockdata" })),
+      trainees: ESL_DATA.trainees.map((t) => ({ ...t, _dataSource: "mockdata" })),
       aircraft: ESL_DATA.aircraft || [],
       scores: {},
-      events: ESL_DATA.events || [],
+      events: (ESL_DATA.events || []).map((e) => ({ ...e, _dataSource: "mockdata" })),
       courses: []
     };
   }
 }
+const API_BASE = "/api";
+const CACHE_KEY = "dfp-syllabus-cache";
+const CACHE_TIMESTAMP_KEY = "dfp-syllabus-cache-timestamp";
+const CACHE_TTL_MS = 30 * 60 * 1e3;
+function getCachedSyllabus() {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    if (!raw || !timestamp) return null;
+    const data = JSON.parse(raw);
+    const age = Date.now() - parseInt(timestamp, 10);
+    const expired = age > CACHE_TTL_MS;
+    return { data, expired };
+  } catch {
+    return null;
+  }
+}
+function setCachedSyllabus(syllabus) {
+  try {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(CACHE_KEY, JSON.stringify(syllabus));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch (e) {
+    console.warn("⚠️ Could not cache syllabus in localStorage:", e);
+  }
+}
+function populatePrerequisites(items) {
+  return items.map((item, index, arr) => {
+    const hasExplicitPrereqs = item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
+    if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
+      return item;
+    }
+    const prerequisitesGround = [];
+    const prerequisitesFlying = [];
+    for (let i = index - 1; i >= 0; i--) {
+      const prereqCandidate = arr[i];
+      if (prereqCandidate.code.includes(" MB")) continue;
+      const sharedCourses = prereqCandidate.courses.some((c) => item.courses.includes(c));
+      if (!sharedCourses) break;
+      if (prereqCandidate.type === "Flight" || prereqCandidate.type === "FTD") {
+        prerequisitesFlying.push(prereqCandidate.code);
+      } else {
+        prerequisitesGround.push(prereqCandidate.code);
+      }
+      break;
+    }
+    return {
+      ...item,
+      prerequisitesGround,
+      prerequisitesFlying,
+      prerequisites: [...prerequisitesGround, ...prerequisitesFlying]
+    };
+  });
+}
+async function loadSyllabusFromDB() {
+  const cached = getCachedSyllabus();
+  if (cached && !cached.expired) {
+    console.log(`📚 [Syllabus] Using fresh cache (${cached.data.length} items)`);
+    return { syllabus: cached.data, source: "cache" };
+  }
+  try {
+    console.log("📚 [Syllabus] Fetching from database...");
+    const response = await fetch(`${API_BASE}/syllabus`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    const rawItems = data.syllabusItems || [];
+    if (rawItems.length === 0) {
+      throw new Error("No syllabus items returned from database");
+    }
+    const processed = populatePrerequisites(rawItems);
+    setCachedSyllabus(processed);
+    console.log(`📚 [Syllabus] Loaded ${processed.length} items from database`);
+    return { syllabus: processed, source: "database" };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
+    console.error(`❌ [Syllabus] Database fetch failed: ${errMsg}`);
+    if (cached && cached.expired) {
+      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${cached.data.length} items)`);
+      return {
+        syllabus: cached.data,
+        source: "expired-cache",
+        error: `Database unavailable - showing cached syllabus. Error: ${errMsg}`
+      };
+    }
+    console.error("❌ [Syllabus] No cache available - returning empty syllabus");
+    return {
+      syllabus: [],
+      source: "empty",
+      error: `Failed to load syllabus: ${errMsg}`
+    };
+  }
+}
+const DEFAULT_PHRASE_BANK = {
+  "Airmanship": {
+    5: [
+      "Operates the aircraft safely and effectively at all times.",
+      "Organised and deals with all situations effectively, under all workloads.",
+      "Handles non-standard situations capably with a high level of confidence.",
+      "Excellent decision making based on situational awareness and prioritised attention."
+    ],
+    4: [
+      "Operates the aircraft safely and effectively.",
+      "Handles most normal situations well.",
+      "Needs occasional help with non-standard routines but does not become confused under moderate workloads.",
+      "Very good decision making based on situational awareness and prioritised attention.",
+      "Sometimes overlooks some considerations but not to the detriment of safety."
+    ],
+    3: [
+      "Operates the aircraft safely.",
+      "Copes with normal situations.",
+      "Occasionally slow to react to new or developing situations.",
+      "Makes basic decisions and applies the basic considerations.",
+      "Adequate confidence and decision making ability."
+    ],
+    2: [
+      "Operates the aircraft safely in familiar situations.",
+      "Slow to react to new or developing situations.",
+      "Makes basic decisions in familiar situations.",
+      "Sometimes unsure in new or more advanced sequences.",
+      "Developing confidence and decision making ability."
+    ],
+    1: [
+      "Just coping with familiar situations.",
+      "Had difficulty applying normal procedures.",
+      "Often deviated from more complex or advanced routines.",
+      "Showed a lack of situational awareness.",
+      "Made basic decisions but was sometimes overwhelmed or task saturated by basic sequences.",
+      "Not confident.",
+      "Uncharacteristic major safety breach."
+    ],
+    0: [
+      "Poor.",
+      "Frequently deviated from normal procedures.",
+      "Not able to cope with familiar situations.",
+      "Demonstrated likelihood of violating aircraft and operational limits.",
+      "Frequently task-saturated by basic sequences.",
+      "Easily confused and often disorganised.",
+      "Excessively under or over confident.",
+      "Repeated safety breaches."
+    ]
+  },
+  "Preparation": {
+    5: [
+      "Always fully prepared.",
+      "An excellent understanding of sortie requirements.",
+      "Focussed and committed to continuous improvement.",
+      "Prepared technique and sequences to a very high standard.",
+      "Enthusiastic and motivated to achieve excellence."
+    ],
+    4: [
+      "Well prepared.",
+      "Researched widely to develop a sound understanding of all sortie aspects.",
+      "Focussed and committed to improvement.",
+      "Prepared technique and sequences to a high standard.",
+      "Enthusiastic and motivated."
+    ],
+    3: [
+      "Adequately prepared.",
+      "A satisfactory understanding of sortie requirements.",
+      "Prepared required technique and sequences.",
+      "Satisfactory motivation."
+    ],
+    2: [
+      "Partially prepared.",
+      "Some gaps in understanding of sortie requirements.",
+      "Partially prepared required technique and sequences.",
+      "Required prompting in some areas."
+    ],
+    1: [
+      "Poorly prepared.",
+      "Significant gaps in understanding of sortie requirements.",
+      "Inadequately prepared required technique and sequences.",
+      "Required significant prompting."
+    ],
+    0: [
+      "Not prepared.",
+      "No understanding of sortie requirements.",
+      "Did not prepare required technique or sequences.",
+      "Unable to proceed without full instructor support."
+    ]
+  },
+  "Technique": {
+    5: [
+      "Aircraft control precise and smooth at all times.",
+      "Excellent management of aircraft energy.",
+      "Proactively manages all aspects of the sortie.",
+      "Techniques mastered to a very high standard."
+    ],
+    4: [
+      "Aircraft control accurate and mostly smooth.",
+      "Good management of aircraft energy.",
+      "Manages most aspects of the sortie effectively.",
+      "Good technical standard overall."
+    ],
+    3: [
+      "Aircraft control adequate.",
+      "Satisfactory management of aircraft energy.",
+      "Manages basic aspects of the sortie.",
+      "Acceptable technical standard."
+    ],
+    2: [
+      "Aircraft control developing.",
+      "Some difficulty managing aircraft energy.",
+      "Manages basic aspects with some prompting.",
+      "Technical standard requires improvement."
+    ],
+    1: [
+      "Aircraft control below standard.",
+      "Difficulty managing aircraft energy.",
+      "Requires regular prompting.",
+      "Technical standard unsatisfactory."
+    ],
+    0: [
+      "Aircraft control unacceptable.",
+      "Unable to manage aircraft energy.",
+      "Requires constant prompting and assistance.",
+      "Technical standard dangerous."
+    ]
+  },
+  "Communication": {
+    5: [
+      "RT phraseology precise, professional, and correct at all times.",
+      "Listens out effectively, never misses a call.",
+      "Maintains excellent situational awareness of radio environment.",
+      "Sets an exemplary standard of RT discipline."
+    ],
+    4: [
+      "RT phraseology accurate and professional.",
+      "Rarely misses a radio call.",
+      "Good situational awareness of radio environment.",
+      "High standard of RT discipline."
+    ],
+    3: [
+      "RT phraseology generally correct.",
+      "Occasionally misses a radio call.",
+      "Adequate situational awareness of radio environment.",
+      "Satisfactory RT discipline."
+    ],
+    2: [
+      "RT phraseology sometimes incorrect.",
+      "Misses some radio calls.",
+      "Developing situational awareness of radio environment.",
+      "RT discipline requires improvement."
+    ],
+    1: [
+      "RT phraseology frequently incorrect.",
+      "Misses many radio calls.",
+      "Limited situational awareness of radio environment.",
+      "RT discipline unsatisfactory."
+    ],
+    0: [
+      "RT phraseology unacceptable.",
+      "Unable to maintain radio watch.",
+      "No situational awareness of radio environment.",
+      "RT discipline dangerous or absent."
+    ]
+  },
+  "Cockpit Management": {
+    5: [
+      "Cockpit management exemplary.",
+      "All checks and procedures completed accurately and on time.",
+      "Excellent prioritisation of tasks under all workloads.",
+      "Proactively manages cockpit environment."
+    ],
+    4: [
+      "Cockpit management of a high standard.",
+      "Checks and procedures completed accurately.",
+      "Good prioritisation of tasks.",
+      "Manages cockpit environment effectively."
+    ],
+    3: [
+      "Cockpit management satisfactory.",
+      "Checks and procedures generally completed.",
+      "Adequate prioritisation of tasks.",
+      "Manages basic cockpit requirements."
+    ],
+    2: [
+      "Cockpit management developing.",
+      "Some checks or procedures missed or late.",
+      "Difficulty prioritising tasks under moderate workload.",
+      "Requires prompting for cockpit management."
+    ],
+    1: [
+      "Cockpit management unsatisfactory.",
+      "Frequently misses checks or procedures.",
+      "Unable to prioritise tasks effectively.",
+      "Requires regular prompting."
+    ],
+    0: [
+      "Cockpit management dangerous.",
+      "Critical checks or procedures missed.",
+      "Task saturated; unable to manage cockpit.",
+      "Work cycles disorganised or absent.",
+      "Easily overwhelmed; demonstrates unsafe or inconsistent behaviour."
+    ]
+  }
+};
 const INITIAL_CURRENCY_REQUIREMENTS = [
   // 12 months = 365 days
   { id: "aircrew-medical", name: "Aircrew Medical", description: "Annual aircrew medical check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
@@ -89821,7 +90128,7 @@ const formatDecimalHourToString = (decimalHour) => {
   const minutes = Math.round(decimalHour % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails = INITIAL_SYLLABUS_DETAILS) => {
+const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails = []) => {
   const instructorEvents = [...events.filter((e) => getPersonnel(e).includes(instructorName)), newEvent];
   if (instructorEvents.length === 0) return 0;
   const sortedWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
@@ -92235,7 +92542,7 @@ const App = () => {
   const [activeView, setActiveView] = reactExports.useState("Program Schedule");
   const [previousView, setPreviousView] = reactExports.useState("Program Schedule");
   const [date, setDate] = reactExports.useState(() => getLocalDateString());
-  const [events, setEvents] = reactExports.useState(ESL_DATA.events);
+  const [events, setEvents] = reactExports.useState([]);
   const [selectedEvent, setSelectedEvent] = reactExports.useState(null);
   const [isEditingDefault, setIsEditingDefault] = reactExports.useState(false);
   const [highlightedField, setHighlightedField] = reactExports.useState(null);
@@ -92265,7 +92572,7 @@ const App = () => {
     return { staff: true, trainee: true, staffDb: true, traineeDb: true };
   });
   const [school, setSchool] = reactExports.useState("ESL");
-  const [allInstructorsData, setInstructorsData] = reactExports.useState(ESL_DATA.instructors);
+  const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
   reactExports.useEffect(() => {
     const instructorIds = /* @__PURE__ */ new Map();
     const duplicates = [];
@@ -92289,7 +92596,7 @@ const App = () => {
     console.log("🔍 [DATA TRACKING v3] First 3 instructors:", allInstructorsData.slice(0, 3).map((i) => ({ id: i.idNumber, name: i.name, category: i.category })));
   }, []);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
-  const [allTraineesData, setTraineesData] = reactExports.useState(ESL_DATA.trainees.map((t) => ({ ...t, _dataSource: "mockdata" })));
+  const [allTraineesData, setTraineesData] = reactExports.useState([]);
   const [archivedTraineesData, setArchivedTraineesData] = reactExports.useState([]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
@@ -92488,10 +92795,37 @@ const App = () => {
     }
   }, [authUser, currentUser2, currentUserName]);
   reactExports.useEffect(() => {
+    const loadSyllabus = async () => {
+      setSyllabusLoading(true);
+      setSyllabusError(null);
+      try {
+        const result = await loadSyllabusFromDB();
+        if (result.syllabus.length > 0) {
+          setSyllabusDetails(result.syllabus);
+          if (result.source === "expired-cache") {
+            console.warn("⚠️ [Syllabus] Using expired cache:", result.error);
+            setSyllabusError(result.error || null);
+          } else {
+            console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+          }
+        } else {
+          console.error("❌ [Syllabus] No syllabus data available:", result.error);
+          setSyllabusError(result.error || "No syllabus data available");
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        console.error("❌ [Syllabus] Failed to load syllabus:", msg);
+        setSyllabusError(msg);
+      } finally {
+        setSyllabusLoading(false);
+      }
+    };
+    loadSyllabus();
+  }, []);
+  reactExports.useEffect(() => {
     const loadInitialData = async () => {
       console.log("🔄 Starting to load initial data...");
       try {
-                console.log("🟢 About to call initializeData()...");
         const data = await initializeData();
         console.log("📦 Data received from initializeData:", {
           instructorsCount: data.instructors.length,
@@ -92521,52 +92855,25 @@ const App = () => {
         setIsTraineeLoaded(true);
         setEvents(data.events);
         if (data.courses && data.courses.length > 0) {
-          console.log("\u2705 Setting courses from DB:", data.courses.length);
+          console.log("🎓 Loading", data.courses.length, "courses from DB");
           setCourses(data.courses);
-          const dbColors = {};
+          const colors = {};
           data.courses.forEach((c) => {
-            const twToHex2 = {
-              "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0",
-              "bg-yellow-400/50": "#4A6218", "bg-pink-400/50": "#9D2B6B",
-              "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5",
-              "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A",
-              "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5",
-              "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
-              "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
-              "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#D4722A": "#4F46E5", "#d4722a": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
-              "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
-              "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
-            };
-            const rawColor = (c.color === "#F97316" || c.color === "#f97316") ? "#4F46E5" : (c.color || "#4B5563");
-            dbColors[c.name] = twToHex2[rawColor] || rawColor; if(c.name==="FIC211")dbColors["FIC211"]="#0E7A6E";
+            if (c.name && c.color) colors[c.name] = c.color;
           });
-          console.log("\u2705 Setting courseColors from DB:", Object.keys(dbColors));
-          setCourseColors((prev) => ({ ...prev, ...dbColors }));
-          setIsCoursesLoaded(true);
+          setCourseColors((prev) => ({ ...prev, ...colors }));
         } else {
-          console.log("\u26a0\ufe0f No DB courses, keeping mock courses");
           setIsCoursesLoaded(true);
-        }
-        if (data.archivedCourses && Object.keys(data.archivedCourses).length > 0) {
-          setArchivedCourses((prev) => ({ ...prev, ...data.archivedCourses }));
-        }
-        if (data.scores && Object.keys(data.scores).length > 0) {
-          setScores((prev) => {
-            const merged = new Map(prev);
-            Object.entries(data.scores).forEach(([name, scoreArr]) => {
-              merged.set(name, scoreArr);
-            });
-            return merged;
-          });
-          console.log(`[Scores] Pre-loaded ${Object.keys(data.scores).length} trainee scores with real dates`);
+          console.log("🎓 No courses in DB yet - keeping existing course state");
+          setIsCoursesLoaded(true);
         }
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
           try {
-            const bpcIpcSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+            const bpcIpcSyllabus = syllabusDetails.filter(
               (item) => !item.lmpType || item.lmpType === "Master LMP"
             );
-            const ficSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+            const ficSyllabus = syllabusDetails.filter(
               (item) => item.courses && item.courses.includes("FIC")
             );
             const syllabusData = {
@@ -92592,19 +92899,14 @@ const App = () => {
                     lmps.forEach((lmp) => {
                       if (!lmp.completedEventIds || lmp.completedEventIds.length === 0) return;
                       const normalizedIds = lmp.completedEventIds.map((id) => id.replace("*", ""));
-                      const existingScores = merged.get(lmp.traineeFullName) || [];
-                      const existingScoreMap = new Map(existingScores.map((s) => [s.event, s]));
-                      const scoreRecords = normalizedIds.map((eventId) => {
-                        const existing = existingScoreMap.get(eventId);
-                        return {
-                          event: eventId,
-                          score: existing?.score || 3,
-                          date: existing?.date || "2025-07-01",
-                          instructor: existing?.instructor || "",
-                          notes: existing?.notes || "",
-                          details: existing?.details || []
-                        };
-                      });
+                      const scoreRecords = normalizedIds.map((eventId) => ({
+                        event: eventId,
+                        score: 3,
+                        date: "",
+                        instructor: "",
+                        notes: "",
+                        details: []
+                      }));
                       merged.set(lmp.traineeFullName, scoreRecords);
                       console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
                     });
@@ -92687,7 +92989,7 @@ const App = () => {
               const isFicTrainee = lmpType === "FIC";
               const alreadySet = newLMPs.has(trainee.fullName);
               if (!alreadySet || isFicTrainee) {
-                const masterLMP = INITIAL_SYLLABUS_DETAILS.filter((item) => {
+                const masterLMP = syllabusDetails.filter((item) => {
                   if (lmpType === "BPC+IPC") {
                     return !item.lmpType || item.lmpType === "Master LMP";
                   }
@@ -92917,15 +93219,17 @@ const App = () => {
   const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
   const combinedPermissions = [...authUserPermissions, ...currentUser2?.permissions || []];
   const currentUserPermission = getHighestPermission(combinedPermissions);
-  const [scores, setScores] = reactExports.useState(ESL_DATA.scores);
-  const [pt051Assessments, setPt051Assessments] = reactExports.useState(ESL_DATA.pt051Assessments);
-  const [courses, setCourses] = reactExports.useState(ESL_DATA.courses);
-  const [courseColors, setCourseColors] = reactExports.useState(ESL_DATA.courseColors);
-  const [archivedCourses, setArchivedCourses] = reactExports.useState(ESL_DATA.archivedCourses);
-  const [coursePriorities, setCoursePriorities] = reactExports.useState(ESL_DATA.coursePriorities);
-  const [coursePercentages, setCoursePercentages] = reactExports.useState(ESL_DATA.coursePercentages);
-  const [syllabusDetails, setSyllabusDetails] = reactExports.useState(INITIAL_SYLLABUS_DETAILS);
-  const [traineeLMPs, setTraineeLMPs] = reactExports.useState(ESL_DATA.traineeLMPs);
+  const [scores, setScores] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [courses, setCourses] = reactExports.useState([]);
+  const [courseColors, setCourseColors] = reactExports.useState({});
+  const [archivedCourses, setArchivedCourses] = reactExports.useState({});
+  const [coursePriorities, setCoursePriorities] = reactExports.useState([]);
+  const [coursePercentages, setCoursePercentages] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [syllabusDetails, setSyllabusDetails] = reactExports.useState([]);
+  const [syllabusLoading, setSyllabusLoading] = reactExports.useState(true);
+  const [syllabusError, setSyllabusError] = reactExports.useState(null);
+  const [traineeLMPs, setTraineeLMPs] = reactExports.useState(/* @__PURE__ */ new Map());
   const [eventLimits, setEventLimits] = reactExports.useState({
     exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
     instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
@@ -93448,25 +93752,7 @@ ${"=".repeat(60)}`);
         if (saved.showDepartureDensityOverlay != null) setShowDepartureDensityOverlay(saved.showDepartureDensityOverlay);
         if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
         if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
-        if (saved.courseColors && Object.keys(saved.courseColors).length) {
-          const twToHex = {
-            "bg-sky-400/50": "#1E6B9E", "bg-purple-400/50": "#6B3FA0",
-            "bg-yellow-400/50": "#4A6218", "bg-pink-400/50": "#9D2B6B",
-            "bg-teal-400/50": "#0E7A6E", "bg-indigo-400/50": "#3D4CB5",
-            "bg-cyan-400/50": "#0A7A94", "bg-blue-400/50": "#1D4E8A",
-            "bg-green-400/50": "#1A6B2E", "bg-orange-400/50": "#4F46E5",
-            "bg-red-400/50": "#B02020", "bg-gray-400/50": "#4B5563",
-            "#7DD3FC": "#1E6B9E", "#C084FC": "#6B3FA0", "#F472B6": "#9D2B6B",
-            "#FB923C": "#4F46E5", "#F97316": "#4F46E5", "#f97316": "#4F46E5", "#C45A0A": "#4F46E5", "#7A3200": "#4F46E5", "#8B4513": "#4F46E5", "#8B4000": "#4F46E5", "#D4722A": "#4F46E5", "#d4722a": "#4F46E5", "#2DD4BF": "#0E7A6E", "#818CF8": "#3D4CB5",
-            "#22D3EE": "#0A7A94", "#60A5FA": "#1D4E8A", "#4ADE80": "#1A6B2E",
-            "#FACC15": "#4A6218", "#38BDF8": "#1E6B9E", "#6B8E23": "#4A6218"
-          };
-          const migratedColors = {};
-          Object.entries(saved.courseColors).forEach(([k, v]) => {
-            migratedColors[k] = twToHex[v] || v;
-          });
-          setCourseColors(migratedColors);
-        }
+        if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
         if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
         if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
         {
@@ -93717,24 +94003,6 @@ ${"=".repeat(60)}`);
       console.log("⏸️ Not syncing - activeView is:", activeView);
     }
   }, [remedialRequests, activeView]);
-  reactExports.useEffect(() => {
-    if (activeView === "AUTH") {
-      const nowInHours = (new Date()).getHours() + (new Date()).getMinutes() / 60;
-      const flightsNeedingAuth = events.filter(
-        (e) => e.type === "flight" && !(e.authoSignedBy && e.captainSignedBy) && e.startTime + e.duration > nowInHours
-      ).sort((a, b) => a.startTime - b.startTime);
-      
-      if (flightsNeedingAuth.length > 0) {
-        const latestEvent = events.find((ev) => ev.id === flightsNeedingAuth[0].id) || flightsNeedingAuth[0];
-        setEventForAuth(latestEvent);
-        setShowAuthFlyout(true);
-        handleNavigation("Program Schedule");
-      } else {
-        handleNavigation("Program Schedule");
-      }
-    }
-  }, [activeView, events, date]);
-
   reactExports.useEffect(() => {
     localStorage.setItem("timezoneOffset", timezoneOffset.toString());
   }, [timezoneOffset]);
@@ -94481,18 +94749,11 @@ ${"=".repeat(60)}`);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
   };
-  reactExports.useEffect(() => {
-    const initialData = school === "ESL" ? ESL_DATA : PEA_DATA;
-    setEvents(initialData.events);
-    const todayStr = getLocalDateString();
-    setPublishedSchedules({ [todayStr]: initialData.events.filter((e) => e.date === todayStr) });
-  }, [school]);
   const handleAddCourseFromTrainingRecords = async (data) => {
-    const _addColor = (data.color === "#F97316" || data.color === "#f97316") ? "#4F46E5" : data.color;
-    setCourseColors((prev) => ({ ...prev, [data.number]: _addColor }));
+    setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
     const newCourse = {
       name: data.number,
-      color: _addColor,
+      color: data.color,
       startDate: data.startDate,
       gradDate: data.gradDate,
       raafStart: data.raafStart,
@@ -94501,8 +94762,23 @@ ${"=".repeat(60)}`);
     };
     setCourses((prev) => [...prev, newCourse]);
     try {
-      await fetch("/api/courses", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newCourse, status: "ACTIVE" }) });
-    } catch (e) { console.error("Failed to save course to DB:", e); }
+      const result = await saveCourse({
+        name: data.number,
+        color: data.color,
+        startDate: data.startDate,
+        gradDate: data.gradDate,
+        raafStart: data.raafStart,
+        navyStart: data.navyStart,
+        armyStart: data.armyStart,
+        status: "ACTIVE",
+        location: school === "ESL" ? "East Sale" : "Pearce"
+      });
+      if (!result.success) {
+        console.error("Failed to save course to DB:", result.error);
+      }
+    } catch (error) {
+      console.error("Error saving course to DB:", error);
+    }
     setSuccessMessage(`Course ${data.number} added successfully!`);
   };
   const handleDeleteCourseFromTrainingRecords = async (courseName, archive) => {
@@ -94515,8 +94791,13 @@ ${"=".repeat(60)}`);
       setArchivedCourses((prev) => ({ ...prev, [courseName]: color }));
       setCourses((prev) => prev.filter((c) => c.name !== courseName));
       try {
-        await fetch("/api/courses", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: courseName, color, status: "ARCHIVED" }) });
-      } catch (e) { console.error("Failed to archive course in DB:", e); }
+        const result = await deleteCourse(courseName);
+        if (!result.success) {
+          console.error("Failed to delete course from DB:", result.error);
+        }
+      } catch (error) {
+        console.error("Error deleting course from DB:", error);
+      }
       setSuccessMessage(`Course ${courseName} archived successfully!`);
     } else {
       const newActive = { ...courseColors };
@@ -94524,8 +94805,13 @@ ${"=".repeat(60)}`);
       setCourseColors(newActive);
       setCourses((prev) => prev.filter((c) => c.name !== courseName));
       try {
-        await fetch(`/api/courses/${encodeURIComponent(courseName)}`, { method: "DELETE", credentials: "include" });
-      } catch (e) { console.error("Failed to delete course from DB:", e); }
+        const result = await deleteCourse(courseName);
+        if (!result.success) {
+          console.error("Failed to delete course from DB:", result.error);
+        }
+      } catch (error) {
+        console.error("Error deleting course from DB:", error);
+      }
       setSuccessMessage(`Course ${courseName} deleted permanently!`);
     }
   };
@@ -94535,44 +94821,37 @@ ${"=".repeat(60)}`);
   const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
     handleNavigation("ArchivedCourses");
   };
-  const handleUpdateCourseDatesFromTrainingRecords = async (courseName, startDate2, gradDate2) => {
-    let courseSnapshot = null;
-    setCourses((prevCourses) => {
-      courseSnapshot = prevCourses.find((c) => c.name === courseName) || null;
-      return prevCourses.map((course) =>
-        course.name === courseName ? { ...course, startDate: startDate2, gradDate: gradDate2 } : course
-      );
-    });
+  const handleUpdateCourseDatesFromTrainingRecords = async (courseName, startDate, gradDate) => {
+    setCourses(
+      (prevCourses) => prevCourses.map(
+        (course) => course.name === courseName ? { ...course, startDate, gradDate } : course
+      )
+    );
     try {
-      const course = courseSnapshot;
+      const course = courses.find((c) => c.name === courseName);
       if (!course) {
         console.error("Course not found:", courseName);
         return;
       }
-      const response = await fetch("/api/courses", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: course.name,
-          color: course.color,
-          startDate: startDate2,
-          gradDate: gradDate2,
-          raafStart: course.raafStart,
-          navyStart: course.navyStart,
-          armyStart: course.armyStart,
-          location: course.location,
-          status: course.status
-        })
+      const result = await saveCourse({
+        name: course.name,
+        color: course.color,
+        startDate,
+        gradDate,
+        raafStart: course.raafStart,
+        navyStart: course.navyStart,
+        armyStart: course.armyStart,
+        location: course.location,
+        status: course.status
       });
-      if (response.ok) {
-        setSuccessMessage("Course " + courseName + " dates updated successfully!");
+      if (result.success) {
+        setSuccessMessage(`Course ${courseName} dates updated successfully!`);
       } else {
-        console.error("Failed to update course dates in DB");
+        console.error("Failed to update course dates in DB:", result.error);
         setErrorMessage("Failed to save changes to database");
       }
-    } catch (error2) {
-      console.error("Error updating course dates in DB:", error2);
+    } catch (error) {
+      console.error("Error updating course dates in DB:", error);
       setErrorMessage("Failed to save changes to database");
     }
   };
@@ -94583,11 +94862,34 @@ ${"=".repeat(60)}`);
     delete newArchived[courseName];
     setArchivedCourses(newArchived);
     setCourseColors((prev) => ({ ...prev, [courseName]: color }));
-    const restoredCourse = { name: courseName, color, startDate: "", gradDate: "", raafStart: 0, navyStart: 0, armyStart: 0 };
+    const restoredCourse = {
+      name: courseName,
+      color,
+      startDate: "",
+      gradDate: "",
+      raafStart: 0,
+      navyStart: 0,
+      armyStart: 0
+    };
     setCourses((prev) => [...prev, restoredCourse]);
     try {
-      await fetch("/api/courses", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...restoredCourse, status: "ACTIVE" }) });
-    } catch (e) { console.error("Failed to restore course to DB:", e); }
+      const result = await saveCourse({
+        name: courseName,
+        color,
+        startDate: "",
+        gradDate: "",
+        raafStart: 0,
+        navyStart: 0,
+        armyStart: 0,
+        status: "ACTIVE",
+        location: school === "ESL" ? "East Sale" : "Pearce"
+      });
+      if (!result.success) {
+        console.error("Failed to save unarchived course to DB:", result.error);
+      }
+    } catch (error) {
+      console.error("Error saving unarchived course to DB:", error);
+    }
     setSuccessMessage(`Course ${courseName} unarchived successfully!`);
   };
   const handleDeleteCourseFromArchivedView = async (courseName) => {
@@ -94596,8 +94898,13 @@ ${"=".repeat(60)}`);
     setArchivedCourses(newArchived);
     setCourses((prev) => prev.filter((c) => c.name !== courseName));
     try {
-      await fetch(`/api/courses/${encodeURIComponent(courseName)}`, { method: "DELETE", credentials: "include" });
-    } catch (e) { console.error("Failed to delete archived course from DB:", e); }
+      const result = await deleteCourse(courseName);
+      if (!result.success) {
+        console.error("Failed to delete course from DB:", result.error);
+      }
+    } catch (error) {
+      console.error("Error deleting course from DB:", error);
+    }
     setSuccessMessage(`Course ${courseName} deleted permanently!`);
   };
   const handleDateChange = (increment) => {
@@ -95945,7 +96252,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return { ...prev, [date]: newScheduleForDate };
     });
     updates.forEach((update) => {
-      const event = (publishedSchedules[date] || []).find((e) => e.id === update.eventId);
+      const event = currentScheduleForDate.find((e) => e.id === update.eventId);
       if (event) {
         const originalStartTime = event.startTime;
         const originalResourceId = event.resourceId;
@@ -95968,62 +96275,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           },
           logAudit
         );
-      }
-    });
-    const processedDeployedEvents = new Set();
-    updates.forEach((update) => {
-      if (update.newResourceId && update.newResourceId.startsWith("Deployed")) {
-        if (processedDeployedEvents.has(update.eventId)) return;
-        processedDeployedEvents.add(update.eventId);
-        const event = (publishedSchedules[date] || []).find((e) => e.id === update.eventId);
-        if (event && event.type === "flight") {
-          const flightEndTime = (update.newStartTime ?? event.startTime) + event.duration;
-          const deploymentEvent = (publishedSchedules[date] || []).find(
-            (e) => e.type === "deployment" && e.resourceId === update.newResourceId
-          );
-          const deployEndTime = deploymentEvent?.deploymentEndTime || "0800";
-          const deployEndHour = parseInt(deployEndTime.toString().replace(":", "").padStart(4, "0").slice(0, 2)) +
-            parseInt(deployEndTime.toString().replace(":", "").padStart(4, "0").slice(2, 4)) / 60;
-          const flightEndHour = Math.round(flightEndTime * 100) / 100;
-          const unavailDate = event.date || date;
-          const unavailPeriod = {
-            id: `deployed-${update.eventId}-${Date.now()}`,
-            startDate: unavailDate,
-            endDate: deploymentEvent?.deploymentEndDate || unavailDate,
-            startTime: `${String(Math.floor(flightEndHour)).padStart(2, "0")}:${String(Math.round((flightEndHour % 1) * 60)).padStart(2, "0")}`,
-            endTime: `${String(Math.floor(deployEndHour)).padStart(2, "0")}:${String(Math.round((deployEndHour % 1) * 60)).padStart(2, "0")}`,
-            reason: "Deployed",
-            allDay: false
-          };
-          const staffNames = [event.instructor, event.pilot, event.student].filter(Boolean);
-          staffNames.forEach((personName) => {
-            const instructor = instructorsData.find((i) => i.name === personName || i.fullName === personName);
-            if (instructor) {
-              const instrName = instructor.name;
-              setInstructorsData((prev) => prev.map((i) => {
-                if (i.name !== instrName) return i;
-                const alreadyExists = (i.unavailability || []).some(
-                  (u) => u.reason === "Deployed" && u.startDate === unavailPeriod.startDate && u.startTime === unavailPeriod.startTime && u.endTime === unavailPeriod.endTime
-                );
-                if (alreadyExists) return i;
-                return { ...i, unavailability: [...(i.unavailability || []), unavailPeriod] };
-              }));
-            }
-            const trainee = traineesData.find((t) => t.name === personName || t.fullName === personName);
-            if (trainee) {
-              const traineeName = trainee.name;
-              const traineeFullName = trainee.fullName;
-              setTraineesData((prev) => prev.map((t) => {
-                if (t.name !== traineeName && t.fullName !== traineeFullName) return t;
-                const alreadyExists = (t.unavailability || []).some(
-                  (u) => u.reason === "Deployed" && u.startDate === unavailPeriod.startDate && u.startTime === unavailPeriod.startTime && u.endTime === unavailPeriod.endTime
-                );
-                if (alreadyExists) return t;
-                return { ...t, unavailability: [...(t.unavailability || []), unavailPeriod] };
-              }));
-            }
-          });
-        }
       }
     });
   };
@@ -97317,7 +97568,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10191,
+            lineNumber: 10365,
             columnNumber: 24
           },
           void 0
@@ -97355,7 +97606,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10347,
+            lineNumber: 10521,
             columnNumber: 24
           },
           void 0
@@ -97415,7 +97666,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10416,
+              lineNumber: 10590,
               columnNumber: 28
             },
             void 0
@@ -97470,7 +97721,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10469,
+            lineNumber: 10643,
             columnNumber: 24
           },
           void 0
@@ -97515,7 +97766,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10487,
+            lineNumber: 10661,
             columnNumber: 24
           },
           void 0
@@ -97648,7 +97899,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10527,
+            lineNumber: 10701,
             columnNumber: 24
           },
           void 0
@@ -97767,7 +98018,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10661,
+            lineNumber: 10835,
             columnNumber: 24
           },
           void 0
@@ -97885,7 +98136,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10794,
+              lineNumber: 10968,
               columnNumber: 28
             },
             void 0
@@ -97905,7 +98156,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 10922,
+              lineNumber: 11096,
               columnNumber: 28
             },
             void 0
@@ -97971,7 +98222,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10930,
+            lineNumber: 11104,
             columnNumber: 24
           },
           void 0
@@ -98163,7 +98414,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 10986,
+            lineNumber: 11160,
             columnNumber: 24
           },
           void 0
@@ -98184,7 +98435,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11175,
+            lineNumber: 11349,
             columnNumber: 24
           },
           void 0
@@ -98216,7 +98467,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11185,
+            lineNumber: 11359,
             columnNumber: 24
           },
           void 0
@@ -98234,7 +98485,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11205,
+            lineNumber: 11380,
             columnNumber: 24
           },
           void 0
@@ -98266,7 +98517,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11212,
+            lineNumber: 11387,
             columnNumber: 25
           },
           void 0
@@ -98397,7 +98648,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11239,
+            lineNumber: 11414,
             columnNumber: 24
           },
           void 0
@@ -98421,7 +98672,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11380,
+            lineNumber: 11555,
             columnNumber: 24
           },
           void 0
@@ -98515,7 +98766,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11395,
+            lineNumber: 11570,
             columnNumber: 24
           },
           void 0
@@ -98613,7 +98864,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11485,
+            lineNumber: 11660,
             columnNumber: 24
           },
           void 0
@@ -98651,7 +98902,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11580,
+            lineNumber: 11755,
             columnNumber: 28
           },
           void 0
@@ -98672,7 +98923,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11607,
+            lineNumber: 11782,
             columnNumber: 24
           },
           void 0
@@ -98714,7 +98965,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 11647,
+                lineNumber: 11822,
                 columnNumber: 32
               },
               void 0
@@ -98723,7 +98974,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Error: Could not load trainee LMP." }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11658,
+          lineNumber: 11833,
           columnNumber: 24
         }, void 0);
       case "Currency":
@@ -98742,7 +98993,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11661,
+              lineNumber: 11836,
               columnNumber: 28
             },
             void 0
@@ -98816,7 +99067,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11672,
+            lineNumber: 11847,
             columnNumber: 24
           },
           void 0
@@ -98835,7 +99086,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11736,
+            lineNumber: 11911,
             columnNumber: 24
           },
           void 0
@@ -98924,7 +99175,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11764,
+              lineNumber: 11939,
               columnNumber: 28
             },
             void 0
@@ -98938,7 +99189,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11847,
+            lineNumber: 12022,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -98946,7 +99197,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11848,
+            lineNumber: 12023,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -98954,7 +99205,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             eventForPt051 ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11849,
+            lineNumber: 12024,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -98968,14 +99219,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11850,
+              lineNumber: 12025,
               columnNumber: 21
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 11846,
+          lineNumber: 12021,
           columnNumber: 24
         }, void 0);
       case "PostFlight":
@@ -99104,7 +99355,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11859,
+              lineNumber: 12034,
               columnNumber: 28
             },
             void 0
@@ -99132,7 +99383,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12006,
+              lineNumber: 12181,
               columnNumber: 28
             },
             void 0
@@ -99140,27 +99391,15 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return null;
       case "AUTH":
-        
-        return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto items-center justify-center", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12023,
-            columnNumber: 24
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400", children: "Opening Flight Authorisation..." }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12024,
-            columnNumber: 24
-          }, void 0)
-        ] }, void 0, true, {
+        return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12022,
+          lineNumber: 12198,
           columnNumber: 24
         }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12025,
+          lineNumber: 12200,
           columnNumber: 24
         }, void 0);
     }
@@ -99202,10 +99441,25 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SystemFreezeBanner, {}, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12079,
+      lineNumber: 12254,
       columnNumber: 9
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DataLoadingMonitor, { isStaffLoaded, isTraineeLoaded, isCoursesLoaded }, void 0, false, {}, void 0),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+      DataLoadingMonitor,
+      {
+        isStaffLoaded,
+        isTraineeLoaded,
+        isCoursesLoaded
+      },
+      void 0,
+      false,
+      {
+        fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
+        lineNumber: 12255,
+        columnNumber: 9
+      },
+      void 0
+    ),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { id: "app-content", "data-theme": theme, className: "flex h-screen bg-gray-900 text-white", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         Sidebar,
@@ -99245,7 +99499,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12081,
+          lineNumber: 12261,
           columnNumber: 13
         },
         void 0
@@ -99283,19 +99537,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12114,
+            lineNumber: 12294,
             columnNumber: 49
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12142,
+          lineNumber: 12322,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12113,
+        lineNumber: 12293,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -99316,14 +99570,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12146,
+          lineNumber: 12326,
           columnNumber: 13
         },
         void 0
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Magnifier, { isEnabled: isMagnifierEnabled }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12158,
+        lineNumber: 12338,
         columnNumber: 36
       }, void 0),
       selectedEvent && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -99398,7 +99652,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 if (lmpType === "BPC+IPC" && trainee.course?.toUpperCase().startsWith("FIC")) {
                   lmpType = "FIC";
                 }
-                const masterSyllabus = INITIAL_SYLLABUS_DETAILS.filter((item) => {
+                const masterSyllabus = syllabusDetails.filter((item) => {
                   if (lmpType === "BPC+IPC") return !item.lmpType || item.lmpType === "Master LMP";
                   return item.courses && item.courses.includes(lmpType);
                 });
@@ -99450,7 +99704,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12161,
+          lineNumber: 12341,
           columnNumber: 17
         },
         void 0
@@ -99458,7 +99712,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       conflict && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12300,
+        lineNumber: 12480,
         columnNumber: 26
       }, void 0),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -99473,7 +99727,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12302,
+          lineNumber: 12482,
           columnNumber: 17
         },
         void 0
@@ -99481,11 +99735,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowNeoChoiceModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Resolution Options" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12313,
+          lineNumber: 12493,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12312,
+          lineNumber: 12492,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 text-center", children: [
@@ -99493,13 +99747,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             "NEO has found multiple ways to resolve the conflict for ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: neoProblemTileForFlyout?.event.flightNumber }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12316,
+              lineNumber: 12496,
               columnNumber: 114
             }, void 0),
             ". Please choose an option:"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12316,
+            lineNumber: 12496,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-4 pt-4", children: [
@@ -99511,12 +99765,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Time Shift" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12322,
+                    lineNumber: 12502,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12323,
+                    lineNumber: 12503,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -99525,7 +99779,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12318,
+                lineNumber: 12498,
                 columnNumber: 33
               },
               void 0
@@ -99538,12 +99792,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12329,
+                    lineNumber: 12509,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 12330,
+                    lineNumber: 12510,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -99552,38 +99806,38 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12325,
+                lineNumber: 12505,
                 columnNumber: 33
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12317,
+            lineNumber: 12497,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12315,
+          lineNumber: 12495,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12311,
+        lineNumber: 12491,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12310,
+        lineNumber: 12490,
         columnNumber: 17
       }, void 0),
       showTimeOnlyRemedyConfirm && timeOnlyRemedyForConfirmation && neoProblemTileForFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: handleCancelTimeOnlyRemedy, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Time Change" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12341,
+          lineNumber: 12521,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12340,
+          lineNumber: 12520,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: [
@@ -99591,89 +99845,89 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Current Start Time:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12346,
+                lineNumber: 12526,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-mono font-bold", children: formatDecimalHourToString(neoProblemTileForFlyout.event.startTime) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12347,
+                lineNumber: 12527,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12345,
+              lineNumber: 12525,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12350,
+                lineNumber: 12530,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12351,
+                lineNumber: 12531,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12349,
+              lineNumber: 12529,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12344,
+            lineNumber: 12524,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center pt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-2 text-sm", children: "Proposed New Start Time" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12362,
+              lineNumber: 12542,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl font-bold text-green-400 font-mono tracking-wider", children: formatDecimalHourToString(timeOnlyRemedyForConfirmation.newStartTime) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12363,
+              lineNumber: 12543,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12361,
+            lineNumber: 12541,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12343,
+          lineNumber: 12523,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelTimeOnlyRemedy, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12369,
+            lineNumber: 12549,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSwitchToCrewChange, className: "px-4 py-2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors text-sm font-semibold", children: "Change Crew Instead" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12370,
+            lineNumber: 12550,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleConfirmTimeOnlyRemedy, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Accept Time Change" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12371,
+            lineNumber: 12551,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12368,
+          lineNumber: 12548,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12339,
+        lineNumber: 12519,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12338,
+        lineNumber: 12518,
         columnNumber: 18
       }, void 0),
       showDutyWarning && dutyWarningRemedy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -99688,49 +99942,49 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12377,
+          lineNumber: 12557,
           columnNumber: 17
         },
         void 0
       ),
       showInfoNotification && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12386,
+        lineNumber: 12566,
         columnNumber: 38
       }, void 0),
       showNightFlyingInfo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12387,
+        lineNumber: 12567,
         columnNumber: 37
       }, void 0),
       isBuildingDfp && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12388,
+        lineNumber: 12568,
         columnNumber: 31
       }, void 0),
       showDateWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12389,
+        lineNumber: 12569,
         columnNumber: 33
       }, void 0),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12390,
+        lineNumber: 12570,
         columnNumber: 56
       }, void 0),
       showPublishConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12391,
+        lineNumber: 12571,
         columnNumber: 36
       }, void 0),
       isLocalityChangeVisible && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LocalityChangeFlyout, { locality: school }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12392,
+        lineNumber: 12572,
         columnNumber: 41
       }, void 0),
       successMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SuccessNotification, { message: successMessage, onClose: () => setSuccessMessage(null) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12393,
+        lineNumber: 12573,
         columnNumber: 32
       }, void 0),
       showCurrencySetup && selectedPersonForCurrency && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -99751,7 +100005,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12395,
+          lineNumber: 12575,
           columnNumber: 17
         },
         void 0
@@ -99767,7 +100021,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12411,
+          lineNumber: 12591,
           columnNumber: 17
         },
         void 0
@@ -99787,7 +100041,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12418,
+          lineNumber: 12598,
           columnNumber: 17
         },
         void 0
@@ -99830,7 +100084,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12429,
+          lineNumber: 12609,
           columnNumber: 17
         },
         void 0
@@ -99849,7 +100103,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12463,
+          lineNumber: 12643,
           columnNumber: 17
         },
         void 0
@@ -99868,7 +100122,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12473,
+          lineNumber: 12653,
           columnNumber: 17
         },
         void 0
@@ -99924,7 +100178,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12483,
+          lineNumber: 12663,
           columnNumber: 17
         },
         void 0
@@ -99946,7 +100200,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12536,
+          lineNumber: 12716,
           columnNumber: 17
         },
         void 0
@@ -99969,7 +100223,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12551,
+          lineNumber: 12731,
           columnNumber: 17
         },
         void 0
@@ -99985,44 +100239,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12567,
+          lineNumber: 12747,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12080,
+      lineNumber: 12260,
       columnNumber: 9
     }, void 0),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoginModal, { onLoginSuccess: handleLoginSuccess }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12577,
+      lineNumber: 12757,
       columnNumber: 13
     }, void 0),
     authLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12584,
+        lineNumber: 12764,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 12585,
+        lineNumber: 12765,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12583,
+      lineNumber: 12763,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 12582,
+      lineNumber: 12762,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
-    lineNumber: 12078,
+    lineNumber: 12253,
     columnNumber: 5
   }, void 0);
 };
@@ -100098,4 +100352,3 @@ root.render(
   }, void 0)
 );
 //# sourceMappingURL=index.js.map
-// FIC211 color fix: courseColors should load from DB including restored courses

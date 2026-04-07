@@ -119,8 +119,12 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { ESL_DATA, PEA_DATA } from './mockData';
 import { initializeData } from './lib/dataService';
+// --- SYLLABUS SERVICE (loads from DB at startup) ---
+import { loadSyllabusFromDB } from './lib/syllabusService';
+// --- DEFAULT PHRASE BANK (configuration data - not mock data) ---
+import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
 import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
@@ -315,7 +319,7 @@ const calculateProjectedDuty = (
     instructorName: string, 
     events: (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[], 
     newEvent: (ScheduleEvent | Omit<ScheduleEvent, 'date'>),
-    syllabusDetails: SyllabusItemDetail[] = INITIAL_SYLLABUS_DETAILS
+    syllabusDetails: SyllabusItemDetail[] = []
 ): number => {
     // Filter events for the instructor
     const instructorEvents = [...events.filter(e => getPersonnel(e).includes(instructorName)), newEvent];
@@ -4373,6 +4377,36 @@ useEffect(() => {
             setCurrentUser(userString);
         }
     }, [authUser, currentUser, currentUserName]);
+// Load syllabus from DB on mount (startup loading with cache)
+    useEffect(() => {
+        const loadSyllabus = async () => {
+            setSyllabusLoading(true);
+            setSyllabusError(null);
+            try {
+                const result = await loadSyllabusFromDB();
+                if (result.syllabus.length > 0) {
+                    setSyllabusDetails(result.syllabus);
+                    if (result.source === 'expired-cache') {
+                        console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
+                        setSyllabusError(result.error || null);
+                    } else {
+                        console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+                    }
+                } else {
+                    console.error('❌ [Syllabus] No syllabus data available:', result.error);
+                    setSyllabusError(result.error || 'No syllabus data available');
+                }
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Unknown error';
+                console.error('❌ [Syllabus] Failed to load syllabus:', msg);
+                setSyllabusError(msg);
+            } finally {
+                setSyllabusLoading(false);
+            }
+        };
+        loadSyllabus();
+    }, []);
+
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
         const loadInitialData = async () => {
@@ -4438,10 +4472,10 @@ useEffect(() => {
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
-                        const bpcIpcSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                        const bpcIpcSyllabus = syllabusDetails.filter(
                             (item: any) => !item.lmpType || item.lmpType === 'Master LMP'
                         );
-                        const ficSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                        const ficSyllabus = syllabusDetails.filter(
                             (item: any) => item.courses && item.courses.includes('FIC')
                         );
                         const syllabusData: Record<string, any[]> = {
@@ -4604,7 +4638,7 @@ useEffect(() => {
                             const alreadySet = newLMPs.has(trainee.fullName);
 
                             if (!alreadySet || isFicTrainee) {
-                                const masterLMP = INITIAL_SYLLABUS_DETAILS.filter(item => {
+                                const masterLMP = syllabusDetails.filter(item => {
                                     if (lmpType === 'BPC+IPC') {
                                         return !item.lmpType || item.lmpType === 'Master LMP';
                                     }
@@ -4886,7 +4920,9 @@ useEffect(() => {
     const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
+    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
+    const [syllabusLoading, setSyllabusLoading] = useState<boolean>(true);
+    const [syllabusError, setSyllabusError] = useState<string | null>(null);
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
     
     // Event Limits State (Lifted from SettingsView)
@@ -12384,7 +12420,7 @@ updates.forEach(update => {
                                     lmpType = 'FIC';
                                 }
 
-                                const masterSyllabus = INITIAL_SYLLABUS_DETAILS.filter((item: any) => {
+                                const masterSyllabus = syllabusDetails.filter((item: any) => {
                                     if (lmpType === 'BPC+IPC') return !item.lmpType || item.lmpType === 'Master LMP';
                                     return item.courses && item.courses.includes(lmpType);
                                 });
