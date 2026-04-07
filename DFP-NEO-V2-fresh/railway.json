@@ -5,7 +5,7 @@
     "buildCommand": "echo 'Build complete - using pre-built static assets'"
   },
   "deploy": {
-    "startCommand": "node server.js",
+    "startCommand": "npm start",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
