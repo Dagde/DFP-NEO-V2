@@ -9,6 +9,7 @@ import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 
 interface PrioritiesViewProps {
+  school?: 'ESL' | 'PEA';
   coursePriorities: string[];
   onUpdatePriorities: (newOrder: string[]) => void;
   coursePercentages: Map<string, number>;
@@ -60,6 +61,7 @@ interface PrioritiesViewProps {
 
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
+  school = 'ESL',
   coursePriorities, 
   onUpdatePriorities, 
   coursePercentages, 
@@ -442,47 +444,61 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
             <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
                 <div className="p-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {school === 'ESL' ? 'East Sale (ESL)' : 'Pearce (PEA)'} &mdash; locality courses only
+                        </p>
+                    </div>
                     <span className="text-xs text-gray-500">Last updated: {courseTimestamp}</span>
                 </div>
                 <div className="p-4 border-t border-gray-700">
-                    <ul className="space-y-2">
-                        {coursePriorities.map((course, index) => (
-                            <li
-                                key={course}
-                                draggable
-                                onDragStart={() => handleCourseDragStart(index)}
-                                onDragEnter={() => handleCourseDragEnter(index)}
-                                onDragEnd={handleCourseDragEnd}
-                                onDragOver={(e) => e.preventDefault()}
-                                className="p-3 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
-                            >
-                                <div className="flex items-center space-x-3">
-                                    <span className="font-mono text-gray-500">{index + 1}</span>
-                                    <span className="font-semibold">{course}</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <span className={`font-mono w-12 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
-                                    <div className="flex flex-col">
-                                        <ArrowButton direction="up" onClick={() => handlePercentageChange(course, 'increase')} disabled={(coursePercentages.get(course) ?? 0) >= 100} />
-                                        <ArrowButton direction="down" onClick={() => handlePercentageChange(course, 'decrease')} disabled={(coursePercentages.get(course) ?? 0) <= 5} />
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                     <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                        Total: {totalPercentage}%
-                    </div>
-                    <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
-                        <p className="font-semibold mb-1">ℹ️ Weighted Priority System:</p>
-                        <ul className="list-disc list-inside space-y-1 text-blue-200">
-                            <li>Percentages are auto-normalized to 100%</li>
-                            <li>Minimum percentage per course: 5%</li>
-                            <li>Higher % = more events (biased allocation)</li>
-                            <li>All courses still get events (no starvation)</li>
-                        </ul>
-                    </div>
+                    {coursePriorities.length === 0 ? (
+                        <div className="py-8 text-center text-gray-500">
+                            <p className="text-sm font-medium">No courses found for {school === 'ESL' ? 'East Sale' : 'Pearce'}</p>
+                            <p className="text-xs mt-1">Courses will appear here once trainees are loaded for this locality.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <ul className="space-y-2">
+                                {coursePriorities.map((course, index) => (
+                                    <li
+                                        key={course}
+                                        draggable
+                                        onDragStart={() => handleCourseDragStart(index)}
+                                        onDragEnter={() => handleCourseDragEnter(index)}
+                                        onDragEnd={handleCourseDragEnd}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        className="p-3 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            <span className="font-mono text-gray-500">{index + 1}</span>
+                                            <span className="font-semibold">{course}</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <span className={`font-mono w-12 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
+                                            <div className="flex flex-col">
+                                                <ArrowButton direction="up" onClick={() => handlePercentageChange(course, 'increase')} disabled={(coursePercentages.get(course) ?? 0) >= 100} />
+                                                <ArrowButton direction="down" onClick={() => handlePercentageChange(course, 'decrease')} disabled={(coursePercentages.get(course) ?? 0) <= 5} />
+                                            </div>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                                Total: {totalPercentage}%
+                            </div>
+                            <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
+                                <p className="font-semibold mb-1">&#x2139;&#xFE0F; Weighted Priority System:</p>
+                                <ul className="list-disc list-inside space-y-1 text-blue-200">
+                                    <li>Percentages are auto-normalized to 100%</li>
+                                    <li>Minimum percentage per course: 5%</li>
+                                    <li>Higher % = more events (biased allocation)</li>
+                                    <li>All courses still get events (no starvation)</li>
+                                </ul>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
            </div>

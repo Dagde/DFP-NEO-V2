@@ -4992,35 +4992,53 @@ useEffect(() => {
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
 
-    // Auto-populate coursePriorities & coursePercentages from courseColors when not yet set.
-    // This ensures the Course Priority page always shows all active courses, even on first load
-    // before the user has manually configured priorities. If saved priorities exist (from DB
-    // settings load), this will only add any NEW courses that aren't already in the list.
+    // Auto-populate coursePriorities & coursePercentages from traineesData (locality-filtered).
+    // traineesData is already filtered by the active school (ESL/PEA), so only courses
+    // belonging to the current locality are included. If saved priorities exist (from DB
+    // settings load), this will only add any NEW locality courses not already in the list,
+    // and will remove courses that no longer belong to the current locality.
     // NOTE: placed here (after state declarations) to avoid temporal dead zone errors.
     useEffect(() => {
-        const courseNames = Object.keys(courseColors);
-        if (courseNames.length === 0) return;
+        // Derive unique course names from locality-filtered trainees that also exist in courseColors
+        const localityCourseNames = [...new Set(
+            traineesData
+                .map(t => t.course)
+                .filter(c => c && courseColors[c])
+        )];
+        if (localityCourseNames.length === 0) return;
 
         setCoursePriorities(prev => {
-            const existing = new Set(prev);
-            const newCourses = courseNames.filter(c => !existing.has(c));
-            if (newCourses.length === 0) return prev;
-            return [...prev, ...newCourses];
+            // Keep only courses that belong to the current locality
+            const localitySet = new Set(localityCourseNames);
+            const filtered = prev.filter(c => localitySet.has(c));
+            const existingSet = new Set(filtered);
+            const newCourses = localityCourseNames.filter(c => !existingSet.has(c));
+            if (newCourses.length === 0 && filtered.length === prev.length) return prev;
+            return [...filtered, ...newCourses];
         });
 
         setCoursePercentages(prev => {
             const updated = new Map(prev);
             let changed = false;
-            courseNames.forEach(course => {
+            const localitySet = new Set(localityCourseNames);
+            // Remove courses not in current locality
+            for (const key of updated.keys()) {
+                if (!localitySet.has(key)) {
+                    updated.delete(key);
+                    changed = true;
+                }
+            }
+            // Add missing locality courses
+            localityCourseNames.forEach(course => {
                 if (!updated.has(course)) {
-                    const equalShare = Math.max(5, Math.floor(100 / courseNames.length));
+                    const equalShare = Math.max(5, Math.floor(100 / localityCourseNames.length));
                     updated.set(course, equalShare);
                     changed = true;
                 }
             });
             return changed ? updated : prev;
         });
-    }, [courseColors]);
+    }, [traineesData, courseColors]);
     
     // Event Limits State (Lifted from SettingsView)
     const [eventLimits, setEventLimits] = useState<EventLimits>({
@@ -11271,6 +11289,7 @@ updates.forEach(update => {
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu 
+                    school={school}
                     coursePriorities={coursePriorities}
                     onUpdatePriorities={setCoursePriorities}
                     coursePercentages={coursePercentages}
@@ -11502,7 +11521,7 @@ updates.forEach(update => {
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
                             instructorsData={instructorsData}
                             traineesData={traineesData}
-                            activeCourses={coursePriorities.length > 0 ? coursePriorities : Object.keys(courseColors)}
+                            activeCourses={coursePriorities.length > 0 ? coursePriorities : [...new Set(traineesData.map(t => t.course).filter(c => c && courseColors[c]))]}
                             onNavigateAndSelectPerson={(name) => {
                                 const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
                                 if (person) {

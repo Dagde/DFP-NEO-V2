@@ -5,6 +5,7 @@ import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Sco
 import { InstructorPriorityConfig } from '../App';
 
 interface PrioritiesViewWithMenuProps {
+  school: 'ESL' | 'PEA';
   coursePriorities: string[];
   onUpdatePriorities: (newOrder: string[]) => void;
   coursePercentages: Map<string, number>;
