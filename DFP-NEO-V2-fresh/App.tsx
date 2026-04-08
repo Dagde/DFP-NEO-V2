@@ -4380,8 +4380,8 @@ useEffect(() => {
         }
     }, [authUser, currentUser, currentUserName]);
     // Syllabus state declared here before useEffects that reference it to avoid TDZ errors
-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
-    const [syllabusLoading, setSyllabusLoading] = useState<boolean>(true);
+    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
+    const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
     const [syllabusError, setSyllabusError] = useState<string | null>(null);
 
 // Load syllabus from DB on mount (startup loading with cache)
@@ -4395,20 +4395,27 @@ useEffect(() => {
                     // Check if DB syllabus uses wrong codes (e.g. BGF_GND_001 instead of BGF1)
                     // Wrong codes don't match PT-051 score records, so fall back to mockData syllabus
                     const firstItem = result.syllabus[0];
-                    const hasWrongCodes = firstItem && firstItem.code && firstItem.code.includes('_GND_') || 
-                                         firstItem && firstItem.code && firstItem.code.includes('_FLT_') ||
-                                         firstItem && firstItem.code && firstItem.code.includes('_SIM_');
+                    const hasWrongCodes = (firstItem?.code?.includes('_GND_') ||
+                                          firstItem?.code?.includes('_FLT_') ||
+                                          firstItem?.code?.includes('_SIM_')) ?? false;
                     if (hasWrongCodes) {
                         console.warn(`⚠️ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Falling back to built-in syllabus (${INITIAL_SYLLABUS_DETAILS.length} items). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix permanently.`);
                         clearSyllabusCache(); // Clear bad cache so next load re-fetches from DB
                         setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
                     } else {
-                        setSyllabusDetails(result.syllabus);
-                        if (result.source === 'expired-cache') {
-                            console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
-                            setSyllabusError(result.error || null);
+                        // Validate items have courses field; fall back to INITIAL if missing
+                        const hasValidCourses = result.syllabus.every(item => item.courses && item.courses.length > 0);
+                        if (hasValidCourses) {
+                            setSyllabusDetails(result.syllabus);
+                            if (result.source === 'expired-cache') {
+                                console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
+                                setSyllabusError(result.error || null);
+                            } else {
+                                console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+                            }
                         } else {
-                            console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+                            console.warn(`⚠️ [Syllabus] DB syllabus items missing courses field. Falling back to built-in syllabus.`);
+                            setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
                         }
                     }
                 } else {
@@ -4419,6 +4426,8 @@ useEffect(() => {
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
                 console.error('❌ [Syllabus] Failed to load syllabus:', msg);
+                // Always fall back to INITIAL_SYLLABUS_DETAILS on error
+                setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
                 setSyllabusError(msg);
             } finally {
                 setSyllabusLoading(false);
@@ -5615,7 +5624,11 @@ useEffect(() => {
                     setMasterCurrencies(merged.masters);
                     setCurrencyRequirements(merged.requirements);
                 }
-                if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
+                // NOTE: syllabusDetails intentionally NOT loaded from settings DB.
+                // syllabusDetails is always set from INITIAL_SYLLABUS_DETAILS (mockData) or a live DB
+                // syllabus fetch. Old saved settings may have items missing the `courses` field,
+                // which would break SyllabusView filtering (shows "No events found").
+                // The loadSyllabus useEffect above handles all syllabus loading with proper fallback.
                 if (saved.organisationSettings) {
                     console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
                     setOrganisationSettings(saved.organisationSettings);
@@ -5684,7 +5697,10 @@ useEffect(() => {
             cancellationCodes,
             masterCurrencies,
             currencyRequirements,
-            syllabusDetails,
+            // NOTE: syllabusDetails intentionally excluded from settings save.
+            // Syllabus is always loaded from INITIAL_SYLLABUS_DETAILS or DB syllabus API,
+            // never from the general settings blob. This prevents stale data overwriting
+            // the built-in syllabus with items that may lack the 'courses' field.
             organisationSettings,
         });
 
@@ -5702,7 +5718,7 @@ useEffect(() => {
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements,
-        syllabusDetails, organisationSettings,
+        organisationSettings,
     ]);
 
     // Baseline schedule state
