@@ -2009,6 +2009,323 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
 });
 
 // ============================================================
+// SYLLABUS API
+// ============================================================
+
+// GET /api/syllabus - Fetch all active syllabus items
+app.get('/api/syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course, phase, type, includeInactive } = req.query;
+
+    // Build WHERE clause
+    const conditions = [];
+    const params = [];
+
+    if (!includeInactive || includeInactive !== 'true') {
+      params.push(true);
+      conditions.push(`"isActive" = $${params.length}`);
+    }
+    if (course) {
+      params.push(course);
+      conditions.push(`$${params.length} = ANY("courses")`);
+    }
+    if (phase) {
+      params.push(`%${phase}%`);
+      conditions.push(`"phase" ILIKE $${params.length}`);
+    }
+    if (type) {
+      params.push(type);
+      conditions.push(`"type" = $${params.length}`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT * FROM "SyllabusItem" ${whereClause} ORDER BY "sortOrder" ASC`;
+
+    const items = await db.$queryRawUnsafe(query, ...params);
+    console.log(`✅ GET /api/syllabus - returning ${items.length} items`);
+    res.json({ syllabus: items, count: items.length });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus error:', error);
+    res.status(500).json({ error: 'Failed to fetch syllabus', details: error.message });
+  }
+});
+
+// GET /api/syllabus/:id - Fetch single syllabus item by id or code
+app.get('/api/syllabus/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1 LIMIT 1`,
+      id
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Syllabus item not found' });
+    }
+    res.json({ item: rows[0] });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus/:id error:', error);
+    res.status(500).json({ error: 'Failed to fetch syllabus item', details: error.message });
+  }
+});
+
+// POST /api/syllabus - Create a new syllabus item
+app.post('/api/syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const body = req.body;
+    const { randomUUID } = await import('crypto');
+    const id = randomUUID();
+    const now = new Date().toISOString();
+
+    await db.$executeRawUnsafe(`
+      INSERT INTO "SyllabusItem" (
+        "id","code","eventDescription","phase","module","type","sortieType","dayNight",
+        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourcesHuman",
+        "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
+        "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
+        "location","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
+        "notes","createdBy","createdAt","updatedAt"
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,
+        $9,$10,$11,$12,$13,
+        $14,$15,$16,$17,$18,
+        $19,$20,$21,$22,$23,
+        $24,$25,$26,$27,$28,$29,$30,$31,
+        $32,$33,$34,$35
+      )`,
+      id, body.code, body.eventDescription, body.phase, body.module, body.type,
+      body.sortieType || null, body.dayNight || 'Day',
+      body.courses || [], body.methodOfDelivery || [], body.methodOfAssessment || [],
+      body.resourcesPhysical || [], body.resourcesHuman || [],
+      body.eventDetailsCommon || [], body.eventDetailsSortie || [],
+      body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
+      body.preFlightTime || 0, body.postFlightTime || 0,
+      body.prerequisites || [], body.prerequisitesGround || [], body.prerequisitesFlying || [],
+      body.location || null, body.sortOrder || 0,
+      body.lmpType || null, body.twrDiReqd || null, body.cctOnly || null,
+      body.isRemedial || false, true, 1,
+      body.notes || null, body.createdBy || null, now, now
+    );
+
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    console.log(`✅ POST /api/syllabus - created: ${body.code}`);
+    res.json({ success: true, item: rows[0] });
+  } catch (error) {
+    console.error('❌ POST /api/syllabus error:', error);
+    res.status(500).json({ error: 'Failed to create syllabus item', details: error.message });
+  }
+});
+
+// PUT /api/syllabus/:id - Update a syllabus item
+app.put('/api/syllabus/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const body = req.body;
+
+    const fields = Object.keys(body).filter(k => !['id','createdAt','createdBy'].includes(k));
+    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+    const setClauses = fields.map((f, i) => `"${f}" = $${i + 2}`).join(', ');
+    const values = fields.map(f => body[f]);
+
+    await db.$executeRawUnsafe(
+      `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1`,
+      id, ...values
+    );
+
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    console.log(`✅ PUT /api/syllabus/${id}`);
+    res.json({ success: true, item: rows[0] });
+  } catch (error) {
+    console.error('❌ PUT /api/syllabus/:id error:', error);
+    res.status(500).json({ error: 'Failed to update syllabus item', details: error.message });
+  }
+});
+
+// DELETE /api/syllabus/:id - Soft delete a syllabus item
+app.delete('/api/syllabus/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+
+    await db.$executeRawUnsafe(
+      `UPDATE "SyllabusItem" SET "isActive" = false, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,
+      id
+    );
+
+    console.log(`✅ DELETE /api/syllabus/${id} (soft delete)`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/syllabus/:id error:', error);
+    res.status(500).json({ error: 'Failed to delete syllabus item', details: error.message });
+  }
+});
+
+// GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
+app.get('/api/admin/seed-syllabus', async (req, res) => {
+  const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
+  const { secret, force } = req.query;
+
+  if (secret !== SEED_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized. Provide ?secret=YOUR_SECRET' });
+  }
+
+  try {
+    const db = await getPrisma();
+
+    // Check if already seeded
+    const countRows = await db.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM "SyllabusItem"`);
+    const existingCount = countRows[0].count;
+
+    if (existingCount > 0 && force !== 'true') {
+      return res.json({
+        success: true,
+        message: `Database already has ${existingCount} syllabus items. Use ?force=true to re-seed.`,
+        count: existingCount,
+        skipped: true,
+      });
+    }
+
+    if (force === 'true' && existingCount > 0) {
+      await db.$executeRawUnsafe(`DELETE FROM "SyllabusHistory"`);
+      await db.$executeRawUnsafe(`DELETE FROM "SyllabusItem"`);
+      console.log(`🗑️ Cleared existing syllabus data (force re-seed)`);
+    }
+
+    const { randomUUID } = await import('crypto');
+    const now = new Date().toISOString();
+
+    const items = [
+      // BGF
+      { code: 'BGF_GND_001', eventDescription: 'Air Law and Regulations', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 10, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_002', eventDescription: 'Meteorology Fundamentals', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 20, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_003', eventDescription: 'Navigation Principles', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 30, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_004', eventDescription: 'Aircraft Systems - General', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 40, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_005', eventDescription: 'Flight Planning Basics', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 50, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_SIM_001', eventDescription: 'Simulator Familiarisation', phase: 'Basic Ground Flying', module: 'BGF', type: 'Simulator', courses: ['BGF'], sortOrder: 60, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_SIM_002', eventDescription: 'Basic Aircraft Handling - Simulator', phase: 'Basic Ground Flying', module: 'BGF', type: 'Simulator', courses: ['BGF'], sortOrder: 70, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_001', eventDescription: 'Aircraft Familiarisation', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 80, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_002', eventDescription: 'Effects of Controls', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 90, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_003', eventDescription: 'Straight and Level Flight', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 100, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_004', eventDescription: 'Climbing and Descending', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 110, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_005', eventDescription: 'Medium Level Turns', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 120, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_006', eventDescription: 'Stalling', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 130, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_007', eventDescription: 'Circuit Training', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 140, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_008', eventDescription: 'First Solo', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 150, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_009', eventDescription: 'Advanced Circuits', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 160, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_010', eventDescription: 'Navigation Exercise 1', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 170, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_011', eventDescription: 'Navigation Exercise 2', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 180, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_012', eventDescription: 'BGF Progress Check', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 190, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_013', eventDescription: 'BGF Final Handling Test', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 200, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // BIF
+      { code: 'BIF_GND_001', eventDescription: 'Instrument Flight Rules Theory', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Ground', courses: ['BIF'], sortOrder: 210, totalEventHours: 2, duration: 2 },
+      { code: 'BIF_GND_002', eventDescription: 'Instrument Meteorological Conditions', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Ground', courses: ['BIF'], sortOrder: 220, totalEventHours: 2, duration: 2 },
+      { code: 'BIF_GND_003', eventDescription: 'Instrument Scanning Techniques', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Ground', courses: ['BIF'], sortOrder: 230, totalEventHours: 2, duration: 2 },
+      { code: 'BIF_SIM_001', eventDescription: 'Instrument Flying - Simulator 1', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Simulator', courses: ['BIF'], sortOrder: 240, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_SIM_002', eventDescription: 'Instrument Flying - Simulator 2', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Simulator', courses: ['BIF'], sortOrder: 250, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_SIM_003', eventDescription: 'Instrument Flying - Simulator 3', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Simulator', courses: ['BIF'], sortOrder: 260, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_001', eventDescription: 'Basic Instrument Flying 1', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 270, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_002', eventDescription: 'Basic Instrument Flying 2', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 280, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_003', eventDescription: 'Basic Instrument Flying 3', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 290, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_004', eventDescription: 'Instrument Navigation Exercise', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 300, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_005', eventDescription: 'BIF Progress Check', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 310, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_006', eventDescription: 'BIF Final Instrument Test', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 320, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // BNF
+      { code: 'BNF_GND_001', eventDescription: 'Advanced Navigation Theory', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Ground', courses: ['BNF'], sortOrder: 330, totalEventHours: 2, duration: 2 },
+      { code: 'BNF_GND_002', eventDescription: 'Map Reading and Chart Work', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Ground', courses: ['BNF'], sortOrder: 340, totalEventHours: 2, duration: 2 },
+      { code: 'BNF_SIM_001', eventDescription: 'Navigation Simulator Exercise 1', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Simulator', courses: ['BNF'], sortOrder: 350, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_SIM_002', eventDescription: 'Navigation Simulator Exercise 2', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Simulator', courses: ['BNF'], sortOrder: 360, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_001', eventDescription: 'Solo Navigation Exercise 1', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 370, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_002', eventDescription: 'Solo Navigation Exercise 2', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 380, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_003', eventDescription: 'Navigation Cross Country 1', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 390, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_004', eventDescription: 'Navigation Cross Country 2', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 400, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_005', eventDescription: 'BNF Progress Check', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 410, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_006', eventDescription: 'BNF Final Navigation Test', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 420, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // BNAV
+      { code: 'BNAV_GND_001', eventDescription: 'Advanced Navigation Systems', phase: 'Basic Navigation', module: 'BNAV', type: 'Ground', courses: ['BNAV'], sortOrder: 430, totalEventHours: 2, duration: 2 },
+      { code: 'BNAV_GND_002', eventDescription: 'GPS and Electronic Navigation', phase: 'Basic Navigation', module: 'BNAV', type: 'Ground', courses: ['BNAV'], sortOrder: 440, totalEventHours: 2, duration: 2 },
+      { code: 'BNAV_GND_003', eventDescription: 'Flight Planning - Advanced', phase: 'Basic Navigation', module: 'BNAV', type: 'Ground', courses: ['BNAV'], sortOrder: 450, totalEventHours: 2, duration: 2 },
+      { code: 'BNAV_SIM_001', eventDescription: 'Advanced Navigation Simulator 1', phase: 'Basic Navigation', module: 'BNAV', type: 'Simulator', courses: ['BNAV'], sortOrder: 460, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_SIM_002', eventDescription: 'Advanced Navigation Simulator 2', phase: 'Basic Navigation', module: 'BNAV', type: 'Simulator', courses: ['BNAV'], sortOrder: 470, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_FLT_001', eventDescription: 'Advanced Navigation Flight 1', phase: 'Basic Navigation', module: 'BNAV', type: 'Flying', courses: ['BNAV'], sortOrder: 480, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_FLT_002', eventDescription: 'Advanced Navigation Flight 2', phase: 'Basic Navigation', module: 'BNAV', type: 'Flying', courses: ['BNAV'], sortOrder: 490, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_FLT_003', eventDescription: 'BNAV Final Test', phase: 'Basic Navigation', module: 'BNAV', type: 'Flying', courses: ['BNAV'], sortOrder: 500, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // FIC
+      { code: 'FIC_GND_001', eventDescription: 'Instructional Techniques', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 510, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_GND_002', eventDescription: 'Teaching and Learning Theory', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 520, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_GND_003', eventDescription: 'Lesson Planning', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 530, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_GND_004', eventDescription: 'Airmanship and Airspace', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 540, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_SIM_001', eventDescription: 'Instructional Simulator Exercise 1', phase: 'Flight Instructor Course', module: 'FIC', type: 'Simulator', courses: ['FIC'], sortOrder: 550, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_SIM_002', eventDescription: 'Instructional Simulator Exercise 2', phase: 'Flight Instructor Course', module: 'FIC', type: 'Simulator', courses: ['FIC'], sortOrder: 560, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_001', eventDescription: 'Instructional Flying - Effects of Controls', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 570, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_002', eventDescription: 'Instructional Flying - Circuits', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 580, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_003', eventDescription: 'Instructional Flying - Navigation', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 590, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_004', eventDescription: 'Instructional Flying - Instruments', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 600, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_005', eventDescription: 'FIC Progress Check', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 610, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_006', eventDescription: 'FIC Final Handling Test', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 620, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+    ];
+
+    let created = 0;
+    const errors = [];
+
+    for (const item of items) {
+      try {
+        const id = randomUUID();
+        await db.$executeRawUnsafe(`
+          INSERT INTO "SyllabusItem" (
+            "id","code","eventDescription","phase","module","type","sortieType","dayNight",
+            "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourcesHuman",
+            "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
+            "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
+            "location","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
+            "notes","createdBy","createdAt","updatedAt"
+          ) VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,
+            $9,$10,$11,$12,$13,$14,$15,
+            $16,$17,$18,$19,$20,
+            $21,$22,$23,$24,$25,
+            $26,$27,$28,$29,$30,$31,
+            $32,$33,$34,$35
+          )`,
+          id, item.code, item.eventDescription, item.phase, item.module, item.type,
+          null, 'Day',
+          item.courses, ['Instructor Led'], ['Instructor Assessment'],
+          [], ['QFI'],
+          [], [],
+          item.flightOrSimHours || 0, item.totalEventHours || 1, item.duration || 1,
+          item.preFlightTime || 0, item.postFlightTime || 0,
+          [], [], [],
+          null, item.sortOrder || 0,
+          null, null, null,
+          false, true, 1,
+          null, 'seed', now, now
+        );
+        created++;
+      } catch (err) {
+        errors.push(`${item.code}: ${err.message}`);
+      }
+    }
+
+    console.log(`✅ GET /api/admin/seed-syllabus - seeded ${created} items`);
+    res.json({
+      success: true,
+      message: `Successfully seeded ${created} syllabus items`,
+      created,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+
+  } catch (error) {
+    console.error('❌ GET /api/admin/seed-syllabus error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================
 // SERVE STATIC VITE BUILD
 // ============================================================
 
