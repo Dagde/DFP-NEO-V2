@@ -4735,37 +4735,6 @@ useEffect(() => {
         loadInitialData();
     }, []);
 
-    // Auto-populate coursePriorities & coursePercentages from courseColors when not yet set.
-    // This ensures the Course Priority page always shows all active courses, even on first load
-    // before the user has manually configured priorities. If saved priorities exist (from DB
-    // settings load), this will only add any NEW courses that aren't already in the list.
-    useEffect(() => {
-        const courseNames = Object.keys(courseColors);
-        if (courseNames.length === 0) return;
-
-        setCoursePriorities(prev => {
-            // Add any courses present in courseColors but missing from the current list
-            const existing = new Set(prev);
-            const newCourses = courseNames.filter(c => !existing.has(c));
-            if (newCourses.length === 0) return prev;
-            return [...prev, ...newCourses];
-        });
-
-        setCoursePercentages(prev => {
-            const updated = new Map(prev);
-            let changed = false;
-            courseNames.forEach(course => {
-                if (!updated.has(course)) {
-                    // Assign equal share to new courses (will auto-normalize on save)
-                    const equalShare = Math.max(5, Math.floor(100 / courseNames.length));
-                    updated.set(course, equalShare);
-                    changed = true;
-                }
-            });
-            return changed ? updated : prev;
-        });
-    }, [courseColors]);
-
     // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
     useEffect(() => {
@@ -5022,6 +4991,36 @@ useEffect(() => {
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
+
+    // Auto-populate coursePriorities & coursePercentages from courseColors when not yet set.
+    // This ensures the Course Priority page always shows all active courses, even on first load
+    // before the user has manually configured priorities. If saved priorities exist (from DB
+    // settings load), this will only add any NEW courses that aren't already in the list.
+    // NOTE: placed here (after state declarations) to avoid temporal dead zone errors.
+    useEffect(() => {
+        const courseNames = Object.keys(courseColors);
+        if (courseNames.length === 0) return;
+
+        setCoursePriorities(prev => {
+            const existing = new Set(prev);
+            const newCourses = courseNames.filter(c => !existing.has(c));
+            if (newCourses.length === 0) return prev;
+            return [...prev, ...newCourses];
+        });
+
+        setCoursePercentages(prev => {
+            const updated = new Map(prev);
+            let changed = false;
+            courseNames.forEach(course => {
+                if (!updated.has(course)) {
+                    const equalShare = Math.max(5, Math.floor(100 / courseNames.length));
+                    updated.set(course, equalShare);
+                    changed = true;
+                }
+            });
+            return changed ? updated : prev;
+        });
+    }, [courseColors]);
     
     // Event Limits State (Lifted from SettingsView)
     const [eventLimits, setEventLimits] = useState<EventLimits>({
