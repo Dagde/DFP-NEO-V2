@@ -62,8 +62,78 @@ async function getPrisma() {
     }
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(prisma);
+    // Ensure SyllabusItem and SyllabusHistory tables exist
+    await ensureSyllabusTablesExist(prisma);
   }
   return prisma;
+}
+
+// Create SyllabusItem and SyllabusHistory tables if they don't exist
+async function ensureSyllabusTablesExist(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SyllabusItem" (
+        "id"                   TEXT NOT NULL,
+        "code"                 TEXT NOT NULL,
+        "eventDescription"     TEXT NOT NULL,
+        "phase"                TEXT NOT NULL,
+        "module"               TEXT NOT NULL,
+        "type"                 TEXT NOT NULL,
+        "sortieType"           TEXT,
+        "dayNight"             TEXT NOT NULL DEFAULT 'Day',
+        "courses"              TEXT[] NOT NULL DEFAULT '{}',
+        "methodOfDelivery"     TEXT[] NOT NULL DEFAULT '{}',
+        "methodOfAssessment"   TEXT[] NOT NULL DEFAULT '{}',
+        "resourcesPhysical"    TEXT[] NOT NULL DEFAULT '{}',
+        "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
+        "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
+        "eventDetailsSortie"   TEXT[] NOT NULL DEFAULT '{}',
+        "flightOrSimHours"     DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "totalEventHours"      DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "duration"             DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "preFlightTime"        DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "postFlightTime"       DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "prerequisites"        TEXT[] NOT NULL DEFAULT '{}',
+        "prerequisitesGround"  TEXT[] NOT NULL DEFAULT '{}',
+        "prerequisitesFlying"  TEXT[] NOT NULL DEFAULT '{}',
+        "location"             TEXT,
+        "sortOrder"            INTEGER NOT NULL DEFAULT 0,
+        "lmpType"              TEXT,
+        "twrDiReqd"            TEXT,
+        "cctOnly"              TEXT,
+        "isRemedial"           BOOLEAN NOT NULL DEFAULT false,
+        "isActive"             BOOLEAN NOT NULL DEFAULT true,
+        "version"              INTEGER NOT NULL DEFAULT 1,
+        "notes"                TEXT,
+        "createdBy"            TEXT,
+        "createdAt"            TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"            TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SyllabusItem_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_isActive_idx" ON "SyllabusItem"("isActive")`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SyllabusHistory" (
+        "id"             TEXT NOT NULL,
+        "syllabusItemId" TEXT NOT NULL,
+        "changeType"     TEXT NOT NULL,
+        "changeData"     JSONB NOT NULL,
+        "previousData"   JSONB,
+        "changedBy"      TEXT,
+        "changeReason"   TEXT,
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SyllabusHistory_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusHistory_syllabusItemId_idx" ON "SyllabusHistory"("syllabusItemId")`);
+
+    console.log('✅ SyllabusItem and SyllabusHistory tables ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Syllabus tables:', err.message);
+  }
 }
 
 // ============================================================
