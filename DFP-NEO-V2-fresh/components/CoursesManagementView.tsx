@@ -148,7 +148,10 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
             >
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded ${courseColors[course.name] || 'bg-gray-400/50'}`}></div>
+                        <div 
+                            className={`w-4 h-4 rounded ${!(courseColors[course.name] || '').startsWith('#') ? (courseColors[course.name] || 'bg-gray-400/50') : ''}`}
+                            style={(courseColors[course.name] || '').startsWith('#') ? { backgroundColor: courseColors[course.name] } : {}}
+                        ></div>
                         <h3 className="text-lg font-semibold text-white group-hover:text-sky-400 transition-colors">
                             {course.name}
                         </h3>

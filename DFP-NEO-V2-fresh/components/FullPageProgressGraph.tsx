@@ -343,8 +343,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
         return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
     }, [weeklyProgress]);
 
-    // Extract color for dots
-    const dotColor = color.includes('sky') ? '#38bdf8' :
+    // Extract hex color for SVG dots and strokes
+    const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
+    const dotColor = isHexColor(color) ? color :
+                     color.includes('sky') ? '#38bdf8' :
                      color.includes('purple') ? '#c084fc' :
                      color.includes('yellow') ? '#facc15' :
                      color.includes('pink') ? '#f472b6' :
@@ -355,11 +357,12 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                      color.includes('blue') ? '#60a5fa' :
                      color.includes('green') ? '#4ade80' :
                      color.includes('red') ? '#f87171' :
+                     color.includes('amber') ? '#f59e0b' :
                      color.includes('lime') ? '#a3e635' : '#9ca3af';
 
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4">
-            <div className={`mb-4 p-3 rounded-lg ${color}`}>
+            <div className={`mb-4 p-3 rounded-lg ${isHexColor(color) ? '' : color}`} style={isHexColor(color) ? { backgroundColor: color } : {}}>
                 <h2 className="text-lg font-bold text-white text-center">{course.name}</h2>
                 <div className="flex justify-between text-sm text-white/80 mt-2">
                     <span>Start: {startDate.toLocaleDateString('en-GB')}</span>

@@ -305,9 +305,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                 const activeCount = courseTrainees.filter(t => !t.isPaused).length;
                                 const pausedCount = courseTrainees.filter(t => t.isPaused).length;
 
+                                const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
-                                        <div className={`px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`}>
+                                        <div 
+                                            className={`px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? '' : color} flex justify-between items-center`}
+                                            style={isHexColor(color) ? { backgroundColor: color } : {}}
+                                        >
                                             <div>
                                                 <span>{courseName}</span>
                                                 {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}

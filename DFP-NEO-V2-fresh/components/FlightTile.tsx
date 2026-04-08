@@ -120,12 +120,19 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const isEndSegment = segment.segmentType === 'start'; 
   const flyoutToLeft = isEndSegment || (effectiveStartTime + effectiveDuration > 22); // Logic: if it ends late in the day, flyout left
 
+  // Helper: check if a color value is a hex/rgb value vs a Tailwind class (defined here for use in style)
+  const isHexColorEarly = (color: string) => color && (color.startsWith('#') || color.startsWith('rgb'));
+
   const style: React.CSSProperties = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
     width: `${tileWidth}px`,
     height: `${rowHeight - 4}px`, // a little padding
     marginTop: '2px',
+    // Handle hex color values (e.g. #0E7A6E) that can't be used as Tailwind CSS class names
+    ...(isHexColorEarly(event.color || '') && event.type !== 'deployment' && event.type !== 'unavailability' && !isUnavailabilityConflict && !isConflicting
+      ? { backgroundColor: event.color }
+      : {}),
   };
   
   const getDynamicRingClass = () => {
@@ -530,12 +537,16 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const shadowClass = isDragging ? 'shadow-xl' : 'shadow-md';
   const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${isDragging ? 'opacity-80 z-50' : 'z-10'} ${shadowClass}`;
 
+  // Use isHexColorEarly (defined above) for hex color detection
+  const isHexColor = isHexColorEarly;
+  const eventColorIsHex = isHexColorEarly(event.color || '');
+
   // Handle deployment tile special styling
   const backgroundClass = event.type === 'deployment' 
     ? 'bg-gray-600/30 border border-white/60' 
     : event.type === 'unavailability'
     ? 'bg-red-900/80 border border-red-600/60'
-    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : event.color;
+    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : (eventColorIsHex ? '' : event.color);
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
@@ -543,7 +554,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const finalClasses = [commonClasses];
 
   if (isPreview) {
-      finalClasses.push(event.color); // The color is set in App.tsx for oracle preview
+      finalClasses.push(eventColorIsHex ? '' : event.color); // The color is set in App.tsx for oracle preview
       finalClasses.push('border-2 border-dashed border-sky-300');
   } else {
       finalClasses.push(backgroundClass);

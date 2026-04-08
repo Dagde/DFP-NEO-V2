@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, d as ReactDOM$1 } from "./vendor-react.js";
+import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
@@ -5076,14 +5076,24 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: allCourses.map(([courseName, color]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "py-1 flex items-center justify-center", children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `h-3 w-3 rounded-full ${color} mr-2 flex-shrink-0` }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-              lineNumber: 221,
-              columnNumber: 21
-            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              "span",
+              {
+                className: `h-3 w-3 rounded-full ${(color || "").startsWith("#") ? "" : color} mr-2 flex-shrink-0`,
+                style: (color || "").startsWith("#") ? { backgroundColor: color } : {}
+              },
+              void 0,
+              false,
+              {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
+                lineNumber: 221,
+                columnNumber: 21
+              },
+              void 0
+            ),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-300", children: formatCourseName(courseName) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-              lineNumber: 222,
+              lineNumber: 225,
               columnNumber: 21
             }, void 0)
           ] }, courseName, true, {
@@ -5110,11 +5120,11 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           currentUserName.split(",")[0]
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-          lineNumber: 231,
+          lineNumber: 234,
           columnNumber: 13
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-          lineNumber: 230,
+          lineNumber: 233,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
@@ -5138,7 +5148,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-        lineNumber: 238,
+        lineNumber: 241,
         columnNumber: 9
       },
       void 0
@@ -5154,7 +5164,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-        lineNumber: 245,
+        lineNumber: 248,
         columnNumber: 9
       },
       void 0
@@ -5162,7 +5172,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     showPinModal && selectedUser && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center", onClick: () => setShowPinModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white mb-4", children: "Confirm User Switch" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-        lineNumber: 257,
+        lineNumber: 260,
         columnNumber: 15
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-6", children: [
@@ -5174,13 +5184,13 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             currentUserName
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-            lineNumber: 261,
+            lineNumber: 264,
             columnNumber: 31
           }, void 0),
           " to:"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-          lineNumber: 260,
+          lineNumber: 263,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "font-semibold text-white text-lg", children: [
@@ -5189,12 +5199,12 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           selectedUser.name
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-          lineNumber: 263,
+          lineNumber: 266,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-        lineNumber: 259,
+        lineNumber: 262,
         columnNumber: 15
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-6", children: [
@@ -5204,7 +5214,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           ":"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-          lineNumber: 269,
+          lineNumber: 272,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -5222,19 +5232,19 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-            lineNumber: 272,
+            lineNumber: 275,
             columnNumber: 17
           },
           void 0
         ),
         pinError && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mt-2 text-sm text-red-400", children: pinError }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-          lineNumber: 281,
+          lineNumber: 284,
           columnNumber: 30
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-        lineNumber: 268,
+        lineNumber: 271,
         columnNumber: 15
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end space-x-3", children: [
@@ -5254,7 +5264,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-            lineNumber: 285,
+            lineNumber: 288,
             columnNumber: 17
           },
           void 0
@@ -5270,27 +5280,27 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-            lineNumber: 296,
+            lineNumber: 299,
             columnNumber: 17
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-        lineNumber: 284,
+        lineNumber: 287,
         columnNumber: 15
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-      lineNumber: 256,
+      lineNumber: 259,
       columnNumber: 13
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-      lineNumber: 255,
+      lineNumber: 258,
       columnNumber: 11
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/Sidebar.tsx",
-      lineNumber: 254,
+      lineNumber: 257,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
@@ -6187,13 +6197,16 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const isSmallTile = tileWidth < 60;
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
+  const isHexColorEarly = (color) => color && (color.startsWith("#") || color.startsWith("rgb"));
   const style = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
     width: `${tileWidth}px`,
     height: `${rowHeight - 4}px`,
     // a little padding
-    marginTop: "2px"
+    marginTop: "2px",
+    // Handle hex color values (e.g. #0E7A6E) that can't be used as Tailwind CSS class names
+    ...isHexColorEarly(event.color || "") && event.type !== "deployment" && event.type !== "unavailability" && !isUnavailabilityConflict && !isConflicting ? { backgroundColor: event.color } : {}
   };
   const getDynamicRingClass = () => {
     if (isConflicting || isUnavailabilityConflict) {
@@ -6293,14 +6306,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     if (event.flightType === "Solo") {
       return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 280,
+        lineNumber: 287,
         columnNumber: 17
       }, void 0);
     }
     if (isSctEvent && !event.student && event.pilot) {
       return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 289,
+        lineNumber: 296,
         columnNumber: 17
       }, void 0);
     }
@@ -6310,7 +6323,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     if (event.pilot && event.student && event.pilot === event.student) {
       return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-yellow-500/20 text-yellow-100 px-1.5 py-0.5 rounded-sm font-bold", style: { fontSize: isSmallTile ? "10px" : `${scaledFontSize * 0.85}px` }, children: "SOLO" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 304,
+        lineNumber: 311,
         columnNumber: 17
       }, void 0);
     }
@@ -6383,12 +6396,12 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white/80 font-medium text-sm", children: "DEPLOYMENT" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 403,
+          lineNumber: 410,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/60 truncate", children: "deployed" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 406,
+          lineNumber: 413,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-white/50 mt-1", children: [
@@ -6397,16 +6410,16 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           event.deploymentEndTime?.replace(/:/g, "")
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 409,
+          lineNumber: 416,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 402,
+        lineNumber: 409,
         columnNumber: 17
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 401,
+        lineNumber: 408,
         columnNumber: 13
       }, void 0);
     }
@@ -6414,26 +6427,26 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-300 font-medium text-sm", children: "UNAVAILABLE" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 422,
+          lineNumber: 429,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-red-400 truncate", children: (event.reason || "Other").toUpperCase() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 425,
+          lineNumber: 432,
           columnNumber: 21
         }, void 0),
         event.notes && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-red-500 mt-1 truncate", children: event.notes }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 429,
+          lineNumber: 436,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 421,
+        lineNumber: 428,
         columnNumber: 17
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 420,
+        lineNumber: 427,
         columnNumber: 13
       }, void 0);
     }
@@ -6444,12 +6457,12 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
             picName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 444,
+              lineNumber: 451,
               columnNumber: 97
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 444,
+            lineNumber: 451,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/80 truncate", children: [
@@ -6459,23 +6472,23 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
               "]"
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 446,
+              lineNumber: 453,
               columnNumber: 29
             }, void 0),
             " ",
             event.flightNumber
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 445,
+            lineNumber: 452,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 443,
+          lineNumber: 450,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 442,
+          lineNumber: 449,
           columnNumber: 17
         }, void 0);
       }
@@ -6485,33 +6498,33 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
             displayPicName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 456,
+              lineNumber: 463,
               columnNumber: 171
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 456,
+            lineNumber: 463,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             displayStudentName?.split(" – ")[0],
             studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 457,
+              lineNumber: 464,
               columnNumber: 223
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 457,
+            lineNumber: 464,
             columnNumber: 162
           }, void 0) : studentDisplay }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 457,
+            lineNumber: 464,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 455,
+          lineNumber: 462,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-end justify-between h-full pl-1 flex-shrink-0", style: { minWidth: "fit-content" }, children: [
@@ -6522,33 +6535,33 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
               "]"
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 462,
+              lineNumber: 469,
               columnNumber: 29
             }, void 0),
             " ",
             event.flightNumber
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 461,
+            lineNumber: 468,
             columnNumber: 25
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 460,
+            lineNumber: 467,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 465,
+            lineNumber: 472,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 459,
+          lineNumber: 466,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 454,
+        lineNumber: 461,
         columnNumber: 13
       }, void 0);
     }
@@ -6559,33 +6572,33 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
             displayPicName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 475,
+              lineNumber: 482,
               columnNumber: 171
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 475,
+            lineNumber: 482,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             displayStudentName?.split(" – ")[0],
             studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 476,
+              lineNumber: 483,
               columnNumber: 223
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 476,
+            lineNumber: 483,
             columnNumber: 162
           }, void 0) : studentDisplay }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 476,
+            lineNumber: 483,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 474,
+          lineNumber: 481,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-end justify-between h-full pl-1 flex-shrink-0", style: { minWidth: "fit-content" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/80 text-right whitespace-nowrap", children: [
@@ -6595,27 +6608,27 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
             "]"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 482,
+            lineNumber: 489,
             columnNumber: 29
           }, void 0),
           " ",
           event.flightNumber
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 481,
+          lineNumber: 488,
           columnNumber: 25
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 480,
+          lineNumber: 487,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 479,
+          lineNumber: 486,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 473,
+        lineNumber: 480,
         columnNumber: 13
       }, void 0),
       event.aircraftNumber && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -6636,7 +6649,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
         true,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 489,
+          lineNumber: 496,
           columnNumber: 17
         },
         void 0
@@ -6657,7 +6670,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 502,
+            lineNumber: 509,
             columnNumber: 21
           },
           void 0
@@ -6677,31 +6690,32 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 514,
+            lineNumber: 521,
             columnNumber: 21
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 500,
+        lineNumber: 507,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 472,
+      lineNumber: 479,
       columnNumber: 9
     }, void 0);
   };
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
-  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : event.color;
+  const eventColorIsHex = isHexColorEarly(event.color || "");
+  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : eventColorIsHex ? "" : event.color;
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
   if (isPreview) {
-    finalClasses.push(event.color);
+    finalClasses.push(eventColorIsHex ? "" : event.color);
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
@@ -6729,68 +6743,68 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           picName?.split(" – ")[0],
           picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 585,
+            lineNumber: 596,
             columnNumber: 136
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 585,
+          lineNumber: 596,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", ""), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           studentDisplay,
           studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 586,
+            lineNumber: 597,
             columnNumber: 159
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 586,
+          lineNumber: 597,
           columnNumber: 119
         }, void 0) : studentDisplay }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 586,
+          lineNumber: 597,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 584,
+        lineNumber: 595,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "h-6 w-px bg-gray-600" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 588,
+        lineNumber: 599,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono font-semibold text-sky-400", children: event.flightNumber }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 590,
+          lineNumber: 601,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-gray-400", children: formatTime$5(effectiveStartTime) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 591,
+          lineNumber: 602,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 589,
+        lineNumber: 600,
         columnNumber: 21
       }, void 0),
       callsign && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 593,
+        lineNumber: 604,
         columnNumber: 34
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 583,
+      lineNumber: 594,
       columnNumber: 16
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 581,
+      lineNumber: 592,
       columnNumber: 11
     }, void 0);
   };
@@ -6810,7 +6824,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       children: [
         isChanged && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 614,
+          lineNumber: 625,
           columnNumber: 13
         }, void 0),
         isStbyEvent && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -6825,7 +6839,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 617,
+            lineNumber: 628,
             columnNumber: 13
           },
           void 0
@@ -6850,7 +6864,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                  lineNumber: 629,
+                  lineNumber: 640,
                   columnNumber: 17
                 },
                 void 0
@@ -6869,7 +6883,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                  lineNumber: 637,
+                  lineNumber: 648,
                   columnNumber: 17
                 },
                 void 0
@@ -6880,7 +6894,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 625,
+            lineNumber: 636,
             columnNumber: 13
           },
           void 0
@@ -6898,7 +6912,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                lineNumber: 650,
+                lineNumber: 661,
                 columnNumber: 21
               },
               void 0
@@ -6914,14 +6928,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                lineNumber: 656,
+                lineNumber: 667,
                 columnNumber: 21
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 649,
+            lineNumber: 660,
             columnNumber: 17
           }, void 0) : !isSmallTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "div",
@@ -6934,7 +6948,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 665,
+              lineNumber: 676,
               columnNumber: 21
             },
             void 0
@@ -6943,7 +6957,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           renderFlyout()
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 647,
+          lineNumber: 658,
           columnNumber: 9
         }, void 0)
       ]
@@ -6952,7 +6966,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 600,
+      lineNumber: 611,
       columnNumber: 5
     },
     void 0
@@ -10203,6 +10217,9 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
     };
   };
   const convertTailwindToHex = (tailwindClass) => {
+    if (tailwindClass.startsWith("#") || tailwindClass.startsWith("rgb")) {
+      return tailwindClass;
+    }
     const colorMap = {
       "bg-sky-400/50": "#38BDF8",
       "bg-purple-400/50": "#C084FC",
@@ -10215,7 +10232,8 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
       "bg-green-400/50": "#4ADE80",
       "bg-orange-400/50": "#FB923C",
       "bg-red-400/50": "#F87171",
-      "bg-gray-400/50": "#9CA3AF"
+      "bg-gray-400/50": "#9CA3AF",
+      "bg-amber-500/50": "#F59E0B"
     };
     return colorMap[tailwindClass] || "#9CA3AF";
   };
@@ -10233,17 +10251,17 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
         children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "truncate font-medium leading-tight", children: name }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeColumn.tsx",
-            lineNumber: 57,
+            lineNumber: 62,
             columnNumber: 19
           }, void 0),
           course && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono leading-tight", style: { color: convertTailwindToHex(courseColors[course] || "bg-gray-400/50") }, children: course }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeColumn.tsx",
-            lineNumber: 58,
+            lineNumber: 63,
             columnNumber: 30
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeColumn.tsx",
-          lineNumber: 56,
+          lineNumber: 61,
           columnNumber: 17
         }, void 0)
       },
@@ -10251,18 +10269,18 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeColumn.tsx",
-        lineNumber: 48,
+        lineNumber: 53,
         columnNumber: 15
       },
       void 0
     );
   }) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeColumn.tsx",
-    lineNumber: 43,
+    lineNumber: 48,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeColumn.tsx",
-    lineNumber: 42,
+    lineNumber: 47,
     columnNumber: 5
   }, void 0);
 };
@@ -14108,11 +14126,22 @@ const TraineeProfileFlyout = ({
                       lineNumber: 1082,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || "bg-gray-500"}`, children: trainee.course }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1082,
-                      columnNumber: 99
-                    }, void 0)
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                      "span",
+                      {
+                        className: `font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || "").startsWith("#") ? "" : courseColors[trainee.course] || "bg-gray-500"}`,
+                        style: (courseColors[trainee.course] || "").startsWith("#") ? { backgroundColor: courseColors[trainee.course] } : {},
+                        children: trainee.course
+                      },
+                      void 0,
+                      false,
+                      {
+                        fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                        lineNumber: 1082,
+                        columnNumber: 99
+                      },
+                      void 0
+                    )
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1082,
@@ -14121,61 +14150,13 @@ const TraineeProfileFlyout = ({
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "LMP" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1083,
+                      lineNumber: 1086,
                       columnNumber: 36
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-300 font-medium", children: trainee.lmpType || "BPC+IPC" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1083,
+                      lineNumber: 1086,
                       columnNumber: 96
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1083,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1084,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1084,
-                      columnNumber: 101
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1084,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1085,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.secondaryCallsign || "-" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1085,
-                      columnNumber: 111
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1085,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Seat Config" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1086,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.seatConfig }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1086,
-                      columnNumber: 104
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14183,15 +14164,31 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Rank" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1087,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1087,
+                      columnNumber: 101
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1087,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1088,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.rank }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.secondaryCallsign || "-" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1088,
-                      columnNumber: 97
+                      columnNumber: 111
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14199,15 +14196,15 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Service" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Seat Config" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1089,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.service || "RAAF" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.seatConfig }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1089,
-                      columnNumber: 100
+                      columnNumber: 104
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14215,28 +14212,12 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1090,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.unit }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1090,
-                      columnNumber: 97
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1090,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Crew" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Rank" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1091,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.crew || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.rank }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1091,
                       columnNumber: 97
@@ -14247,15 +14228,15 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Location" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Service" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1092,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.location }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.service || "RAAF" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1092,
-                      columnNumber: 101
+                      columnNumber: 100
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14263,15 +14244,15 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Flight" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1093,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.flight || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.unit }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1093,
-                      columnNumber: 99
+                      columnNumber: 97
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14279,15 +14260,31 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Phone Number" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Crew" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1094,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.crew || "N/A" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1094,
+                      columnNumber: 97
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1094,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Location" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1095,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.phoneNumber || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.location }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1095,
-                      columnNumber: 105
+                      columnNumber: 101
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14295,32 +14292,49 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Email" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Flight" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1096,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.email || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.flight || "N/A" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1096,
-                      columnNumber: 98
+                      columnNumber: 99
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1096,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1097,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Phone Number" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1098,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.phoneNumber || "N/A" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1098,
+                      columnNumber: 105
+                    }, void 0)
+                  ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1098,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Email" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1099,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.email || "N/A" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1099,
+                      columnNumber: 98
+                    }, void 0)
+                  ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1099,
                     columnNumber: 31
@@ -14328,6 +14342,21 @@ const TraineeProfileFlyout = ({
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1100,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1101,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1102,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1103,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
@@ -14344,7 +14373,7 @@ const TraineeProfileFlyout = ({
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2 flex-1", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[10px] text-gray-400 font-semibold mb-1", children: "Permissions" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1108,
+                    lineNumber: 1111,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: (trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white text-[10px]", children: [
@@ -14352,45 +14381,45 @@ const TraineeProfileFlyout = ({
                     p
                   ] }, p, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1112,
+                    lineNumber: 1115,
                     columnNumber: 39
                   }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-[10px] italic col-span-3", children: "None" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1114,
+                    lineNumber: 1117,
                     columnNumber: 37
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1109,
+                    lineNumber: 1112,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1107,
+                  lineNumber: 1110,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2 flex-1", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[10px] text-gray-400 font-semibold mb-1", children: "Roles" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1120,
+                    lineNumber: 1123,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-[10px] italic col-span-3", children: "None" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1122,
+                    lineNumber: 1125,
                     columnNumber: 33
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1121,
+                    lineNumber: 1124,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1119,
+                  lineNumber: 1122,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1105,
+                lineNumber: 1108,
                 columnNumber: 27
               }, void 0)
             ] }, void 0, true, {
@@ -14406,14 +14435,14 @@ const TraineeProfileFlyout = ({
           !isEditing && !isCreating && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Instructors" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1134,
+              lineNumber: 1137,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1138,
+                  lineNumber: 1141,
                   columnNumber: 31
                 }, void 0),
                 (() => {
@@ -14421,19 +14450,19 @@ const TraineeProfileFlyout = ({
                   return primaries.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-1.5", children: primaries.map((name2, idx) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1149,
+                      lineNumber: 1152,
                       columnNumber: 45
                     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1151,
+                      lineNumber: 1154,
                       columnNumber: 124
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1151,
+                      lineNumber: 1154,
                       columnNumber: 45
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1147,
+                      lineNumber: 1150,
                       columnNumber: 41
                     }, void 0),
                     onOpenInstructorProfile ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14450,57 +14479,57 @@ const TraineeProfileFlyout = ({
                       false,
                       {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                        lineNumber: 1155,
+                        lineNumber: 1158,
                         columnNumber: 43
                       },
                       void 0
                     ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: name2 }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1160,
+                      lineNumber: 1163,
                       columnNumber: 43
                     }, void 0)
                   ] }, idx, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1146,
+                    lineNumber: 1149,
                     columnNumber: 39
                   }, void 0)) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1144,
+                    lineNumber: 1147,
                     columnNumber: 35
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-600", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1168,
+                      lineNumber: 1171,
                       columnNumber: 118
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1168,
+                      lineNumber: 1171,
                       columnNumber: 39
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1167,
+                      lineNumber: 1170,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1170,
+                      lineNumber: 1173,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1166,
+                    lineNumber: 1169,
                     columnNumber: 35
                   }, void 0);
                 })()
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1137,
+                lineNumber: 1140,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1177,
+                  lineNumber: 1180,
                   columnNumber: 31
                 }, void 0),
                 (() => {
@@ -14508,19 +14537,19 @@ const TraineeProfileFlyout = ({
                   return secondaries.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-1.5", children: secondaries.map((name2, idx) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1188,
+                      lineNumber: 1191,
                       columnNumber: 45
                     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1190,
+                      lineNumber: 1193,
                       columnNumber: 124
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1190,
+                      lineNumber: 1193,
                       columnNumber: 45
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1186,
+                      lineNumber: 1189,
                       columnNumber: 41
                     }, void 0),
                     onOpenInstructorProfile ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14537,437 +14566,437 @@ const TraineeProfileFlyout = ({
                       false,
                       {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                        lineNumber: 1194,
+                        lineNumber: 1197,
                         columnNumber: 43
                       },
                       void 0
                     ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: name2 }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1199,
+                      lineNumber: 1202,
                       columnNumber: 43
                     }, void 0)
                   ] }, idx, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1185,
+                    lineNumber: 1188,
                     columnNumber: 39
                   }, void 0)) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1183,
+                    lineNumber: 1186,
                     columnNumber: 35
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-600", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1207,
+                      lineNumber: 1210,
                       columnNumber: 118
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1207,
+                      lineNumber: 1210,
                       columnNumber: 39
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1206,
+                      lineNumber: 1209,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1209,
+                      lineNumber: 1212,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1205,
+                    lineNumber: 1208,
                     columnNumber: 35
                   }, void 0);
                 })()
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1176,
+                lineNumber: 1179,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1135,
+              lineNumber: 1138,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1133,
+            lineNumber: 1136,
             columnNumber: 25
           }, void 0),
           !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Logbook – Prior Experience (PC-21 only)" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1221,
+              lineNumber: 1224,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-2", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Day Flying" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1225,
+                  lineNumber: 1228,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: (exp.day.p1 + exp.day.p2 + exp.day.dual).toFixed(1) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1227,
+                  lineNumber: 1230,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1226,
+                  lineNumber: 1229,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P1" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1230,
+                      lineNumber: 1233,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.day.p1.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1230,
+                      lineNumber: 1233,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1230,
+                    lineNumber: 1233,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1231,
+                      lineNumber: 1234,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.day.p2.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1231,
+                      lineNumber: 1234,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1231,
+                    lineNumber: 1234,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1232,
+                      lineNumber: 1235,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.day.dual.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1232,
+                      lineNumber: 1235,
                       columnNumber: 126
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1232,
+                    lineNumber: 1235,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1229,
+                  lineNumber: 1232,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1224,
+                lineNumber: 1227,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Night Flying" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1237,
+                  lineNumber: 1240,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: (exp.night.p1 + exp.night.p2 + exp.night.dual).toFixed(1) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1239,
+                  lineNumber: 1242,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1238,
+                  lineNumber: 1241,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P1" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1242,
+                      lineNumber: 1245,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.night.p1.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1242,
+                      lineNumber: 1245,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1242,
+                    lineNumber: 1245,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1243,
+                      lineNumber: 1246,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.night.p2.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1243,
+                      lineNumber: 1246,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1243,
+                    lineNumber: 1246,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1244,
+                      lineNumber: 1247,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.night.dual.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1244,
+                      lineNumber: 1247,
                       columnNumber: 126
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1244,
+                    lineNumber: 1247,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1241,
+                  lineNumber: 1244,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1236,
+                lineNumber: 1239,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Totals" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1249,
+                  lineNumber: 1252,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.total.toFixed(1) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1251,
+                  lineNumber: 1254,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1250,
+                  lineNumber: 1253,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "TOTAL" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1254,
+                      lineNumber: 1257,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.total.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1254,
+                      lineNumber: 1257,
                       columnNumber: 127
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1254,
+                    lineNumber: 1257,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Captain" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1255,
+                      lineNumber: 1258,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.captain.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1255,
+                      lineNumber: 1258,
                       columnNumber: 129
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1255,
+                    lineNumber: 1258,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Instructor" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1256,
+                      lineNumber: 1259,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.instructor.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1256,
+                      lineNumber: 1259,
                       columnNumber: 132
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1256,
+                    lineNumber: 1259,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1253,
+                  lineNumber: 1256,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1248,
+                lineNumber: 1251,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Instrument" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1261,
+                  lineNumber: 1264,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-[9px] leading-none", children: "Sim" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1263,
+                    lineNumber: 1266,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.instrument.sim.toFixed(1) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1264,
+                    lineNumber: 1267,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1262,
+                  lineNumber: 1265,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Actual" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1267,
+                    lineNumber: 1270,
                     columnNumber: 83
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.instrument.actual.toFixed(1) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1267,
+                    lineNumber: 1270,
                     columnNumber: 128
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1267,
+                  lineNumber: 1270,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1266,
+                  lineNumber: 1269,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1260,
+                lineNumber: 1263,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Simulator" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1272,
+                  lineNumber: 1275,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.simulator.total.toFixed(1) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1274,
+                  lineNumber: 1277,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1273,
+                  lineNumber: 1276,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P1" }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1277,
+                      lineNumber: 1280,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.p1.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1277,
-                      columnNumber: 124
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1277,
-                    columnNumber: 33
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1278,
-                      columnNumber: 83
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.p2.toFixed(1) }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1278,
-                      columnNumber: 124
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1278,
-                    columnNumber: 33
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1279,
-                      columnNumber: 83
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.dual.toFixed(1) }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1279,
-                      columnNumber: 126
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1279,
-                    columnNumber: 33
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Total" }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1280,
-                      columnNumber: 83
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.total.toFixed(1) }, void 0, false, {
-                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1280,
-                      columnNumber: 127
+                      columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1280,
                     columnNumber: 33
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1281,
+                      columnNumber: 83
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.p2.toFixed(1) }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1281,
+                      columnNumber: 124
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1281,
+                    columnNumber: 33
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1282,
+                      columnNumber: 83
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.dual.toFixed(1) }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1282,
+                      columnNumber: 126
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1282,
+                    columnNumber: 33
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Total" }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1283,
+                      columnNumber: 83
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.total.toFixed(1) }, void 0, false, {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1283,
+                      columnNumber: 127
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1283,
+                    columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1276,
+                  lineNumber: 1279,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1271,
+                lineNumber: 1274,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1222,
+              lineNumber: 1225,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1220,
+            lineNumber: 1223,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
@@ -14979,73 +15008,73 @@ const TraineeProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1293,
+              lineNumber: 1296,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1294,
+              lineNumber: 1297,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleHateSheetClick, className: btnClass, children: "PT-051" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1295,
+              lineNumber: 1298,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleIndividualLMPClick, className: btnClass, children: "View Individual LMP" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1296,
+              lineNumber: 1299,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1297,
+              lineNumber: 1300,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1298,
+              lineNumber: 1301,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-[1px]" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1299,
+              lineNumber: 1302,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1300,
+              lineNumber: 1303,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: btnClass, children: "Close" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1301,
+              lineNumber: 1304,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1292,
+            lineNumber: 1295,
             columnNumber: 25
           }, void 0),
           isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: btnClass, children: "Save" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1306,
+              lineNumber: 1309,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancel, className: btnClass, children: "Cancel" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1307,
+              lineNumber: 1310,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1305,
+            lineNumber: 1308,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 1290,
+          lineNumber: 1293,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
@@ -15064,7 +15093,7 @@ const TraineeProfileFlyout = ({
     }, void 0),
     showAddUnavailability && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: trainee.unavailability || [], onRemove: handleRemoveUnavailabilityFromFlyout }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 1314,
+      lineNumber: 1317,
       columnNumber: 40
     }, void 0),
     showScheduleWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ScheduleWarningFlyout, { traineeName: trainee.name, onAcknowledge: () => {
@@ -15072,12 +15101,12 @@ const TraineeProfileFlyout = ({
       setShowPauseConfirm(true);
     } }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 1315,
+      lineNumber: 1318,
       columnNumber: 37
     }, void 0),
     showPauseConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PauseConfirmationFlyout, { onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 1316,
+      lineNumber: 1319,
       columnNumber: 34
     }, void 0)
   ] }, void 0, true, {
@@ -15718,7 +15747,10 @@ const CourseEditFlyout = ({
       setSelectedTrainee(null);
     }
   };
-  const courseColor = courseColors[courseName] || "bg-gray-500";
+  const courseColorRaw = courseColors[courseName] || "bg-gray-500";
+  const isHexCourseColor = courseColorRaw.startsWith("#") || courseColorRaw.startsWith("rgb");
+  const courseColor = isHexCourseColor ? "" : courseColorRaw;
+  const courseColorStyle = isHexCourseColor ? { backgroundColor: courseColorRaw } : {};
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 pt-8", onClick: onClose, children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
       "div",
@@ -15726,13 +15758,13 @@ const CourseEditFlyout = ({
         className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden border border-gray-600",
         onClick: (e) => e.stopPropagation(),
         children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${courseColor} px-6 py-4 flex justify-between items-center`, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `${courseColor} px-6 py-4 flex justify-between items-center`, style: courseColorStyle, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: [
               "Edit Course: ",
               courseName
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 114,
+              lineNumber: 117,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -15742,11 +15774,11 @@ const CourseEditFlyout = ({
                 className: "text-white/80 hover:text-white transition-colors",
                 children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 120,
+                  lineNumber: 123,
                   columnNumber: 29
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 119,
+                  lineNumber: 122,
                   columnNumber: 25
                 }, void 0)
               },
@@ -15754,28 +15786,28 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 115,
+                lineNumber: 118,
                 columnNumber: 21
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 113,
+            lineNumber: 116,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 overflow-y-auto max-h-[calc(90vh-80px)]", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-6", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4", children: "Course Details" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 129,
+                lineNumber: 132,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: "Course Number" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                    lineNumber: 132,
+                    lineNumber: 135,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -15791,20 +15823,20 @@ const CourseEditFlyout = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 133,
+                      lineNumber: 136,
                       columnNumber: 33
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 131,
+                  lineNumber: 134,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: "Unit" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                    lineNumber: 142,
+                    lineNumber: 145,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -15815,7 +15847,7 @@ const CourseEditFlyout = ({
                       className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                       children: availableUnits.map((unit) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: unit, children: unit }, unit, false, {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                        lineNumber: 149,
+                        lineNumber: 152,
                         columnNumber: 41
                       }, void 0))
                     },
@@ -15823,19 +15855,19 @@ const CourseEditFlyout = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 143,
+                      lineNumber: 146,
                       columnNumber: 33
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 141,
+                  lineNumber: 144,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 130,
+                lineNumber: 133,
                 columnNumber: 25
               }, void 0),
               hasChanges && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -15849,30 +15881,30 @@ const CourseEditFlyout = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 155,
+                  lineNumber: 158,
                   columnNumber: 29
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 128,
+              lineNumber: 131,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("hr", { className: "border-gray-700 mb-6" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 165,
+              lineNumber: 168,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4", children: "Trainee Management" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 169,
+                lineNumber: 172,
                 columnNumber: 25
               }, void 0),
               trainees.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 italic text-center py-4", children: "No trainees in this course" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 172,
+                lineNumber: 175,
                 columnNumber: 29
               }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: trainees.map((trainee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                 "div",
@@ -15882,17 +15914,17 @@ const CourseEditFlyout = ({
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 text-sm", children: trainee.rank }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                        lineNumber: 181,
+                        lineNumber: 184,
                         columnNumber: 45
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white", children: trainee.name }, void 0, false, {
                         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                        lineNumber: 182,
+                        lineNumber: 185,
                         columnNumber: 45
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 180,
+                      lineNumber: 183,
                       columnNumber: 41
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
@@ -15906,7 +15938,7 @@ const CourseEditFlyout = ({
                             "Back",
                             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                              lineNumber: 190,
+                              lineNumber: 193,
                               columnNumber: 53
                             }, void 0),
                             "Course"
@@ -15916,7 +15948,7 @@ const CourseEditFlyout = ({
                         true,
                         {
                           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                          lineNumber: 185,
+                          lineNumber: 188,
                           columnNumber: 45
                         },
                         void 0
@@ -15933,14 +15965,14 @@ const CourseEditFlyout = ({
                         false,
                         {
                           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                          lineNumber: 192,
+                          lineNumber: 195,
                           columnNumber: 45
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                      lineNumber: 184,
+                      lineNumber: 187,
                       columnNumber: 41
                     }, void 0)
                   ]
@@ -15949,23 +15981,23 @@ const CourseEditFlyout = ({
                 true,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 176,
+                  lineNumber: 179,
                   columnNumber: 37
                 },
                 void 0
               )) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 174,
+                lineNumber: 177,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 168,
+              lineNumber: 171,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 126,
+            lineNumber: 129,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-700/50 border-t border-gray-600 flex justify-end", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -15979,13 +16011,13 @@ const CourseEditFlyout = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 209,
+              lineNumber: 212,
               columnNumber: 21
             },
             void 0
           ) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 208,
+            lineNumber: 211,
             columnNumber: 17
           }, void 0)
         ]
@@ -15994,7 +16026,7 @@ const CourseEditFlyout = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-        lineNumber: 108,
+        lineNumber: 111,
         columnNumber: 13
       },
       void 0
@@ -16007,20 +16039,20 @@ const CourseEditFlyout = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-amber-400 mb-4", children: "Backcourse Trainee" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 225,
+            lineNumber: 228,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
             "Move ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: selectedTrainee.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 227,
+              lineNumber: 230,
               columnNumber: 34
             }, void 0),
             " to a different course:"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 226,
+            lineNumber: 229,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -16032,17 +16064,17 @@ const CourseEditFlyout = ({
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "Select target course..." }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 234,
+                  lineNumber: 237,
                   columnNumber: 29
                 }, void 0),
                 availableCourses.filter((c) => c !== courseName).map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: course, children: course }, course, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 238,
+                  lineNumber: 241,
                   columnNumber: 37
                 }, void 0)),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "__NEW__", children: "+ Create New Course" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                  lineNumber: 240,
+                  lineNumber: 243,
                   columnNumber: 29
                 }, void 0)
               ]
@@ -16051,7 +16083,7 @@ const CourseEditFlyout = ({
             true,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 229,
+              lineNumber: 232,
               columnNumber: 25
             },
             void 0
@@ -16068,7 +16100,7 @@ const CourseEditFlyout = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 243,
+              lineNumber: 246,
               columnNumber: 29
             },
             void 0
@@ -16085,7 +16117,7 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 251,
+                lineNumber: 254,
                 columnNumber: 29
               },
               void 0
@@ -16102,14 +16134,14 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 257,
+                lineNumber: 260,
                 columnNumber: 29
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 250,
+            lineNumber: 253,
             columnNumber: 25
           }, void 0)
         ]
@@ -16118,13 +16150,13 @@ const CourseEditFlyout = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-        lineNumber: 221,
+        lineNumber: 224,
         columnNumber: 21
       },
       void 0
     ) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-      lineNumber: 220,
+      lineNumber: 223,
       columnNumber: 17
     }, void 0),
     showDeleteConfirm && selectedTrainee && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/60 flex items-center justify-center z-60", onClick: () => setShowDeleteConfirm(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -16135,25 +16167,25 @@ const CourseEditFlyout = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-red-400 mb-4", children: "Delete Trainee" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 276,
+            lineNumber: 279,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
             "Are you sure you want to delete ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: selectedTrainee.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-              lineNumber: 278,
+              lineNumber: 281,
               columnNumber: 61
             }, void 0),
             "?"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 277,
+            lineNumber: 280,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-red-400/80 text-sm mb-4", children: "This action cannot be undone. All training records for this trainee will be permanently removed." }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 280,
+            lineNumber: 283,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-3", children: [
@@ -16168,7 +16200,7 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 284,
+                lineNumber: 287,
                 columnNumber: 29
               },
               void 0
@@ -16184,14 +16216,14 @@ const CourseEditFlyout = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-                lineNumber: 290,
+                lineNumber: 293,
                 columnNumber: 29
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-            lineNumber: 283,
+            lineNumber: 286,
             columnNumber: 25
           }, void 0)
         ]
@@ -16200,18 +16232,18 @@ const CourseEditFlyout = ({
       true,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-        lineNumber: 272,
+        lineNumber: 275,
         columnNumber: 21
       },
       void 0
     ) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-      lineNumber: 271,
+      lineNumber: 274,
       columnNumber: 17
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseEditFlyout.tsx",
-    lineNumber: 107,
+    lineNumber: 110,
     columnNumber: 9
   }, void 0);
 };
@@ -16464,94 +16496,106 @@ const CourseRosterView = ({
         const color = courseColorMap[courseName] || "bg-gray-500";
         const activeCount = courseTrainees.filter((t) => !t.isPaused).length;
         const pausedCount = courseTrainees.filter((t) => t.isPaused).length;
+        const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`, children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: courseName }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 312,
-                columnNumber: 49
-              }, void 0),
-              courseTrainees.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 313,
-                columnNumber: 79
-              }, void 0)
-            ] }, void 0, true, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+            "div",
+            {
+              className: `px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? "" : color} flex justify-between items-center`,
+              style: isHexColor(color) ? { backgroundColor: color } : {},
+              children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: courseName }, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                    lineNumber: 316,
+                    columnNumber: 49
+                  }, void 0),
+                  courseTrainees.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs font-normal opacity-80", children: courseTrainees[0].unit }, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                    lineNumber: 317,
+                    columnNumber: 79
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                  lineNumber: 315,
+                  columnNumber: 45
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
+                  view2 === "active" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                    "button",
+                    {
+                      onClick: () => !isFrozen && setCourseToEdit(courseName),
+                      disabled: isFrozen,
+                      className: "p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group",
+                      "aria-label": `Edit course ${courseName}`,
+                      title: "Edit course",
+                      children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }, void 0, false, {
+                        fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                        lineNumber: 328,
+                        columnNumber: 61
+                      }, void 0) }, void 0, false, {
+                        fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                        lineNumber: 327,
+                        columnNumber: 57
+                      }, void 0)
+                    },
+                    void 0,
+                    false,
+                    {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                      lineNumber: 321,
+                      columnNumber: 53
+                    },
+                    void 0
+                  ),
+                  view2 === "archived" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                    "button",
+                    {
+                      onClick: () => setCourseToRestore(courseName),
+                      className: "p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors",
+                      "aria-label": `Restore course ${courseName}`,
+                      children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }, void 0, false, {
+                        fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                        lineNumber: 339,
+                        columnNumber: 61
+                      }, void 0) }, void 0, false, {
+                        fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                        lineNumber: 338,
+                        columnNumber: 57
+                      }, void 0)
+                    },
+                    void 0,
+                    false,
+                    {
+                      fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                      lineNumber: 333,
+                      columnNumber: 53
+                    },
+                    void 0
+                  )
+                ] }, void 0, true, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
+                  lineNumber: 319,
+                  columnNumber: 45
+                }, void 0)
+              ]
+            },
+            void 0,
+            true,
+            {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
               lineNumber: 311,
-              columnNumber: 45
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1", children: [
-              view2 === "active" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                "button",
-                {
-                  onClick: () => !isFrozen && setCourseToEdit(courseName),
-                  disabled: isFrozen,
-                  className: "p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group",
-                  "aria-label": `Edit course ${courseName}`,
-                  title: "Edit course",
-                  children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 group-hover:scale-110 transition-transform", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" }, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 324,
-                    columnNumber: 61
-                  }, void 0) }, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 323,
-                    columnNumber: 57
-                  }, void 0)
-                },
-                void 0,
-                false,
-                {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                  lineNumber: 317,
-                  columnNumber: 53
-                },
-                void 0
-              ),
-              view2 === "archived" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                "button",
-                {
-                  onClick: () => setCourseToRestore(courseName),
-                  className: "p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors",
-                  "aria-label": `Restore course ${courseName}`,
-                  children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z", clipRule: "evenodd" }, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 335,
-                    columnNumber: 61
-                  }, void 0) }, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 334,
-                    columnNumber: 57
-                  }, void 0)
-                },
-                void 0,
-                false,
-                {
-                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                  lineNumber: 329,
-                  columnNumber: 53
-                },
-                void 0
-              )
-            ] }, void 0, true, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-              lineNumber: 315,
-              columnNumber: 45
-            }, void 0)
-          ] }, void 0, true, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 310,
-            columnNumber: 41
-          }, void 0),
+              columnNumber: 41
+            },
+            void 0
+          ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-4 py-1 text-right text-xs text-white opacity-70", children: [
             activeCount,
             " active",
             pausedCount > 0 && `, ${pausedCount} paused`
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 341,
+            lineNumber: 345,
             columnNumber: 41
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-3", children: courseTrainees.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2", children: courseTrainees.map((trainee) => {
@@ -16565,7 +16609,7 @@ const CourseRosterView = ({
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono text-gray-500 w-16 flex-shrink-0", children: trainee.rank }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                    lineNumber: 357,
+                    lineNumber: 361,
                     columnNumber: 65
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -16579,7 +16623,7 @@ const CourseRosterView = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                      lineNumber: 358,
+                      lineNumber: 362,
                       columnNumber: 65
                     },
                     void 0
@@ -16590,27 +16634,27 @@ const CourseRosterView = ({
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-                lineNumber: 351,
+                lineNumber: 355,
                 columnNumber: 61
               },
               void 0
             );
           }) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 346,
+            lineNumber: 350,
             columnNumber: 49
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 text-sm italic text-center py-4", children: "No trainees assigned." }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 369,
+            lineNumber: 373,
             columnNumber: 49
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-            lineNumber: 344,
+            lineNumber: 348,
             columnNumber: 41
           }, void 0)
         ] }, courseName, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-          lineNumber: 309,
+          lineNumber: 310,
           columnNumber: 37
         }, void 0);
       }) }, void 0, false, {
@@ -16642,7 +16686,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 380,
+        lineNumber: 384,
         columnNumber: 17
       },
       void 0
@@ -16661,7 +16705,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 387,
+        lineNumber: 391,
         columnNumber: 17
       },
       void 0
@@ -16703,7 +16747,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 397,
+        lineNumber: 401,
         columnNumber: 17
       },
       void 0
@@ -16720,7 +16764,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 430,
+        lineNumber: 434,
         columnNumber: 17
       },
       void 0
@@ -16761,7 +16805,7 @@ const CourseRosterView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseRosterView.tsx",
-        lineNumber: 438,
+        lineNumber: 442,
         columnNumber: 17
       },
       void 0
@@ -40255,6 +40299,320 @@ const UnsavedChangesWarning = ({ onSaveAndExit, onExitWithoutSaving, onCancel })
     columnNumber: 9
   }, void 0);
 };
+var pRetry$1 = { exports: {} };
+var retry$1 = {};
+var retry_operation;
+var hasRequiredRetry_operation;
+function requireRetry_operation() {
+  if (hasRequiredRetry_operation) return retry_operation;
+  hasRequiredRetry_operation = 1;
+  function RetryOperation(timeouts, options) {
+    if (typeof options === "boolean") {
+      options = { forever: options };
+    }
+    this._originalTimeouts = JSON.parse(JSON.stringify(timeouts));
+    this._timeouts = timeouts;
+    this._options = options || {};
+    this._maxRetryTime = options && options.maxRetryTime || Infinity;
+    this._fn = null;
+    this._errors = [];
+    this._attempts = 1;
+    this._operationTimeout = null;
+    this._operationTimeoutCb = null;
+    this._timeout = null;
+    this._operationStart = null;
+    this._timer = null;
+    if (this._options.forever) {
+      this._cachedTimeouts = this._timeouts.slice(0);
+    }
+  }
+  retry_operation = RetryOperation;
+  RetryOperation.prototype.reset = function() {
+    this._attempts = 1;
+    this._timeouts = this._originalTimeouts.slice(0);
+  };
+  RetryOperation.prototype.stop = function() {
+    if (this._timeout) {
+      clearTimeout(this._timeout);
+    }
+    if (this._timer) {
+      clearTimeout(this._timer);
+    }
+    this._timeouts = [];
+    this._cachedTimeouts = null;
+  };
+  RetryOperation.prototype.retry = function(err) {
+    if (this._timeout) {
+      clearTimeout(this._timeout);
+    }
+    if (!err) {
+      return false;
+    }
+    var currentTime = (/* @__PURE__ */ new Date()).getTime();
+    if (err && currentTime - this._operationStart >= this._maxRetryTime) {
+      this._errors.push(err);
+      this._errors.unshift(new Error("RetryOperation timeout occurred"));
+      return false;
+    }
+    this._errors.push(err);
+    var timeout = this._timeouts.shift();
+    if (timeout === void 0) {
+      if (this._cachedTimeouts) {
+        this._errors.splice(0, this._errors.length - 1);
+        timeout = this._cachedTimeouts.slice(-1);
+      } else {
+        return false;
+      }
+    }
+    var self = this;
+    this._timer = setTimeout(function() {
+      self._attempts++;
+      if (self._operationTimeoutCb) {
+        self._timeout = setTimeout(function() {
+          self._operationTimeoutCb(self._attempts);
+        }, self._operationTimeout);
+        if (self._options.unref) {
+          self._timeout.unref();
+        }
+      }
+      self._fn(self._attempts);
+    }, timeout);
+    if (this._options.unref) {
+      this._timer.unref();
+    }
+    return true;
+  };
+  RetryOperation.prototype.attempt = function(fn, timeoutOps) {
+    this._fn = fn;
+    if (timeoutOps) {
+      if (timeoutOps.timeout) {
+        this._operationTimeout = timeoutOps.timeout;
+      }
+      if (timeoutOps.cb) {
+        this._operationTimeoutCb = timeoutOps.cb;
+      }
+    }
+    var self = this;
+    if (this._operationTimeoutCb) {
+      this._timeout = setTimeout(function() {
+        self._operationTimeoutCb();
+      }, self._operationTimeout);
+    }
+    this._operationStart = (/* @__PURE__ */ new Date()).getTime();
+    this._fn(this._attempts);
+  };
+  RetryOperation.prototype.try = function(fn) {
+    console.log("Using RetryOperation.try() is deprecated");
+    this.attempt(fn);
+  };
+  RetryOperation.prototype.start = function(fn) {
+    console.log("Using RetryOperation.start() is deprecated");
+    this.attempt(fn);
+  };
+  RetryOperation.prototype.start = RetryOperation.prototype.try;
+  RetryOperation.prototype.errors = function() {
+    return this._errors;
+  };
+  RetryOperation.prototype.attempts = function() {
+    return this._attempts;
+  };
+  RetryOperation.prototype.mainError = function() {
+    if (this._errors.length === 0) {
+      return null;
+    }
+    var counts = {};
+    var mainError = null;
+    var mainErrorCount = 0;
+    for (var i = 0; i < this._errors.length; i++) {
+      var error = this._errors[i];
+      var message = error.message;
+      var count = (counts[message] || 0) + 1;
+      counts[message] = count;
+      if (count >= mainErrorCount) {
+        mainError = error;
+        mainErrorCount = count;
+      }
+    }
+    return mainError;
+  };
+  return retry_operation;
+}
+var hasRequiredRetry$1;
+function requireRetry$1() {
+  if (hasRequiredRetry$1) return retry$1;
+  hasRequiredRetry$1 = 1;
+  (function(exports$1) {
+    var RetryOperation = requireRetry_operation();
+    exports$1.operation = function(options) {
+      var timeouts = exports$1.timeouts(options);
+      return new RetryOperation(timeouts, {
+        forever: options && (options.forever || options.retries === Infinity),
+        unref: options && options.unref,
+        maxRetryTime: options && options.maxRetryTime
+      });
+    };
+    exports$1.timeouts = function(options) {
+      if (options instanceof Array) {
+        return [].concat(options);
+      }
+      var opts = {
+        retries: 10,
+        factor: 2,
+        minTimeout: 1 * 1e3,
+        maxTimeout: Infinity,
+        randomize: false
+      };
+      for (var key in options) {
+        opts[key] = options[key];
+      }
+      if (opts.minTimeout > opts.maxTimeout) {
+        throw new Error("minTimeout is greater than maxTimeout");
+      }
+      var timeouts = [];
+      for (var i = 0; i < opts.retries; i++) {
+        timeouts.push(this.createTimeout(i, opts));
+      }
+      if (options && options.forever && !timeouts.length) {
+        timeouts.push(this.createTimeout(i, opts));
+      }
+      timeouts.sort(function(a, b) {
+        return a - b;
+      });
+      return timeouts;
+    };
+    exports$1.createTimeout = function(attempt, opts) {
+      var random = opts.randomize ? Math.random() + 1 : 1;
+      var timeout = Math.round(random * Math.max(opts.minTimeout, 1) * Math.pow(opts.factor, attempt));
+      timeout = Math.min(timeout, opts.maxTimeout);
+      return timeout;
+    };
+    exports$1.wrap = function(obj, options, methods) {
+      if (options instanceof Array) {
+        methods = options;
+        options = null;
+      }
+      if (!methods) {
+        methods = [];
+        for (var key in obj) {
+          if (typeof obj[key] === "function") {
+            methods.push(key);
+          }
+        }
+      }
+      for (var i = 0; i < methods.length; i++) {
+        var method = methods[i];
+        var original = obj[method];
+        obj[method] = (function retryWrapper(original2) {
+          var op = exports$1.operation(options);
+          var args = Array.prototype.slice.call(arguments, 1);
+          var callback = args.pop();
+          args.push(function(err) {
+            if (op.retry(err)) {
+              return;
+            }
+            if (err) {
+              arguments[0] = op.mainError();
+            }
+            callback.apply(this, arguments);
+          });
+          op.attempt(function() {
+            original2.apply(obj, args);
+          });
+        }).bind(obj, original);
+        obj[method].options = options;
+      }
+    };
+  })(retry$1);
+  return retry$1;
+}
+var retry;
+var hasRequiredRetry;
+function requireRetry() {
+  if (hasRequiredRetry) return retry;
+  hasRequiredRetry = 1;
+  retry = requireRetry$1();
+  return retry;
+}
+var hasRequiredPRetry;
+function requirePRetry() {
+  if (hasRequiredPRetry) return pRetry$1.exports;
+  hasRequiredPRetry = 1;
+  const retry2 = requireRetry();
+  const networkErrorMsgs = [
+    "Failed to fetch",
+    // Chrome
+    "NetworkError when attempting to fetch resource.",
+    // Firefox
+    "The Internet connection appears to be offline.",
+    // Safari
+    "Network request failed"
+    // `cross-fetch`
+  ];
+  class AbortError extends Error {
+    constructor(message) {
+      super();
+      if (message instanceof Error) {
+        this.originalError = message;
+        ({ message } = message);
+      } else {
+        this.originalError = new Error(message);
+        this.originalError.stack = this.stack;
+      }
+      this.name = "AbortError";
+      this.message = message;
+    }
+  }
+  const decorateErrorWithCounts = (error, attemptNumber, options) => {
+    const retriesLeft = options.retries - (attemptNumber - 1);
+    error.attemptNumber = attemptNumber;
+    error.retriesLeft = retriesLeft;
+    return error;
+  };
+  const isNetworkError = (errorMessage) => networkErrorMsgs.includes(errorMessage);
+  const pRetry2 = (input, options) => new Promise((resolve, reject) => {
+    options = {
+      onFailedAttempt: () => {
+      },
+      retries: 10,
+      ...options
+    };
+    const operation = retry2.operation(options);
+    operation.attempt(async (attemptNumber) => {
+      try {
+        resolve(await input(attemptNumber));
+      } catch (error) {
+        if (!(error instanceof Error)) {
+          reject(new TypeError(`Non-error was thrown: "${error}". You should only throw errors.`));
+          return;
+        }
+        if (error instanceof AbortError) {
+          operation.stop();
+          reject(error.originalError);
+        } else if (error instanceof TypeError && !isNetworkError(error.message)) {
+          operation.stop();
+          reject(error);
+        } else {
+          decorateErrorWithCounts(error, attemptNumber, options);
+          try {
+            await options.onFailedAttempt(error);
+          } catch (error2) {
+            reject(error2);
+            return;
+          }
+          if (!operation.retry(error)) {
+            reject(operation.mainError());
+          }
+        }
+      }
+    });
+  });
+  pRetry$1.exports = pRetry2;
+  pRetry$1.exports.default = pRetry2;
+  pRetry$1.exports.AbortError = AbortError;
+  return pRetry$1.exports;
+}
+var pRetryExports = requirePRetry();
+const pRetry = /* @__PURE__ */ getDefaultExportFromCjs(pRetryExports);
 var define_globalThis_process_env_default = {};
 let _defaultBaseGeminiUrl = void 0;
 let _defaultBaseVertexUrl = void 0;
@@ -40733,6 +41091,11 @@ function videoFromVertex$1(fromObject) {
   }
   return toObject;
 }
+var Language;
+(function(Language2) {
+  Language2["LANGUAGE_UNSPECIFIED"] = "LANGUAGE_UNSPECIFIED";
+  Language2["PYTHON"] = "PYTHON";
+})(Language || (Language = {}));
 var Outcome;
 (function(Outcome2) {
   Outcome2["OUTCOME_UNSPECIFIED"] = "OUTCOME_UNSPECIFIED";
@@ -40740,11 +41103,6 @@ var Outcome;
   Outcome2["OUTCOME_FAILED"] = "OUTCOME_FAILED";
   Outcome2["OUTCOME_DEADLINE_EXCEEDED"] = "OUTCOME_DEADLINE_EXCEEDED";
 })(Outcome || (Outcome = {}));
-var Language;
-(function(Language2) {
-  Language2["LANGUAGE_UNSPECIFIED"] = "LANGUAGE_UNSPECIFIED";
-  Language2["PYTHON"] = "PYTHON";
-})(Language || (Language = {}));
 var FunctionResponseScheduling;
 (function(FunctionResponseScheduling2) {
   FunctionResponseScheduling2["SCHEDULING_UNSPECIFIED"] = "SCHEDULING_UNSPECIFIED";
@@ -40763,12 +41121,11 @@ var Type;
   Type2["OBJECT"] = "OBJECT";
   Type2["NULL"] = "NULL";
 })(Type || (Type = {}));
-var ApiSpec;
-(function(ApiSpec2) {
-  ApiSpec2["API_SPEC_UNSPECIFIED"] = "API_SPEC_UNSPECIFIED";
-  ApiSpec2["SIMPLE_SEARCH"] = "SIMPLE_SEARCH";
-  ApiSpec2["ELASTIC_SEARCH"] = "ELASTIC_SEARCH";
-})(ApiSpec || (ApiSpec = {}));
+var Environment;
+(function(Environment2) {
+  Environment2["ENVIRONMENT_UNSPECIFIED"] = "ENVIRONMENT_UNSPECIFIED";
+  Environment2["ENVIRONMENT_BROWSER"] = "ENVIRONMENT_BROWSER";
+})(Environment || (Environment = {}));
 var AuthType;
 (function(AuthType2) {
   AuthType2["AUTH_TYPE_UNSPECIFIED"] = "AUTH_TYPE_UNSPECIFIED";
@@ -40788,6 +41145,12 @@ var HttpElementLocation;
   HttpElementLocation2["HTTP_IN_BODY"] = "HTTP_IN_BODY";
   HttpElementLocation2["HTTP_IN_COOKIE"] = "HTTP_IN_COOKIE";
 })(HttpElementLocation || (HttpElementLocation = {}));
+var ApiSpec;
+(function(ApiSpec2) {
+  ApiSpec2["API_SPEC_UNSPECIFIED"] = "API_SPEC_UNSPECIFIED";
+  ApiSpec2["SIMPLE_SEARCH"] = "SIMPLE_SEARCH";
+  ApiSpec2["ELASTIC_SEARCH"] = "ELASTIC_SEARCH";
+})(ApiSpec || (ApiSpec = {}));
 var PhishBlockThreshold;
 (function(PhishBlockThreshold2) {
   PhishBlockThreshold2["PHISH_BLOCK_THRESHOLD_UNSPECIFIED"] = "PHISH_BLOCK_THRESHOLD_UNSPECIFIED";
@@ -40820,11 +41183,23 @@ var FunctionCallingConfigMode;
 var ThinkingLevel;
 (function(ThinkingLevel2) {
   ThinkingLevel2["THINKING_LEVEL_UNSPECIFIED"] = "THINKING_LEVEL_UNSPECIFIED";
+  ThinkingLevel2["MINIMAL"] = "MINIMAL";
   ThinkingLevel2["LOW"] = "LOW";
   ThinkingLevel2["MEDIUM"] = "MEDIUM";
   ThinkingLevel2["HIGH"] = "HIGH";
-  ThinkingLevel2["MINIMAL"] = "MINIMAL";
 })(ThinkingLevel || (ThinkingLevel = {}));
+var PersonGeneration;
+(function(PersonGeneration2) {
+  PersonGeneration2["DONT_ALLOW"] = "DONT_ALLOW";
+  PersonGeneration2["ALLOW_ADULT"] = "ALLOW_ADULT";
+  PersonGeneration2["ALLOW_ALL"] = "ALLOW_ALL";
+})(PersonGeneration || (PersonGeneration = {}));
+var ProminentPeople;
+(function(ProminentPeople2) {
+  ProminentPeople2["PROMINENT_PEOPLE_UNSPECIFIED"] = "PROMINENT_PEOPLE_UNSPECIFIED";
+  ProminentPeople2["ALLOW_PROMINENT_PEOPLE"] = "ALLOW_PROMINENT_PEOPLE";
+  ProminentPeople2["BLOCK_PROMINENT_PEOPLE"] = "BLOCK_PROMINENT_PEOPLE";
+})(ProminentPeople || (ProminentPeople = {}));
 var HarmCategory;
 (function(HarmCategory2) {
   HarmCategory2["HARM_CATEGORY_UNSPECIFIED"] = "HARM_CATEGORY_UNSPECIFIED";
@@ -40913,6 +41288,8 @@ var TrafficType;
 (function(TrafficType2) {
   TrafficType2["TRAFFIC_TYPE_UNSPECIFIED"] = "TRAFFIC_TYPE_UNSPECIFIED";
   TrafficType2["ON_DEMAND"] = "ON_DEMAND";
+  TrafficType2["ON_DEMAND_PRIORITY"] = "ON_DEMAND_PRIORITY";
+  TrafficType2["ON_DEMAND_FLEX"] = "ON_DEMAND_FLEX";
   TrafficType2["PROVISIONED_THROUGHPUT"] = "PROVISIONED_THROUGHPUT";
 })(TrafficType || (TrafficType = {}));
 var Modality;
@@ -40922,6 +41299,17 @@ var Modality;
   Modality2["IMAGE"] = "IMAGE";
   Modality2["AUDIO"] = "AUDIO";
 })(Modality || (Modality = {}));
+var ModelStage;
+(function(ModelStage2) {
+  ModelStage2["MODEL_STAGE_UNSPECIFIED"] = "MODEL_STAGE_UNSPECIFIED";
+  ModelStage2["UNSTABLE_EXPERIMENTAL"] = "UNSTABLE_EXPERIMENTAL";
+  ModelStage2["EXPERIMENTAL"] = "EXPERIMENTAL";
+  ModelStage2["PREVIEW"] = "PREVIEW";
+  ModelStage2["STABLE"] = "STABLE";
+  ModelStage2["LEGACY"] = "LEGACY";
+  ModelStage2["DEPRECATED"] = "DEPRECATED";
+  ModelStage2["RETIRED"] = "RETIRED";
+})(ModelStage || (ModelStage = {}));
 var MediaResolution;
 (function(MediaResolution2) {
   MediaResolution2["MEDIA_RESOLUTION_UNSPECIFIED"] = "MEDIA_RESOLUTION_UNSPECIFIED";
@@ -40960,6 +41348,36 @@ var JobState;
   JobState2["JOB_STATE_UPDATING"] = "JOB_STATE_UPDATING";
   JobState2["JOB_STATE_PARTIALLY_SUCCEEDED"] = "JOB_STATE_PARTIALLY_SUCCEEDED";
 })(JobState || (JobState = {}));
+var TuningJobState;
+(function(TuningJobState2) {
+  TuningJobState2["TUNING_JOB_STATE_UNSPECIFIED"] = "TUNING_JOB_STATE_UNSPECIFIED";
+  TuningJobState2["TUNING_JOB_STATE_WAITING_FOR_QUOTA"] = "TUNING_JOB_STATE_WAITING_FOR_QUOTA";
+  TuningJobState2["TUNING_JOB_STATE_PROCESSING_DATASET"] = "TUNING_JOB_STATE_PROCESSING_DATASET";
+  TuningJobState2["TUNING_JOB_STATE_WAITING_FOR_CAPACITY"] = "TUNING_JOB_STATE_WAITING_FOR_CAPACITY";
+  TuningJobState2["TUNING_JOB_STATE_TUNING"] = "TUNING_JOB_STATE_TUNING";
+  TuningJobState2["TUNING_JOB_STATE_POST_PROCESSING"] = "TUNING_JOB_STATE_POST_PROCESSING";
+})(TuningJobState || (TuningJobState = {}));
+var AggregationMetric;
+(function(AggregationMetric2) {
+  AggregationMetric2["AGGREGATION_METRIC_UNSPECIFIED"] = "AGGREGATION_METRIC_UNSPECIFIED";
+  AggregationMetric2["AVERAGE"] = "AVERAGE";
+  AggregationMetric2["MODE"] = "MODE";
+  AggregationMetric2["STANDARD_DEVIATION"] = "STANDARD_DEVIATION";
+  AggregationMetric2["VARIANCE"] = "VARIANCE";
+  AggregationMetric2["MINIMUM"] = "MINIMUM";
+  AggregationMetric2["MAXIMUM"] = "MAXIMUM";
+  AggregationMetric2["MEDIAN"] = "MEDIAN";
+  AggregationMetric2["PERCENTILE_P90"] = "PERCENTILE_P90";
+  AggregationMetric2["PERCENTILE_P95"] = "PERCENTILE_P95";
+  AggregationMetric2["PERCENTILE_P99"] = "PERCENTILE_P99";
+})(AggregationMetric || (AggregationMetric = {}));
+var PairwiseChoice;
+(function(PairwiseChoice2) {
+  PairwiseChoice2["PAIRWISE_CHOICE_UNSPECIFIED"] = "PAIRWISE_CHOICE_UNSPECIFIED";
+  PairwiseChoice2["BASELINE"] = "BASELINE";
+  PairwiseChoice2["CANDIDATE"] = "CANDIDATE";
+  PairwiseChoice2["TIE"] = "TIE";
+})(PairwiseChoice || (PairwiseChoice = {}));
 var TuningTask;
 (function(TuningTask2) {
   TuningTask2["TUNING_TASK_UNSPECIFIED"] = "TUNING_TASK_UNSPECIFIED";
@@ -40967,6 +41385,13 @@ var TuningTask;
   TuningTask2["TUNING_TASK_T2V"] = "TUNING_TASK_T2V";
   TuningTask2["TUNING_TASK_R2V"] = "TUNING_TASK_R2V";
 })(TuningTask || (TuningTask = {}));
+var DocumentState;
+(function(DocumentState2) {
+  DocumentState2["STATE_UNSPECIFIED"] = "STATE_UNSPECIFIED";
+  DocumentState2["STATE_PENDING"] = "STATE_PENDING";
+  DocumentState2["STATE_ACTIVE"] = "STATE_ACTIVE";
+  DocumentState2["STATE_FAILED"] = "STATE_FAILED";
+})(DocumentState || (DocumentState = {}));
 var PartMediaResolutionLevel;
 (function(PartMediaResolutionLevel2) {
   PartMediaResolutionLevel2["MEDIA_RESOLUTION_UNSPECIFIED"] = "MEDIA_RESOLUTION_UNSPECIFIED";
@@ -40975,6 +41400,26 @@ var PartMediaResolutionLevel;
   PartMediaResolutionLevel2["MEDIA_RESOLUTION_HIGH"] = "MEDIA_RESOLUTION_HIGH";
   PartMediaResolutionLevel2["MEDIA_RESOLUTION_ULTRA_HIGH"] = "MEDIA_RESOLUTION_ULTRA_HIGH";
 })(PartMediaResolutionLevel || (PartMediaResolutionLevel = {}));
+var ToolType;
+(function(ToolType2) {
+  ToolType2["TOOL_TYPE_UNSPECIFIED"] = "TOOL_TYPE_UNSPECIFIED";
+  ToolType2["GOOGLE_SEARCH_WEB"] = "GOOGLE_SEARCH_WEB";
+  ToolType2["GOOGLE_SEARCH_IMAGE"] = "GOOGLE_SEARCH_IMAGE";
+  ToolType2["URL_CONTEXT"] = "URL_CONTEXT";
+  ToolType2["GOOGLE_MAPS"] = "GOOGLE_MAPS";
+  ToolType2["FILE_SEARCH"] = "FILE_SEARCH";
+})(ToolType || (ToolType = {}));
+var ResourceScope;
+(function(ResourceScope2) {
+  ResourceScope2["COLLECTION"] = "COLLECTION";
+})(ResourceScope || (ResourceScope = {}));
+var ServiceTier;
+(function(ServiceTier2) {
+  ServiceTier2["UNSPECIFIED"] = "unspecified";
+  ServiceTier2["FLEX"] = "flex";
+  ServiceTier2["STANDARD"] = "standard";
+  ServiceTier2["PRIORITY"] = "priority";
+})(ServiceTier || (ServiceTier = {}));
 var FeatureSelectionPreference;
 (function(FeatureSelectionPreference2) {
   FeatureSelectionPreference2["FEATURE_SELECTION_PREFERENCE_UNSPECIFIED"] = "FEATURE_SELECTION_PREFERENCE_UNSPECIFIED";
@@ -40982,11 +41427,11 @@ var FeatureSelectionPreference;
   FeatureSelectionPreference2["BALANCED"] = "BALANCED";
   FeatureSelectionPreference2["PRIORITIZE_COST"] = "PRIORITIZE_COST";
 })(FeatureSelectionPreference || (FeatureSelectionPreference = {}));
-var Environment;
-(function(Environment2) {
-  Environment2["ENVIRONMENT_UNSPECIFIED"] = "ENVIRONMENT_UNSPECIFIED";
-  Environment2["ENVIRONMENT_BROWSER"] = "ENVIRONMENT_BROWSER";
-})(Environment || (Environment = {}));
+var EmbeddingApiType;
+(function(EmbeddingApiType2) {
+  EmbeddingApiType2["PREDICT"] = "PREDICT";
+  EmbeddingApiType2["EMBED_CONTENT"] = "EMBED_CONTENT";
+})(EmbeddingApiType || (EmbeddingApiType = {}));
 var SafetyFilterLevel;
 (function(SafetyFilterLevel2) {
   SafetyFilterLevel2["BLOCK_LOW_AND_ABOVE"] = "BLOCK_LOW_AND_ABOVE";
@@ -40994,12 +41439,6 @@ var SafetyFilterLevel;
   SafetyFilterLevel2["BLOCK_ONLY_HIGH"] = "BLOCK_ONLY_HIGH";
   SafetyFilterLevel2["BLOCK_NONE"] = "BLOCK_NONE";
 })(SafetyFilterLevel || (SafetyFilterLevel = {}));
-var PersonGeneration;
-(function(PersonGeneration2) {
-  PersonGeneration2["DONT_ALLOW"] = "DONT_ALLOW";
-  PersonGeneration2["ALLOW_ADULT"] = "ALLOW_ADULT";
-  PersonGeneration2["ALLOW_ALL"] = "ALLOW_ALL";
-})(PersonGeneration || (PersonGeneration = {}));
 var ImagePromptLanguage;
 (function(ImagePromptLanguage2) {
   ImagePromptLanguage2["auto"] = "auto";
@@ -41073,14 +41512,8 @@ var TuningMethod;
 (function(TuningMethod2) {
   TuningMethod2["SUPERVISED_FINE_TUNING"] = "SUPERVISED_FINE_TUNING";
   TuningMethod2["PREFERENCE_TUNING"] = "PREFERENCE_TUNING";
+  TuningMethod2["DISTILLATION"] = "DISTILLATION";
 })(TuningMethod || (TuningMethod = {}));
-var DocumentState;
-(function(DocumentState2) {
-  DocumentState2["STATE_UNSPECIFIED"] = "STATE_UNSPECIFIED";
-  DocumentState2["STATE_PENDING"] = "STATE_PENDING";
-  DocumentState2["STATE_ACTIVE"] = "STATE_ACTIVE";
-  DocumentState2["STATE_FAILED"] = "STATE_FAILED";
-})(DocumentState || (DocumentState = {}));
 var FileState;
 (function(FileState2) {
   FileState2["STATE_UNSPECIFIED"] = "STATE_UNSPECIFIED";
@@ -41146,6 +41579,7 @@ var TurnCoverage;
   TurnCoverage2["TURN_COVERAGE_UNSPECIFIED"] = "TURN_COVERAGE_UNSPECIFIED";
   TurnCoverage2["TURN_INCLUDES_ONLY_ACTIVITY"] = "TURN_INCLUDES_ONLY_ACTIVITY";
   TurnCoverage2["TURN_INCLUDES_ALL_INPUT"] = "TURN_INCLUDES_ALL_INPUT";
+  TurnCoverage2["TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO"] = "TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO";
 })(TurnCoverage || (TurnCoverage = {}));
 var Scale;
 (function(Scale2) {
@@ -41435,7 +41869,6 @@ class ComputeTokensResponse {
 class GenerateVideosOperation {
   /**
    * Instantiates an Operation of the same type as the one being called with the fields set from the API response.
-   * @internal
    */
   _fromAPIResponse({ apiResponse, _isVertexAI }) {
     const operation = new GenerateVideosOperation();
@@ -41467,7 +41900,6 @@ class UploadToFileSearchStoreResumableResponse {
 class ImportFileOperation {
   /**
    * Instantiates an Operation of the same type as the one being called with the fields set from the API response.
-   * @internal
    */
   _fromAPIResponse({ apiResponse, _isVertexAI }) {
     const operation = new ImportFileOperation();
@@ -41482,6 +41914,8 @@ class ListFilesResponse {
 class CreateFileResponse {
 }
 class DeleteFileResponse {
+}
+class RegisterFilesResponse {
 }
 class ListBatchJobsResponse {
 }
@@ -41562,7 +41996,6 @@ class LiveMusicServerMessage {
 class UploadToFileSearchStoreOperation {
   /**
    * Instantiates an Operation of the same type as the one being called with the fields set from the API response.
-   * @internal
    */
   _fromAPIResponse({ apiResponse, _isVertexAI }) {
     const operation = new UploadToFileSearchStoreOperation();
@@ -42153,6 +42586,35 @@ function tJobState(state) {
     return stateString;
   }
 }
+function tIsVertexEmbedContentModel(model) {
+  return model.includes("gemini") && model !== "gemini-embedding-001" || model.includes("maas");
+}
+function authConfigToMldev$4(fromObject) {
+  const toObject = {};
+  const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
+  if (fromApiKey != null) {
+    setValueByPath(toObject, ["apiKey"], fromApiKey);
+  }
+  if (getValueByPath(fromObject, ["apiKeyConfig"]) !== void 0) {
+    throw new Error("apiKeyConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["authType"]) !== void 0) {
+    throw new Error("authType parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["googleServiceAccountConfig"]) !== void 0) {
+    throw new Error("googleServiceAccountConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["httpBasicAuthConfig"]) !== void 0) {
+    throw new Error("httpBasicAuthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oauthConfig"]) !== void 0) {
+    throw new Error("oauthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oidcConfig"]) !== void 0) {
+    throw new Error("oidcConfig parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
 function batchJobDestinationFromMldev(fromObject) {
   const toObject = {};
   const fromFileName = getValueByPath(fromObject, ["responsesFile"]);
@@ -42457,15 +42919,15 @@ function candidateFromMldev$1(fromObject) {
   if (fromFinishReason != null) {
     setValueByPath(toObject, ["finishReason"], fromFinishReason);
   }
-  const fromAvgLogprobs = getValueByPath(fromObject, ["avgLogprobs"]);
-  if (fromAvgLogprobs != null) {
-    setValueByPath(toObject, ["avgLogprobs"], fromAvgLogprobs);
-  }
   const fromGroundingMetadata = getValueByPath(fromObject, [
     "groundingMetadata"
   ]);
   if (fromGroundingMetadata != null) {
     setValueByPath(toObject, ["groundingMetadata"], fromGroundingMetadata);
+  }
+  const fromAvgLogprobs = getValueByPath(fromObject, ["avgLogprobs"]);
+  if (fromAvgLogprobs != null) {
+    setValueByPath(toObject, ["avgLogprobs"], fromAvgLogprobs);
   }
   const fromIndex = getValueByPath(fromObject, ["index"]);
   if (fromIndex != null) {
@@ -42937,6 +43399,13 @@ function generateContentConfigToMldev$1(apiClient, fromObject, parentObject) {
   if (fromEnableEnhancedCivicAnswers != null) {
     setValueByPath(toObject, ["enableEnhancedCivicAnswers"], fromEnableEnhancedCivicAnswers);
   }
+  if (getValueByPath(fromObject, ["modelArmorConfig"]) !== void 0) {
+    throw new Error("modelArmorConfig parameter is not supported in Gemini API.");
+  }
+  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
+  if (parentObject !== void 0 && fromServiceTier != null) {
+    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
+  }
   return toObject;
 }
 function generateContentResponseFromMldev$1(fromObject) {
@@ -42977,6 +43446,10 @@ function generateContentResponseFromMldev$1(fromObject) {
   if (fromUsageMetadata != null) {
     setValueByPath(toObject, ["usageMetadata"], fromUsageMetadata);
   }
+  const fromModelStatus = getValueByPath(fromObject, ["modelStatus"]);
+  if (fromModelStatus != null) {
+    setValueByPath(toObject, ["modelStatus"], fromModelStatus);
+  }
   return toObject;
 }
 function getBatchJobParametersToMldev(apiClient, fromObject) {
@@ -42997,8 +43470,9 @@ function getBatchJobParametersToVertex(apiClient, fromObject) {
 }
 function googleMapsToMldev$4(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["authConfig"]) !== void 0) {
-    throw new Error("authConfig parameter is not supported in Gemini API.");
+  const fromAuthConfig = getValueByPath(fromObject, ["authConfig"]);
+  if (fromAuthConfig != null) {
+    setValueByPath(toObject, ["authConfig"], authConfigToMldev$4(fromAuthConfig));
   }
   const fromEnableWidget = getValueByPath(fromObject, ["enableWidget"]);
   if (fromEnableWidget != null) {
@@ -43008,11 +43482,15 @@ function googleMapsToMldev$4(fromObject) {
 }
 function googleSearchToMldev$4(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
-    throw new Error("excludeDomains parameter is not supported in Gemini API.");
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
+    throw new Error("excludeDomains parameter is not supported in Gemini API.");
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -43035,11 +43513,17 @@ function imageConfigToMldev$1(fromObject) {
   if (getValueByPath(fromObject, ["personGeneration"]) !== void 0) {
     throw new Error("personGeneration parameter is not supported in Gemini API.");
   }
+  if (getValueByPath(fromObject, ["prominentPeople"]) !== void 0) {
+    throw new Error("prominentPeople parameter is not supported in Gemini API.");
+  }
   if (getValueByPath(fromObject, ["outputMimeType"]) !== void 0) {
     throw new Error("outputMimeType parameter is not supported in Gemini API.");
   }
   if (getValueByPath(fromObject, ["outputCompressionQuality"]) !== void 0) {
     throw new Error("outputCompressionQuality parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["imageOutputOptions"]) !== void 0) {
+    throw new Error("imageOutputOptions parameter is not supported in Gemini API.");
   }
   return toObject;
 }
@@ -43074,6 +43558,10 @@ function inlinedResponseFromMldev(fromObject) {
   const fromResponse = getValueByPath(fromObject, ["response"]);
   if (fromResponse != null) {
     setValueByPath(toObject, ["response"], generateContentResponseFromMldev$1(fromResponse));
+  }
+  const fromMetadata = getValueByPath(fromObject, ["metadata"]);
+  if (fromMetadata != null) {
+    setValueByPath(toObject, ["metadata"], fromMetadata);
   }
   const fromError = getValueByPath(fromObject, ["error"]);
   if (fromError != null) {
@@ -43240,6 +43728,18 @@ function partToMldev$4(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
+  if (fromPartMetadata != null) {
+    setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
   return toObject;
 }
 function safetySettingToMldev$1(fromObject) {
@@ -43271,6 +43771,10 @@ function toolConfigToMldev$2(fromObject) {
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], functionCallingConfigToMldev$2(fromFunctionCallingConfig));
   }
+  const fromIncludeServerSideToolInvocations = getValueByPath(fromObject, ["includeServerSideToolInvocations"]);
+  if (fromIncludeServerSideToolInvocations != null) {
+    setValueByPath(toObject, ["includeServerSideToolInvocations"], fromIncludeServerSideToolInvocations);
+  }
   return toObject;
 }
 function toolToMldev$4(fromObject) {
@@ -43285,6 +43789,14 @@ function toolToMldev$4(fromObject) {
   const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
   if (fromFileSearch != null) {
     setValueByPath(toObject, ["fileSearch"], fromFileSearch);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$4(fromGoogleSearch));
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$4(fromGoogleMaps));
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -43307,23 +43819,28 @@ function toolToMldev$4(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$4(fromGoogleMaps));
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$4(fromGoogleSearch));
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  if (getValueByPath(fromObject, ["parallelAiSearch"]) !== void 0) {
+    throw new Error("parallelAiSearch parameter is not supported in Gemini API.");
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   return toObject;
 }
@@ -43920,6 +44437,32 @@ class Batches extends BaseModule {
     }
   }
 }
+function authConfigToMldev$3(fromObject) {
+  const toObject = {};
+  const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
+  if (fromApiKey != null) {
+    setValueByPath(toObject, ["apiKey"], fromApiKey);
+  }
+  if (getValueByPath(fromObject, ["apiKeyConfig"]) !== void 0) {
+    throw new Error("apiKeyConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["authType"]) !== void 0) {
+    throw new Error("authType parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["googleServiceAccountConfig"]) !== void 0) {
+    throw new Error("googleServiceAccountConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["httpBasicAuthConfig"]) !== void 0) {
+    throw new Error("httpBasicAuthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oauthConfig"]) !== void 0) {
+    throw new Error("oauthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oidcConfig"]) !== void 0) {
+    throw new Error("oidcConfig parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
 function blobToMldev$3(fromObject) {
   const toObject = {};
   const fromData = getValueByPath(fromObject, ["data"]);
@@ -43943,6 +44486,24 @@ function contentToMldev$3(fromObject) {
     if (Array.isArray(transformedList)) {
       transformedList = transformedList.map((item) => {
         return partToMldev$3(item);
+      });
+    }
+    setValueByPath(toObject, ["parts"], transformedList);
+  }
+  const fromRole = getValueByPath(fromObject, ["role"]);
+  if (fromRole != null) {
+    setValueByPath(toObject, ["role"], fromRole);
+  }
+  return toObject;
+}
+function contentToVertex$2(fromObject) {
+  const toObject = {};
+  const fromParts = getValueByPath(fromObject, ["parts"]);
+  if (fromParts != null) {
+    let transformedList = fromParts;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return partToVertex$2(item);
       });
     }
     setValueByPath(toObject, ["parts"], transformedList);
@@ -44021,7 +44582,7 @@ function createCachedContentConfigToVertex(fromObject, parentObject) {
     let transformedList = tContents(fromContents);
     if (Array.isArray(transformedList)) {
       transformedList = transformedList.map((item) => {
-        return item;
+        return contentToVertex$2(item);
       });
     }
     setValueByPath(parentObject, ["contents"], transformedList);
@@ -44030,7 +44591,7 @@ function createCachedContentConfigToVertex(fromObject, parentObject) {
     "systemInstruction"
   ]);
   if (parentObject !== void 0 && fromSystemInstruction != null) {
-    setValueByPath(parentObject, ["systemInstruction"], tContent(fromSystemInstruction));
+    setValueByPath(parentObject, ["systemInstruction"], contentToVertex$2(tContent(fromSystemInstruction)));
   }
   const fromTools = getValueByPath(fromObject, ["tools"]);
   if (parentObject !== void 0 && fromTools != null) {
@@ -44044,7 +44605,7 @@ function createCachedContentConfigToVertex(fromObject, parentObject) {
   }
   const fromToolConfig = getValueByPath(fromObject, ["toolConfig"]);
   if (parentObject !== void 0 && fromToolConfig != null) {
-    setValueByPath(parentObject, ["toolConfig"], fromToolConfig);
+    setValueByPath(parentObject, ["toolConfig"], toolConfigToVertex$1(fromToolConfig));
   }
   const fromKmsKeyName = getValueByPath(fromObject, ["kmsKeyName"]);
   if (parentObject !== void 0 && fromKmsKeyName != null) {
@@ -44219,8 +44780,9 @@ function getCachedContentParametersToVertex(apiClient, fromObject) {
 }
 function googleMapsToMldev$3(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["authConfig"]) !== void 0) {
-    throw new Error("authConfig parameter is not supported in Gemini API.");
+  const fromAuthConfig = getValueByPath(fromObject, ["authConfig"]);
+  if (fromAuthConfig != null) {
+    setValueByPath(toObject, ["authConfig"], authConfigToMldev$3(fromAuthConfig));
   }
   const fromEnableWidget = getValueByPath(fromObject, ["enableWidget"]);
   if (fromEnableWidget != null) {
@@ -44230,11 +44792,15 @@ function googleMapsToMldev$3(fromObject) {
 }
 function googleSearchToMldev$3(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
-    throw new Error("excludeDomains parameter is not supported in Gemini API.");
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
+    throw new Error("excludeDomains parameter is not supported in Gemini API.");
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -44398,6 +44964,87 @@ function partToMldev$3(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
+  if (fromPartMetadata != null) {
+    setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
+  return toObject;
+}
+function partToVertex$2(fromObject) {
+  const toObject = {};
+  const fromMediaResolution = getValueByPath(fromObject, [
+    "mediaResolution"
+  ]);
+  if (fromMediaResolution != null) {
+    setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
+  }
+  const fromCodeExecutionResult = getValueByPath(fromObject, [
+    "codeExecutionResult"
+  ]);
+  if (fromCodeExecutionResult != null) {
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
+  }
+  const fromExecutableCode = getValueByPath(fromObject, [
+    "executableCode"
+  ]);
+  if (fromExecutableCode != null) {
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
+  }
+  const fromFileData = getValueByPath(fromObject, ["fileData"]);
+  if (fromFileData != null) {
+    setValueByPath(toObject, ["fileData"], fromFileData);
+  }
+  const fromFunctionCall = getValueByPath(fromObject, ["functionCall"]);
+  if (fromFunctionCall != null) {
+    setValueByPath(toObject, ["functionCall"], fromFunctionCall);
+  }
+  const fromFunctionResponse = getValueByPath(fromObject, [
+    "functionResponse"
+  ]);
+  if (fromFunctionResponse != null) {
+    setValueByPath(toObject, ["functionResponse"], fromFunctionResponse);
+  }
+  const fromInlineData = getValueByPath(fromObject, ["inlineData"]);
+  if (fromInlineData != null) {
+    setValueByPath(toObject, ["inlineData"], fromInlineData);
+  }
+  const fromText = getValueByPath(fromObject, ["text"]);
+  if (fromText != null) {
+    setValueByPath(toObject, ["text"], fromText);
+  }
+  const fromThought = getValueByPath(fromObject, ["thought"]);
+  if (fromThought != null) {
+    setValueByPath(toObject, ["thought"], fromThought);
+  }
+  const fromThoughtSignature = getValueByPath(fromObject, [
+    "thoughtSignature"
+  ]);
+  if (fromThoughtSignature != null) {
+    setValueByPath(toObject, ["thoughtSignature"], fromThoughtSignature);
+  }
+  const fromVideoMetadata = getValueByPath(fromObject, [
+    "videoMetadata"
+  ]);
+  if (fromVideoMetadata != null) {
+    setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
+  }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is not supported in Vertex AI.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is not supported in Vertex AI.");
+  }
+  if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
+    throw new Error("partMetadata parameter is not supported in Vertex AI.");
+  }
   return toObject;
 }
 function toolConfigToMldev$1(fromObject) {
@@ -44414,6 +45061,29 @@ function toolConfigToMldev$1(fromObject) {
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], functionCallingConfigToMldev$1(fromFunctionCallingConfig));
   }
+  const fromIncludeServerSideToolInvocations = getValueByPath(fromObject, ["includeServerSideToolInvocations"]);
+  if (fromIncludeServerSideToolInvocations != null) {
+    setValueByPath(toObject, ["includeServerSideToolInvocations"], fromIncludeServerSideToolInvocations);
+  }
+  return toObject;
+}
+function toolConfigToVertex$1(fromObject) {
+  const toObject = {};
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
+  }
+  const fromFunctionCallingConfig = getValueByPath(fromObject, [
+    "functionCallingConfig"
+  ]);
+  if (fromFunctionCallingConfig != null) {
+    setValueByPath(toObject, ["functionCallingConfig"], fromFunctionCallingConfig);
+  }
+  if (getValueByPath(fromObject, ["includeServerSideToolInvocations"]) !== void 0) {
+    throw new Error("includeServerSideToolInvocations parameter is not supported in Vertex AI.");
+  }
   return toObject;
 }
 function toolToMldev$3(fromObject) {
@@ -44428,6 +45098,14 @@ function toolToMldev$3(fromObject) {
   const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
   if (fromFileSearch != null) {
     setValueByPath(toObject, ["fileSearch"], fromFileSearch);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$3(fromGoogleSearch));
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$3(fromGoogleMaps));
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -44450,23 +45128,28 @@ function toolToMldev$3(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$3(fromGoogleMaps));
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$3(fromGoogleSearch));
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  if (getValueByPath(fromObject, ["parallelAiSearch"]) !== void 0) {
+    throw new Error("parallelAiSearch parameter is not supported in Gemini API.");
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   return toObject;
 }
@@ -44482,6 +45165,14 @@ function toolToVertex$2(fromObject) {
   }
   if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
     throw new Error("fileSearch parameter is not supported in Vertex AI.");
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -44507,23 +45198,24 @@ function toolToVertex$2(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  const fromParallelAiSearch = getValueByPath(fromObject, [
+    "parallelAiSearch"
+  ]);
+  if (fromParallelAiSearch != null) {
+    setValueByPath(toObject, ["parallelAiSearch"], fromParallelAiSearch);
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
+  }
+  if (getValueByPath(fromObject, ["mcpServers"]) !== void 0) {
+    throw new Error("mcpServers parameter is not supported in Vertex AI.");
   }
   return toObject;
 }
@@ -45318,6 +46010,14 @@ function getFileParametersToMldev(fromObject) {
   }
   return toObject;
 }
+function internalRegisterFilesParametersToMldev(fromObject) {
+  const toObject = {};
+  const fromUris = getValueByPath(fromObject, ["uris"]);
+  if (fromUris != null) {
+    setValueByPath(toObject, ["uris"], fromUris);
+  }
+  return toObject;
+}
 function listFilesConfigToMldev(fromObject, parentObject) {
   const toObject = {};
   const fromPageSize = getValueByPath(fromObject, ["pageSize"]);
@@ -45351,6 +46051,26 @@ function listFilesResponseFromMldev(fromObject) {
   ]);
   if (fromNextPageToken != null) {
     setValueByPath(toObject, ["nextPageToken"], fromNextPageToken);
+  }
+  const fromFiles = getValueByPath(fromObject, ["files"]);
+  if (fromFiles != null) {
+    let transformedList = fromFiles;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["files"], transformedList);
+  }
+  return toObject;
+}
+function registerFilesResponseFromMldev(fromObject) {
+  const toObject = {};
+  const fromSdkHttpResponse = getValueByPath(fromObject, [
+    "sdkHttpResponse"
+  ]);
+  if (fromSdkHttpResponse != null) {
+    setValueByPath(toObject, ["sdkHttpResponse"], fromSdkHttpResponse);
   }
   const fromFiles = getValueByPath(fromObject, ["files"]);
   if (fromFiles != null) {
@@ -45441,6 +46161,16 @@ class Files extends BaseModule {
    */
   async download(params) {
     await this.apiClient.downloadFile(params);
+  }
+  /**
+   * Registers Google Cloud Storage files for use with the API.
+   * This method is only available in Node.js environments.
+   */
+  async registerFiles(params) {
+    throw new Error("registerFiles is only supported in Node.js environments.");
+  }
+  async _registerFiles(params) {
+    return this.registerFilesInternal(params);
   }
   async listInternal(params) {
     var _a2, _b;
@@ -45603,6 +46333,70 @@ class Files extends BaseModule {
       });
     }
   }
+  async registerFilesInternal(params) {
+    var _a2, _b;
+    let response;
+    let path2 = "";
+    let queryParams = {};
+    if (this.apiClient.isVertexAI()) {
+      throw new Error("This method is only supported by the Gemini Developer API.");
+    } else {
+      const body = internalRegisterFilesParametersToMldev(params);
+      path2 = formatMap("files:register", body["_url"]);
+      queryParams = body["_query"];
+      delete body["_url"];
+      delete body["_query"];
+      response = this.apiClient.request({
+        path: path2,
+        queryParams,
+        body: JSON.stringify(body),
+        httpMethod: "POST",
+        httpOptions: (_a2 = params.config) === null || _a2 === void 0 ? void 0 : _a2.httpOptions,
+        abortSignal: (_b = params.config) === null || _b === void 0 ? void 0 : _b.abortSignal
+      }).then((httpResponse) => {
+        return httpResponse.json();
+      });
+      return response.then((apiResponse) => {
+        const resp = registerFilesResponseFromMldev(apiResponse);
+        const typedResp = new RegisterFilesResponse();
+        Object.assign(typedResp, resp);
+        return typedResp;
+      });
+    }
+  }
+}
+function audioTranscriptionConfigToMldev$1(fromObject) {
+  const toObject = {};
+  if (getValueByPath(fromObject, ["languageCodes"]) !== void 0) {
+    throw new Error("languageCodes parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
+function authConfigToMldev$2(fromObject) {
+  const toObject = {};
+  const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
+  if (fromApiKey != null) {
+    setValueByPath(toObject, ["apiKey"], fromApiKey);
+  }
+  if (getValueByPath(fromObject, ["apiKeyConfig"]) !== void 0) {
+    throw new Error("apiKeyConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["authType"]) !== void 0) {
+    throw new Error("authType parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["googleServiceAccountConfig"]) !== void 0) {
+    throw new Error("googleServiceAccountConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["httpBasicAuthConfig"]) !== void 0) {
+    throw new Error("httpBasicAuthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oauthConfig"]) !== void 0) {
+    throw new Error("oauthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oidcConfig"]) !== void 0) {
+    throw new Error("oidcConfig parameter is not supported in Gemini API.");
+  }
+  return toObject;
 }
 function blobToMldev$2(fromObject) {
   const toObject = {};
@@ -45627,6 +46421,24 @@ function contentToMldev$2(fromObject) {
     if (Array.isArray(transformedList)) {
       transformedList = transformedList.map((item) => {
         return partToMldev$2(item);
+      });
+    }
+    setValueByPath(toObject, ["parts"], transformedList);
+  }
+  const fromRole = getValueByPath(fromObject, ["role"]);
+  if (fromRole != null) {
+    setValueByPath(toObject, ["role"], fromRole);
+  }
+  return toObject;
+}
+function contentToVertex$1(fromObject) {
+  const toObject = {};
+  const fromParts = getValueByPath(fromObject, ["parts"]);
+  if (fromParts != null) {
+    let transformedList = fromParts;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return partToVertex$1(item);
       });
     }
     setValueByPath(toObject, ["parts"], transformedList);
@@ -45805,7 +46617,7 @@ function generationConfigToVertex$1(fromObject) {
   }
   const fromSpeechConfig = getValueByPath(fromObject, ["speechConfig"]);
   if (fromSpeechConfig != null) {
-    setValueByPath(toObject, ["speechConfig"], fromSpeechConfig);
+    setValueByPath(toObject, ["speechConfig"], speechConfigToVertex$1(fromSpeechConfig));
   }
   const fromStopSequences = getValueByPath(fromObject, [
     "stopSequences"
@@ -45838,8 +46650,9 @@ function generationConfigToVertex$1(fromObject) {
 }
 function googleMapsToMldev$2(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["authConfig"]) !== void 0) {
-    throw new Error("authConfig parameter is not supported in Gemini API.");
+  const fromAuthConfig = getValueByPath(fromObject, ["authConfig"]);
+  if (fromAuthConfig != null) {
+    setValueByPath(toObject, ["authConfig"], authConfigToMldev$2(fromAuthConfig));
   }
   const fromEnableWidget = getValueByPath(fromObject, ["enableWidget"]);
   if (fromEnableWidget != null) {
@@ -45849,11 +46662,15 @@ function googleMapsToMldev$2(fromObject) {
 }
 function googleSearchToMldev$2(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
-    throw new Error("excludeDomains parameter is not supported in Gemini API.");
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
+    throw new Error("excludeDomains parameter is not supported in Gemini API.");
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -45947,13 +46764,13 @@ function liveConnectConfigToMldev$1(fromObject, parentObject) {
     "inputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromInputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], fromInputAudioTranscription);
+    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], audioTranscriptionConfigToMldev$1(fromInputAudioTranscription));
   }
   const fromOutputAudioTranscription = getValueByPath(fromObject, [
     "outputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromOutputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], fromOutputAudioTranscription);
+    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], audioTranscriptionConfigToMldev$1(fromOutputAudioTranscription));
   }
   const fromRealtimeInputConfig = getValueByPath(fromObject, [
     "realtimeInputConfig"
@@ -46020,7 +46837,7 @@ function liveConnectConfigToVertex(fromObject, parentObject) {
   }
   const fromSpeechConfig = getValueByPath(fromObject, ["speechConfig"]);
   if (parentObject !== void 0 && fromSpeechConfig != null) {
-    setValueByPath(parentObject, ["setup", "generationConfig", "speechConfig"], tLiveSpeechConfig(fromSpeechConfig));
+    setValueByPath(parentObject, ["setup", "generationConfig", "speechConfig"], speechConfigToVertex$1(tLiveSpeechConfig(fromSpeechConfig)));
   }
   const fromThinkingConfig = getValueByPath(fromObject, [
     "thinkingConfig"
@@ -46038,7 +46855,7 @@ function liveConnectConfigToVertex(fromObject, parentObject) {
     "systemInstruction"
   ]);
   if (parentObject !== void 0 && fromSystemInstruction != null) {
-    setValueByPath(parentObject, ["setup", "systemInstruction"], tContent(fromSystemInstruction));
+    setValueByPath(parentObject, ["setup", "systemInstruction"], contentToVertex$1(tContent(fromSystemInstruction)));
   }
   const fromTools = getValueByPath(fromObject, ["tools"]);
   if (parentObject !== void 0 && fromTools != null) {
@@ -46280,6 +47097,22 @@ function liveServerMessageFromVertex(fromObject) {
   }
   return toObject;
 }
+function multiSpeakerVoiceConfigToVertex$1(fromObject) {
+  const toObject = {};
+  const fromSpeakerVoiceConfigs = getValueByPath(fromObject, [
+    "speakerVoiceConfigs"
+  ]);
+  if (fromSpeakerVoiceConfigs != null) {
+    let transformedList = fromSpeakerVoiceConfigs;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return speakerVoiceConfigToVertex$1(item);
+      });
+    }
+    setValueByPath(toObject, ["speakerVoiceConfigs"], transformedList);
+  }
+  return toObject;
+}
 function partToMldev$2(fromObject) {
   const toObject = {};
   const fromMediaResolution = getValueByPath(fromObject, [
@@ -46338,6 +47171,101 @@ function partToMldev$2(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
+  if (fromPartMetadata != null) {
+    setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
+  return toObject;
+}
+function partToVertex$1(fromObject) {
+  const toObject = {};
+  const fromMediaResolution = getValueByPath(fromObject, [
+    "mediaResolution"
+  ]);
+  if (fromMediaResolution != null) {
+    setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
+  }
+  const fromCodeExecutionResult = getValueByPath(fromObject, [
+    "codeExecutionResult"
+  ]);
+  if (fromCodeExecutionResult != null) {
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
+  }
+  const fromExecutableCode = getValueByPath(fromObject, [
+    "executableCode"
+  ]);
+  if (fromExecutableCode != null) {
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
+  }
+  const fromFileData = getValueByPath(fromObject, ["fileData"]);
+  if (fromFileData != null) {
+    setValueByPath(toObject, ["fileData"], fromFileData);
+  }
+  const fromFunctionCall = getValueByPath(fromObject, ["functionCall"]);
+  if (fromFunctionCall != null) {
+    setValueByPath(toObject, ["functionCall"], fromFunctionCall);
+  }
+  const fromFunctionResponse = getValueByPath(fromObject, [
+    "functionResponse"
+  ]);
+  if (fromFunctionResponse != null) {
+    setValueByPath(toObject, ["functionResponse"], fromFunctionResponse);
+  }
+  const fromInlineData = getValueByPath(fromObject, ["inlineData"]);
+  if (fromInlineData != null) {
+    setValueByPath(toObject, ["inlineData"], fromInlineData);
+  }
+  const fromText = getValueByPath(fromObject, ["text"]);
+  if (fromText != null) {
+    setValueByPath(toObject, ["text"], fromText);
+  }
+  const fromThought = getValueByPath(fromObject, ["thought"]);
+  if (fromThought != null) {
+    setValueByPath(toObject, ["thought"], fromThought);
+  }
+  const fromThoughtSignature = getValueByPath(fromObject, [
+    "thoughtSignature"
+  ]);
+  if (fromThoughtSignature != null) {
+    setValueByPath(toObject, ["thoughtSignature"], fromThoughtSignature);
+  }
+  const fromVideoMetadata = getValueByPath(fromObject, [
+    "videoMetadata"
+  ]);
+  if (fromVideoMetadata != null) {
+    setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
+  }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is not supported in Vertex AI.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is not supported in Vertex AI.");
+  }
+  if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
+    throw new Error("partMetadata parameter is not supported in Vertex AI.");
+  }
+  return toObject;
+}
+function replicatedVoiceConfigToVertex$1(fromObject) {
+  const toObject = {};
+  const fromMimeType = getValueByPath(fromObject, ["mimeType"]);
+  if (fromMimeType != null) {
+    setValueByPath(toObject, ["mimeType"], fromMimeType);
+  }
+  const fromVoiceSampleAudio = getValueByPath(fromObject, [
+    "voiceSampleAudio"
+  ]);
+  if (fromVoiceSampleAudio != null) {
+    setValueByPath(toObject, ["voiceSampleAudio"], fromVoiceSampleAudio);
+  }
   return toObject;
 }
 function sessionResumptionConfigToMldev$1(fromObject) {
@@ -46348,6 +47276,36 @@ function sessionResumptionConfigToMldev$1(fromObject) {
   }
   if (getValueByPath(fromObject, ["transparent"]) !== void 0) {
     throw new Error("transparent parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
+function speakerVoiceConfigToVertex$1(fromObject) {
+  const toObject = {};
+  const fromSpeaker = getValueByPath(fromObject, ["speaker"]);
+  if (fromSpeaker != null) {
+    setValueByPath(toObject, ["speaker"], fromSpeaker);
+  }
+  const fromVoiceConfig = getValueByPath(fromObject, ["voiceConfig"]);
+  if (fromVoiceConfig != null) {
+    setValueByPath(toObject, ["voiceConfig"], voiceConfigToVertex$1(fromVoiceConfig));
+  }
+  return toObject;
+}
+function speechConfigToVertex$1(fromObject) {
+  const toObject = {};
+  const fromVoiceConfig = getValueByPath(fromObject, ["voiceConfig"]);
+  if (fromVoiceConfig != null) {
+    setValueByPath(toObject, ["voiceConfig"], voiceConfigToVertex$1(fromVoiceConfig));
+  }
+  const fromLanguageCode = getValueByPath(fromObject, ["languageCode"]);
+  if (fromLanguageCode != null) {
+    setValueByPath(toObject, ["languageCode"], fromLanguageCode);
+  }
+  const fromMultiSpeakerVoiceConfig = getValueByPath(fromObject, [
+    "multiSpeakerVoiceConfig"
+  ]);
+  if (fromMultiSpeakerVoiceConfig != null) {
+    setValueByPath(toObject, ["multiSpeakerVoiceConfig"], multiSpeakerVoiceConfigToVertex$1(fromMultiSpeakerVoiceConfig));
   }
   return toObject;
 }
@@ -46363,6 +47321,14 @@ function toolToMldev$2(fromObject) {
   const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
   if (fromFileSearch != null) {
     setValueByPath(toObject, ["fileSearch"], fromFileSearch);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$2(fromGoogleSearch));
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$2(fromGoogleMaps));
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -46385,23 +47351,28 @@ function toolToMldev$2(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$2(fromGoogleMaps));
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$2(fromGoogleSearch));
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  if (getValueByPath(fromObject, ["parallelAiSearch"]) !== void 0) {
+    throw new Error("parallelAiSearch parameter is not supported in Gemini API.");
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   return toObject;
 }
@@ -46417,6 +47388,14 @@ function toolToVertex$1(fromObject) {
   }
   if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
     throw new Error("fileSearch parameter is not supported in Vertex AI.");
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -46442,23 +47421,24 @@ function toolToVertex$1(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  const fromParallelAiSearch = getValueByPath(fromObject, [
+    "parallelAiSearch"
+  ]);
+  if (fromParallelAiSearch != null) {
+    setValueByPath(toObject, ["parallelAiSearch"], fromParallelAiSearch);
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
+  }
+  if (getValueByPath(fromObject, ["mcpServers"]) !== void 0) {
+    throw new Error("mcpServers parameter is not supported in Vertex AI.");
   }
   return toObject;
 }
@@ -46562,7 +47542,49 @@ function voiceActivityFromVertex(fromObject) {
   }
   return toObject;
 }
-function blobToMldev$1(fromObject) {
+function voiceConfigToVertex$1(fromObject) {
+  const toObject = {};
+  const fromReplicatedVoiceConfig = getValueByPath(fromObject, [
+    "replicatedVoiceConfig"
+  ]);
+  if (fromReplicatedVoiceConfig != null) {
+    setValueByPath(toObject, ["replicatedVoiceConfig"], replicatedVoiceConfigToVertex$1(fromReplicatedVoiceConfig));
+  }
+  const fromPrebuiltVoiceConfig = getValueByPath(fromObject, [
+    "prebuiltVoiceConfig"
+  ]);
+  if (fromPrebuiltVoiceConfig != null) {
+    setValueByPath(toObject, ["prebuiltVoiceConfig"], fromPrebuiltVoiceConfig);
+  }
+  return toObject;
+}
+function authConfigToMldev$1(fromObject, _rootObject) {
+  const toObject = {};
+  const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
+  if (fromApiKey != null) {
+    setValueByPath(toObject, ["apiKey"], fromApiKey);
+  }
+  if (getValueByPath(fromObject, ["apiKeyConfig"]) !== void 0) {
+    throw new Error("apiKeyConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["authType"]) !== void 0) {
+    throw new Error("authType parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["googleServiceAccountConfig"]) !== void 0) {
+    throw new Error("googleServiceAccountConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["httpBasicAuthConfig"]) !== void 0) {
+    throw new Error("httpBasicAuthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oauthConfig"]) !== void 0) {
+    throw new Error("oauthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oidcConfig"]) !== void 0) {
+    throw new Error("oidcConfig parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
+function blobToMldev$1(fromObject, _rootObject) {
   const toObject = {};
   const fromData = getValueByPath(fromObject, ["data"]);
   if (fromData != null) {
@@ -46577,7 +47599,7 @@ function blobToMldev$1(fromObject) {
   }
   return toObject;
 }
-function candidateFromMldev(fromObject) {
+function candidateFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromContent = getValueByPath(fromObject, ["content"]);
   if (fromContent != null) {
@@ -46597,15 +47619,15 @@ function candidateFromMldev(fromObject) {
   if (fromFinishReason != null) {
     setValueByPath(toObject, ["finishReason"], fromFinishReason);
   }
-  const fromAvgLogprobs = getValueByPath(fromObject, ["avgLogprobs"]);
-  if (fromAvgLogprobs != null) {
-    setValueByPath(toObject, ["avgLogprobs"], fromAvgLogprobs);
-  }
   const fromGroundingMetadata = getValueByPath(fromObject, [
     "groundingMetadata"
   ]);
   if (fromGroundingMetadata != null) {
     setValueByPath(toObject, ["groundingMetadata"], fromGroundingMetadata);
+  }
+  const fromAvgLogprobs = getValueByPath(fromObject, ["avgLogprobs"]);
+  if (fromAvgLogprobs != null) {
+    setValueByPath(toObject, ["avgLogprobs"], fromAvgLogprobs);
   }
   const fromIndex = getValueByPath(fromObject, ["index"]);
   if (fromIndex != null) {
@@ -46637,7 +47659,7 @@ function candidateFromMldev(fromObject) {
   }
   return toObject;
 }
-function citationMetadataFromMldev(fromObject) {
+function citationMetadataFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromCitations = getValueByPath(fromObject, ["citationSources"]);
   if (fromCitations != null) {
@@ -46651,7 +47673,7 @@ function citationMetadataFromMldev(fromObject) {
   }
   return toObject;
 }
-function computeTokensParametersToVertex(apiClient, fromObject) {
+function computeTokensParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -46662,14 +47684,14 @@ function computeTokensParametersToVertex(apiClient, fromObject) {
     let transformedList = tContents(fromContents);
     if (Array.isArray(transformedList)) {
       transformedList = transformedList.map((item) => {
-        return item;
+        return contentToVertex(item);
       });
     }
     setValueByPath(toObject, ["contents"], transformedList);
   }
   return toObject;
 }
-function computeTokensResponseFromVertex(fromObject) {
+function computeTokensResponseFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -46689,7 +47711,7 @@ function computeTokensResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function contentEmbeddingFromVertex(fromObject) {
+function contentEmbeddingFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromValues = getValueByPath(fromObject, ["values"]);
   if (fromValues != null) {
@@ -46701,7 +47723,7 @@ function contentEmbeddingFromVertex(fromObject) {
   }
   return toObject;
 }
-function contentEmbeddingStatisticsFromVertex(fromObject) {
+function contentEmbeddingStatisticsFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromTruncated = getValueByPath(fromObject, ["truncated"]);
   if (fromTruncated != null) {
@@ -46713,7 +47735,7 @@ function contentEmbeddingStatisticsFromVertex(fromObject) {
   }
   return toObject;
 }
-function contentToMldev$1(fromObject) {
+function contentToMldev$1(fromObject, rootObject) {
   const toObject = {};
   const fromParts = getValueByPath(fromObject, ["parts"]);
   if (fromParts != null) {
@@ -46731,7 +47753,25 @@ function contentToMldev$1(fromObject) {
   }
   return toObject;
 }
-function controlReferenceConfigToVertex(fromObject) {
+function contentToVertex(fromObject, rootObject) {
+  const toObject = {};
+  const fromParts = getValueByPath(fromObject, ["parts"]);
+  if (fromParts != null) {
+    let transformedList = fromParts;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return partToVertex(item);
+      });
+    }
+    setValueByPath(toObject, ["parts"], transformedList);
+  }
+  const fromRole = getValueByPath(fromObject, ["role"]);
+  if (fromRole != null) {
+    setValueByPath(toObject, ["role"], fromRole);
+  }
+  return toObject;
+}
+function controlReferenceConfigToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromControlType = getValueByPath(fromObject, ["controlType"]);
   if (fromControlType != null) {
@@ -46745,7 +47785,7 @@ function controlReferenceConfigToVertex(fromObject) {
   }
   return toObject;
 }
-function countTokensConfigToMldev(fromObject) {
+function countTokensConfigToMldev(fromObject, _rootObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["systemInstruction"]) !== void 0) {
     throw new Error("systemInstruction parameter is not supported in Gemini API.");
@@ -46758,13 +47798,13 @@ function countTokensConfigToMldev(fromObject) {
   }
   return toObject;
 }
-function countTokensConfigToVertex(fromObject, parentObject) {
+function countTokensConfigToVertex(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
   ]);
   if (parentObject !== void 0 && fromSystemInstruction != null) {
-    setValueByPath(parentObject, ["systemInstruction"], tContent(fromSystemInstruction));
+    setValueByPath(parentObject, ["systemInstruction"], contentToVertex(tContent(fromSystemInstruction)));
   }
   const fromTools = getValueByPath(fromObject, ["tools"]);
   if (parentObject !== void 0 && fromTools != null) {
@@ -46784,7 +47824,7 @@ function countTokensConfigToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function countTokensParametersToMldev(apiClient, fromObject) {
+function countTokensParametersToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -46806,7 +47846,7 @@ function countTokensParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function countTokensParametersToVertex(apiClient, fromObject) {
+function countTokensParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -46817,7 +47857,7 @@ function countTokensParametersToVertex(apiClient, fromObject) {
     let transformedList = tContents(fromContents);
     if (Array.isArray(transformedList)) {
       transformedList = transformedList.map((item) => {
-        return item;
+        return contentToVertex(item);
       });
     }
     setValueByPath(toObject, ["contents"], transformedList);
@@ -46828,7 +47868,7 @@ function countTokensParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function countTokensResponseFromMldev(fromObject) {
+function countTokensResponseFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -46848,7 +47888,7 @@ function countTokensResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function countTokensResponseFromVertex(fromObject) {
+function countTokensResponseFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -46862,7 +47902,7 @@ function countTokensResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function deleteModelParametersToMldev(apiClient, fromObject) {
+function deleteModelParametersToMldev(apiClient, fromObject, _rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -46870,7 +47910,7 @@ function deleteModelParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function deleteModelParametersToVertex(apiClient, fromObject) {
+function deleteModelParametersToVertex(apiClient, fromObject, _rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -46878,7 +47918,7 @@ function deleteModelParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function deleteModelResponseFromMldev(fromObject) {
+function deleteModelResponseFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -46888,7 +47928,7 @@ function deleteModelResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function deleteModelResponseFromVertex(fromObject) {
+function deleteModelResponseFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -46898,7 +47938,7 @@ function deleteModelResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function editImageConfigToVertex(fromObject, parentObject) {
+function editImageConfigToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromOutputGcsUri = getValueByPath(fromObject, ["outputGcsUri"]);
   if (parentObject !== void 0 && fromOutputGcsUri != null) {
@@ -46988,7 +48028,7 @@ function editImageConfigToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function editImageParametersInternalToVertex(apiClient, fromObject) {
+function editImageParametersInternalToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -47016,7 +48056,7 @@ function editImageParametersInternalToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function editImageResponseFromVertex(fromObject) {
+function editImageResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -47038,7 +48078,7 @@ function editImageResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function embedContentConfigToMldev(fromObject, parentObject) {
+function embedContentConfigToMldev(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromTaskType = getValueByPath(fromObject, ["taskType"]);
   if (parentObject !== void 0 && fromTaskType != null) {
@@ -47062,33 +48102,99 @@ function embedContentConfigToMldev(fromObject, parentObject) {
   }
   return toObject;
 }
-function embedContentConfigToVertex(fromObject, parentObject) {
+function embedContentConfigToVertex(fromObject, parentObject, rootObject) {
   const toObject = {};
-  const fromTaskType = getValueByPath(fromObject, ["taskType"]);
-  if (parentObject !== void 0 && fromTaskType != null) {
-    setValueByPath(parentObject, ["instances[]", "task_type"], fromTaskType);
-  }
-  const fromTitle = getValueByPath(fromObject, ["title"]);
-  if (parentObject !== void 0 && fromTitle != null) {
-    setValueByPath(parentObject, ["instances[]", "title"], fromTitle);
-  }
-  const fromOutputDimensionality = getValueByPath(fromObject, [
-    "outputDimensionality"
+  let discriminatorTaskType = getValueByPath(rootObject, [
+    "embeddingApiType"
   ]);
-  if (parentObject !== void 0 && fromOutputDimensionality != null) {
-    setValueByPath(parentObject, ["parameters", "outputDimensionality"], fromOutputDimensionality);
+  if (discriminatorTaskType === void 0) {
+    discriminatorTaskType = "PREDICT";
   }
-  const fromMimeType = getValueByPath(fromObject, ["mimeType"]);
-  if (parentObject !== void 0 && fromMimeType != null) {
-    setValueByPath(parentObject, ["instances[]", "mimeType"], fromMimeType);
+  if (discriminatorTaskType === "PREDICT") {
+    const fromTaskType = getValueByPath(fromObject, ["taskType"]);
+    if (parentObject !== void 0 && fromTaskType != null) {
+      setValueByPath(parentObject, ["instances[]", "task_type"], fromTaskType);
+    }
+  } else if (discriminatorTaskType === "EMBED_CONTENT") {
+    const fromTaskType = getValueByPath(fromObject, ["taskType"]);
+    if (parentObject !== void 0 && fromTaskType != null) {
+      setValueByPath(parentObject, ["taskType"], fromTaskType);
+    }
   }
-  const fromAutoTruncate = getValueByPath(fromObject, ["autoTruncate"]);
-  if (parentObject !== void 0 && fromAutoTruncate != null) {
-    setValueByPath(parentObject, ["parameters", "autoTruncate"], fromAutoTruncate);
+  let discriminatorTitle = getValueByPath(rootObject, [
+    "embeddingApiType"
+  ]);
+  if (discriminatorTitle === void 0) {
+    discriminatorTitle = "PREDICT";
+  }
+  if (discriminatorTitle === "PREDICT") {
+    const fromTitle = getValueByPath(fromObject, ["title"]);
+    if (parentObject !== void 0 && fromTitle != null) {
+      setValueByPath(parentObject, ["instances[]", "title"], fromTitle);
+    }
+  } else if (discriminatorTitle === "EMBED_CONTENT") {
+    const fromTitle = getValueByPath(fromObject, ["title"]);
+    if (parentObject !== void 0 && fromTitle != null) {
+      setValueByPath(parentObject, ["title"], fromTitle);
+    }
+  }
+  let discriminatorOutputDimensionality = getValueByPath(rootObject, [
+    "embeddingApiType"
+  ]);
+  if (discriminatorOutputDimensionality === void 0) {
+    discriminatorOutputDimensionality = "PREDICT";
+  }
+  if (discriminatorOutputDimensionality === "PREDICT") {
+    const fromOutputDimensionality = getValueByPath(fromObject, [
+      "outputDimensionality"
+    ]);
+    if (parentObject !== void 0 && fromOutputDimensionality != null) {
+      setValueByPath(parentObject, ["parameters", "outputDimensionality"], fromOutputDimensionality);
+    }
+  } else if (discriminatorOutputDimensionality === "EMBED_CONTENT") {
+    const fromOutputDimensionality = getValueByPath(fromObject, [
+      "outputDimensionality"
+    ]);
+    if (parentObject !== void 0 && fromOutputDimensionality != null) {
+      setValueByPath(parentObject, ["outputDimensionality"], fromOutputDimensionality);
+    }
+  }
+  let discriminatorMimeType = getValueByPath(rootObject, [
+    "embeddingApiType"
+  ]);
+  if (discriminatorMimeType === void 0) {
+    discriminatorMimeType = "PREDICT";
+  }
+  if (discriminatorMimeType === "PREDICT") {
+    const fromMimeType = getValueByPath(fromObject, ["mimeType"]);
+    if (parentObject !== void 0 && fromMimeType != null) {
+      setValueByPath(parentObject, ["instances[]", "mimeType"], fromMimeType);
+    }
+  }
+  let discriminatorAutoTruncate = getValueByPath(rootObject, [
+    "embeddingApiType"
+  ]);
+  if (discriminatorAutoTruncate === void 0) {
+    discriminatorAutoTruncate = "PREDICT";
+  }
+  if (discriminatorAutoTruncate === "PREDICT") {
+    const fromAutoTruncate = getValueByPath(fromObject, [
+      "autoTruncate"
+    ]);
+    if (parentObject !== void 0 && fromAutoTruncate != null) {
+      setValueByPath(parentObject, ["parameters", "autoTruncate"], fromAutoTruncate);
+    }
+  } else if (discriminatorAutoTruncate === "EMBED_CONTENT") {
+    const fromAutoTruncate = getValueByPath(fromObject, [
+      "autoTruncate"
+    ]);
+    if (parentObject !== void 0 && fromAutoTruncate != null) {
+      setValueByPath(parentObject, ["autoTruncate"], fromAutoTruncate);
+    }
   }
   return toObject;
 }
-function embedContentParametersToMldev(apiClient, fromObject) {
+function embedContentParametersPrivateToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -47104,6 +48210,10 @@ function embedContentParametersToMldev(apiClient, fromObject) {
     }
     setValueByPath(toObject, ["requests[]", "content"], transformedList);
   }
+  const fromContent = getValueByPath(fromObject, ["content"]);
+  if (fromContent != null) {
+    contentToMldev$1(tContent(fromContent));
+  }
   const fromConfig = getValueByPath(fromObject, ["config"]);
   if (fromConfig != null) {
     embedContentConfigToMldev(fromConfig, toObject);
@@ -47114,29 +48224,49 @@ function embedContentParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function embedContentParametersToVertex(apiClient, fromObject) {
+function embedContentParametersPrivateToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
     setValueByPath(toObject, ["_url", "model"], tModel(apiClient, fromModel));
   }
-  const fromContents = getValueByPath(fromObject, ["contents"]);
-  if (fromContents != null) {
-    let transformedList = tContentsForEmbed(apiClient, fromContents);
-    if (Array.isArray(transformedList)) {
-      transformedList = transformedList.map((item) => {
-        return item;
-      });
+  let discriminatorContents = getValueByPath(rootObject, [
+    "embeddingApiType"
+  ]);
+  if (discriminatorContents === void 0) {
+    discriminatorContents = "PREDICT";
+  }
+  if (discriminatorContents === "PREDICT") {
+    const fromContents = getValueByPath(fromObject, ["contents"]);
+    if (fromContents != null) {
+      let transformedList = tContentsForEmbed(apiClient, fromContents);
+      if (Array.isArray(transformedList)) {
+        transformedList = transformedList.map((item) => {
+          return item;
+        });
+      }
+      setValueByPath(toObject, ["instances[]", "content"], transformedList);
     }
-    setValueByPath(toObject, ["instances[]", "content"], transformedList);
+  }
+  let discriminatorContent = getValueByPath(rootObject, [
+    "embeddingApiType"
+  ]);
+  if (discriminatorContent === void 0) {
+    discriminatorContent = "PREDICT";
+  }
+  if (discriminatorContent === "EMBED_CONTENT") {
+    const fromContent = getValueByPath(fromObject, ["content"]);
+    if (fromContent != null) {
+      setValueByPath(toObject, ["content"], contentToVertex(tContent(fromContent)));
+    }
   }
   const fromConfig = getValueByPath(fromObject, ["config"]);
   if (fromConfig != null) {
-    embedContentConfigToVertex(fromConfig, toObject);
+    embedContentConfigToVertex(fromConfig, toObject, rootObject);
   }
   return toObject;
 }
-function embedContentResponseFromMldev(fromObject) {
+function embedContentResponseFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -47160,7 +48290,7 @@ function embedContentResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function embedContentResponseFromVertex(fromObject) {
+function embedContentResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -47185,9 +48315,25 @@ function embedContentResponseFromVertex(fromObject) {
   if (fromMetadata != null) {
     setValueByPath(toObject, ["metadata"], fromMetadata);
   }
+  if (rootObject && getValueByPath(rootObject, ["embeddingApiType"]) === "EMBED_CONTENT") {
+    const embedding = getValueByPath(fromObject, ["embedding"]);
+    const usageMetadata = getValueByPath(fromObject, ["usageMetadata"]);
+    const truncated = getValueByPath(fromObject, ["truncated"]);
+    if (embedding) {
+      const stats = {};
+      if (usageMetadata && usageMetadata["promptTokenCount"]) {
+        stats.tokenCount = usageMetadata["promptTokenCount"];
+      }
+      if (truncated) {
+        stats.truncated = truncated;
+      }
+      embedding.statistics = stats;
+      setValueByPath(toObject, ["embeddings"], [embedding]);
+    }
+  }
   return toObject;
 }
-function endpointFromVertex(fromObject) {
+function endpointFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromName = getValueByPath(fromObject, ["endpoint"]);
   if (fromName != null) {
@@ -47201,7 +48347,7 @@ function endpointFromVertex(fromObject) {
   }
   return toObject;
 }
-function fileDataToMldev$1(fromObject) {
+function fileDataToMldev$1(fromObject, _rootObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["displayName"]) !== void 0) {
     throw new Error("displayName parameter is not supported in Gemini API.");
@@ -47216,7 +48362,7 @@ function fileDataToMldev$1(fromObject) {
   }
   return toObject;
 }
-function functionCallToMldev$1(fromObject) {
+function functionCallToMldev$1(fromObject, _rootObject) {
   const toObject = {};
   const fromId = getValueByPath(fromObject, ["id"]);
   if (fromId != null) {
@@ -47238,7 +48384,7 @@ function functionCallToMldev$1(fromObject) {
   }
   return toObject;
 }
-function functionCallingConfigToMldev(fromObject) {
+function functionCallingConfigToMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromAllowedFunctionNames = getValueByPath(fromObject, [
     "allowedFunctionNames"
@@ -47255,7 +48401,7 @@ function functionCallingConfigToMldev(fromObject) {
   }
   return toObject;
 }
-function functionDeclarationToVertex(fromObject) {
+function functionDeclarationToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromDescription = getValueByPath(fromObject, ["description"]);
   if (fromDescription != null) {
@@ -47290,7 +48436,7 @@ function functionDeclarationToVertex(fromObject) {
   }
   return toObject;
 }
-function generateContentConfigToMldev(apiClient, fromObject, parentObject) {
+function generateContentConfigToMldev(apiClient, fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
@@ -47448,15 +48594,22 @@ function generateContentConfigToMldev(apiClient, fromObject, parentObject) {
   if (fromEnableEnhancedCivicAnswers != null) {
     setValueByPath(toObject, ["enableEnhancedCivicAnswers"], fromEnableEnhancedCivicAnswers);
   }
+  if (getValueByPath(fromObject, ["modelArmorConfig"]) !== void 0) {
+    throw new Error("modelArmorConfig parameter is not supported in Gemini API.");
+  }
+  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
+  if (parentObject !== void 0 && fromServiceTier != null) {
+    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
+  }
   return toObject;
 }
-function generateContentConfigToVertex(apiClient, fromObject, parentObject) {
+function generateContentConfigToVertex(apiClient, fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromSystemInstruction = getValueByPath(fromObject, [
     "systemInstruction"
   ]);
   if (parentObject !== void 0 && fromSystemInstruction != null) {
-    setValueByPath(parentObject, ["systemInstruction"], tContent(fromSystemInstruction));
+    setValueByPath(parentObject, ["systemInstruction"], contentToVertex(tContent(fromSystemInstruction)));
   }
   const fromTemperature = getValueByPath(fromObject, ["temperature"]);
   if (fromTemperature != null) {
@@ -47568,7 +48721,7 @@ function generateContentConfigToVertex(apiClient, fromObject, parentObject) {
   }
   const fromToolConfig = getValueByPath(fromObject, ["toolConfig"]);
   if (parentObject !== void 0 && fromToolConfig != null) {
-    setValueByPath(parentObject, ["toolConfig"], fromToolConfig);
+    setValueByPath(parentObject, ["toolConfig"], toolConfigToVertex(fromToolConfig));
   }
   const fromLabels = getValueByPath(fromObject, ["labels"]);
   if (parentObject !== void 0 && fromLabels != null) {
@@ -47594,7 +48747,7 @@ function generateContentConfigToVertex(apiClient, fromObject, parentObject) {
   }
   const fromSpeechConfig = getValueByPath(fromObject, ["speechConfig"]);
   if (fromSpeechConfig != null) {
-    setValueByPath(toObject, ["speechConfig"], tSpeechConfig(fromSpeechConfig));
+    setValueByPath(toObject, ["speechConfig"], speechConfigToVertex(tSpeechConfig(fromSpeechConfig)));
   }
   const fromAudioTimestamp = getValueByPath(fromObject, [
     "audioTimestamp"
@@ -47615,9 +48768,19 @@ function generateContentConfigToVertex(apiClient, fromObject, parentObject) {
   if (getValueByPath(fromObject, ["enableEnhancedCivicAnswers"]) !== void 0) {
     throw new Error("enableEnhancedCivicAnswers parameter is not supported in Vertex AI.");
   }
+  const fromModelArmorConfig = getValueByPath(fromObject, [
+    "modelArmorConfig"
+  ]);
+  if (parentObject !== void 0 && fromModelArmorConfig != null) {
+    setValueByPath(parentObject, ["modelArmorConfig"], fromModelArmorConfig);
+  }
+  const fromServiceTier = getValueByPath(fromObject, ["serviceTier"]);
+  if (parentObject !== void 0 && fromServiceTier != null) {
+    setValueByPath(parentObject, ["serviceTier"], fromServiceTier);
+  }
   return toObject;
 }
-function generateContentParametersToMldev(apiClient, fromObject) {
+function generateContentParametersToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -47639,7 +48802,7 @@ function generateContentParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function generateContentParametersToVertex(apiClient, fromObject) {
+function generateContentParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -47650,7 +48813,7 @@ function generateContentParametersToVertex(apiClient, fromObject) {
     let transformedList = tContents(fromContents);
     if (Array.isArray(transformedList)) {
       transformedList = transformedList.map((item) => {
-        return item;
+        return contentToVertex(item);
       });
     }
     setValueByPath(toObject, ["contents"], transformedList);
@@ -47661,7 +48824,7 @@ function generateContentParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function generateContentResponseFromMldev(fromObject) {
+function generateContentResponseFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -47699,9 +48862,13 @@ function generateContentResponseFromMldev(fromObject) {
   if (fromUsageMetadata != null) {
     setValueByPath(toObject, ["usageMetadata"], fromUsageMetadata);
   }
+  const fromModelStatus = getValueByPath(fromObject, ["modelStatus"]);
+  if (fromModelStatus != null) {
+    setValueByPath(toObject, ["modelStatus"], fromModelStatus);
+  }
   return toObject;
 }
-function generateContentResponseFromVertex(fromObject) {
+function generateContentResponseFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -47745,7 +48912,7 @@ function generateContentResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function generateImagesConfigToMldev(fromObject, parentObject) {
+function generateImagesConfigToMldev(fromObject, parentObject, _rootObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["outputGcsUri"]) !== void 0) {
     throw new Error("outputGcsUri parameter is not supported in Gemini API.");
@@ -47827,7 +48994,7 @@ function generateImagesConfigToMldev(fromObject, parentObject) {
   }
   return toObject;
 }
-function generateImagesConfigToVertex(fromObject, parentObject) {
+function generateImagesConfigToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromOutputGcsUri = getValueByPath(fromObject, ["outputGcsUri"]);
   if (parentObject !== void 0 && fromOutputGcsUri != null) {
@@ -47919,7 +49086,7 @@ function generateImagesConfigToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function generateImagesParametersToMldev(apiClient, fromObject) {
+function generateImagesParametersToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -47935,7 +49102,7 @@ function generateImagesParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function generateImagesParametersToVertex(apiClient, fromObject) {
+function generateImagesParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -47951,7 +49118,7 @@ function generateImagesParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function generateImagesResponseFromMldev(fromObject) {
+function generateImagesResponseFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -47979,7 +49146,7 @@ function generateImagesResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function generateImagesResponseFromVertex(fromObject) {
+function generateImagesResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -48007,7 +49174,7 @@ function generateImagesResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function generateVideosConfigToMldev(fromObject, parentObject) {
+function generateVideosConfigToMldev(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromNumberOfVideos = getValueByPath(fromObject, [
     "numberOfVideos"
@@ -48084,9 +49251,12 @@ function generateVideosConfigToMldev(fromObject, parentObject) {
   if (getValueByPath(fromObject, ["compressionQuality"]) !== void 0) {
     throw new Error("compressionQuality parameter is not supported in Gemini API.");
   }
+  if (getValueByPath(fromObject, ["labels"]) !== void 0) {
+    throw new Error("labels parameter is not supported in Gemini API.");
+  }
   return toObject;
 }
-function generateVideosConfigToVertex(fromObject, parentObject) {
+function generateVideosConfigToVertex(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromNumberOfVideos = getValueByPath(fromObject, [
     "numberOfVideos"
@@ -48174,9 +49344,13 @@ function generateVideosConfigToVertex(fromObject, parentObject) {
   if (parentObject !== void 0 && fromCompressionQuality != null) {
     setValueByPath(parentObject, ["parameters", "compressionQuality"], fromCompressionQuality);
   }
+  const fromLabels = getValueByPath(fromObject, ["labels"]);
+  if (parentObject !== void 0 && fromLabels != null) {
+    setValueByPath(parentObject, ["labels"], fromLabels);
+  }
   return toObject;
 }
-function generateVideosOperationFromMldev(fromObject) {
+function generateVideosOperationFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -48203,7 +49377,7 @@ function generateVideosOperationFromMldev(fromObject) {
   }
   return toObject;
 }
-function generateVideosOperationFromVertex(fromObject) {
+function generateVideosOperationFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -48227,7 +49401,7 @@ function generateVideosOperationFromVertex(fromObject) {
   }
   return toObject;
 }
-function generateVideosParametersToMldev(apiClient, fromObject) {
+function generateVideosParametersToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -48255,7 +49429,7 @@ function generateVideosParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function generateVideosParametersToVertex(apiClient, fromObject) {
+function generateVideosParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -48283,7 +49457,7 @@ function generateVideosParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function generateVideosResponseFromMldev(fromObject) {
+function generateVideosResponseFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromGeneratedVideos = getValueByPath(fromObject, [
     "generatedSamples"
@@ -48311,7 +49485,7 @@ function generateVideosResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function generateVideosResponseFromVertex(fromObject) {
+function generateVideosResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromGeneratedVideos = getValueByPath(fromObject, ["videos"]);
   if (fromGeneratedVideos != null) {
@@ -48337,7 +49511,7 @@ function generateVideosResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function generateVideosSourceToMldev(fromObject, parentObject) {
+function generateVideosSourceToMldev(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromPrompt = getValueByPath(fromObject, ["prompt"]);
   if (parentObject !== void 0 && fromPrompt != null) {
@@ -48353,7 +49527,7 @@ function generateVideosSourceToMldev(fromObject, parentObject) {
   }
   return toObject;
 }
-function generateVideosSourceToVertex(fromObject, parentObject) {
+function generateVideosSourceToVertex(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromPrompt = getValueByPath(fromObject, ["prompt"]);
   if (parentObject !== void 0 && fromPrompt != null) {
@@ -48369,7 +49543,7 @@ function generateVideosSourceToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function generatedImageFromMldev(fromObject) {
+function generatedImageFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["_self"]);
   if (fromImage != null) {
@@ -48387,7 +49561,7 @@ function generatedImageFromMldev(fromObject) {
   }
   return toObject;
 }
-function generatedImageFromVertex(fromObject) {
+function generatedImageFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["_self"]);
   if (fromImage != null) {
@@ -48409,7 +49583,7 @@ function generatedImageFromVertex(fromObject) {
   }
   return toObject;
 }
-function generatedImageMaskFromVertex(fromObject) {
+function generatedImageMaskFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromMask = getValueByPath(fromObject, ["_self"]);
   if (fromMask != null) {
@@ -48427,7 +49601,7 @@ function generatedImageMaskFromVertex(fromObject) {
   }
   return toObject;
 }
-function generatedVideoFromMldev(fromObject) {
+function generatedVideoFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromVideo = getValueByPath(fromObject, ["video"]);
   if (fromVideo != null) {
@@ -48435,7 +49609,7 @@ function generatedVideoFromMldev(fromObject) {
   }
   return toObject;
 }
-function generatedVideoFromVertex(fromObject) {
+function generatedVideoFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromVideo = getValueByPath(fromObject, ["_self"]);
   if (fromVideo != null) {
@@ -48443,7 +49617,7 @@ function generatedVideoFromVertex(fromObject) {
   }
   return toObject;
 }
-function generationConfigToVertex(fromObject) {
+function generationConfigToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromModelSelectionConfig = getValueByPath(fromObject, [
     "modelSelectionConfig"
@@ -48539,7 +49713,7 @@ function generationConfigToVertex(fromObject) {
   }
   const fromSpeechConfig = getValueByPath(fromObject, ["speechConfig"]);
   if (fromSpeechConfig != null) {
-    setValueByPath(toObject, ["speechConfig"], fromSpeechConfig);
+    setValueByPath(toObject, ["speechConfig"], speechConfigToVertex(fromSpeechConfig));
   }
   const fromStopSequences = getValueByPath(fromObject, [
     "stopSequences"
@@ -48570,7 +49744,7 @@ function generationConfigToVertex(fromObject) {
   }
   return toObject;
 }
-function getModelParametersToMldev(apiClient, fromObject) {
+function getModelParametersToMldev(apiClient, fromObject, _rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -48578,7 +49752,7 @@ function getModelParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function getModelParametersToVertex(apiClient, fromObject) {
+function getModelParametersToVertex(apiClient, fromObject, _rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -48586,10 +49760,11 @@ function getModelParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function googleMapsToMldev$1(fromObject) {
+function googleMapsToMldev$1(fromObject, rootObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["authConfig"]) !== void 0) {
-    throw new Error("authConfig parameter is not supported in Gemini API.");
+  const fromAuthConfig = getValueByPath(fromObject, ["authConfig"]);
+  if (fromAuthConfig != null) {
+    setValueByPath(toObject, ["authConfig"], authConfigToMldev$1(fromAuthConfig));
   }
   const fromEnableWidget = getValueByPath(fromObject, ["enableWidget"]);
   if (fromEnableWidget != null) {
@@ -48597,13 +49772,17 @@ function googleMapsToMldev$1(fromObject) {
   }
   return toObject;
 }
-function googleSearchToMldev$1(fromObject) {
+function googleSearchToMldev$1(fromObject, _rootObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
-    throw new Error("excludeDomains parameter is not supported in Gemini API.");
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
+    throw new Error("excludeDomains parameter is not supported in Gemini API.");
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -48613,7 +49792,7 @@ function googleSearchToMldev$1(fromObject) {
   }
   return toObject;
 }
-function imageConfigToMldev(fromObject) {
+function imageConfigToMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromAspectRatio = getValueByPath(fromObject, ["aspectRatio"]);
   if (fromAspectRatio != null) {
@@ -48626,15 +49805,21 @@ function imageConfigToMldev(fromObject) {
   if (getValueByPath(fromObject, ["personGeneration"]) !== void 0) {
     throw new Error("personGeneration parameter is not supported in Gemini API.");
   }
+  if (getValueByPath(fromObject, ["prominentPeople"]) !== void 0) {
+    throw new Error("prominentPeople parameter is not supported in Gemini API.");
+  }
   if (getValueByPath(fromObject, ["outputMimeType"]) !== void 0) {
     throw new Error("outputMimeType parameter is not supported in Gemini API.");
   }
   if (getValueByPath(fromObject, ["outputCompressionQuality"]) !== void 0) {
     throw new Error("outputCompressionQuality parameter is not supported in Gemini API.");
   }
+  if (getValueByPath(fromObject, ["imageOutputOptions"]) !== void 0) {
+    throw new Error("imageOutputOptions parameter is not supported in Gemini API.");
+  }
   return toObject;
 }
-function imageConfigToVertex(fromObject) {
+function imageConfigToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromAspectRatio = getValueByPath(fromObject, ["aspectRatio"]);
   if (fromAspectRatio != null) {
@@ -48650,6 +49835,12 @@ function imageConfigToVertex(fromObject) {
   if (fromPersonGeneration != null) {
     setValueByPath(toObject, ["personGeneration"], fromPersonGeneration);
   }
+  const fromProminentPeople = getValueByPath(fromObject, [
+    "prominentPeople"
+  ]);
+  if (fromProminentPeople != null) {
+    setValueByPath(toObject, ["prominentPeople"], fromProminentPeople);
+  }
   const fromOutputMimeType = getValueByPath(fromObject, [
     "outputMimeType"
   ]);
@@ -48662,9 +49853,15 @@ function imageConfigToVertex(fromObject) {
   if (fromOutputCompressionQuality != null) {
     setValueByPath(toObject, ["imageOutputOptions", "compressionQuality"], fromOutputCompressionQuality);
   }
+  const fromImageOutputOptions = getValueByPath(fromObject, [
+    "imageOutputOptions"
+  ]);
+  if (fromImageOutputOptions != null) {
+    setValueByPath(toObject, ["imageOutputOptions"], fromImageOutputOptions);
+  }
   return toObject;
 }
-function imageFromMldev(fromObject) {
+function imageFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromImageBytes = getValueByPath(fromObject, [
     "bytesBase64Encoded"
@@ -48678,7 +49875,7 @@ function imageFromMldev(fromObject) {
   }
   return toObject;
 }
-function imageFromVertex(fromObject) {
+function imageFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromGcsUri = getValueByPath(fromObject, ["gcsUri"]);
   if (fromGcsUri != null) {
@@ -48696,7 +49893,7 @@ function imageFromVertex(fromObject) {
   }
   return toObject;
 }
-function imageToMldev(fromObject) {
+function imageToMldev(fromObject, _rootObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["gcsUri"]) !== void 0) {
     throw new Error("gcsUri parameter is not supported in Gemini API.");
@@ -48711,7 +49908,7 @@ function imageToMldev(fromObject) {
   }
   return toObject;
 }
-function imageToVertex(fromObject) {
+function imageToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromGcsUri = getValueByPath(fromObject, ["gcsUri"]);
   if (fromGcsUri != null) {
@@ -48727,7 +49924,7 @@ function imageToVertex(fromObject) {
   }
   return toObject;
 }
-function listModelsConfigToMldev(apiClient, fromObject, parentObject) {
+function listModelsConfigToMldev(apiClient, fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromPageSize = getValueByPath(fromObject, ["pageSize"]);
   if (parentObject !== void 0 && fromPageSize != null) {
@@ -48747,7 +49944,7 @@ function listModelsConfigToMldev(apiClient, fromObject, parentObject) {
   }
   return toObject;
 }
-function listModelsConfigToVertex(apiClient, fromObject, parentObject) {
+function listModelsConfigToVertex(apiClient, fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromPageSize = getValueByPath(fromObject, ["pageSize"]);
   if (parentObject !== void 0 && fromPageSize != null) {
@@ -48767,7 +49964,7 @@ function listModelsConfigToVertex(apiClient, fromObject, parentObject) {
   }
   return toObject;
 }
-function listModelsParametersToMldev(apiClient, fromObject) {
+function listModelsParametersToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromConfig = getValueByPath(fromObject, ["config"]);
   if (fromConfig != null) {
@@ -48775,7 +49972,7 @@ function listModelsParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function listModelsParametersToVertex(apiClient, fromObject) {
+function listModelsParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromConfig = getValueByPath(fromObject, ["config"]);
   if (fromConfig != null) {
@@ -48783,7 +49980,7 @@ function listModelsParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function listModelsResponseFromMldev(fromObject) {
+function listModelsResponseFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -48809,7 +50006,7 @@ function listModelsResponseFromMldev(fromObject) {
   }
   return toObject;
 }
-function listModelsResponseFromVertex(fromObject) {
+function listModelsResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -48835,7 +50032,7 @@ function listModelsResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function maskReferenceConfigToVertex(fromObject) {
+function maskReferenceConfigToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromMaskMode = getValueByPath(fromObject, ["maskMode"]);
   if (fromMaskMode != null) {
@@ -48853,7 +50050,7 @@ function maskReferenceConfigToVertex(fromObject) {
   }
   return toObject;
 }
-function modelFromMldev(fromObject) {
+function modelFromMldev(fromObject, rootObject) {
   const toObject = {};
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -48917,7 +50114,7 @@ function modelFromMldev(fromObject) {
   }
   return toObject;
 }
-function modelFromVertex(fromObject) {
+function modelFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromName = getValueByPath(fromObject, ["name"]);
   if (fromName != null) {
@@ -48971,7 +50168,23 @@ function modelFromVertex(fromObject) {
   }
   return toObject;
 }
-function partToMldev$1(fromObject) {
+function multiSpeakerVoiceConfigToVertex(fromObject, rootObject) {
+  const toObject = {};
+  const fromSpeakerVoiceConfigs = getValueByPath(fromObject, [
+    "speakerVoiceConfigs"
+  ]);
+  if (fromSpeakerVoiceConfigs != null) {
+    let transformedList = fromSpeakerVoiceConfigs;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return speakerVoiceConfigToVertex(item);
+      });
+    }
+    setValueByPath(toObject, ["speakerVoiceConfigs"], transformedList);
+  }
+  return toObject;
+}
+function partToMldev$1(fromObject, rootObject) {
   const toObject = {};
   const fromMediaResolution = getValueByPath(fromObject, [
     "mediaResolution"
@@ -49029,9 +50242,90 @@ function partToMldev$1(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
+  if (fromPartMetadata != null) {
+    setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
   return toObject;
 }
-function productImageToVertex(fromObject) {
+function partToVertex(fromObject, _rootObject) {
+  const toObject = {};
+  const fromMediaResolution = getValueByPath(fromObject, [
+    "mediaResolution"
+  ]);
+  if (fromMediaResolution != null) {
+    setValueByPath(toObject, ["mediaResolution"], fromMediaResolution);
+  }
+  const fromCodeExecutionResult = getValueByPath(fromObject, [
+    "codeExecutionResult"
+  ]);
+  if (fromCodeExecutionResult != null) {
+    setValueByPath(toObject, ["codeExecutionResult"], fromCodeExecutionResult);
+  }
+  const fromExecutableCode = getValueByPath(fromObject, [
+    "executableCode"
+  ]);
+  if (fromExecutableCode != null) {
+    setValueByPath(toObject, ["executableCode"], fromExecutableCode);
+  }
+  const fromFileData = getValueByPath(fromObject, ["fileData"]);
+  if (fromFileData != null) {
+    setValueByPath(toObject, ["fileData"], fromFileData);
+  }
+  const fromFunctionCall = getValueByPath(fromObject, ["functionCall"]);
+  if (fromFunctionCall != null) {
+    setValueByPath(toObject, ["functionCall"], fromFunctionCall);
+  }
+  const fromFunctionResponse = getValueByPath(fromObject, [
+    "functionResponse"
+  ]);
+  if (fromFunctionResponse != null) {
+    setValueByPath(toObject, ["functionResponse"], fromFunctionResponse);
+  }
+  const fromInlineData = getValueByPath(fromObject, ["inlineData"]);
+  if (fromInlineData != null) {
+    setValueByPath(toObject, ["inlineData"], fromInlineData);
+  }
+  const fromText = getValueByPath(fromObject, ["text"]);
+  if (fromText != null) {
+    setValueByPath(toObject, ["text"], fromText);
+  }
+  const fromThought = getValueByPath(fromObject, ["thought"]);
+  if (fromThought != null) {
+    setValueByPath(toObject, ["thought"], fromThought);
+  }
+  const fromThoughtSignature = getValueByPath(fromObject, [
+    "thoughtSignature"
+  ]);
+  if (fromThoughtSignature != null) {
+    setValueByPath(toObject, ["thoughtSignature"], fromThoughtSignature);
+  }
+  const fromVideoMetadata = getValueByPath(fromObject, [
+    "videoMetadata"
+  ]);
+  if (fromVideoMetadata != null) {
+    setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
+  }
+  if (getValueByPath(fromObject, ["toolCall"]) !== void 0) {
+    throw new Error("toolCall parameter is not supported in Vertex AI.");
+  }
+  if (getValueByPath(fromObject, ["toolResponse"]) !== void 0) {
+    throw new Error("toolResponse parameter is not supported in Vertex AI.");
+  }
+  if (getValueByPath(fromObject, ["partMetadata"]) !== void 0) {
+    throw new Error("partMetadata parameter is not supported in Vertex AI.");
+  }
+  return toObject;
+}
+function productImageToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromProductImage = getValueByPath(fromObject, ["productImage"]);
   if (fromProductImage != null) {
@@ -49039,7 +50333,7 @@ function productImageToVertex(fromObject) {
   }
   return toObject;
 }
-function recontextImageConfigToVertex(fromObject, parentObject) {
+function recontextImageConfigToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromNumberOfImages = getValueByPath(fromObject, [
     "numberOfImages"
@@ -49099,7 +50393,7 @@ function recontextImageConfigToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function recontextImageParametersToVertex(apiClient, fromObject) {
+function recontextImageParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -49115,7 +50409,7 @@ function recontextImageParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function recontextImageResponseFromVertex(fromObject) {
+function recontextImageResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromGeneratedImages = getValueByPath(fromObject, [
     "predictions"
@@ -49131,7 +50425,7 @@ function recontextImageResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function recontextImageSourceToVertex(fromObject, parentObject) {
+function recontextImageSourceToVertex(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromPrompt = getValueByPath(fromObject, ["prompt"]);
   if (parentObject !== void 0 && fromPrompt != null) {
@@ -49155,7 +50449,7 @@ function recontextImageSourceToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function referenceImageAPIInternalToVertex(fromObject) {
+function referenceImageAPIInternalToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromReferenceImage = getValueByPath(fromObject, [
     "referenceImage"
@@ -49199,7 +50493,21 @@ function referenceImageAPIInternalToVertex(fromObject) {
   }
   return toObject;
 }
-function safetyAttributesFromMldev(fromObject) {
+function replicatedVoiceConfigToVertex(fromObject, _rootObject) {
+  const toObject = {};
+  const fromMimeType = getValueByPath(fromObject, ["mimeType"]);
+  if (fromMimeType != null) {
+    setValueByPath(toObject, ["mimeType"], fromMimeType);
+  }
+  const fromVoiceSampleAudio = getValueByPath(fromObject, [
+    "voiceSampleAudio"
+  ]);
+  if (fromVoiceSampleAudio != null) {
+    setValueByPath(toObject, ["voiceSampleAudio"], fromVoiceSampleAudio);
+  }
+  return toObject;
+}
+function safetyAttributesFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromCategories = getValueByPath(fromObject, [
     "safetyAttributes",
@@ -49221,7 +50529,7 @@ function safetyAttributesFromMldev(fromObject) {
   }
   return toObject;
 }
-function safetyAttributesFromVertex(fromObject) {
+function safetyAttributesFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromCategories = getValueByPath(fromObject, [
     "safetyAttributes",
@@ -49243,7 +50551,7 @@ function safetyAttributesFromVertex(fromObject) {
   }
   return toObject;
 }
-function safetySettingToMldev(fromObject) {
+function safetySettingToMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromCategory = getValueByPath(fromObject, ["category"]);
   if (fromCategory != null) {
@@ -49258,7 +50566,7 @@ function safetySettingToMldev(fromObject) {
   }
   return toObject;
 }
-function scribbleImageToVertex(fromObject) {
+function scribbleImageToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["image"]);
   if (fromImage != null) {
@@ -49266,7 +50574,7 @@ function scribbleImageToVertex(fromObject) {
   }
   return toObject;
 }
-function segmentImageConfigToVertex(fromObject, parentObject) {
+function segmentImageConfigToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromMode = getValueByPath(fromObject, ["mode"]);
   if (parentObject !== void 0 && fromMode != null) {
@@ -49300,7 +50608,7 @@ function segmentImageConfigToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function segmentImageParametersToVertex(apiClient, fromObject) {
+function segmentImageParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -49316,7 +50624,7 @@ function segmentImageParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function segmentImageResponseFromVertex(fromObject) {
+function segmentImageResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromGeneratedMasks = getValueByPath(fromObject, ["predictions"]);
   if (fromGeneratedMasks != null) {
@@ -49330,7 +50638,7 @@ function segmentImageResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function segmentImageSourceToVertex(fromObject, parentObject) {
+function segmentImageSourceToVertex(fromObject, parentObject, rootObject) {
   const toObject = {};
   const fromPrompt = getValueByPath(fromObject, ["prompt"]);
   if (parentObject !== void 0 && fromPrompt != null) {
@@ -49348,7 +50656,37 @@ function segmentImageSourceToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function toolConfigToMldev(fromObject) {
+function speakerVoiceConfigToVertex(fromObject, rootObject) {
+  const toObject = {};
+  const fromSpeaker = getValueByPath(fromObject, ["speaker"]);
+  if (fromSpeaker != null) {
+    setValueByPath(toObject, ["speaker"], fromSpeaker);
+  }
+  const fromVoiceConfig = getValueByPath(fromObject, ["voiceConfig"]);
+  if (fromVoiceConfig != null) {
+    setValueByPath(toObject, ["voiceConfig"], voiceConfigToVertex(fromVoiceConfig));
+  }
+  return toObject;
+}
+function speechConfigToVertex(fromObject, rootObject) {
+  const toObject = {};
+  const fromVoiceConfig = getValueByPath(fromObject, ["voiceConfig"]);
+  if (fromVoiceConfig != null) {
+    setValueByPath(toObject, ["voiceConfig"], voiceConfigToVertex(fromVoiceConfig));
+  }
+  const fromLanguageCode = getValueByPath(fromObject, ["languageCode"]);
+  if (fromLanguageCode != null) {
+    setValueByPath(toObject, ["languageCode"], fromLanguageCode);
+  }
+  const fromMultiSpeakerVoiceConfig = getValueByPath(fromObject, [
+    "multiSpeakerVoiceConfig"
+  ]);
+  if (fromMultiSpeakerVoiceConfig != null) {
+    setValueByPath(toObject, ["multiSpeakerVoiceConfig"], multiSpeakerVoiceConfigToVertex(fromMultiSpeakerVoiceConfig));
+  }
+  return toObject;
+}
+function toolConfigToMldev(fromObject, rootObject) {
   const toObject = {};
   const fromRetrievalConfig = getValueByPath(fromObject, [
     "retrievalConfig"
@@ -49362,9 +50700,32 @@ function toolConfigToMldev(fromObject) {
   if (fromFunctionCallingConfig != null) {
     setValueByPath(toObject, ["functionCallingConfig"], functionCallingConfigToMldev(fromFunctionCallingConfig));
   }
+  const fromIncludeServerSideToolInvocations = getValueByPath(fromObject, ["includeServerSideToolInvocations"]);
+  if (fromIncludeServerSideToolInvocations != null) {
+    setValueByPath(toObject, ["includeServerSideToolInvocations"], fromIncludeServerSideToolInvocations);
+  }
   return toObject;
 }
-function toolToMldev$1(fromObject) {
+function toolConfigToVertex(fromObject, _rootObject) {
+  const toObject = {};
+  const fromRetrievalConfig = getValueByPath(fromObject, [
+    "retrievalConfig"
+  ]);
+  if (fromRetrievalConfig != null) {
+    setValueByPath(toObject, ["retrievalConfig"], fromRetrievalConfig);
+  }
+  const fromFunctionCallingConfig = getValueByPath(fromObject, [
+    "functionCallingConfig"
+  ]);
+  if (fromFunctionCallingConfig != null) {
+    setValueByPath(toObject, ["functionCallingConfig"], fromFunctionCallingConfig);
+  }
+  if (getValueByPath(fromObject, ["includeServerSideToolInvocations"]) !== void 0) {
+    throw new Error("includeServerSideToolInvocations parameter is not supported in Vertex AI.");
+  }
+  return toObject;
+}
+function toolToMldev$1(fromObject, rootObject) {
   const toObject = {};
   if (getValueByPath(fromObject, ["retrieval"]) !== void 0) {
     throw new Error("retrieval parameter is not supported in Gemini API.");
@@ -49376,6 +50737,14 @@ function toolToMldev$1(fromObject) {
   const fromFileSearch = getValueByPath(fromObject, ["fileSearch"]);
   if (fromFileSearch != null) {
     setValueByPath(toObject, ["fileSearch"], fromFileSearch);
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$1(fromGoogleSearch));
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$1(fromGoogleMaps));
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -49398,27 +50767,32 @@ function toolToMldev$1(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev$1(fromGoogleMaps));
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev$1(fromGoogleSearch));
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  if (getValueByPath(fromObject, ["parallelAiSearch"]) !== void 0) {
+    throw new Error("parallelAiSearch parameter is not supported in Gemini API.");
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
+  }
   return toObject;
 }
-function toolToVertex(fromObject) {
+function toolToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromRetrieval = getValueByPath(fromObject, ["retrieval"]);
   if (fromRetrieval != null) {
@@ -49430,6 +50804,14 @@ function toolToVertex(fromObject) {
   }
   if (getValueByPath(fromObject, ["fileSearch"]) !== void 0) {
     throw new Error("fileSearch parameter is not supported in Vertex AI.");
+  }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
   }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
@@ -49455,27 +50837,28 @@ function toolToVertex(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], fromGoogleMaps);
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], fromGoogleSearch);
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  const fromParallelAiSearch = getValueByPath(fromObject, [
+    "parallelAiSearch"
+  ]);
+  if (fromParallelAiSearch != null) {
+    setValueByPath(toObject, ["parallelAiSearch"], fromParallelAiSearch);
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
   }
+  if (getValueByPath(fromObject, ["mcpServers"]) !== void 0) {
+    throw new Error("mcpServers parameter is not supported in Vertex AI.");
+  }
   return toObject;
 }
-function tunedModelInfoFromMldev(fromObject) {
+function tunedModelInfoFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromBaseModel = getValueByPath(fromObject, ["baseModel"]);
   if (fromBaseModel != null) {
@@ -49491,7 +50874,7 @@ function tunedModelInfoFromMldev(fromObject) {
   }
   return toObject;
 }
-function tunedModelInfoFromVertex(fromObject) {
+function tunedModelInfoFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromBaseModel = getValueByPath(fromObject, [
     "labels",
@@ -49510,7 +50893,7 @@ function tunedModelInfoFromVertex(fromObject) {
   }
   return toObject;
 }
-function updateModelConfigToMldev(fromObject, parentObject) {
+function updateModelConfigToMldev(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromDisplayName = getValueByPath(fromObject, ["displayName"]);
   if (parentObject !== void 0 && fromDisplayName != null) {
@@ -49528,7 +50911,7 @@ function updateModelConfigToMldev(fromObject, parentObject) {
   }
   return toObject;
 }
-function updateModelConfigToVertex(fromObject, parentObject) {
+function updateModelConfigToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromDisplayName = getValueByPath(fromObject, ["displayName"]);
   if (parentObject !== void 0 && fromDisplayName != null) {
@@ -49546,7 +50929,7 @@ function updateModelConfigToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function updateModelParametersToMldev(apiClient, fromObject) {
+function updateModelParametersToMldev(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -49558,7 +50941,7 @@ function updateModelParametersToMldev(apiClient, fromObject) {
   }
   return toObject;
 }
-function updateModelParametersToVertex(apiClient, fromObject) {
+function updateModelParametersToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -49570,7 +50953,7 @@ function updateModelParametersToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function upscaleImageAPIConfigInternalToVertex(fromObject, parentObject) {
+function upscaleImageAPIConfigInternalToVertex(fromObject, parentObject, _rootObject) {
   const toObject = {};
   const fromOutputGcsUri = getValueByPath(fromObject, ["outputGcsUri"]);
   if (parentObject !== void 0 && fromOutputGcsUri != null) {
@@ -49634,7 +51017,7 @@ function upscaleImageAPIConfigInternalToVertex(fromObject, parentObject) {
   }
   return toObject;
 }
-function upscaleImageAPIParametersInternalToVertex(apiClient, fromObject) {
+function upscaleImageAPIParametersInternalToVertex(apiClient, fromObject, rootObject) {
   const toObject = {};
   const fromModel = getValueByPath(fromObject, ["model"]);
   if (fromModel != null) {
@@ -49656,7 +51039,7 @@ function upscaleImageAPIParametersInternalToVertex(apiClient, fromObject) {
   }
   return toObject;
 }
-function upscaleImageResponseFromVertex(fromObject) {
+function upscaleImageResponseFromVertex(fromObject, rootObject) {
   const toObject = {};
   const fromSdkHttpResponse = getValueByPath(fromObject, [
     "sdkHttpResponse"
@@ -49678,7 +51061,7 @@ function upscaleImageResponseFromVertex(fromObject) {
   }
   return toObject;
 }
-function videoFromMldev(fromObject) {
+function videoFromMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromUri = getValueByPath(fromObject, ["uri"]);
   if (fromUri != null) {
@@ -49694,7 +51077,7 @@ function videoFromMldev(fromObject) {
   }
   return toObject;
 }
-function videoFromVertex(fromObject) {
+function videoFromVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromUri = getValueByPath(fromObject, ["gcsUri"]);
   if (fromUri != null) {
@@ -49712,7 +51095,7 @@ function videoFromVertex(fromObject) {
   }
   return toObject;
 }
-function videoGenerationMaskToVertex(fromObject) {
+function videoGenerationMaskToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["image"]);
   if (fromImage != null) {
@@ -49724,7 +51107,7 @@ function videoGenerationMaskToVertex(fromObject) {
   }
   return toObject;
 }
-function videoGenerationReferenceImageToMldev(fromObject) {
+function videoGenerationReferenceImageToMldev(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["image"]);
   if (fromImage != null) {
@@ -49738,7 +51121,7 @@ function videoGenerationReferenceImageToMldev(fromObject) {
   }
   return toObject;
 }
-function videoGenerationReferenceImageToVertex(fromObject) {
+function videoGenerationReferenceImageToVertex(fromObject, rootObject) {
   const toObject = {};
   const fromImage = getValueByPath(fromObject, ["image"]);
   if (fromImage != null) {
@@ -49752,7 +51135,7 @@ function videoGenerationReferenceImageToVertex(fromObject) {
   }
   return toObject;
 }
-function videoToMldev(fromObject) {
+function videoToMldev(fromObject, _rootObject) {
   const toObject = {};
   const fromUri = getValueByPath(fromObject, ["uri"]);
   if (fromUri != null) {
@@ -49768,7 +51151,7 @@ function videoToMldev(fromObject) {
   }
   return toObject;
 }
-function videoToVertex(fromObject) {
+function videoToVertex(fromObject, _rootObject) {
   const toObject = {};
   const fromUri = getValueByPath(fromObject, ["uri"]);
   if (fromUri != null) {
@@ -49781,6 +51164,22 @@ function videoToVertex(fromObject) {
   const fromMimeType = getValueByPath(fromObject, ["mimeType"]);
   if (fromMimeType != null) {
     setValueByPath(toObject, ["mimeType"], fromMimeType);
+  }
+  return toObject;
+}
+function voiceConfigToVertex(fromObject, rootObject) {
+  const toObject = {};
+  const fromReplicatedVoiceConfig = getValueByPath(fromObject, [
+    "replicatedVoiceConfig"
+  ]);
+  if (fromReplicatedVoiceConfig != null) {
+    setValueByPath(toObject, ["replicatedVoiceConfig"], replicatedVoiceConfigToVertex(fromReplicatedVoiceConfig));
+  }
+  const fromPrebuiltVoiceConfig = getValueByPath(fromObject, [
+    "prebuiltVoiceConfig"
+  ]);
+  if (fromPrebuiltVoiceConfig != null) {
+    setValueByPath(toObject, ["prebuiltVoiceConfig"], fromPrebuiltVoiceConfig);
   }
   return toObject;
 }
@@ -50016,21 +51415,65 @@ const CONTENT_TYPE_HEADER = "Content-Type";
 const SERVER_TIMEOUT_HEADER = "X-Server-Timeout";
 const USER_AGENT_HEADER = "User-Agent";
 const GOOGLE_API_CLIENT_HEADER = "x-goog-api-client";
-const SDK_VERSION = "1.37.0";
+const SDK_VERSION = "1.48.0";
 const LIBRARY_LABEL = `google-genai-sdk/${SDK_VERSION}`;
 const VERTEX_AI_API_DEFAULT_VERSION = "v1beta1";
 const GOOGLE_AI_API_DEFAULT_VERSION = "v1beta";
+const DEFAULT_RETRY_ATTEMPTS = 5;
+const DEFAULT_RETRY_HTTP_STATUS_CODES = [
+  408,
+  // Request timeout
+  429,
+  // Too many requests
+  500,
+  // Internal server error
+  502,
+  // Bad gateway
+  503,
+  // Service unavailable
+  504
+  // Gateway timeout
+];
 class ApiClient {
   constructor(opts) {
-    var _a2, _b;
-    this.clientOptions = Object.assign(Object.assign({}, opts), { project: opts.project, location: opts.location, apiKey: opts.apiKey, vertexai: opts.vertexai });
+    var _a2, _b, _c;
+    this.clientOptions = Object.assign({}, opts);
+    this.customBaseUrl = (_a2 = opts.httpOptions) === null || _a2 === void 0 ? void 0 : _a2.baseUrl;
+    if (this.clientOptions.vertexai) {
+      if (this.clientOptions.project && this.clientOptions.location) {
+        this.clientOptions.apiKey = void 0;
+      } else if (this.clientOptions.apiKey) {
+        this.clientOptions.project = void 0;
+        this.clientOptions.location = void 0;
+      }
+    }
     const initHttpOptions = {};
     if (this.clientOptions.vertexai) {
-      initHttpOptions.apiVersion = (_a2 = this.clientOptions.apiVersion) !== null && _a2 !== void 0 ? _a2 : VERTEX_AI_API_DEFAULT_VERSION;
-      initHttpOptions.baseUrl = this.baseUrlFromProjectLocation();
-      this.normalizeAuthParameters();
+      if (!this.clientOptions.location && !this.clientOptions.apiKey && !this.customBaseUrl) {
+        this.clientOptions.location = "global";
+      }
+      const hasSufficientAuth = this.clientOptions.project && this.clientOptions.location || this.clientOptions.apiKey;
+      if (!hasSufficientAuth && !this.customBaseUrl) {
+        throw new Error("Authentication is not set up. Please provide either a project and location, or an API key, or a custom base URL.");
+      }
+      const hasConstructorAuth = opts.project && opts.location || !!opts.apiKey;
+      if (this.customBaseUrl && !hasConstructorAuth) {
+        initHttpOptions.baseUrl = this.customBaseUrl;
+        this.clientOptions.project = void 0;
+        this.clientOptions.location = void 0;
+      } else if (this.clientOptions.apiKey || this.clientOptions.location === "global") {
+        initHttpOptions.baseUrl = "https://aiplatform.googleapis.com/";
+      } else if (this.clientOptions.project && this.clientOptions.location && this.clientOptions.location === "us") {
+        initHttpOptions.baseUrl = `https://aiplatform.${this.clientOptions.location}.rep.googleapis.com/`;
+      } else if (this.clientOptions.project && this.clientOptions.location) {
+        initHttpOptions.baseUrl = `https://${this.clientOptions.location}-aiplatform.googleapis.com/`;
+      }
+      initHttpOptions.apiVersion = (_b = this.clientOptions.apiVersion) !== null && _b !== void 0 ? _b : VERTEX_AI_API_DEFAULT_VERSION;
     } else {
-      initHttpOptions.apiVersion = (_b = this.clientOptions.apiVersion) !== null && _b !== void 0 ? _b : GOOGLE_AI_API_DEFAULT_VERSION;
+      if (!this.clientOptions.apiKey) {
+        console.warn("API key should be set when using the Gemini API.");
+      }
+      initHttpOptions.apiVersion = (_c = this.clientOptions.apiVersion) !== null && _c !== void 0 ? _c : GOOGLE_AI_API_DEFAULT_VERSION;
       initHttpOptions.baseUrl = `https://generativelanguage.googleapis.com/`;
     }
     initHttpOptions.headers = this.getDefaultHeaders();
@@ -50038,33 +51481,6 @@ class ApiClient {
     if (opts.httpOptions) {
       this.clientOptions.httpOptions = this.patchHttpOptions(initHttpOptions, opts.httpOptions);
     }
-  }
-  /**
-   * Determines the base URL for Vertex AI based on project and location.
-   * Uses the global endpoint if location is 'global' or if project/location
-   * are not specified (implying API key usage).
-   * @private
-   */
-  baseUrlFromProjectLocation() {
-    if (this.clientOptions.project && this.clientOptions.location && this.clientOptions.location !== "global") {
-      return `https://${this.clientOptions.location}-aiplatform.googleapis.com/`;
-    }
-    return `https://aiplatform.googleapis.com/`;
-  }
-  /**
-   * Normalizes authentication parameters for Vertex AI.
-   * If project and location are provided, API key is cleared.
-   * If project and location are not provided (implying API key usage),
-   * project and location are cleared.
-   * @private
-   */
-  normalizeAuthParameters() {
-    if (this.clientOptions.project && this.clientOptions.location) {
-      this.clientOptions.apiKey = void 0;
-      return;
-    }
-    this.clientOptions.project = void 0;
-    this.clientOptions.location = void 0;
   }
   isVertexAI() {
     var _a2;
@@ -50075,6 +51491,9 @@ class ApiClient {
   }
   getLocation() {
     return this.clientOptions.location;
+  }
+  getCustomBaseUrl() {
+    return this.customBaseUrl;
   }
   async getAuthHeaders() {
     const headers = new Headers();
@@ -50144,7 +51563,10 @@ class ApiClient {
     const url = new URL(`${urlElement.join("/")}`);
     return url;
   }
-  shouldPrependVertexProjectPath(request) {
+  shouldPrependVertexProjectPath(request, httpOptions) {
+    if (httpOptions.baseUrl && httpOptions.baseUrlResourceScope === ResourceScope.COLLECTION) {
+      return false;
+    }
     if (this.clientOptions.apiKey) {
       return false;
     }
@@ -50164,7 +51586,7 @@ class ApiClient {
     if (request.httpOptions) {
       patchedHttpOptions = this.patchHttpOptions(this.clientOptions.httpOptions, request.httpOptions);
     }
-    const prependProjectLocation = this.shouldPrependVertexProjectPath(request);
+    const prependProjectLocation = this.shouldPrependVertexProjectPath(request, patchedHttpOptions);
     const url = this.constructUrl(request.path, patchedHttpOptions, prependProjectLocation);
     if (request.queryParams) {
       for (const [key, value] of Object.entries(request.queryParams)) {
@@ -50198,7 +51620,7 @@ class ApiClient {
     if (request.httpOptions) {
       patchedHttpOptions = this.patchHttpOptions(this.clientOptions.httpOptions, request.httpOptions);
     }
-    const prependProjectLocation = this.shouldPrependVertexProjectPath(request);
+    const prependProjectLocation = this.shouldPrependVertexProjectPath(request, patchedHttpOptions);
     const url = this.constructUrl(request.path, patchedHttpOptions, prependProjectLocation);
     if (!url.searchParams.has("alt") || url.searchParams.get("alt") !== "sse") {
       url.searchParams.set("alt", "sse");
@@ -50337,8 +51759,24 @@ class ApiClient {
     });
   }
   async apiCall(url, requestInit) {
-    return fetch(url, requestInit).catch((e) => {
-      throw new Error(`exception ${e} sending request`);
+    var _a2;
+    if (!this.clientOptions.httpOptions || !this.clientOptions.httpOptions.retryOptions) {
+      return fetch(url, requestInit);
+    }
+    const retryOptions = this.clientOptions.httpOptions.retryOptions;
+    const runFetch = async () => {
+      const response = await fetch(url, requestInit);
+      if (response.ok) {
+        return response;
+      }
+      if (DEFAULT_RETRY_HTTP_STATUS_CODES.includes(response.status)) {
+        throw new Error(`Retryable HTTP Error: ${response.statusText}`);
+      }
+      throw new pRetryExports.AbortError(`Non-retryable exception ${response.statusText} sending request`);
+    };
+    return pRetry(runFetch, {
+      // Retry attempts is one less than the number of total attempts.
+      retries: ((_a2 = retryOptions.attempts) !== null && _a2 !== void 0 ? _a2 : DEFAULT_RETRY_ATTEMPTS) - 1
     });
   }
   getDefaultHeaders() {
@@ -50954,8 +52392,16 @@ class Live {
     }
     const headers = mapToHeaders(clientHeaders);
     if (this.apiClient.isVertexAI()) {
-      url = `${websocketBaseUrl}/ws/google.cloud.aiplatform.${apiVersion}.LlmBidiService/BidiGenerateContent`;
-      await this.auth.addAuthHeaders(headers, url);
+      const project = this.apiClient.getProject();
+      const location = this.apiClient.getLocation();
+      const apiKey = this.apiClient.getApiKey();
+      const hasStandardAuth = !!project && !!location || !!apiKey;
+      if (this.apiClient.getCustomBaseUrl() && !hasStandardAuth) {
+        url = websocketBaseUrl;
+      } else {
+        url = `${websocketBaseUrl}/ws/google.cloud.aiplatform.${apiVersion}.LlmBidiService/BidiGenerateContent`;
+        await this.auth.addAuthHeaders(headers, url);
+      }
     } else {
       const apiKey = this.apiClient.getApiKey();
       let method = "BidiGenerateContent";
@@ -50999,7 +52445,9 @@ class Live {
     if (this.apiClient.isVertexAI() && transformedModel.startsWith("publishers/")) {
       const project = this.apiClient.getProject();
       const location = this.apiClient.getLocation();
-      transformedModel = `projects/${project}/locations/${location}/` + transformedModel;
+      if (project && location) {
+        transformedModel = `projects/${project}/locations/${location}/` + transformedModel;
+      }
     }
     let clientMessage = {};
     if (this.apiClient.isVertexAI() && ((_c = params.config) === null || _c === void 0 ? void 0 : _c.responseModalities) === void 0) {
@@ -51093,7 +52541,7 @@ class Session {
       }
     }
     const clientMessage = {
-      toolResponse: { functionResponses }
+      toolResponse: { "functionResponses": functionResponses }
     };
     return clientMessage;
   }
@@ -51303,6 +52751,23 @@ class Models extends BaseModule {
   constructor(apiClient) {
     super();
     this.apiClient = apiClient;
+    this.embedContent = async (params) => {
+      if (!this.apiClient.isVertexAI()) {
+        return await this.embedContentInternal(params);
+      }
+      const isVertexEmbedContentModel = params.model.includes("gemini") && params.model !== "gemini-embedding-001" || params.model.includes("maas");
+      if (isVertexEmbedContentModel) {
+        const contents = tContents(params.contents);
+        if (contents.length > 1) {
+          throw new Error("The embedContent API for this model only supports one content at a time.");
+        }
+        const paramsPrivate = Object.assign(Object.assign({}, params), { content: contents[0], embeddingApiType: EmbeddingApiType.EMBED_CONTENT });
+        return await this.embedContentInternal(paramsPrivate);
+      } else {
+        const paramsPrivate = Object.assign(Object.assign({}, params), { embeddingApiType: EmbeddingApiType.PREDICT });
+        return await this.embedContentInternal(paramsPrivate);
+      }
+    };
     this.generateContent = async (params) => {
       var _a2, _b, _c, _d, _e;
       const transformedParams = await this.processParamsMaybeAddMcpUsage(params);
@@ -51715,7 +53180,7 @@ class Models extends BaseModule {
               _c2 = apiResponse_1_1.value;
               _d2 = false;
               const chunk = _c2;
-              const resp = generateContentResponseFromVertex(yield __await(chunk.json()));
+              const resp = generateContentResponseFromVertex(yield __await(chunk.json()), params);
               resp["sdkHttpResponse"] = {
                 headers: chunk.headers
               };
@@ -51757,7 +53222,7 @@ class Models extends BaseModule {
               _c2 = apiResponse_2_1.value;
               _d2 = false;
               const chunk = _c2;
-              const resp = generateContentResponseFromMldev(yield __await(chunk.json()));
+              const resp = generateContentResponseFromMldev(yield __await(chunk.json()), params);
               resp["sdkHttpResponse"] = {
                 headers: chunk.headers
               };
@@ -51799,14 +53264,15 @@ class Models extends BaseModule {
    * console.log(response);
    * ```
    */
-  async embedContent(params) {
+  async embedContentInternal(params) {
     var _a2, _b, _c, _d;
     let response;
     let path2 = "";
     let queryParams = {};
     if (this.apiClient.isVertexAI()) {
-      const body = embedContentParametersToVertex(this.apiClient, params);
-      path2 = formatMap("{model}:predict", body["_url"]);
+      const body = embedContentParametersPrivateToVertex(this.apiClient, params, params);
+      const endpointUrl = tIsVertexEmbedContentModel(params.model) ? "{model}:embedContent" : "{model}:predict";
+      path2 = formatMap(endpointUrl, body["_url"]);
       queryParams = body["_query"];
       delete body["_url"];
       delete body["_query"];
@@ -51827,13 +53293,13 @@ class Models extends BaseModule {
         });
       });
       return response.then((apiResponse) => {
-        const resp = embedContentResponseFromVertex(apiResponse);
+        const resp = embedContentResponseFromVertex(apiResponse, params);
         const typedResp = new EmbedContentResponse();
         Object.assign(typedResp, resp);
         return typedResp;
       });
     } else {
-      const body = embedContentParametersToMldev(this.apiClient, params);
+      const body = embedContentParametersPrivateToMldev(this.apiClient, params);
       path2 = formatMap("{model}:batchEmbedContents", body["_url"]);
       queryParams = body["_query"];
       delete body["_url"];
@@ -52722,6 +54188,39 @@ class Operations extends BaseModule {
     }
   }
 }
+function audioTranscriptionConfigToMldev(fromObject) {
+  const toObject = {};
+  if (getValueByPath(fromObject, ["languageCodes"]) !== void 0) {
+    throw new Error("languageCodes parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
+function authConfigToMldev(fromObject) {
+  const toObject = {};
+  const fromApiKey = getValueByPath(fromObject, ["apiKey"]);
+  if (fromApiKey != null) {
+    setValueByPath(toObject, ["apiKey"], fromApiKey);
+  }
+  if (getValueByPath(fromObject, ["apiKeyConfig"]) !== void 0) {
+    throw new Error("apiKeyConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["authType"]) !== void 0) {
+    throw new Error("authType parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["googleServiceAccountConfig"]) !== void 0) {
+    throw new Error("googleServiceAccountConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["httpBasicAuthConfig"]) !== void 0) {
+    throw new Error("httpBasicAuthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oauthConfig"]) !== void 0) {
+    throw new Error("oauthConfig parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["oidcConfig"]) !== void 0) {
+    throw new Error("oidcConfig parameter is not supported in Gemini API.");
+  }
+  return toObject;
+}
 function blobToMldev(fromObject) {
   const toObject = {};
   const fromData = getValueByPath(fromObject, ["data"]);
@@ -52832,8 +54331,9 @@ function functionCallToMldev(fromObject) {
 }
 function googleMapsToMldev(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["authConfig"]) !== void 0) {
-    throw new Error("authConfig parameter is not supported in Gemini API.");
+  const fromAuthConfig = getValueByPath(fromObject, ["authConfig"]);
+  if (fromAuthConfig != null) {
+    setValueByPath(toObject, ["authConfig"], authConfigToMldev(fromAuthConfig));
   }
   const fromEnableWidget = getValueByPath(fromObject, ["enableWidget"]);
   if (fromEnableWidget != null) {
@@ -52843,11 +54343,15 @@ function googleMapsToMldev(fromObject) {
 }
 function googleSearchToMldev(fromObject) {
   const toObject = {};
-  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
-    throw new Error("excludeDomains parameter is not supported in Gemini API.");
+  const fromSearchTypes = getValueByPath(fromObject, ["searchTypes"]);
+  if (fromSearchTypes != null) {
+    setValueByPath(toObject, ["searchTypes"], fromSearchTypes);
   }
   if (getValueByPath(fromObject, ["blockingConfidence"]) !== void 0) {
     throw new Error("blockingConfidence parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["excludeDomains"]) !== void 0) {
+    throw new Error("excludeDomains parameter is not supported in Gemini API.");
   }
   const fromTimeRangeFilter = getValueByPath(fromObject, [
     "timeRangeFilter"
@@ -52941,13 +54445,13 @@ function liveConnectConfigToMldev(fromObject, parentObject) {
     "inputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromInputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], fromInputAudioTranscription);
+    setValueByPath(parentObject, ["setup", "inputAudioTranscription"], audioTranscriptionConfigToMldev(fromInputAudioTranscription));
   }
   const fromOutputAudioTranscription = getValueByPath(fromObject, [
     "outputAudioTranscription"
   ]);
   if (parentObject !== void 0 && fromOutputAudioTranscription != null) {
-    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], fromOutputAudioTranscription);
+    setValueByPath(parentObject, ["setup", "outputAudioTranscription"], audioTranscriptionConfigToMldev(fromOutputAudioTranscription));
   }
   const fromRealtimeInputConfig = getValueByPath(fromObject, [
     "realtimeInputConfig"
@@ -53040,6 +54544,18 @@ function partToMldev(fromObject) {
   if (fromVideoMetadata != null) {
     setValueByPath(toObject, ["videoMetadata"], fromVideoMetadata);
   }
+  const fromToolCall = getValueByPath(fromObject, ["toolCall"]);
+  if (fromToolCall != null) {
+    setValueByPath(toObject, ["toolCall"], fromToolCall);
+  }
+  const fromToolResponse = getValueByPath(fromObject, ["toolResponse"]);
+  if (fromToolResponse != null) {
+    setValueByPath(toObject, ["toolResponse"], fromToolResponse);
+  }
+  const fromPartMetadata = getValueByPath(fromObject, ["partMetadata"]);
+  if (fromPartMetadata != null) {
+    setValueByPath(toObject, ["partMetadata"], fromPartMetadata);
+  }
   return toObject;
 }
 function sessionResumptionConfigToMldev(fromObject) {
@@ -53066,6 +54582,14 @@ function toolToMldev(fromObject) {
   if (fromFileSearch != null) {
     setValueByPath(toObject, ["fileSearch"], fromFileSearch);
   }
+  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
+  if (fromGoogleSearch != null) {
+    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev(fromGoogleSearch));
+  }
+  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
+  if (fromGoogleMaps != null) {
+    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev(fromGoogleMaps));
+  }
   const fromCodeExecution = getValueByPath(fromObject, [
     "codeExecution"
   ]);
@@ -53087,23 +54611,28 @@ function toolToMldev(fromObject) {
     }
     setValueByPath(toObject, ["functionDeclarations"], transformedList);
   }
-  const fromGoogleMaps = getValueByPath(fromObject, ["googleMaps"]);
-  if (fromGoogleMaps != null) {
-    setValueByPath(toObject, ["googleMaps"], googleMapsToMldev(fromGoogleMaps));
-  }
-  const fromGoogleSearch = getValueByPath(fromObject, ["googleSearch"]);
-  if (fromGoogleSearch != null) {
-    setValueByPath(toObject, ["googleSearch"], googleSearchToMldev(fromGoogleSearch));
-  }
   const fromGoogleSearchRetrieval = getValueByPath(fromObject, [
     "googleSearchRetrieval"
   ]);
   if (fromGoogleSearchRetrieval != null) {
     setValueByPath(toObject, ["googleSearchRetrieval"], fromGoogleSearchRetrieval);
   }
+  if (getValueByPath(fromObject, ["parallelAiSearch"]) !== void 0) {
+    throw new Error("parallelAiSearch parameter is not supported in Gemini API.");
+  }
   const fromUrlContext = getValueByPath(fromObject, ["urlContext"]);
   if (fromUrlContext != null) {
     setValueByPath(toObject, ["urlContext"], fromUrlContext);
+  }
+  const fromMcpServers = getValueByPath(fromObject, ["mcpServers"]);
+  if (fromMcpServers != null) {
+    let transformedList = fromMcpServers;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["mcpServers"], transformedList);
   }
   return toObject;
 }
@@ -53896,132 +55425,6 @@ const safeJSON = (text) => {
   }
 };
 const sleep$1 = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const VERSION = "0.0.1";
-function getDetectedPlatform() {
-  if (typeof Deno !== "undefined" && Deno.build != null) {
-    return "deno";
-  }
-  if (typeof EdgeRuntime !== "undefined") {
-    return "edge";
-  }
-  if (Object.prototype.toString.call(typeof globalThis.process !== "undefined" ? globalThis.process : 0) === "[object process]") {
-    return "node";
-  }
-  return "unknown";
-}
-const getPlatformProperties = () => {
-  var _a2, _b, _c, _d, _e;
-  const detectedPlatform = getDetectedPlatform();
-  if (detectedPlatform === "deno") {
-    return {
-      "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION,
-      "X-Stainless-OS": normalizePlatform(Deno.build.os),
-      "X-Stainless-Arch": normalizeArch(Deno.build.arch),
-      "X-Stainless-Runtime": "deno",
-      "X-Stainless-Runtime-Version": typeof Deno.version === "string" ? Deno.version : (_b = (_a2 = Deno.version) === null || _a2 === void 0 ? void 0 : _a2.deno) !== null && _b !== void 0 ? _b : "unknown"
-    };
-  }
-  if (typeof EdgeRuntime !== "undefined") {
-    return {
-      "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION,
-      "X-Stainless-OS": "Unknown",
-      "X-Stainless-Arch": `other:${EdgeRuntime}`,
-      "X-Stainless-Runtime": "edge",
-      "X-Stainless-Runtime-Version": globalThis.process.version
-    };
-  }
-  if (detectedPlatform === "node") {
-    return {
-      "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION,
-      "X-Stainless-OS": normalizePlatform((_c = globalThis.process.platform) !== null && _c !== void 0 ? _c : "unknown"),
-      "X-Stainless-Arch": normalizeArch((_d = globalThis.process.arch) !== null && _d !== void 0 ? _d : "unknown"),
-      "X-Stainless-Runtime": "node",
-      "X-Stainless-Runtime-Version": (_e = globalThis.process.version) !== null && _e !== void 0 ? _e : "unknown"
-    };
-  }
-  const browserInfo = getBrowserInfo();
-  if (browserInfo) {
-    return {
-      "X-Stainless-Lang": "js",
-      "X-Stainless-Package-Version": VERSION,
-      "X-Stainless-OS": "Unknown",
-      "X-Stainless-Arch": "unknown",
-      "X-Stainless-Runtime": `browser:${browserInfo.browser}`,
-      "X-Stainless-Runtime-Version": browserInfo.version
-    };
-  }
-  return {
-    "X-Stainless-Lang": "js",
-    "X-Stainless-Package-Version": VERSION,
-    "X-Stainless-OS": "Unknown",
-    "X-Stainless-Arch": "unknown",
-    "X-Stainless-Runtime": "unknown",
-    "X-Stainless-Runtime-Version": "unknown"
-  };
-};
-function getBrowserInfo() {
-  if (typeof navigator === "undefined" || !navigator) {
-    return null;
-  }
-  const browserPatterns = [
-    { key: "edge", pattern: /Edge(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
-    { key: "ie", pattern: /MSIE(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
-    { key: "ie", pattern: /Trident(?:.*rv\:(\d+)\.(\d+)(?:\.(\d+))?)?/ },
-    { key: "chrome", pattern: /Chrome(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
-    { key: "firefox", pattern: /Firefox(?:\W+(\d+)\.(\d+)(?:\.(\d+))?)?/ },
-    { key: "safari", pattern: /(?:Version\W+(\d+)\.(\d+)(?:\.(\d+))?)?(?:\W+Mobile\S*)?\W+Safari/ }
-  ];
-  for (const { key, pattern } of browserPatterns) {
-    const match = pattern.exec(navigator.userAgent);
-    if (match) {
-      const major = match[1] || 0;
-      const minor = match[2] || 0;
-      const patch = match[3] || 0;
-      return { browser: key, version: `${major}.${minor}.${patch}` };
-    }
-  }
-  return null;
-}
-const normalizeArch = (arch) => {
-  if (arch === "x32")
-    return "x32";
-  if (arch === "x86_64" || arch === "x64")
-    return "x64";
-  if (arch === "arm")
-    return "arm";
-  if (arch === "aarch64" || arch === "arm64")
-    return "arm64";
-  if (arch)
-    return `other:${arch}`;
-  return "unknown";
-};
-const normalizePlatform = (platform) => {
-  platform = platform.toLowerCase();
-  if (platform.includes("ios"))
-    return "iOS";
-  if (platform === "android")
-    return "Android";
-  if (platform === "darwin")
-    return "MacOS";
-  if (platform === "win32")
-    return "Windows";
-  if (platform === "freebsd")
-    return "FreeBSD";
-  if (platform === "openbsd")
-    return "OpenBSD";
-  if (platform === "linux")
-    return "Linux";
-  if (platform)
-    return `Other:${platform}`;
-  return "Unknown";
-};
-let _platformHeaders;
-const getPlatformHeaders = () => {
-  return _platformHeaders !== null && _platformHeaders !== void 0 ? _platformHeaders : _platformHeaders = getPlatformProperties();
-};
 function getDefaultFetch() {
   if (typeof fetch !== "undefined") {
     return fetch;
@@ -54102,6 +55505,18 @@ const FallbackEncoder = ({ headers, body }) => {
     body: JSON.stringify(body)
   };
 };
+function stringifyQuery(query) {
+  return Object.entries(query).filter(([_, value]) => typeof value !== "undefined").map(([key, value]) => {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    }
+    if (value === null) {
+      return `${encodeURIComponent(key)}=`;
+    }
+    throw new GeminiNextGenAPIClientError(`Cannot stringify type ${typeof value}; Expected string, number, boolean, or null. If you need to pass nested query parameters, you can manually encode them, e.g. { query: { 'foo[key1]': value1, 'foo[key2]': value2 } }, and please open a GitHub issue requesting better support for your use case.`);
+  }).join("&");
+}
+const VERSION = "0.0.1";
 const checkFileSupport = () => {
   var _a2;
   if (typeof File === "undefined") {
@@ -54217,13 +55632,16 @@ const createPathTagFunction = (pathEncoder = encodeURIPath) => (function path2(s
     return previousValue + currentValue + (index === params.length ? "" : encoded);
   }, "");
   const pathOnly = path3.split(/[?#]/, 1)[0];
-  const invalidSegmentPattern = new RegExp("(?<=^|\\/)(?:\\.|%2e){1,2}(?=\\/|$)", "gi");
+  const invalidSegmentPattern = /(^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
   let match;
   while ((match = invalidSegmentPattern.exec(pathOnly)) !== null) {
+    const hasLeadingSlash = match[0].startsWith("/");
+    const offset = hasLeadingSlash ? 1 : 0;
+    const cleanMatch = hasLeadingSlash ? match[0].slice(1) : match[0];
     invalidSegments.push({
-      start: match.index,
-      length: match[0].length,
-      error: `Value "${match[0]}" can't be safely passed as a path parameter`
+      start: match.index + offset,
+      length: cleanMatch.length,
+      error: `Value "${cleanMatch}" can't be safely passed as a path parameter`
     });
   }
   invalidSegments.sort((a, b) => a.start - b.start);
@@ -54260,7 +55678,9 @@ class BaseInteractions extends APIResource {
    *
    * @example
    * ```ts
-   * const interaction = await client.interactions.delete('id');
+   * const interaction = await client.interactions.delete('id', {
+   *   api_version: 'api_version',
+   * });
    * ```
    */
   delete(id, params = {}, options) {
@@ -54272,7 +55692,9 @@ class BaseInteractions extends APIResource {
    *
    * @example
    * ```ts
-   * const interaction = await client.interactions.cancel('id');
+   * const interaction = await client.interactions.cancel('id', {
+   *   api_version: 'api_version',
+   * });
    * ```
    */
   cancel(id, params = {}, options) {
@@ -54315,8 +55737,10 @@ class LineDecoder {
   constructor() {
     this.buffer = new Uint8Array();
     this.carriageReturnIndex = null;
+    this.searchIndex = 0;
   }
   decode(chunk) {
+    var _a2;
     if (chunk == null) {
       return [];
     }
@@ -54324,7 +55748,7 @@ class LineDecoder {
     this.buffer = concatBytes([this.buffer, binaryChunk]);
     const lines = [];
     let patternIndex;
-    while ((patternIndex = findNewlineIndex(this.buffer, this.carriageReturnIndex)) != null) {
+    while ((patternIndex = findNewlineIndex(this.buffer, (_a2 = this.carriageReturnIndex) !== null && _a2 !== void 0 ? _a2 : this.searchIndex)) != null) {
       if (patternIndex.carriage && this.carriageReturnIndex == null) {
         this.carriageReturnIndex = patternIndex.index;
         continue;
@@ -54333,6 +55757,7 @@ class LineDecoder {
         lines.push(decodeUTF8(this.buffer.subarray(0, this.carriageReturnIndex - 1)));
         this.buffer = this.buffer.subarray(this.carriageReturnIndex);
         this.carriageReturnIndex = null;
+        this.searchIndex = 0;
         continue;
       }
       const endIndex = this.carriageReturnIndex !== null ? patternIndex.preceding - 1 : patternIndex.preceding;
@@ -54340,7 +55765,9 @@ class LineDecoder {
       lines.push(line);
       this.buffer = this.buffer.subarray(patternIndex.index);
       this.carriageReturnIndex = null;
+      this.searchIndex = 0;
     }
+    this.searchIndex = Math.max(0, this.buffer.length - 1);
     return lines;
   }
   flush() {
@@ -54355,31 +55782,22 @@ LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
 function findNewlineIndex(buffer, startIndex) {
   const newline = 10;
   const carriage = 13;
-  for (let i = startIndex !== null && startIndex !== void 0 ? startIndex : 0; i < buffer.length; i++) {
-    if (buffer[i] === newline) {
-      return { preceding: i, index: i + 1, carriage: false };
-    }
-    if (buffer[i] === carriage) {
-      return { preceding: i, index: i + 1, carriage: true };
-    }
+  const start = startIndex !== null && startIndex !== void 0 ? startIndex : 0;
+  const nextNewline = buffer.indexOf(newline, start);
+  const nextCarriage = buffer.indexOf(carriage, start);
+  if (nextNewline === -1 && nextCarriage === -1) {
+    return null;
   }
-  return null;
-}
-function findDoubleNewlineIndex(buffer) {
-  const newline = 10;
-  const carriage = 13;
-  for (let i = 0; i < buffer.length - 1; i++) {
-    if (buffer[i] === newline && buffer[i + 1] === newline) {
-      return i + 2;
-    }
-    if (buffer[i] === carriage && buffer[i + 1] === carriage) {
-      return i + 2;
-    }
-    if (buffer[i] === carriage && buffer[i + 1] === newline && i + 3 < buffer.length && buffer[i + 2] === carriage && buffer[i + 3] === newline) {
-      return i + 4;
-    }
+  let i;
+  if (nextNewline !== -1 && nextCarriage !== -1) {
+    i = Math.min(nextNewline, nextCarriage);
+  } else {
+    i = nextNewline !== -1 ? nextNewline : nextCarriage;
   }
-  return -1;
+  if (buffer[i] === newline) {
+    return { preceding: i, index: i + 1, carriage: false };
+  }
+  return { preceding: i, index: i + 1, carriage: true };
 }
 const levelNumbers = {
   off: 0,
@@ -54660,7 +56078,7 @@ function _iterSSEMessages(response, controller) {
     const lineDecoder = new LineDecoder();
     const iter = ReadableStreamToAsyncIterable(response.body);
     try {
-      for (var _d = true, _e = __asyncValues(iterSSEChunks(iter)), _f; _f = yield __await(_e.next()), _a2 = _f.done, !_a2; _d = true) {
+      for (var _d = true, _e = __asyncValues(iterBinaryChunks(iter)), _f; _f = yield __await(_e.next()), _a2 = _f.done, !_a2; _d = true) {
         _c = _f.value;
         _d = false;
         const sseChunk = _c;
@@ -54686,10 +56104,9 @@ function _iterSSEMessages(response, controller) {
     }
   });
 }
-function iterSSEChunks(iterator) {
-  return __asyncGenerator(this, arguments, function* iterSSEChunks_1() {
+function iterBinaryChunks(iterator) {
+  return __asyncGenerator(this, arguments, function* iterBinaryChunks_1() {
     var _a2, e_5, _b, _c;
-    let data = new Uint8Array();
     try {
       for (var _d = true, iterator_3 = __asyncValues(iterator), iterator_3_1; iterator_3_1 = yield __await(iterator_3.next()), _a2 = iterator_3_1.done, !_a2; _d = true) {
         _c = iterator_3_1.value;
@@ -54699,15 +56116,7 @@ function iterSSEChunks(iterator) {
           continue;
         }
         const binaryChunk = chunk instanceof ArrayBuffer ? new Uint8Array(chunk) : typeof chunk === "string" ? encodeUTF8(chunk) : chunk;
-        let newData = new Uint8Array(data.length + binaryChunk.length);
-        newData.set(data);
-        newData.set(binaryChunk, data.length);
-        data = newData;
-        let patternIndex;
-        while ((patternIndex = findDoubleNewlineIndex(data)) !== -1) {
-          yield yield __await(data.slice(0, patternIndex));
-          data = data.slice(patternIndex);
-        }
+        yield yield __await(binaryChunk);
       }
     } catch (e_5_1) {
       e_5 = { error: e_5_1 };
@@ -54717,9 +56126,6 @@ function iterSSEChunks(iterator) {
       } finally {
         if (e_5) throw e_5.error;
       }
-    }
-    if (data.length > 0) {
-      yield yield __await(data);
     }
   });
 }
@@ -54790,6 +56196,10 @@ async function defaultParseResponse(client, props) {
     const mediaType = (_a2 = contentType === null || contentType === void 0 ? void 0 : contentType.split(";")[0]) === null || _a2 === void 0 ? void 0 : _a2.trim();
     const isJSON = (mediaType === null || mediaType === void 0 ? void 0 : mediaType.includes("application/json")) || (mediaType === null || mediaType === void 0 ? void 0 : mediaType.endsWith("+json"));
     if (isJSON) {
+      const contentLength = response.headers.get("content-length");
+      if (contentLength === "0") {
+        return void 0;
+      }
       const json = await response.json();
       return json;
     }
@@ -55014,15 +56424,7 @@ class BaseGeminiNextGenAPIClient {
    * Basic re-implementation of `qs.stringify` for primitive types.
    */
   stringifyQuery(query) {
-    return Object.entries(query).filter(([_, value]) => typeof value !== "undefined").map(([key, value]) => {
-      if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-        return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
-      }
-      if (value === null) {
-        return `${encodeURIComponent(key)}=`;
-      }
-      throw new GeminiNextGenAPIClientError(`Cannot stringify type ${typeof value}; Expected string, number, boolean, or null. If you need to pass nested query parameters, you can manually encode them, e.g. { query: { 'foo[key1]': value1, 'foo[key2]': value2 } }, and please open a GitHub issue requesting better support for your use case.`);
-    }).join("&");
+    return stringifyQuery(query);
   }
   getUserAgent() {
     return `${this.constructor.name}/JS ${VERSION}`;
@@ -55037,8 +56439,9 @@ class BaseGeminiNextGenAPIClient {
     const baseURL = !this.baseURLOverridden() && defaultBaseURL || this.baseURL;
     const url = isAbsoluteURL(path2) ? new URL(path2) : new URL(baseURL + (baseURL.endsWith("/") && path2.startsWith("/") ? path2.slice(1) : path2));
     const defaultQuery = this.defaultQuery();
-    if (!isEmptyObj(defaultQuery)) {
-      query = Object.assign(Object.assign({}, defaultQuery), query);
+    const pathQuery = Object.fromEntries(url.searchParams);
+    if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
+      query = Object.assign(Object.assign(Object.assign({}, pathQuery), defaultQuery), query);
     }
     if (typeof query === "object" && query && !Array.isArray(query)) {
       url.search = this.stringifyQuery(query);
@@ -55186,9 +56589,10 @@ class BaseGeminiNextGenAPIClient {
   }
   async fetchWithTimeout(url, init, ms, controller) {
     const _b = init || {}, { signal, method } = _b, options = __rest(_b, ["signal", "method"]);
+    const abort = this._makeAbort(controller);
     if (signal)
-      signal.addEventListener("abort", () => controller.abort());
-    const timeout = setTimeout(() => controller.abort(), ms);
+      signal.addEventListener("abort", abort, { once: true });
+    const timeout = setTimeout(abort, ms);
     const isReadableBody = globalThis.ReadableStream && options.body instanceof globalThis.ReadableStream || typeof options.body === "object" && options.body !== null && Symbol.asyncIterator in options.body;
     const fetchOptions = Object.assign(Object.assign(Object.assign({ signal: controller.signal }, isReadableBody ? { duplex: "half" } : {}), { method: "GET" }), options);
     if (method) {
@@ -55235,7 +56639,7 @@ class BaseGeminiNextGenAPIClient {
         timeoutMillis = Date.parse(retryAfterHeader) - Date.now();
       }
     }
-    if (!(timeoutMillis && 0 <= timeoutMillis && timeoutMillis < 60 * 1e3)) {
+    if (timeoutMillis === void 0) {
       const maxRetries = (_b = options.maxRetries) !== null && _b !== void 0 ? _b : this.maxRetries;
       timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
     }
@@ -55273,7 +56677,7 @@ class BaseGeminiNextGenAPIClient {
     const authHeaders = await this.authHeaders(options);
     let headers = buildHeaders([
       idempotencyHeaders,
-      Object.assign(Object.assign({ Accept: "application/json", "User-Agent": this.getUserAgent(), "X-Stainless-Retry-Count": String(retryCount) }, options.timeout ? { "X-Stainless-Timeout": String(Math.trunc(options.timeout / 1e3)) } : {}), getPlatformHeaders()),
+      { Accept: "application/json", "User-Agent": this.getUserAgent() },
       this._options.defaultHeaders,
       bodyHeaders,
       options.headers,
@@ -55281,6 +56685,9 @@ class BaseGeminiNextGenAPIClient {
     ]);
     this.validateHeaders(headers);
     return headers.values;
+  }
+  _makeAbort(controller) {
+    return () => controller.abort();
   }
   buildBody({ options: { body, headers: rawHeaders } }) {
     if (!body) {
@@ -55299,6 +56706,11 @@ class BaseGeminiNextGenAPIClient {
       return { bodyHeaders: void 0, body };
     } else if (typeof body === "object" && (Symbol.asyncIterator in body || Symbol.iterator in body && "next" in body && typeof body.next === "function")) {
       return { bodyHeaders: void 0, body: ReadableStreamFrom(body) };
+    } else if (typeof body === "object" && headers.values.get("content-type") === "application/x-www-form-urlencoded") {
+      return {
+        bodyHeaders: { "content-type": "application/x-www-form-urlencoded" },
+        body: this.stringifyQuery(body)
+      };
     } else {
       return this.encoder({ body, headers });
     }
@@ -55397,6 +56809,12 @@ function createTuningJobConfigToMldev(fromObject, parentObject, _rootObject) {
   if (getValueByPath(fromObject, ["adapterSize"]) !== void 0) {
     throw new Error("adapterSize parameter is not supported in Gemini API.");
   }
+  if (getValueByPath(fromObject, ["tuningMode"]) !== void 0) {
+    throw new Error("tuningMode parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["customBaseModel"]) !== void 0) {
+    throw new Error("customBaseModel parameter is not supported in Gemini API.");
+  }
   const fromBatchSize = getValueByPath(fromObject, ["batchSize"]);
   if (parentObject !== void 0 && fromBatchSize != null) {
     setValueByPath(parentObject, ["tuningTask", "hyperparameters", "batchSize"], fromBatchSize);
@@ -55410,6 +56828,21 @@ function createTuningJobConfigToMldev(fromObject, parentObject, _rootObject) {
   }
   if (getValueByPath(fromObject, ["beta"]) !== void 0) {
     throw new Error("beta parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["baseTeacherModel"]) !== void 0) {
+    throw new Error("baseTeacherModel parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["tunedTeacherModelSource"]) !== void 0) {
+    throw new Error("tunedTeacherModelSource parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["sftLossWeightMultiplier"]) !== void 0) {
+    throw new Error("sftLossWeightMultiplier parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["outputUri"]) !== void 0) {
+    throw new Error("outputUri parameter is not supported in Gemini API.");
+  }
+  if (getValueByPath(fromObject, ["encryptionSpec"]) !== void 0) {
+    throw new Error("encryptionSpec parameter is not supported in Gemini API.");
   }
   return toObject;
 }
@@ -55435,6 +56868,13 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
     ]);
     if (parentObject !== void 0 && fromValidationDataset != null) {
       setValueByPath(parentObject, ["preferenceOptimizationSpec"], tuningValidationDatasetToVertex(fromValidationDataset));
+    }
+  } else if (discriminatorValidationDataset === "DISTILLATION") {
+    const fromValidationDataset = getValueByPath(fromObject, [
+      "validationDataset"
+    ]);
+    if (parentObject !== void 0 && fromValidationDataset != null) {
+      setValueByPath(parentObject, ["distillationSpec"], tuningValidationDatasetToVertex(fromValidationDataset));
     }
   }
   const fromTunedModelDisplayName = getValueByPath(fromObject, [
@@ -55464,6 +56904,11 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
     if (parentObject !== void 0 && fromEpochCount != null) {
       setValueByPath(parentObject, ["preferenceOptimizationSpec", "hyperParameters", "epochCount"], fromEpochCount);
     }
+  } else if (discriminatorEpochCount === "DISTILLATION") {
+    const fromEpochCount = getValueByPath(fromObject, ["epochCount"]);
+    if (parentObject !== void 0 && fromEpochCount != null) {
+      setValueByPath(parentObject, ["distillationSpec", "hyperParameters", "epochCount"], fromEpochCount);
+    }
   }
   let discriminatorLearningRateMultiplier = getValueByPath(rootObject, [
     "config",
@@ -55490,6 +56935,13 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
         "learningRateMultiplier"
       ], fromLearningRateMultiplier);
     }
+  } else if (discriminatorLearningRateMultiplier === "DISTILLATION") {
+    const fromLearningRateMultiplier = getValueByPath(fromObject, [
+      "learningRateMultiplier"
+    ]);
+    if (parentObject !== void 0 && fromLearningRateMultiplier != null) {
+      setValueByPath(parentObject, ["distillationSpec", "hyperParameters", "learningRateMultiplier"], fromLearningRateMultiplier);
+    }
   }
   let discriminatorExportLastCheckpointOnly = getValueByPath(rootObject, ["config", "method"]);
   if (discriminatorExportLastCheckpointOnly === void 0) {
@@ -55509,6 +56961,13 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
     if (parentObject !== void 0 && fromExportLastCheckpointOnly != null) {
       setValueByPath(parentObject, ["preferenceOptimizationSpec", "exportLastCheckpointOnly"], fromExportLastCheckpointOnly);
     }
+  } else if (discriminatorExportLastCheckpointOnly === "DISTILLATION") {
+    const fromExportLastCheckpointOnly = getValueByPath(fromObject, [
+      "exportLastCheckpointOnly"
+    ]);
+    if (parentObject !== void 0 && fromExportLastCheckpointOnly != null) {
+      setValueByPath(parentObject, ["distillationSpec", "exportLastCheckpointOnly"], fromExportLastCheckpointOnly);
+    }
   }
   let discriminatorAdapterSize = getValueByPath(rootObject, [
     "config",
@@ -55527,12 +56986,75 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
     if (parentObject !== void 0 && fromAdapterSize != null) {
       setValueByPath(parentObject, ["preferenceOptimizationSpec", "hyperParameters", "adapterSize"], fromAdapterSize);
     }
+  } else if (discriminatorAdapterSize === "DISTILLATION") {
+    const fromAdapterSize = getValueByPath(fromObject, ["adapterSize"]);
+    if (parentObject !== void 0 && fromAdapterSize != null) {
+      setValueByPath(parentObject, ["distillationSpec", "hyperParameters", "adapterSize"], fromAdapterSize);
+    }
   }
-  if (getValueByPath(fromObject, ["batchSize"]) !== void 0) {
-    throw new Error("batchSize parameter is not supported in Vertex AI.");
+  let discriminatorTuningMode = getValueByPath(rootObject, [
+    "config",
+    "method"
+  ]);
+  if (discriminatorTuningMode === void 0) {
+    discriminatorTuningMode = "SUPERVISED_FINE_TUNING";
   }
-  if (getValueByPath(fromObject, ["learningRate"]) !== void 0) {
-    throw new Error("learningRate parameter is not supported in Vertex AI.");
+  if (discriminatorTuningMode === "SUPERVISED_FINE_TUNING") {
+    const fromTuningMode = getValueByPath(fromObject, ["tuningMode"]);
+    if (parentObject !== void 0 && fromTuningMode != null) {
+      setValueByPath(parentObject, ["supervisedTuningSpec", "tuningMode"], fromTuningMode);
+    }
+  } else if (discriminatorTuningMode === "DISTILLATION") {
+    const fromTuningMode = getValueByPath(fromObject, ["tuningMode"]);
+    if (parentObject !== void 0 && fromTuningMode != null) {
+      setValueByPath(parentObject, ["distillationSpec", "tuningMode"], fromTuningMode);
+    }
+  }
+  const fromCustomBaseModel = getValueByPath(fromObject, [
+    "customBaseModel"
+  ]);
+  if (parentObject !== void 0 && fromCustomBaseModel != null) {
+    setValueByPath(parentObject, ["customBaseModel"], fromCustomBaseModel);
+  }
+  let discriminatorBatchSize = getValueByPath(rootObject, [
+    "config",
+    "method"
+  ]);
+  if (discriminatorBatchSize === void 0) {
+    discriminatorBatchSize = "SUPERVISED_FINE_TUNING";
+  }
+  if (discriminatorBatchSize === "SUPERVISED_FINE_TUNING") {
+    const fromBatchSize = getValueByPath(fromObject, ["batchSize"]);
+    if (parentObject !== void 0 && fromBatchSize != null) {
+      setValueByPath(parentObject, ["supervisedTuningSpec", "hyperParameters", "batchSize"], fromBatchSize);
+    }
+  } else if (discriminatorBatchSize === "DISTILLATION") {
+    const fromBatchSize = getValueByPath(fromObject, ["batchSize"]);
+    if (parentObject !== void 0 && fromBatchSize != null) {
+      setValueByPath(parentObject, ["distillationSpec", "hyperParameters", "batchSize"], fromBatchSize);
+    }
+  }
+  let discriminatorLearningRate = getValueByPath(rootObject, [
+    "config",
+    "method"
+  ]);
+  if (discriminatorLearningRate === void 0) {
+    discriminatorLearningRate = "SUPERVISED_FINE_TUNING";
+  }
+  if (discriminatorLearningRate === "SUPERVISED_FINE_TUNING") {
+    const fromLearningRate = getValueByPath(fromObject, [
+      "learningRate"
+    ]);
+    if (parentObject !== void 0 && fromLearningRate != null) {
+      setValueByPath(parentObject, ["supervisedTuningSpec", "hyperParameters", "learningRate"], fromLearningRate);
+    }
+  } else if (discriminatorLearningRate === "DISTILLATION") {
+    const fromLearningRate = getValueByPath(fromObject, [
+      "learningRate"
+    ]);
+    if (parentObject !== void 0 && fromLearningRate != null) {
+      setValueByPath(parentObject, ["distillationSpec", "hyperParameters", "learningRate"], fromLearningRate);
+    }
   }
   const fromLabels = getValueByPath(fromObject, ["labels"]);
   if (parentObject !== void 0 && fromLabels != null) {
@@ -55541,6 +57063,34 @@ function createTuningJobConfigToVertex(fromObject, parentObject, rootObject) {
   const fromBeta = getValueByPath(fromObject, ["beta"]);
   if (parentObject !== void 0 && fromBeta != null) {
     setValueByPath(parentObject, ["preferenceOptimizationSpec", "hyperParameters", "beta"], fromBeta);
+  }
+  const fromBaseTeacherModel = getValueByPath(fromObject, [
+    "baseTeacherModel"
+  ]);
+  if (parentObject !== void 0 && fromBaseTeacherModel != null) {
+    setValueByPath(parentObject, ["distillationSpec", "baseTeacherModel"], fromBaseTeacherModel);
+  }
+  const fromTunedTeacherModelSource = getValueByPath(fromObject, [
+    "tunedTeacherModelSource"
+  ]);
+  if (parentObject !== void 0 && fromTunedTeacherModelSource != null) {
+    setValueByPath(parentObject, ["distillationSpec", "tunedTeacherModelSource"], fromTunedTeacherModelSource);
+  }
+  const fromSftLossWeightMultiplier = getValueByPath(fromObject, [
+    "sftLossWeightMultiplier"
+  ]);
+  if (parentObject !== void 0 && fromSftLossWeightMultiplier != null) {
+    setValueByPath(parentObject, ["distillationSpec", "hyperParameters", "sftLossWeightMultiplier"], fromSftLossWeightMultiplier);
+  }
+  const fromOutputUri = getValueByPath(fromObject, ["outputUri"]);
+  if (parentObject !== void 0 && fromOutputUri != null) {
+    setValueByPath(parentObject, ["outputUri"], fromOutputUri);
+  }
+  const fromEncryptionSpec = getValueByPath(fromObject, [
+    "encryptionSpec"
+  ]);
+  if (parentObject !== void 0 && fromEncryptionSpec != null) {
+    setValueByPath(parentObject, ["encryptionSpec"], fromEncryptionSpec);
   }
   return toObject;
 }
@@ -55759,6 +57309,11 @@ function tuningDatasetToVertex(fromObject, parentObject, rootObject) {
     if (parentObject !== void 0 && fromGcsUri != null) {
       setValueByPath(parentObject, ["preferenceOptimizationSpec", "trainingDatasetUri"], fromGcsUri);
     }
+  } else if (discriminatorGcsUri === "DISTILLATION") {
+    const fromGcsUri = getValueByPath(fromObject, ["gcsUri"]);
+    if (parentObject !== void 0 && fromGcsUri != null) {
+      setValueByPath(parentObject, ["distillationSpec", "promptDatasetUri"], fromGcsUri);
+    }
   }
   let discriminatorVertexDatasetResource = getValueByPath(rootObject, [
     "config",
@@ -55780,6 +57335,13 @@ function tuningDatasetToVertex(fromObject, parentObject, rootObject) {
     ]);
     if (parentObject !== void 0 && fromVertexDatasetResource != null) {
       setValueByPath(parentObject, ["preferenceOptimizationSpec", "trainingDatasetUri"], fromVertexDatasetResource);
+    }
+  } else if (discriminatorVertexDatasetResource === "DISTILLATION") {
+    const fromVertexDatasetResource = getValueByPath(fromObject, [
+      "vertexDatasetResource"
+    ]);
+    if (parentObject !== void 0 && fromVertexDatasetResource != null) {
+      setValueByPath(parentObject, ["distillationSpec", "promptDatasetUri"], fromVertexDatasetResource);
     }
   }
   if (getValueByPath(fromObject, ["examples"]) !== void 0) {
@@ -55905,6 +57467,12 @@ function tuningJobFromVertex(fromObject, _rootObject) {
   if (fromPreferenceOptimizationSpec != null) {
     setValueByPath(toObject, ["preferenceOptimizationSpec"], fromPreferenceOptimizationSpec);
   }
+  const fromDistillationSpec = getValueByPath(fromObject, [
+    "distillationSpec"
+  ]);
+  if (fromDistillationSpec != null) {
+    setValueByPath(toObject, ["distillationSpec"], fromDistillationSpec);
+  }
   const fromTuningDataStats = getValueByPath(fromObject, [
     "tuningDataStats"
   ]);
@@ -55929,9 +57497,27 @@ function tuningJobFromVertex(fromObject, _rootObject) {
   if (fromCustomBaseModel != null) {
     setValueByPath(toObject, ["customBaseModel"], fromCustomBaseModel);
   }
+  const fromEvaluateDatasetRuns = getValueByPath(fromObject, [
+    "evaluateDatasetRuns"
+  ]);
+  if (fromEvaluateDatasetRuns != null) {
+    let transformedList = fromEvaluateDatasetRuns;
+    if (Array.isArray(transformedList)) {
+      transformedList = transformedList.map((item) => {
+        return item;
+      });
+    }
+    setValueByPath(toObject, ["evaluateDatasetRuns"], transformedList);
+  }
   const fromExperiment = getValueByPath(fromObject, ["experiment"]);
   if (fromExperiment != null) {
     setValueByPath(toObject, ["experiment"], fromExperiment);
+  }
+  const fromFullFineTuningSpec = getValueByPath(fromObject, [
+    "fullFineTuningSpec"
+  ]);
+  if (fromFullFineTuningSpec != null) {
+    setValueByPath(toObject, ["fullFineTuningSpec"], fromFullFineTuningSpec);
   }
   const fromLabels = getValueByPath(fromObject, ["labels"]);
   if (fromLabels != null) {
@@ -55957,11 +57543,29 @@ function tuningJobFromVertex(fromObject, _rootObject) {
   if (fromTunedModelDisplayName != null) {
     setValueByPath(toObject, ["tunedModelDisplayName"], fromTunedModelDisplayName);
   }
+  const fromTuningJobState = getValueByPath(fromObject, [
+    "tuningJobState"
+  ]);
+  if (fromTuningJobState != null) {
+    setValueByPath(toObject, ["tuningJobState"], fromTuningJobState);
+  }
   const fromVeoTuningSpec = getValueByPath(fromObject, [
     "veoTuningSpec"
   ]);
   if (fromVeoTuningSpec != null) {
     setValueByPath(toObject, ["veoTuningSpec"], fromVeoTuningSpec);
+  }
+  const fromDistillationSamplingSpec = getValueByPath(fromObject, [
+    "distillationSamplingSpec"
+  ]);
+  if (fromDistillationSamplingSpec != null) {
+    setValueByPath(toObject, ["distillationSamplingSpec"], fromDistillationSamplingSpec);
+  }
+  const fromTuningJobMetadata = getValueByPath(fromObject, [
+    "tuningJobMetadata"
+  ]);
+  if (fromTuningJobMetadata != null) {
+    setValueByPath(toObject, ["tuningJobMetadata"], fromTuningJobMetadata);
   }
   return toObject;
 }
@@ -56326,18 +57930,18 @@ const MAX_RETRY_COUNT = 3;
 const INITIAL_RETRY_DELAY_MS = 1e3;
 const DELAY_MULTIPLIER = 2;
 const X_GOOG_UPLOAD_STATUS_HEADER_FIELD = "x-goog-upload-status";
-async function uploadBlob(file, uploadUrl, apiClient) {
+async function uploadBlob(file, uploadUrl, apiClient, httpOptions) {
   var _a2;
-  const response = await uploadBlobInternal(file, uploadUrl, apiClient);
+  const response = await uploadBlobInternal(file, uploadUrl, apiClient, httpOptions);
   const responseJson = await (response === null || response === void 0 ? void 0 : response.json());
   if (((_a2 = response === null || response === void 0 ? void 0 : response.headers) === null || _a2 === void 0 ? void 0 : _a2[X_GOOG_UPLOAD_STATUS_HEADER_FIELD]) !== "final") {
     throw new Error("Failed to upload file: Upload status is not finalized.");
   }
   return responseJson["file"];
 }
-async function uploadBlobToFileSearchStore(file, uploadUrl, apiClient) {
+async function uploadBlobToFileSearchStore(file, uploadUrl, apiClient, httpOptions) {
   var _a2;
-  const response = await uploadBlobInternal(file, uploadUrl, apiClient);
+  const response = await uploadBlobInternal(file, uploadUrl, apiClient, httpOptions);
   const responseJson = await (response === null || response === void 0 ? void 0 : response.json());
   if (((_a2 = response === null || response === void 0 ? void 0 : response.headers) === null || _a2 === void 0 ? void 0 : _a2[X_GOOG_UPLOAD_STATUS_HEADER_FIELD]) !== "final") {
     throw new Error("Failed to upload file: Upload status is not finalized.");
@@ -56347,8 +57951,18 @@ async function uploadBlobToFileSearchStore(file, uploadUrl, apiClient) {
   Object.assign(typedResp, resp);
   return typedResp;
 }
-async function uploadBlobInternal(file, uploadUrl, apiClient) {
-  var _a2, _b;
+async function uploadBlobInternal(file, uploadUrl, apiClient, httpOptions) {
+  var _a2, _b, _c;
+  let finalUrl = uploadUrl;
+  const effectiveBaseUrl = (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.baseUrl) || ((_a2 = apiClient.clientOptions.httpOptions) === null || _a2 === void 0 ? void 0 : _a2.baseUrl);
+  if (effectiveBaseUrl) {
+    const baseUri = new URL(effectiveBaseUrl);
+    const uploadUri = new URL(uploadUrl);
+    uploadUri.protocol = baseUri.protocol;
+    uploadUri.host = baseUri.host;
+    uploadUri.port = baseUri.port;
+    finalUrl = uploadUri.toString();
+  }
   let fileSize = 0;
   let offset = 0;
   let response = new HttpResponse(new Response());
@@ -56363,21 +57977,14 @@ async function uploadBlobInternal(file, uploadUrl, apiClient) {
     let retryCount = 0;
     let currentDelayMs = INITIAL_RETRY_DELAY_MS;
     while (retryCount < MAX_RETRY_COUNT) {
+      const mergedHeaders = Object.assign(Object.assign({}, (httpOptions === null || httpOptions === void 0 ? void 0 : httpOptions.headers) || {}), { "X-Goog-Upload-Command": uploadCommand, "X-Goog-Upload-Offset": String(offset), "Content-Length": String(chunkSize) });
       response = await apiClient.request({
         path: "",
         body: chunk,
         httpMethod: "POST",
-        httpOptions: {
-          apiVersion: "",
-          baseUrl: uploadUrl,
-          headers: {
-            "X-Goog-Upload-Command": uploadCommand,
-            "X-Goog-Upload-Offset": String(offset),
-            "Content-Length": String(chunkSize)
-          }
-        }
+        httpOptions: Object.assign(Object.assign({}, httpOptions), { apiVersion: "", baseUrl: finalUrl, headers: mergedHeaders })
       });
-      if ((_a2 = response === null || response === void 0 ? void 0 : response.headers) === null || _a2 === void 0 ? void 0 : _a2[X_GOOG_UPLOAD_STATUS_HEADER_FIELD]) {
+      if ((_b = response === null || response === void 0 ? void 0 : response.headers) === null || _b === void 0 ? void 0 : _b[X_GOOG_UPLOAD_STATUS_HEADER_FIELD]) {
         break;
       }
       retryCount++;
@@ -56385,7 +57992,7 @@ async function uploadBlobInternal(file, uploadUrl, apiClient) {
       currentDelayMs = currentDelayMs * DELAY_MULTIPLIER;
     }
     offset += chunkSize;
-    if (((_b = response === null || response === void 0 ? void 0 : response.headers) === null || _b === void 0 ? void 0 : _b[X_GOOG_UPLOAD_STATUS_HEADER_FIELD]) !== "active") {
+    if (((_c = response === null || response === void 0 ? void 0 : response.headers) === null || _c === void 0 ? void 0 : _c[X_GOOG_UPLOAD_STATUS_HEADER_FIELD]) !== "active") {
       break;
     }
     if (fileSize <= offset) {
@@ -56402,17 +58009,17 @@ function sleep(ms) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 }
 class BrowserUploader {
-  async upload(file, uploadUrl, apiClient) {
+  async upload(file, uploadUrl, apiClient, httpOptions) {
     if (typeof file === "string") {
       throw new Error("File path is not supported in browser uploader.");
     }
-    return await uploadBlob(file, uploadUrl, apiClient);
+    return await uploadBlob(file, uploadUrl, apiClient, httpOptions);
   }
-  async uploadToFileSearchStore(file, uploadUrl, apiClient) {
+  async uploadToFileSearchStore(file, uploadUrl, apiClient, httpOptions) {
     if (typeof file === "string") {
       throw new Error("File path is not supported in browser uploader.");
     }
-    return await uploadBlobToFileSearchStore(file, uploadUrl, apiClient);
+    return await uploadBlobToFileSearchStore(file, uploadUrl, apiClient, httpOptions);
   }
   async stat(file) {
     if (typeof file === "string") {
@@ -56475,6 +58082,7 @@ class WebAuth {
 const LANGUAGE_LABEL_PREFIX = "gl-node/";
 class GoogleGenAI {
   get interactions() {
+    var _a2;
     if (this._interactions !== void 0) {
       return this._interactions;
     }
@@ -56489,7 +58097,8 @@ class GoogleGenAI {
       apiVersion: this.apiClient.getApiVersion(),
       clientAdapter: this.apiClient,
       defaultHeaders: this.apiClient.getDefaultHeaders(),
-      timeout: httpOpts === null || httpOpts === void 0 ? void 0 : httpOpts.timeout
+      timeout: httpOpts === null || httpOpts === void 0 ? void 0 : httpOpts.timeout,
+      maxRetries: (_a2 = httpOpts === null || httpOpts === void 0 ? void 0 : httpOpts.retryOptions) === null || _a2 === void 0 ? void 0 : _a2.attempts
     });
     this._interactions = nextGenClient.interactions;
     return this._interactions;
@@ -81270,6 +82879,9 @@ const CourseDataWindow = ({
   onShowFullGraph
 }) => {
   const { name: courseName, color: courseColor, gradDate, startDate } = course;
+  const isHexColor = (color) => color.startsWith("#") || color.startsWith("rgb");
+  const courseColorClass = isHexColor(courseColor || "") ? "" : courseColor || "";
+  const courseColorStyle = isHexColor(courseColor || "") ? { backgroundColor: courseColor } : {};
   const getCompletedCount = (traineeScores) => {
     return traineeScores.filter((s) => !s.event.includes("MB") && !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
   };
@@ -81353,17 +82965,17 @@ const CourseDataWindow = ({
     };
   }, [courseName, allTrainees, scores, traineeLMPs, gradDate]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColor}`, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`, style: courseColorStyle, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 135,
+        lineNumber: 140,
         columnNumber: 18
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center text-xs", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: `start-date-${courseName.replace(/\s+/g, "-")}`, className: "text-white/80 font-semibold cursor-pointer", children: "Start:" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 138,
+            lineNumber: 143,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -81380,20 +82992,20 @@ const CourseDataWindow = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-              lineNumber: 139,
+              lineNumber: 144,
               columnNumber: 25
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 137,
+          lineNumber: 142,
           columnNumber: 22
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: `grad-date-${courseName.replace(/\s+/g, "-")}`, className: "text-white/80 font-semibold cursor-pointer", children: "Grad:" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 149,
+            lineNumber: 154,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -81410,19 +83022,19 @@ const CourseDataWindow = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-              lineNumber: 150,
+              lineNumber: 155,
               columnNumber: 25
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 148,
+          lineNumber: 153,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 136,
+        lineNumber: 141,
         columnNumber: 18
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-black/30 rounded-full h-2.5 mt-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -81435,13 +83047,13 @@ const CourseDataWindow = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 161,
+          lineNumber: 166,
           columnNumber: 21
         },
         void 0
       ) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 160,
+        lineNumber: 165,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 grid grid-cols-2 gap-x-4 text-xs", children: [
@@ -81450,119 +83062,119 @@ const CourseDataWindow = ({
             "Front Runner: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white/90", children: courseData.frontRunnerEvent }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-              lineNumber: 168,
+              lineNumber: 173,
               columnNumber: 68
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 168,
+            lineNumber: 173,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white", children: [
             "Median Progress: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: courseData.medianEvent }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-              lineNumber: 169,
+              lineNumber: 174,
               columnNumber: 68
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 169,
+            lineNumber: 174,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white/70", children: [
             "Back Marker: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-white/90", children: courseData.backMarkerEvent }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-              lineNumber: 170,
+              lineNumber: 175,
               columnNumber: 67
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 170,
+            lineNumber: 175,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 167,
+          lineNumber: 172,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-right flex flex-col justify-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white/70", children: "Required Pace" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 173,
+            lineNumber: 178,
             columnNumber: 26
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "font-bold text-lg text-white", children: [
             courseData.requiredPace.toFixed(1),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-normal", children: "/wk" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-              lineNumber: 174,
+              lineNumber: 179,
               columnNumber: 106
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-            lineNumber: 174,
+            lineNumber: 179,
             columnNumber: 26
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 172,
+          lineNumber: 177,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 166,
+        lineNumber: 171,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-      lineNumber: 134,
+      lineNumber: 139,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 space-y-3 max-h-60 overflow-y-auto", children: courseData.trainees.map(({ trainee, percentage, nextEvent }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between mb-1", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-gray-300", children: trainee.name }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 182,
+          lineNumber: 187,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-mono text-sky-300", children: nextEvent }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 183,
+          lineNumber: 188,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 181,
+        lineNumber: 186,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-gray-700 rounded-full h-1.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "div",
         {
-          className: `${courseColor} h-1.5 rounded-full`,
-          style: { width: `${percentage}%` }
+          className: `${courseColorClass} h-1.5 rounded-full`,
+          style: { width: `${percentage}%`, ...isHexColor(courseColor || "") ? { backgroundColor: courseColor } : {} }
         },
         void 0,
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-          lineNumber: 186,
+          lineNumber: 191,
           columnNumber: 29
         },
         void 0
       ) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 185,
+        lineNumber: 190,
         columnNumber: 25
       }, void 0)
     ] }, trainee.idNumber, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-      lineNumber: 180,
+      lineNumber: 185,
       columnNumber: 21
     }, void 0)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-      lineNumber: 178,
+      lineNumber: 183,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -81576,18 +83188,18 @@ const CourseDataWindow = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-        lineNumber: 195,
+        lineNumber: 200,
         columnNumber: 17
       },
       void 0
     ) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-      lineNumber: 194,
+      lineNumber: 199,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CourseDataWindow.tsx",
-    lineNumber: 133,
+    lineNumber: 138,
     columnNumber: 9
   }, void 0);
 };
@@ -82002,12 +83614,13 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
     }));
     return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   }, [weeklyProgress]);
-  color.includes("sky") ? "#38bdf8" : color.includes("purple") ? "#c084fc" : color.includes("yellow") ? "#facc15" : color.includes("pink") ? "#f472b6" : color.includes("teal") ? "#2dd4bf" : color.includes("indigo") ? "#818cf8" : color.includes("cyan") ? "#22d3ee" : color.includes("fuchsia") ? "#e879f9" : color.includes("blue") ? "#60a5fa" : color.includes("green") ? "#4ade80" : color.includes("red") ? "#f87171" : color.includes("lime") ? "#a3e635" : "#9ca3af";
+  const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
+  isHexColor(color) ? color : color.includes("sky") ? "#38bdf8" : color.includes("purple") ? "#c084fc" : color.includes("yellow") ? "#facc15" : color.includes("pink") ? "#f472b6" : color.includes("teal") ? "#2dd4bf" : color.includes("indigo") ? "#818cf8" : color.includes("cyan") ? "#22d3ee" : color.includes("fuchsia") ? "#e879f9" : color.includes("blue") ? "#60a5fa" : color.includes("green") ? "#4ade80" : color.includes("red") ? "#f87171" : color.includes("amber") ? "#f59e0b" : color.includes("lime") ? "#a3e635" : "#9ca3af";
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `mb-4 p-3 rounded-lg ${color}`, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `mb-4 p-3 rounded-lg ${isHexColor(color) ? "" : color}`, style: isHexColor(color) ? { backgroundColor: color } : {}, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-white text-center", children: course.name }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 363,
+        lineNumber: 366,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-sm text-white/80 mt-2", children: [
@@ -82016,7 +83629,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           startDate.toLocaleDateString("en-GB")
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 365,
+          lineNumber: 368,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -82024,7 +83637,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           totalEvents
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 366,
+          lineNumber: 369,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -82032,125 +83645,125 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           endDate.toLocaleDateString("en-GB")
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 367,
+          lineNumber: 370,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 364,
+        lineNumber: 367,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 362,
+      lineNumber: 365,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-lg p-3 mb-4", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Events Per Week Required:" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 373,
+        lineNumber: 376,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex space-x-6", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3 h-3 bg-green-500 rounded-full mr-2" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 376,
+            lineNumber: 379,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
             "Front Runner: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-green-400", children: frontRunnerStats.eventsPerWeek.toFixed(1) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 377,
+              lineNumber: 380,
               columnNumber: 79
             }, void 0),
             "/wk"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 377,
+            lineNumber: 380,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 375,
+          lineNumber: 378,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3 h-3 bg-blue-500 rounded-full mr-2" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 380,
+            lineNumber: 383,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
             "Course Average: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-blue-400", children: courseAverageStats.eventsPerWeek.toFixed(1) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 381,
+              lineNumber: 384,
               columnNumber: 81
             }, void 0),
             "/wk"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 381,
+            lineNumber: 384,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 379,
+          lineNumber: 382,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3 h-3 bg-red-500 rounded-full mr-2" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 384,
+            lineNumber: 387,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: [
             "Back Marker: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-red-400", children: backMarkerStats.eventsPerWeek.toFixed(1) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 385,
+              lineNumber: 388,
               columnNumber: 78
             }, void 0),
             "/wk"
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 385,
+            lineNumber: 388,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 383,
+          lineNumber: 386,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 374,
+        lineNumber: 377,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 372,
+      lineNumber: 375,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { viewBox: `0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`, className: "w-full h-auto", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("defs", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("pattern", { id: `grid-${course.name}`, width: "40", height: "40", patternUnits: "userSpaceOnUse", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M 40 0 L 0 0 0 40", fill: "none", stroke: "#374151", strokeWidth: "0.5" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 394,
+        lineNumber: 397,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 393,
+        lineNumber: 396,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 392,
+        lineNumber: 395,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("rect", { x: PADDING.left, y: PADDING.top, width: CHART_WIDTH, height: CHART_HEIGHT, fill: `url(#grid-${course.name})` }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 397,
+        lineNumber: 400,
         columnNumber: 17
       }, void 0),
       yAxisTicks.map((tick) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("g", { children: [
@@ -82168,7 +83781,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 402,
+            lineNumber: 405,
             columnNumber: 25
           },
           void 0
@@ -82187,14 +83800,14 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 410,
+            lineNumber: 413,
             columnNumber: 25
           },
           void 0
         )
       ] }, `y-${tick.value}`, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 401,
+        lineNumber: 404,
         columnNumber: 21
       }, void 0)),
       xAxisTicks.map((tick) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("g", { children: [
@@ -82212,7 +83825,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 425,
+            lineNumber: 428,
             columnNumber: 25
           },
           void 0
@@ -82231,14 +83844,14 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-            lineNumber: 433,
+            lineNumber: 436,
             columnNumber: 25
           },
           void 0
         )
       ] }, `x-${tick.x}`, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 424,
+        lineNumber: 427,
         columnNumber: 21
       }, void 0)),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -82253,7 +83866,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 446,
+          lineNumber: 449,
           columnNumber: 17
         },
         void 0
@@ -82274,7 +83887,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 454,
+          lineNumber: 457,
           columnNumber: 17
         },
         void 0
@@ -82294,7 +83907,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 465,
+          lineNumber: 468,
           columnNumber: 17
         },
         void 0
@@ -82314,7 +83927,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 478,
+          lineNumber: 481,
           columnNumber: 21
         },
         void 0
@@ -82331,7 +83944,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 492,
+          lineNumber: 495,
           columnNumber: 21
         },
         void 0
@@ -82356,7 +83969,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
               strokeWidth: "0.5",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("title", { children: `Week ${i + 1}: Highest - ${wp.highest} events (${wp.highestTrainee})` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 523,
+                lineNumber: 526,
                 columnNumber: 33
               }, void 0)
             },
@@ -82364,7 +83977,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 515,
+              lineNumber: 518,
               columnNumber: 29
             },
             void 0
@@ -82380,7 +83993,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
               strokeWidth: "0.5",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("title", { children: `Week ${i + 1}: Lowest - ${wp.lowest} events (${wp.lowestTrainee})` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 535,
+                lineNumber: 538,
                 columnNumber: 33
               }, void 0)
             },
@@ -82388,7 +84001,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 527,
+              lineNumber: 530,
               columnNumber: 29
             },
             void 0
@@ -82404,7 +84017,7 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
               strokeWidth: "0.5",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("title", { children: `Week ${i + 1}: Average - ${wp.average.toFixed(1)} events` }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-                lineNumber: 547,
+                lineNumber: 550,
                 columnNumber: 33
               }, void 0)
             },
@@ -82412,101 +84025,101 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-              lineNumber: 539,
+              lineNumber: 542,
               columnNumber: 29
             },
             void 0
           )
         ] }, `week-${i}`, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 513,
+          lineNumber: 516,
           columnNumber: 25
         }, void 0);
       }),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("g", { transform: `translate(${PADDING.left + 15}, ${PADDING.top - 30})`, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "0", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Reference Lines:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 555,
+          lineNumber: 558,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "100", y1: "-3", x2: "120", y2: "-3", stroke: "#f87171", strokeWidth: "2", strokeDasharray: "8 4" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 557,
+          lineNumber: 560,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "125", y: "0", fontSize: "9", fill: "#9ca3af", children: "3.5/wk" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 558,
+          lineNumber: 561,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "170", y1: "-3", x2: "190", y2: "-3", stroke: "#fbbf24", strokeWidth: "2" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 560,
+          lineNumber: 563,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "195", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.0/wk" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 561,
+          lineNumber: 564,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "240", y1: "-3", x2: "260", y2: "-3", stroke: "#4ade80", strokeWidth: "2", strokeDasharray: "8 4" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 563,
+          lineNumber: 566,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "265", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.5/wk" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 564,
+          lineNumber: 567,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "320", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Progress:" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 566,
+          lineNumber: 569,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { cx: "380", cy: "-3", r: "3", fill: "#4ade80", stroke: "#1f2937", strokeWidth: "1.5" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 568,
+          lineNumber: 571,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "385", y: "0", fontSize: "9", fill: "#9ca3af", children: "Highest" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 569,
+          lineNumber: 572,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { cx: "430", cy: "-3", r: "3", fill: "#f87171", stroke: "#1f2937", strokeWidth: "1.5" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 571,
+          lineNumber: 574,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "435", y: "0", fontSize: "9", fill: "#9ca3af", children: "Lowest" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 572,
+          lineNumber: 575,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("line", { x1: "480", y1: "-3", x2: "495", y2: "-3", stroke: "#60a5fa", strokeWidth: "2.5" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 574,
+          lineNumber: 577,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("text", { x: "500", y: "0", fontSize: "9", fill: "#9ca3af", children: "Average" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-          lineNumber: 575,
+          lineNumber: 578,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-        lineNumber: 554,
+        lineNumber: 557,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-      lineNumber: 390,
+      lineNumber: 393,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/FullPageProgressGraph.tsx",
-    lineNumber: 361,
+    lineNumber: 364,
     columnNumber: 9
   }, void 0);
 };
@@ -82901,14 +84514,24 @@ const CoursesManagementView = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-start mb-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${courseColors[course.name] || "bg-gray-400/50"}` }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 151,
-                columnNumber: 25
-              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                "div",
+                {
+                  className: `w-4 h-4 rounded ${!(courseColors[course.name] || "").startsWith("#") ? courseColors[course.name] || "bg-gray-400/50" : ""}`,
+                  style: (courseColors[course.name] || "").startsWith("#") ? { backgroundColor: courseColors[course.name] } : {}
+                },
+                void 0,
+                false,
+                {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
+                  lineNumber: 151,
+                  columnNumber: 25
+                },
+                void 0
+              ),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 152,
+                lineNumber: 155,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
@@ -82928,11 +84551,11 @@ const CoursesManagementView = ({
                   title: "Edit Course Dates",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 166,
+                    lineNumber: 169,
                     columnNumber: 33
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 165,
+                    lineNumber: 168,
                     columnNumber: 29
                   }, void 0)
                 },
@@ -82940,7 +84563,7 @@ const CoursesManagementView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                  lineNumber: 157,
+                  lineNumber: 160,
                   columnNumber: 25
                 },
                 void 0
@@ -82956,11 +84579,11 @@ const CoursesManagementView = ({
                   title: "Delete Course",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 178,
+                    lineNumber: 181,
                     columnNumber: 33
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                    lineNumber: 177,
+                    lineNumber: 180,
                     columnNumber: 29
                   }, void 0)
                 },
@@ -82968,14 +84591,14 @@ const CoursesManagementView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                  lineNumber: 169,
+                  lineNumber: 172,
                   columnNumber: 25
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 156,
+              lineNumber: 159,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
@@ -82987,49 +84610,49 @@ const CoursesManagementView = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Start Date:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 186,
+                lineNumber: 189,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: new Date(course.startDate).toLocaleDateString() }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 187,
+                lineNumber: 190,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 185,
+              lineNumber: 188,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Grad Date:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 190,
+                lineNumber: 193,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: new Date(course.gradDate).toLocaleDateString() }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 191,
+                lineNumber: 194,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 189,
+              lineNumber: 192,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Total Students:" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 194,
+                lineNumber: 197,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: totalStudents }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 195,
+                lineNumber: 198,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 193,
+              lineNumber: 196,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-xs", children: [
@@ -83038,7 +84661,7 @@ const CoursesManagementView = ({
                 course.raafStart
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 198,
+                lineNumber: 201,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
@@ -83046,7 +84669,7 @@ const CoursesManagementView = ({
                 course.navyStart
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 199,
+                lineNumber: 202,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: [
@@ -83054,17 +84677,17 @@ const CoursesManagementView = ({
                 course.armyStart
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 200,
+                lineNumber: 203,
                 columnNumber: 25
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 197,
+              lineNumber: 200,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 184,
+            lineNumber: 187,
             columnNumber: 17
           }, void 0)
         ]
@@ -83084,17 +84707,17 @@ const CoursesManagementView = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-white", children: "Courses Management" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 213,
+          lineNumber: 216,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: "Manage active and archived courses" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 214,
+          lineNumber: 217,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 212,
+        lineNumber: 215,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-[1px]", children: [
@@ -83107,13 +84730,13 @@ const CoursesManagementView = ({
               "Archived",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 221,
+                lineNumber: 224,
                 columnNumber: 81
               }, void 0),
               "Courses"
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 221,
+              lineNumber: 224,
               columnNumber: 29
             }, void 0)
           },
@@ -83121,7 +84744,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 217,
+            lineNumber: 220,
             columnNumber: 25
           },
           void 0
@@ -83135,13 +84758,13 @@ const CoursesManagementView = ({
               "+ Add",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-                lineNumber: 227,
+                lineNumber: 230,
                 columnNumber: 105
               }, void 0),
               "Course"
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-              lineNumber: 227,
+              lineNumber: 230,
               columnNumber: 29
             }, void 0)
           },
@@ -83149,29 +84772,29 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 223,
+            lineNumber: 226,
             columnNumber: 25
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 216,
+        lineNumber: 219,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 211,
+      lineNumber: 214,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 210,
+      lineNumber: 213,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 p-6 overflow-y-auto", children: Object.keys(groupedCourses).length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-8 text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-lg mb-4", children: "No courses available" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 237,
+        lineNumber: 240,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83185,20 +84808,20 @@ const CoursesManagementView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 238,
+          lineNumber: 241,
           columnNumber: 25
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 236,
+      lineNumber: 239,
       columnNumber: 21
     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-8", children: Object.entries(groupedCourses).map(([type, coursesInGroup]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-white mb-4 flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: type }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 250,
+          lineNumber: 253,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-400", children: [
@@ -83207,34 +84830,34 @@ const CoursesManagementView = ({
           ")"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 251,
+          lineNumber: 254,
           columnNumber: 37
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 249,
+        lineNumber: 252,
         columnNumber: 33
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: coursesInGroup.map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CourseCard, { course }, course.name, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 255,
+        lineNumber: 258,
         columnNumber: 41
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 253,
+        lineNumber: 256,
         columnNumber: 33
       }, void 0)
     ] }, type, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 248,
+      lineNumber: 251,
       columnNumber: 29
     }, void 0)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 246,
+      lineNumber: 249,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 234,
+      lineNumber: 237,
       columnNumber: 13
     }, void 0),
     showAddCourseFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83251,7 +84874,7 @@ const CoursesManagementView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 266,
+        lineNumber: 269,
         columnNumber: 17
       },
       void 0
@@ -83272,7 +84895,7 @@ const CoursesManagementView = ({
       false,
       {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 278,
+        lineNumber: 281,
         columnNumber: 17
       },
       void 0
@@ -83280,19 +84903,19 @@ const CoursesManagementView = ({
     showPinDialog && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-white mb-4", children: "Enter PIN to Delete Course" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 294,
+        lineNumber: 297,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
         "You are about to delete ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 296,
+          lineNumber: 299,
           columnNumber: 53
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 295,
+        lineNumber: 298,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -83310,7 +84933,7 @@ const CoursesManagementView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 298,
+          lineNumber: 301,
           columnNumber: 25
         },
         void 0
@@ -83327,7 +84950,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 308,
+            lineNumber: 311,
             columnNumber: 29
           },
           void 0
@@ -83343,72 +84966,72 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 314,
+            lineNumber: 317,
             columnNumber: 29
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 307,
+        lineNumber: 310,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 293,
+      lineNumber: 296,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 292,
+      lineNumber: 295,
       columnNumber: 17
     }, void 0),
     showChoiceDialog && courseToDelete && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-yellow-600/50", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-yellow-400 mb-2", children: "Archive or Delete Course?" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 329,
+        lineNumber: 332,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-6", children: [
         "What would you like to do with ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 331,
+          lineNumber: 334,
           columnNumber: 60
         }, void 0),
         "?"
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 330,
+        lineNumber: 333,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm text-gray-400 mb-6 space-y-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 font-medium", children: "Archive" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 334,
+            lineNumber: 337,
             columnNumber: 32
           }, void 0),
           " — hides the course but keeps all data. Can be restored later."
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 334,
+          lineNumber: 337,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400 font-medium", children: "Delete" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 335,
+            lineNumber: 338,
             columnNumber: 32
           }, void 0),
           " — permanently removes the course. This cannot be undone."
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 335,
+          lineNumber: 338,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 333,
+        lineNumber: 336,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-3 justify-end", children: [
@@ -83423,7 +85046,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 338,
+            lineNumber: 341,
             columnNumber: 29
           },
           void 0
@@ -83439,7 +85062,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 344,
+            lineNumber: 347,
             columnNumber: 29
           },
           void 0
@@ -83455,28 +85078,28 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 350,
+            lineNumber: 353,
             columnNumber: 29
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 337,
+        lineNumber: 340,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 328,
+      lineNumber: 331,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 327,
+      lineNumber: 330,
       columnNumber: 17
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-    lineNumber: 208,
+    lineNumber: 211,
     columnNumber: 9
   }, void 0);
 };
@@ -86346,14 +87969,24 @@ const ArchivedCoursesView = ({
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-lg p-4 border border-gray-600", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-start mb-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-4 h-4 rounded ${color}` }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-            lineNumber: 95,
-            columnNumber: 25
-          }, void 0),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+            "div",
+            {
+              className: `w-4 h-4 rounded ${(color || "").startsWith("#") ? "" : color}`,
+              style: (color || "").startsWith("#") ? { backgroundColor: color } : {}
+            },
+            void 0,
+            false,
+            {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
+              lineNumber: 95,
+              columnNumber: 25
+            },
+            void 0
+          ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-semibold text-gray-300", children: courseName }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-            lineNumber: 96,
+            lineNumber: 99,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
@@ -86370,11 +88003,11 @@ const ArchivedCoursesView = ({
               title: "Unarchive Course",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-                lineNumber: 107,
+                lineNumber: 110,
                 columnNumber: 33
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-                lineNumber: 106,
+                lineNumber: 109,
                 columnNumber: 29
               }, void 0)
             },
@@ -86382,7 +88015,7 @@ const ArchivedCoursesView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-              lineNumber: 101,
+              lineNumber: 104,
               columnNumber: 25
             },
             void 0
@@ -86395,11 +88028,11 @@ const ArchivedCoursesView = ({
               title: "Delete Permanently",
               children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-                lineNumber: 116,
+                lineNumber: 119,
                 columnNumber: 33
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-                lineNumber: 115,
+                lineNumber: 118,
                 columnNumber: 29
               }, void 0)
             },
@@ -86407,14 +88040,14 @@ const ArchivedCoursesView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-              lineNumber: 110,
+              lineNumber: 113,
               columnNumber: 25
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-          lineNumber: 100,
+          lineNumber: 103,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
@@ -86424,15 +88057,15 @@ const ArchivedCoursesView = ({
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm text-gray-400", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-600 text-gray-300", children: "Archived" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 124,
+        lineNumber: 127,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 123,
+        lineNumber: 126,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 122,
+        lineNumber: 125,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
@@ -86451,11 +88084,11 @@ const ArchivedCoursesView = ({
             className: "text-gray-400 hover:text-white transition-colors",
             children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-              lineNumber: 144,
+              lineNumber: 147,
               columnNumber: 33
             }, void 0) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-              lineNumber: 143,
+              lineNumber: 146,
               columnNumber: 29
             }, void 0)
           },
@@ -86463,7 +88096,7 @@ const ArchivedCoursesView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-            lineNumber: 139,
+            lineNumber: 142,
             columnNumber: 25
           },
           void 0
@@ -86471,22 +88104,22 @@ const ArchivedCoursesView = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-white", children: "Archived Courses" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-            lineNumber: 148,
+            lineNumber: 151,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: "Manage archived courses" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-            lineNumber: 149,
+            lineNumber: 152,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-          lineNumber: 147,
+          lineNumber: 150,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 138,
+        lineNumber: 141,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm text-gray-400", children: [
@@ -86495,31 +88128,31 @@ const ArchivedCoursesView = ({
         Object.keys(archivedCourses).length !== 1 ? "s" : ""
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 152,
+        lineNumber: 155,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-      lineNumber: 137,
+      lineNumber: 140,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-      lineNumber: 136,
+      lineNumber: 139,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 p-6 overflow-y-auto", children: Object.keys(archivedCourses).length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-8 text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-16 h-16 mx-auto text-gray-600 mb-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 163,
+        lineNumber: 166,
         columnNumber: 29
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 162,
+        lineNumber: 165,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-lg mb-4", children: "No archived courses" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 165,
+        lineNumber: 168,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -86533,20 +88166,20 @@ const ArchivedCoursesView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-          lineNumber: 166,
+          lineNumber: 169,
           columnNumber: 25
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-      lineNumber: 161,
+      lineNumber: 164,
       columnNumber: 21
     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-8", children: Object.entries(groupedArchivedCourses).map(([type, coursesInGroup]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-gray-300 mb-4 flex items-center gap-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500", children: type }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-          lineNumber: 178,
+          lineNumber: 181,
           columnNumber: 37
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-500", children: [
@@ -86555,12 +88188,12 @@ const ArchivedCoursesView = ({
           ")"
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-          lineNumber: 179,
+          lineNumber: 182,
           columnNumber: 37
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 177,
+        lineNumber: 180,
         columnNumber: 33
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4", children: coursesInGroup.map((courseName) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -86573,31 +88206,31 @@ const ArchivedCoursesView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-          lineNumber: 183,
+          lineNumber: 186,
           columnNumber: 41
         },
         void 0
       )) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-        lineNumber: 181,
+        lineNumber: 184,
         columnNumber: 33
       }, void 0)
     ] }, type, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-      lineNumber: 176,
+      lineNumber: 179,
       columnNumber: 29
     }, void 0)) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-      lineNumber: 174,
+      lineNumber: 177,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-      lineNumber: 159,
+      lineNumber: 162,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/ArchivedCoursesView.tsx",
-    lineNumber: 134,
+    lineNumber: 137,
     columnNumber: 9
   }, void 0);
 };

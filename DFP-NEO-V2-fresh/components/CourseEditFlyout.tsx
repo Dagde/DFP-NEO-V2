@@ -101,7 +101,10 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
         }
     };
 
-    const courseColor = courseColors[courseName] || 'bg-gray-500';
+    const courseColorRaw = courseColors[courseName] || 'bg-gray-500';
+    const isHexCourseColor = courseColorRaw.startsWith('#') || courseColorRaw.startsWith('rgb');
+    const courseColor = isHexCourseColor ? '' : courseColorRaw;
+    const courseColorStyle = isHexCourseColor ? { backgroundColor: courseColorRaw } : {};
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 pt-8" onClick={onClose}>
@@ -110,7 +113,7 @@ const CourseEditFlyout: React.FC<CourseEditFlyoutProps> = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className={`${courseColor} px-6 py-4 flex justify-between items-center`}>
+                <div className={`${courseColor} px-6 py-4 flex justify-between items-center`} style={courseColorStyle}>
                     <h2 className="text-xl font-bold text-white">Edit Course: {courseName}</h2>
                     <button
                         onClick={onClose}
