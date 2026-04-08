@@ -25305,226 +25305,244 @@ const PrioritiesView = ({
           lineNumber: 494,
           columnNumber: 21
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700 space-y-4", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-gray-400", children: "Available Aircraft" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 499,
-              columnNumber: 29
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { id: "aircraft-count", type: "number", value: availableAircraftCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`);
-              onUpdateAircraftCount(parseInt(e.target.value));
-            }, className: "w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 500,
-              columnNumber: 29
-            }, void 0)
-          ] }, void 0, true, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 498,
-            columnNumber: 25
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-gray-400", children: "FTD Available" }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-x-6 gap-y-4", children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-gray-400", children: "Available Aircraft" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 504,
+                columnNumber: 37
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { id: "aircraft-count", type: "number", value: availableAircraftCount, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`);
+                onUpdateAircraftCount(parseInt(e.target.value));
+              }, className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 505,
+                columnNumber: 37
+              }, void 0)
+            ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
               lineNumber: 503,
-              columnNumber: 29
+              columnNumber: 33
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { id: "ftd-count", type: "number", value: availableFtdCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`);
-              onUpdateFtdCount(parseInt(e.target.value));
-            }, className: "w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-gray-400", children: "FTD Available" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 508,
+                columnNumber: 37
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { id: "ftd-count", type: "number", value: availableFtdCount, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`);
+                onUpdateFtdCount(parseInt(e.target.value));
+              }, className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 509,
+                columnNumber: 37
+              }, void 0)
+            ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 504,
-              columnNumber: 29
+              lineNumber: 507,
+              columnNumber: 33
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-gray-400", children: "CPT Available" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 512,
+                columnNumber: 37
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { id: "cpt-count", type: "number", value: availableCptCount, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`);
+                onUpdateCptCount(parseInt(e.target.value));
+              }, className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 513,
+                columnNumber: 37
+              }, void 0)
+            ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+              lineNumber: 511,
+              columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
             lineNumber: 502,
-            columnNumber: 25
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-gray-400", children: "CPT Available" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 507,
-              columnNumber: 29
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { id: "cpt-count", type: "number", value: availableCptCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`);
-              onUpdateCptCount(parseInt(e.target.value));
-            }, className: "w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 508,
-              columnNumber: 29
-            }, void 0)
-          ] }, void 0, true, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 506,
-            columnNumber: 25
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Day Flying Window" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 511,
-              columnNumber: 29
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mt-1", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: flyingStartTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFlyingStartTime(parseFloat(e.target.value));
-              }, className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 514,
-                columnNumber: 61
-              }, void 0)) }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 513,
-                columnNumber: 33
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "to" }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 516,
-                columnNumber: 33
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: flyingEndTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFlyingEndTime(parseFloat(e.target.value));
-              }, className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 518,
-                columnNumber: 61
-              }, void 0)) }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 517,
-                columnNumber: 33
-              }, void 0)
-            ] }, void 0, true, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 512,
-              columnNumber: 29
-            }, void 0)
-          ] }, void 0, true, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 510,
-            columnNumber: 25
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "FTD Operating Window" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 523,
-              columnNumber: 32
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mt-1", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: ftdStartTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFtdStartTime(parseFloat(e.target.value));
-              }, className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 526,
-                columnNumber: 64
-              }, void 0)) }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 525,
-                columnNumber: 36
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "to" }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 528,
-                columnNumber: 36
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: ftdEndTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`);
-                onUpdateFtdEndTime(parseFloat(e.target.value));
-              }, className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 530,
-                columnNumber: 64
-              }, void 0)) }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 529,
-                columnNumber: 36
-              }, void 0)
-            ] }, void 0, true, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 524,
-              columnNumber: 32
-            }, void 0)
-          ] }, void 0, true, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 522,
-            columnNumber: 28
-          }, void 0),
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
-              onUpdateAllowNightFlying(e.target.checked);
-            }, className: "h-5 w-5 bg-gray-700 rounded accent-sky-500" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 536,
-              columnNumber: 33
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: "Allow Night Flying" }, void 0, false, {
-              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 537,
-              columnNumber: 33
-            }, void 0)
-          ] }, void 0, true, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 535,
             columnNumber: 29
-          }, void 0) }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 534,
-            columnNumber: 26
           }, void 0),
-          allowNightFlying && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "pl-8 space-y-2", children: [
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Night Flying Window" }, void 0, false, {
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Day Flying Window" }, void 0, false, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 521,
+                columnNumber: 37
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mt-1", children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: flyingStartTime, onChange: (e) => {
+                  logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`);
+                  onUpdateFlyingStartTime(parseFloat(e.target.value));
+                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 524,
+                  columnNumber: 69
+                }, void 0)) }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 523,
+                  columnNumber: 41
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 shrink-0", children: "to" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 526,
+                  columnNumber: 41
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: flyingEndTime, onChange: (e) => {
+                  logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`);
+                  onUpdateFlyingEndTime(parseFloat(e.target.value));
+                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 528,
+                  columnNumber: 69
+                }, void 0)) }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 527,
+                  columnNumber: 41
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                lineNumber: 522,
+                columnNumber: 37
+              }, void 0)
+            ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 542,
+              lineNumber: 520,
               columnNumber: 33
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: commenceNightFlying, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
-                onUpdateCommenceNightFlying(parseFloat(e.target.value));
-              }, className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "FTD Operating Window" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 545,
-                columnNumber: 65
-              }, void 0)) }, void 0, false, {
-                fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 544,
+                lineNumber: 535,
                 columnNumber: 37
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "to" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mt-1", children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: ftdStartTime, onChange: (e) => {
+                  logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`);
+                  onUpdateFtdStartTime(parseFloat(e.target.value));
+                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 538,
+                  columnNumber: 69
+                }, void 0)) }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 537,
+                  columnNumber: 41
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 shrink-0", children: "to" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 540,
+                  columnNumber: 41
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: ftdEndTime, onChange: (e) => {
+                  logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`);
+                  onUpdateFtdEndTime(parseFloat(e.target.value));
+                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 542,
+                  columnNumber: 69
+                }, void 0)) }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 541,
+                  columnNumber: 41
+                }, void 0)
+              ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 547,
+                lineNumber: 536,
                 columnNumber: 37
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: ceaseNightFlying, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
-                onUpdateCeaseNightFlying(parseFloat(e.target.value));
-              }, className: "w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+              }, void 0)
+            ] }, void 0, true, {
+              fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+              lineNumber: 534,
+              columnNumber: 33
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-2 cursor-pointer mb-2", children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
+                  logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
+                  onUpdateAllowNightFlying(e.target.checked);
+                }, className: "h-4 w-4 bg-gray-700 rounded accent-sky-500 shrink-0" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 550,
+                  columnNumber: 41
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-sky-400", children: "Allow Night Flying" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 551,
+                  columnNumber: 41
+                }, void 0)
+              ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
                 lineNumber: 549,
-                columnNumber: 65
-              }, void 0)) }, void 0, false, {
+                columnNumber: 37
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Night Flying Window" }, void 0, false, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 555,
+                  columnNumber: 41
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mt-1", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
+                    logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
+                    onUpdateCommenceNightFlying(parseFloat(e.target.value));
+                  }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                    lineNumber: 558,
+                    columnNumber: 73
+                  }, void 0)) }, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                    lineNumber: 557,
+                    columnNumber: 45
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 shrink-0", children: "to" }, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                    lineNumber: 560,
+                    columnNumber: 45
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: ceaseNightFlying, disabled: !allowNightFlying, onChange: (e) => {
+                    logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
+                    onUpdateCeaseNightFlying(parseFloat(e.target.value));
+                  }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                    lineNumber: 562,
+                    columnNumber: 73
+                  }, void 0)) }, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                    lineNumber: 561,
+                    columnNumber: 45
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+                  lineNumber: 556,
+                  columnNumber: 41
+                }, void 0)
+              ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 548,
+                lineNumber: 554,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 543,
+              lineNumber: 548,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 541,
-            columnNumber: 30
+            lineNumber: 518,
+            columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
+          fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
+          lineNumber: 499,
+          columnNumber: 25
+        }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
           lineNumber: 497,
           columnNumber: 22
@@ -25537,11 +25555,11 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-semibold text-gray-200", children: "Instructor Allocation Priorities" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 560,
+          lineNumber: 576,
           columnNumber: 25
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 559,
+          lineNumber: 575,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-t border-gray-700 space-y-5", children: [
@@ -25558,7 +25576,7 @@ const PrioritiesView = ({
                   className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? "bg-sky-500" : "bg-gray-600"}`,
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${instructorPriority.enabled ? "translate-x-6" : "translate-x-1"}` }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                    lineNumber: 575,
+                    lineNumber: 591,
                     columnNumber: 37
                   }, void 0)
                 },
@@ -25566,36 +25584,36 @@ const PrioritiesView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 567,
+                  lineNumber: 583,
                   columnNumber: 33
                 },
                 void 0
               ),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: "Priority Mode" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 577,
+                lineNumber: 593,
                 columnNumber: 33
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 566,
+              lineNumber: 582,
               columnNumber: 29
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: "When on, the scheduler prioritises selected instructor groups for flight and FTD events." }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 579,
+              lineNumber: 595,
               columnNumber: 29
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 565,
+            lineNumber: 581,
             columnNumber: 25
           }, void 0),
           instructorPriority.enabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-5 pl-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm font-medium text-gray-300 mb-2", children: "Mode" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 589,
+                lineNumber: 605,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 bg-gray-700 rounded-lg p-1 w-fit", children: ["soft", "hard"].map((m) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25613,42 +25631,42 @@ const PrioritiesView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 592,
+                  lineNumber: 608,
                   columnNumber: 45
                 },
                 void 0
               )) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 590,
+                lineNumber: 606,
                 columnNumber: 37
               }, void 0),
               instructorPriority.mode === "soft" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400 mt-1", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400 font-medium", children: "Soft:" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 611,
+                  lineNumber: 627,
                   columnNumber: 45
                 }, void 0),
                 " The scheduler will prefer instructors from selected groups but will use any available instructor if none are free."
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 610,
+                lineNumber: 626,
                 columnNumber: 41
               }, void 0),
               instructorPriority.mode === "hard" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400 mt-1", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400 font-medium", children: "Hard:" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 616,
+                  lineNumber: 632,
                   columnNumber: 45
                 }, void 0),
                 " Flight and FTD events will only be placed if an instructor from the required groups is available. If none are free, the event is placed on STBY with no instructor. CPT and Ground are unaffected."
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 615,
+                lineNumber: 631,
                 columnNumber: 41
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 588,
+              lineNumber: 604,
               columnNumber: 33
             }, void 0),
             instructorPriority.mode === "soft" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
@@ -25656,12 +25674,12 @@ const PrioritiesView = ({
                 "Preferred Groups",
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(select one or more)" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 625,
+                  lineNumber: 641,
                   columnNumber: 45
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 624,
+                lineNumber: 640,
                 columnNumber: 41
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: [
@@ -25688,7 +25706,7 @@ const PrioritiesView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                    lineNumber: 634,
+                    lineNumber: 650,
                     columnNumber: 53
                   },
                   void 0
@@ -25696,31 +25714,31 @@ const PrioritiesView = ({
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-gray-200 group-hover:text-white", children: label }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                    lineNumber: 648,
+                    lineNumber: 664,
                     columnNumber: 57
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400", children: desc }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                    lineNumber: 649,
+                    lineNumber: 665,
                     columnNumber: 57
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 647,
+                  lineNumber: 663,
                   columnNumber: 53
                 }, void 0)
               ] }, key, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 633,
+                lineNumber: 649,
                 columnNumber: 49
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 627,
+                lineNumber: 643,
                 columnNumber: 41
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 623,
+              lineNumber: 639,
               columnNumber: 37
             }, void 0),
             instructorPriority.mode === "hard" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
@@ -25729,17 +25747,17 @@ const PrioritiesView = ({
                   "Required Groups",
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(flight/FTD will go to STBY if none available)" }, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                    lineNumber: 662,
+                    lineNumber: 678,
                     columnNumber: 49
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 661,
+                  lineNumber: 677,
                   columnNumber: 45
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400 mb-2", children: "Select which instructor groups must be available for a flight or FTD to be placed on the schedule. If none from the selected groups are free, the event is placed on STBY with no instructor assigned." }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 664,
+                  lineNumber: 680,
                   columnNumber: 45
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3", children: [
@@ -25766,7 +25784,7 @@ const PrioritiesView = ({
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                      lineNumber: 674,
+                      lineNumber: 690,
                       columnNumber: 57
                     },
                     void 0
@@ -25774,63 +25792,63 @@ const PrioritiesView = ({
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-medium text-gray-200 group-hover:text-white", children: label }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                      lineNumber: 688,
+                      lineNumber: 704,
                       columnNumber: 61
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400", children: desc }, void 0, false, {
                       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                      lineNumber: 689,
+                      lineNumber: 705,
                       columnNumber: 61
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                    lineNumber: 687,
+                    lineNumber: 703,
                     columnNumber: 57
                   }, void 0)
                 ] }, key, true, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 673,
+                  lineNumber: 689,
                   columnNumber: 53
                 }, void 0)) }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 667,
+                  lineNumber: 683,
                   columnNumber: 45
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 660,
+                lineNumber: 676,
                 columnNumber: 41
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: "Note:" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                  lineNumber: 696,
+                  lineNumber: 712,
                   columnNumber: 45
                 }, void 0),
                 " CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal."
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 695,
+                lineNumber: 711,
                 columnNumber: 41
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 659,
+              lineNumber: 675,
               columnNumber: 37
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 585,
+            lineNumber: 601,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 562,
+          lineNumber: 578,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 558,
+        lineNumber: 574,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
@@ -25845,133 +25863,133 @@ const PrioritiesView = ({
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "section-sct-requests bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "SCT Requests" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 709,
+        lineNumber: 725,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-6", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SctRequestTable, { type: "flight", requests: sctFlights }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 711,
+          lineNumber: 727,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SctRequestTable, { type: "ftd", requests: sctFtds }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 712,
+          lineNumber: 728,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 710,
+        lineNumber: 726,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-      lineNumber: 708,
+      lineNumber: 724,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "section-highest-priority bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Highest Priority Events" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 717,
+        lineNumber: 733,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PriorityEventTable, { events: standardPriorityEvents }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 718,
+        lineNumber: 734,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-      lineNumber: 716,
+      lineNumber: 732,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "section-sct-optional bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional SCT Events" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 723,
+        lineNumber: 739,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 724,
+        lineNumber: 740,
         columnNumber: 13
       }, void 0),
       sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority SCT events. Add SCT requests with MEDIUM or LOW priority in the SCT Requests tab above." }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 726,
+        lineNumber: 742,
         columnNumber: 15
       }, void 0),
       sctFlights.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-4", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT Flights" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 732,
+          lineNumber: 748,
           columnNumber: 19
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "min-w-full text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Name" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 737,
+              lineNumber: 753,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Event" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 738,
+              lineNumber: 754,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Type" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 739,
+              lineNumber: 755,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Currency" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 740,
+              lineNumber: 756,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Priority" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 741,
+              lineNumber: 757,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-center", children: "Include in Build" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 742,
+              lineNumber: 758,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 736,
+            lineNumber: 752,
             columnNumber: 29
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 735,
+            lineNumber: 751,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "divide-y divide-gray-700/50", children: sctFlights.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-sky-900/50", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: req.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 748,
+              lineNumber: 764,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 749,
+              lineNumber: 765,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 750,
+              lineNumber: 766,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 751,
+              lineNumber: 767,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 752,
+              lineNumber: 768,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25986,109 +26004,109 @@ const PrioritiesView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 754,
+                lineNumber: 770,
                 columnNumber: 41
               },
               void 0
             ) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 753,
+              lineNumber: 769,
               columnNumber: 37
             }, void 0)
           ] }, req.id, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 747,
+            lineNumber: 763,
             columnNumber: 33
           }, void 0)) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 745,
+            lineNumber: 761,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 734,
+          lineNumber: 750,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 733,
+          lineNumber: 749,
           columnNumber: 19
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 731,
+        lineNumber: 747,
         columnNumber: 17
       }, void 0),
       sctFtds.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT FTDs" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 772,
+          lineNumber: 788,
           columnNumber: 19
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "min-w-full text-sm", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Name" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 777,
+              lineNumber: 793,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Event" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 778,
+              lineNumber: 794,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Type" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 779,
+              lineNumber: 795,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Currency" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 780,
+              lineNumber: 796,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Priority" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 781,
+              lineNumber: 797,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-center", children: "Include in Build" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 782,
+              lineNumber: 798,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 776,
+            lineNumber: 792,
             columnNumber: 29
           }, void 0) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 775,
+            lineNumber: 791,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "divide-y divide-gray-700/50", children: sctFtds.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-sky-900/50", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: req.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 788,
+              lineNumber: 804,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 789,
+              lineNumber: 805,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 790,
+              lineNumber: 806,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 791,
+              lineNumber: 807,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 792,
+              lineNumber: 808,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -26103,83 +26121,83 @@ const PrioritiesView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 794,
+                lineNumber: 810,
                 columnNumber: 41
               },
               void 0
             ) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 793,
+              lineNumber: 809,
               columnNumber: 37
             }, void 0)
           ] }, req.id, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 787,
+            lineNumber: 803,
             columnNumber: 33
           }, void 0)) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 785,
+            lineNumber: 801,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 774,
+          lineNumber: 790,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 773,
+          lineNumber: 789,
           columnNumber: 19
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 771,
+        lineNumber: 787,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-      lineNumber: 722,
+      lineNumber: 738,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "section-remedial-queue bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Remedial Priority Queue" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 811,
+        lineNumber: 827,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("table", { className: "min-w-full text-sm", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Trainee" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 816,
+            lineNumber: 832,
             columnNumber: 27
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Course" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 817,
+            lineNumber: 833,
             columnNumber: 27
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Event" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 818,
+            lineNumber: 834,
             columnNumber: 27
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-left", children: "Staff" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 819,
+            lineNumber: 835,
             columnNumber: 27
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("th", { className: "py-2 px-2 text-center", children: "Force Schedule" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 820,
+            lineNumber: 836,
             columnNumber: 27
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 815,
+          lineNumber: 831,
           columnNumber: 23
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 814,
+          lineNumber: 830,
           columnNumber: 19
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee, item }) => {
@@ -26189,22 +26207,22 @@ const PrioritiesView = ({
           return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("tr", { className: "hover:bg-sky-900/50", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 font-semibold text-white", children: trainee.name }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 833,
+              lineNumber: 849,
               columnNumber: 31
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: trainee.course }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 834,
+              lineNumber: 850,
               columnNumber: 31
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-amber-300 font-mono", children: item.code }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 835,
+              lineNumber: 851,
               columnNumber: 31
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-gray-300", children: allocatedStaff }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 836,
+              lineNumber: 852,
               columnNumber: 31
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -26219,37 +26237,37 @@ const PrioritiesView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-                lineNumber: 840,
+                lineNumber: 856,
                 columnNumber: 34
               },
               void 0
             ) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-              lineNumber: 839,
+              lineNumber: 855,
               columnNumber: 31
             }, void 0)
           ] }, `${trainee.idNumber}-${item.code}`, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-            lineNumber: 832,
+            lineNumber: 848,
             columnNumber: 27
           }, void 0);
         }) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-          lineNumber: 823,
+          lineNumber: 839,
           columnNumber: 19
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 813,
+        lineNumber: 829,
         columnNumber: 15
       }, void 0) }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-        lineNumber: 812,
+        lineNumber: 828,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/PrioritiesView.tsx",
-      lineNumber: 810,
+      lineNumber: 826,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
