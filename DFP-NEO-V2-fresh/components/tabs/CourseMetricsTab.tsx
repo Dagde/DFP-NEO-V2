@@ -57,9 +57,23 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   onNavigateAndSelectPerson,
   analysis
 }) => {
+  // Build a lookup map: trainee fullName/name → course
+  const traineeCourseLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    traineesData.forEach(t => {
+      if (t.fullName && t.course) map.set(t.fullName, t.course);
+      if (t.name && t.course) map.set(t.name, t.course);
+    });
+    return map;
+  }, [traineesData]);
+
   const getCourseFromStudent = (studentName: string): string | null => {
     if (!studentName) return null;
-    const match = studentName.match(/ – (.*)$/);
+    // Primary: look up in traineesData by fullName or name
+    const fromLookup = traineeCourseLookup.get(studentName);
+    if (fromLookup) return fromLookup;
+    // Fallback: old "Name – CourseName" format
+    const match = studentName.match(/ \u2013 (.*)$/);
     return match ? match[1] : null;
   };
 
@@ -98,7 +112,9 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
     
     events.forEach(e => {
       if (e.flightNumber !== 'Ground School') {
-        const course = getCourseFromStudent(e.student || e.pilot || '');
+        // Try student first, then pilot to find the trainee's course
+        const course = getCourseFromStudent(e.student || '') ||
+                       getCourseFromStudent(e.pilot || '');
         if (course && eventsPerCourse.has(course)) {
           eventsPerCourse.set(course, eventsPerCourse.get(course)! + 1);
           
@@ -119,7 +135,7 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
       personnelPerCourseLists,
       availableTraineesPerCourse
     };
-  }, [date, events, traineesData, activeCourses]);
+  }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
 
   return (
     <div className="space-y-6">

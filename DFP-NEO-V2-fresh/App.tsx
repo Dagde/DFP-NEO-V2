@@ -4735,6 +4735,37 @@ useEffect(() => {
         loadInitialData();
     }, []);
 
+    // Auto-populate coursePriorities & coursePercentages from courseColors when not yet set.
+    // This ensures the Course Priority page always shows all active courses, even on first load
+    // before the user has manually configured priorities. If saved priorities exist (from DB
+    // settings load), this will only add any NEW courses that aren't already in the list.
+    useEffect(() => {
+        const courseNames = Object.keys(courseColors);
+        if (courseNames.length === 0) return;
+
+        setCoursePriorities(prev => {
+            // Add any courses present in courseColors but missing from the current list
+            const existing = new Set(prev);
+            const newCourses = courseNames.filter(c => !existing.has(c));
+            if (newCourses.length === 0) return prev;
+            return [...prev, ...newCourses];
+        });
+
+        setCoursePercentages(prev => {
+            const updated = new Map(prev);
+            let changed = false;
+            courseNames.forEach(course => {
+                if (!updated.has(course)) {
+                    // Assign equal share to new courses (will auto-normalize on save)
+                    const equalShare = Math.max(5, Math.floor(100 / courseNames.length));
+                    updated.set(course, equalShare);
+                    changed = true;
+                }
+            });
+            return changed ? updated : prev;
+        });
+    }, [courseColors]);
+
     // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
     // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
     useEffect(() => {
@@ -5614,6 +5645,12 @@ useEffect(() => {
                 if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
                 if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+                if (saved.coursePercentages && Object.keys(saved.coursePercentages).length) {
+                    setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v as number])));
+                }
+                if (saved.coursePriorities && saved.coursePriorities.length) {
+                    setCoursePriorities(saved.coursePriorities);
+                }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
@@ -5702,6 +5739,8 @@ useEffect(() => {
             // never from the general settings blob. This prevents stale data overwriting
             // the built-in syllabus with items that may lack the 'courses' field.
             organisationSettings,
+            coursePriorities,
+            coursePercentages: Object.fromEntries(coursePercentages),
         });
 
         saveSettingsToDB(snapshot, sessionUser?.userId);
@@ -5719,6 +5758,7 @@ useEffect(() => {
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements,
         organisationSettings,
+        coursePriorities, coursePercentages,
     ]);
 
     // Baseline schedule state
@@ -11463,7 +11503,7 @@ updates.forEach(update => {
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
                             instructorsData={instructorsData}
                             traineesData={traineesData}
-                            activeCourses={coursePriorities}
+                            activeCourses={coursePriorities.length > 0 ? coursePriorities : Object.keys(courseColors)}
                             onNavigateAndSelectPerson={(name) => {
                                 const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
                                 if (person) {

@@ -58,6 +58,10 @@ export interface AppSettingsData {
   // Course Colors
   courseColors: Record<string, string>;
 
+  // Course Priorities & Percentages
+  coursePriorities: string[];
+  coursePercentages: Record<string, number>;
+
   // Phrase Bank
   phraseBank: Record<string, any>;
 
@@ -272,6 +276,8 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     sctEvents: state.sctEvents || [],
     formationCallsigns: state.formationCallsigns || [],
     courseColors: state.courseColors || {},
+    coursePriorities: state.coursePriorities || [],
+    coursePercentages: state.coursePercentages || {},
     phraseBank: state.phraseBank || {},
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
