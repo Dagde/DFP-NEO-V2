@@ -7,54 +7,304 @@ const prisma = new PrismaClient();
 // Set SEED_SECRET env var in Railway to secure this endpoint
 const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
 
-function createSyllabusItem(code: string, overrides: any = {}) {
-  const parts = code.split('_');
-  const courseCode = parts[0];
-  const phaseMap: Record<string, string> = {
-    BGF: 'Basic Ground Flying', BIF: 'Basic Instrument Flying',
-    BNF: 'Basic Navigation Flying', BNAV: 'Basic Navigation',
-    FIC: 'Flight Instructor Course',
+// ============================================================================
+// SYLLABUS ITEMS - Using correct codes that match PT-051 score records
+// BGF1, BGF MB1, BGF FTD1, BIF1, BNF1, FIC1, etc.
+// These MUST match the 'event' field in Score records
+// ============================================================================
+
+interface SyllabusItemSeed {
+  code: string;
+  eventDescription: string;
+  phase: string;
+  module: string;
+  type: string;
+  sortieType?: string | null;
+  dayNight: string;
+  courses: string[];
+  methodOfDelivery: string[];
+  methodOfAssessment: string[];
+  resourcesPhysical: string[];
+  resourcesHuman: string[];
+  eventDetailsCommon: string[];
+  eventDetailsSortie: string[];
+  flightOrSimHours: number;
+  totalEventHours: number;
+  duration: number;
+  preFlightTime: number;
+  postFlightTime: number;
+  prerequisites: string[];
+  prerequisitesGround: string[];
+  prerequisitesFlying: string[];
+  location: string;
+  sortOrder: number;
+  lmpType?: string | null;
+  twrDiReqd?: string | null;
+  cctOnly?: string | null;
+  isRemedial: boolean;
+  isActive: boolean;
+  version: number;
+  notes: string | null;
+  createdBy: string;
+}
+
+function makeFlight(code: string, desc: string, courses: string[], sortOrder: number, overrides: Partial<SyllabusItemSeed> = {}): SyllabusItemSeed {
+  const isSolo = ['BGF11', 'BGF18'].includes(code);
+  let phase = 'BGF';
+  if (code.startsWith('BIF')) phase = 'BIF';
+  else if (code.startsWith('BNF')) phase = 'BNF';
+  else if (code.startsWith('BNAV')) phase = 'BNAV';
+  else if (code.startsWith('FIC') || code.startsWith('AIT')) phase = 'FIC';
+  else if (code.startsWith('WSO')) phase = 'WSO';
+  else if (code.startsWith('OFI')) phase = 'OFI';
+
+  const phaseNames: Record<string,string> = {
+    BGF: 'Basic General Flying', BIF: 'Basic Instrument Flying',
+    BNF: 'Basic Night Flying', BNAV: 'Basic Navigation',
+    FIC: 'Flight Instructor Course', WSO: 'Weapons Systems Officer', OFI: 'Operational Flying Instructor',
   };
-  const phase = phaseMap[courseCode] || courseCode;
-  const typeFromCode = code.includes('_SIM_') ? 'Simulator' :
-    code.includes('_GND_') ? 'Ground' :
-    code.includes('_BRIEF_') ? 'Briefing' : 'Flying';
 
   return {
     code,
-    eventDescription: overrides.eventDescription || code.replace(/_/g, ' '),
-    phase: overrides.phase || phase,
-    module: overrides.module || courseCode,
-    type: overrides.type || typeFromCode,
-    sortieType: overrides.sortieType || null,
-    dayNight: overrides.dayNight || 'Day',
-    courses: overrides.courses || [courseCode],
-    methodOfDelivery: overrides.methodOfDelivery || ['Instructor Led'],
-    methodOfAssessment: overrides.methodOfAssessment || ['Instructor Assessment'],
-    resourcesPhysical: overrides.resourcesPhysical || [],
-    resourcesHuman: overrides.resourcesHuman || ['QFI'],
-    eventDetailsCommon: overrides.eventDetailsCommon || [],
-    eventDetailsSortie: overrides.eventDetailsSortie || [],
-    flightOrSimHours: overrides.flightOrSimHours || 0,
-    totalEventHours: overrides.totalEventHours || 1,
-    duration: overrides.duration || 1,
-    preFlightTime: overrides.preFlightTime || 0,
-    postFlightTime: overrides.postFlightTime || 0,
-    prerequisites: overrides.prerequisites || [],
-    prerequisitesGround: overrides.prerequisitesGround || [],
-    prerequisitesFlying: overrides.prerequisitesFlying || [],
-    location: overrides.location || null,
-    sortOrder: overrides.sortOrder || 0,
-    lmpType: overrides.lmpType || null,
-    twrDiReqd: overrides.twrDiReqd || null,
-    cctOnly: overrides.cctOnly || null,
-    isRemedial: overrides.isRemedial || false,
+    eventDescription: desc,
+    phase,
+    module: phaseNames[phase] || phase,
+    type: 'Flight',
+    sortieType: isSolo ? 'Solo' : 'Dual',
+    dayNight: 'Day',
+    courses,
+    methodOfDelivery: ['Dual Sortie', 'Brief', 'Debrief'],
+    methodOfAssessment: ['Instructor Assessment', 'Debrief'],
+    resourcesPhysical: ['PC-21'],
+    resourcesHuman: ['QFI', 'Trainee'],
+    eventDetailsCommon: [],
+    eventDetailsSortie: [],
+    flightOrSimHours: 1.0,
+    totalEventHours: 2.0,
+    duration: 2.0,
+    preFlightTime: 0.5,
+    postFlightTime: 0.5,
+    prerequisites: [],
+    prerequisitesGround: [],
+    prerequisitesFlying: [],
+    location: '',
+    sortOrder,
+    lmpType: null,
+    twrDiReqd: isSolo ? 'YES' : 'NO',
+    cctOnly: code === 'BGF10' ? 'YES' : 'NO',
+    isRemedial: false,
     isActive: true,
     version: 1,
-    notes: overrides.notes || null,
+    notes: null,
     createdBy: 'seed-api',
+    ...overrides,
   };
 }
+
+function makeFTD(code: string, desc: string, courses: string[], sortOrder: number, overrides: Partial<SyllabusItemSeed> = {}): SyllabusItemSeed {
+  let phase = 'BGF';
+  if (code.startsWith('BIF')) phase = 'BIF';
+  else if (code.startsWith('BNF')) phase = 'BNF';
+  else if (code.startsWith('BNAV')) phase = 'BNAV';
+  else if (code.startsWith('FIC') || code.startsWith('AIT')) phase = 'FIC';
+
+  const phaseNames: Record<string,string> = {
+    BGF: 'Basic General Flying', BIF: 'Basic Instrument Flying',
+    BNF: 'Basic Night Flying', BNAV: 'Basic Navigation', FIC: 'Flight Instructor Course',
+  };
+
+  return {
+    code,
+    eventDescription: desc,
+    phase,
+    module: phaseNames[phase] || phase,
+    type: 'FTD',
+    sortieType: 'Dual',
+    dayNight: 'Day',
+    courses,
+    methodOfDelivery: ['FTD', 'Brief', 'Debrief'],
+    methodOfAssessment: ['Instructor Assessment', 'Debrief'],
+    resourcesPhysical: ['FTD'],
+    resourcesHuman: ['QFI', 'Trainee'],
+    eventDetailsCommon: [],
+    eventDetailsSortie: [],
+    flightOrSimHours: 2.0,
+    totalEventHours: 2.5,
+    duration: 2.5,
+    preFlightTime: 40/60,
+    postFlightTime: 30/60,
+    prerequisites: [],
+    prerequisitesGround: [],
+    prerequisitesFlying: [],
+    location: 'FTD Complex',
+    sortOrder,
+    lmpType: null,
+    twrDiReqd: null,
+    cctOnly: null,
+    isRemedial: false,
+    isActive: true,
+    version: 1,
+    notes: null,
+    createdBy: 'seed-api',
+    ...overrides,
+  };
+}
+
+function makeGround(code: string, desc: string, courses: string[], sortOrder: number, overrides: Partial<SyllabusItemSeed> = {}): SyllabusItemSeed {
+  let phase = 'BGF';
+  if (code.startsWith('BIF')) phase = 'BIF';
+  else if (code.startsWith('BNF')) phase = 'BNF';
+  else if (code.startsWith('BNAV')) phase = 'BNAV';
+  else if (code.startsWith('FIC') || code.startsWith('AIT')) phase = 'FIC';
+
+  const phaseNames: Record<string,string> = {
+    BGF: 'Basic General Flying', BIF: 'Basic Instrument Flying',
+    BNF: 'Basic Night Flying', BNAV: 'Basic Navigation', FIC: 'Flight Instructor Course',
+  };
+
+  const isCPT = code.includes('CPT');
+
+  return {
+    code,
+    eventDescription: desc,
+    phase,
+    module: phaseNames[phase] || phase,
+    type: 'Ground School',
+    sortieType: null,
+    dayNight: 'Day',
+    courses,
+    methodOfDelivery: isCPT ? ['CPT', 'Brief'] : ['Classroom', 'Brief'],
+    methodOfAssessment: ['Written Assessment', 'Observation'],
+    resourcesPhysical: isCPT ? ['CPT'] : [],
+    resourcesHuman: ['QFI', 'Trainee'],
+    eventDetailsCommon: [],
+    eventDetailsSortie: [],
+    flightOrSimHours: isCPT ? 1.0 : 0,
+    totalEventHours: isCPT ? 1.5 : 1.0,
+    duration: isCPT ? 1.5 : 1.0,
+    preFlightTime: isCPT ? 15/60 : 0,
+    postFlightTime: isCPT ? 15/60 : 0,
+    prerequisites: [],
+    prerequisitesGround: [],
+    prerequisitesFlying: [],
+    location: isCPT ? 'CPT Rooms' : 'Classroom',
+    sortOrder,
+    lmpType: null,
+    twrDiReqd: null,
+    cctOnly: null,
+    isRemedial: false,
+    isActive: true,
+    version: 1,
+    notes: null,
+    createdBy: 'seed-api',
+    ...overrides,
+  };
+}
+
+const BPC_IPC = ['BPC+IPC'];
+const FIC_ONLY = ['FIC'];
+
+// Full syllabus - codes MUST match Score records (s.event field in PT-051)
+const SYLLABUS_ITEMS: SyllabusItemSeed[] = [
+  // ========== BGF Phase ==========
+  makeGround('BGF MB1', 'Preparation and Pre / Post Flight Admin', BPC_IPC, 10),
+  makeGround('BGF MB2', 'Ground Operations and Checklist', BPC_IPC, 20),
+  makeGround('BGF CPT1', 'Checklist Procedures - Ground', BPC_IPC, 30),
+  makeGround('BGF TUT1A', 'Ejection Seat Strap-in', BPC_IPC, 40),
+  makeGround('BGF TUT1B', 'FTD Safety Brief', BPC_IPC, 50),
+  makeGround('BGF TUT2', 'Flight Preparation, Checklist and Walkaround', BPC_IPC, 60),
+  makeGround('BGF MB3', 'Effects of Controls; Attitude Flying; Straight and Level; Turning', BPC_IPC, 70),
+  makeGround('BGF MB4', 'Climbing and Descending and Climbing and Descending Turns', BPC_IPC, 80),
+  makeGround('BGF MB5', 'Re-join; Landing; Local Circuit Procedures', BPC_IPC, 90),
+  makeGround('BGF MB6', 'Emergency Handling and Procedures', BPC_IPC, 100),
+  makeGround('BGF CPT2', 'Airborne Procedures', BPC_IPC, 110),
+  makeFTD('BGF FTD1', 'Strap in and Ground Procedures', BPC_IPC, 120),
+  makeGround('BGF MB7', 'Normal Circuits', BPC_IPC, 130),
+  makeFlight('BGF1', 'Effects of Controls; Attitude Flying; Straight and Level; Turning; Steep Turn', BPC_IPC, 140),
+  makeFTD('BGF FTD2', 'Climbing; Descending; Climbing, Turning and Descending', BPC_IPC, 150),
+  makeFlight('BGF2', 'Basic AP Operation; Climbing; Descending; Re-join; Landing', BPC_IPC, 160),
+  makeGround('BGF MB8', 'Ground and Airborne Emergency Procedures', BPC_IPC, 170),
+  makeGround('BGF CPT3', 'Emergency Procedures', BPC_IPC, 180),
+  makeGround('BGF MB9', 'Wingover and Stalling', BPC_IPC, 190),
+  makeGround('BGF TUT3', 'Stalling; Circuits', BPC_IPC, 200),
+  makeFTD('BGF FTD3', 'Normal Circuits - Base & Final; Go Around; Wingovers; Clean Stalls; Accelerated Stall', BPC_IPC, 210),
+  makeFlight('BGF3', 'Normal Circuit - Base and Final Technique; Go Around; Wingovers; Clean Stalls; Accelerated Stall', BPC_IPC, 220),
+  makeFTD('BGF FTD4', 'Emergency Procedures; Normal Circuit', BPC_IPC, 230),
+  makeFlight('BGF4', 'Configured Stalls; Normal Circuit', BPC_IPC, 240),
+  makeFlight('BGF5', 'Consolidate Stalls and Circuits', BPC_IPC, 250),
+  makeGround('BGF MB10', 'Abnormal Recovery', BPC_IPC, 260),
+  makeGround('BGF MB11', 'Solo Malfunctions', BPC_IPC, 270),
+  makeGround('BGF MB12', 'Solo Briefing', BPC_IPC, 280),
+  makeGround('BGF CPT4', 'Emergency Procedures', BPC_IPC, 290),
+  makeFlight('BGF6', 'Consolidate Circuits', BPC_IPC, 300),
+  makeGround('BGF MB13', 'HUD Intro - Handling, Stalls, Normal CCT', BPC_IPC, 310),
+  makeGround('BGF CPT5', 'HUD Intro', BPC_IPC, 320),
+  makeGround('PRE-SOLO QUIZ', 'Pre-Solo Quiz', BPC_IPC, 330),
+  makeFlight('BGF7', 'HUD Intro - Handling, Stalls, Normal Circuit; Demo Abnormal Landing', BPC_IPC, 340),
+  makeFTD('BGF FTD5', 'Flapless & AIL PWR OFF S-l app; Circuit Consolidation', BPC_IPC, 350),
+  makeFlight('BGF8', 'Flapless & AIL PWR OFF S-1 app; Consolidation', BPC_IPC, 360),
+  makeGround('PERRT CPT1', 'Hypoxia', BPC_IPC, 370),
+  makeFlight('BGF9', 'WSL Diversion; Controllability Check; Circuit Consolidation', BPC_IPC, 380),
+  makeGround('BGF MB14', 'Low Level Circuit: Glide Circuit; Forced Landings', BPC_IPC, 390),
+  makeFTD('BGF FTD6', 'Emergency Handling - Solo', BPC_IPC, 400),
+  makeFlight('BGF10', 'Day Circuit Solo Check', BPC_IPC, 410, { cctOnly: 'YES' }),
+  makeFlight('BGF11', 'Day Circuit Solo', BPC_IPC, 420, { sortieType: 'Solo', twrDiReqd: 'YES' }),
+  makeGround('BGF MB15', 'G Warm Up; Basic Aerobatics; Unusual Attitude Recovery', BPC_IPC, 430),
+  makeGround('BGF MB16', 'Spin Recovery', BPC_IPC, 440),
+  makeFTD('BGF FTD7', 'Gliding; Glide Circuit; Low Level Circuit', BPC_IPC, 450),
+  makeFlight('BGF12', 'Glide Circuit', BPC_IPC, 460),
+  makeFlight('BGF13', 'Low Level Circuit', BPC_IPC, 470),
+  makeFlight('BGF14', 'Unusual Attitude Recovery; G Warm Up; Wingover; Loop', BPC_IPC, 480),
+  makeGround('BGF MB17', 'Barrel Roll; Aileron Roll', BPC_IPC, 490),
+  makeFlight('BGF15', 'Aerobatics Consolidation', BPC_IPC, 500),
+  makeGround('BGF MB18', 'Navigation Intro; Map Reading; Visual Waypoints', BPC_IPC, 510),
+  makeFlight('BGF16', 'Navigation Introduction', BPC_IPC, 520),
+  makeFlight('BGF17', 'Navigation Consolidation; Low Level', BPC_IPC, 530),
+  makeGround('BGF MB19', 'Solo Navigation Briefing', BPC_IPC, 540),
+  makeFlight('BGF18', 'Navigation Solo', BPC_IPC, 550, { sortieType: 'Solo', twrDiReqd: 'YES' }),
+  makeGround('BGF MB20', 'Formation Intro Briefing', BPC_IPC, 560),
+  makeFTD('BGF FTD8', 'Formation Intro FTD', BPC_IPC, 570),
+  makeFlight('BGF19', 'Formation Introduction', BPC_IPC, 580),
+  makeFlight('BGF20', 'Formation Consolidation', BPC_IPC, 590),
+  makeFlight('BGF21', 'Final Handling Test (FHT)', BPC_IPC, 600),
+
+  // ========== BIF Phase ==========
+  makeGround('BIF MB1', 'Basic Instrument Flying Theory', BPC_IPC, 610),
+  makeGround('BIF CPT1', 'Basic Instrument Procedures - CPT', BPC_IPC, 620),
+  makeFTD('BIF FTD1', 'Basic Instrument Flying - FTD', BPC_IPC, 630),
+  makeFlight('BIF1', 'Basic Instrument Flying - Dual', BPC_IPC, 640),
+  makeFlight('BIF2', 'Basic IF Consolidation', BPC_IPC, 650),
+  makeFlight('BIF3', 'Basic IF Check', BPC_IPC, 660),
+
+  // ========== BNF Phase ==========
+  makeGround('BNF MB1', 'Night Flying Theory and Procedures', BPC_IPC, 670),
+  makeFTD('BNF FTD1', 'Night Flying - FTD', BPC_IPC, 680),
+  makeFlight('BNF1', 'Night Flying Introduction', BPC_IPC, 690, { dayNight: 'Night' }),
+  makeFlight('BNF2', 'Night Flying Consolidation', BPC_IPC, 700, { dayNight: 'Night' }),
+  makeFlight('BNF3', 'Night Check', BPC_IPC, 710, { dayNight: 'Night' }),
+
+  // ========== BNAV Phase ==========
+  makeGround('BNAV MB1', 'Navigation Theory', BPC_IPC, 720),
+  makeGround('BNAV MB2', 'Map Reading and Visual Waypoints', BPC_IPC, 730),
+  makeFTD('BNAV FTD1', 'Navigation Simulator Exercise', BPC_IPC, 740),
+  makeFlight('BNAV1', 'Navigation - Short Range', BPC_IPC, 750),
+  makeFlight('BNAV2', 'Navigation Consolidation', BPC_IPC, 760),
+  makeFlight('BNAV3', 'Navigation Solo Check', BPC_IPC, 770),
+  makeFlight('BNAV4', 'Navigation Solo', BPC_IPC, 780, { sortieType: 'Solo', twrDiReqd: 'YES' }),
+
+  // ========== FIC Phase ==========
+  makeGround('FIC GND1', 'Instructional Techniques Theory', FIC_ONLY, 800),
+  makeGround('FIC GND2', 'Teaching and Learning Principles', FIC_ONLY, 810),
+  makeGround('FIC GND3', 'Lesson Planning and Preparation', FIC_ONLY, 820),
+  makeGround('FIC CPT1', 'Instructional Procedures - CPT', FIC_ONLY, 830),
+  makeFTD('FIC FTD1', 'Instructional Flying - FTD', FIC_ONLY, 840),
+  makeFlight('FIC1', 'Instructional Flying - Effects of Controls', FIC_ONLY, 850),
+  makeFlight('FIC2', 'Instructional Flying - Circuits', FIC_ONLY, 860),
+  makeFlight('FIC3', 'Instructional Flying - Navigation', FIC_ONLY, 870),
+  makeFlight('FIC4', 'Instructional Flying - Instruments', FIC_ONLY, 880),
+  makeFlight('FIC5', 'FIC Progress Check', FIC_ONLY, 890),
+  makeFlight('FIC6', 'FIC Final Handling Test', FIC_ONLY, 900),
+];
 
 export async function GET(request: NextRequest) {
   // Check secret
@@ -72,101 +322,34 @@ export async function GET(request: NextRequest) {
     // Check if already seeded
     const existingCount = await prisma.syllabusItem.count();
     if (existingCount > 0 && !force) {
+      // Check if existing items use wrong codes
+      const firstItem = await prisma.syllabusItem.findFirst({ orderBy: { sortOrder: 'asc' } });
+      const usesWrongCodes = firstItem && firstItem.code.includes('_');
       return NextResponse.json({
         success: true,
-        message: `Database already has ${existingCount} syllabus items. Use ?force=true to re-seed.`,
+        message: existingCount > 0
+          ? `Database has ${existingCount} syllabus items${usesWrongCodes ? ' (WARNING: using wrong codes like BGF_GND_001 - use ?force=true to fix)' : ' with correct codes'}. Use ?force=true to re-seed.`
+          : 'No items found.',
         count: existingCount,
-        skipped: true,
+        firstItemCode: firstItem?.code,
+        needsReseed: usesWrongCodes,
+        skipped: !usesWrongCodes,
       });
     }
 
-    const items = [
-      // BGF items
-      createSyllabusItem('BGF_GND_001', { eventDescription: 'Air Law and Regulations', type: 'Ground', sortOrder: 10, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BGF_GND_002', { eventDescription: 'Meteorology Fundamentals', type: 'Ground', sortOrder: 20, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BGF_GND_003', { eventDescription: 'Navigation Principles', type: 'Ground', sortOrder: 30, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BGF_GND_004', { eventDescription: 'Aircraft Systems - General', type: 'Ground', sortOrder: 40, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BGF_GND_005', { eventDescription: 'Flight Planning Basics', type: 'Ground', sortOrder: 50, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BGF_SIM_001', { eventDescription: 'Simulator Familiarisation', type: 'Simulator', sortOrder: 60, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_SIM_002', { eventDescription: 'Basic Aircraft Handling - Simulator', type: 'Simulator', sortOrder: 70, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_001', { eventDescription: 'Aircraft Familiarisation', type: 'Flying', sortOrder: 80, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_002', { eventDescription: 'Effects of Controls', type: 'Flying', sortOrder: 90, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_003', { eventDescription: 'Straight and Level Flight', type: 'Flying', sortOrder: 100, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_004', { eventDescription: 'Climbing and Descending', type: 'Flying', sortOrder: 110, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_005', { eventDescription: 'Medium Level Turns', type: 'Flying', sortOrder: 120, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_006', { eventDescription: 'Stalling', type: 'Flying', sortOrder: 130, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_007', { eventDescription: 'Circuit Training', type: 'Flying', sortOrder: 140, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_008', { eventDescription: 'First Solo', type: 'Flying', sortOrder: 150, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_009', { eventDescription: 'Advanced Circuits', type: 'Flying', sortOrder: 160, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_010', { eventDescription: 'Navigation Exercise 1', type: 'Flying', sortOrder: 170, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_011', { eventDescription: 'Navigation Exercise 2', type: 'Flying', sortOrder: 180, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_012', { eventDescription: 'BGF Progress Check', type: 'Flying', sortOrder: 190, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BGF_FLT_013', { eventDescription: 'BGF Final Handling Test', type: 'Flying', sortOrder: 200, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-
-      // BIF items
-      createSyllabusItem('BIF_GND_001', { eventDescription: 'Instrument Flight Rules Theory', type: 'Ground', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 210, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BIF_GND_002', { eventDescription: 'Instrument Meteorological Conditions', type: 'Ground', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 220, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BIF_GND_003', { eventDescription: 'Instrument Scanning Techniques', type: 'Ground', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 230, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BIF_SIM_001', { eventDescription: 'Instrument Flying - Simulator 1', type: 'Simulator', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 240, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_SIM_002', { eventDescription: 'Instrument Flying - Simulator 2', type: 'Simulator', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 250, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_SIM_003', { eventDescription: 'Instrument Flying - Simulator 3', type: 'Simulator', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 260, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_FLT_001', { eventDescription: 'Basic Instrument Flying 1', type: 'Flying', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 270, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_FLT_002', { eventDescription: 'Basic Instrument Flying 2', type: 'Flying', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 280, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_FLT_003', { eventDescription: 'Basic Instrument Flying 3', type: 'Flying', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 290, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_FLT_004', { eventDescription: 'Instrument Navigation Exercise', type: 'Flying', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 300, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_FLT_005', { eventDescription: 'BIF Progress Check', type: 'Flying', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 310, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BIF_FLT_006', { eventDescription: 'BIF Final Instrument Test', type: 'Flying', phase: 'Basic Instrument Flying', module: 'BIF', courses: ['BIF'], sortOrder: 320, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-
-      // BNF items
-      createSyllabusItem('BNF_GND_001', { eventDescription: 'Advanced Navigation Theory', type: 'Ground', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 330, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BNF_GND_002', { eventDescription: 'Map Reading and Chart Work', type: 'Ground', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 340, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BNF_SIM_001', { eventDescription: 'Navigation Simulator Exercise 1', type: 'Simulator', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 350, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_SIM_002', { eventDescription: 'Navigation Simulator Exercise 2', type: 'Simulator', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 360, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_FLT_001', { eventDescription: 'Solo Navigation Exercise 1', type: 'Flying', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 370, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_FLT_002', { eventDescription: 'Solo Navigation Exercise 2', type: 'Flying', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 380, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_FLT_003', { eventDescription: 'Navigation Cross Country 1', type: 'Flying', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 390, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_FLT_004', { eventDescription: 'Navigation Cross Country 2', type: 'Flying', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 400, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_FLT_005', { eventDescription: 'BNF Progress Check', type: 'Flying', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 410, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNF_FLT_006', { eventDescription: 'BNF Final Navigation Test', type: 'Flying', phase: 'Basic Navigation Flying', module: 'BNF', courses: ['BNF'], sortOrder: 420, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-
-      // BNAV items
-      createSyllabusItem('BNAV_GND_001', { eventDescription: 'Advanced Navigation Systems', type: 'Ground', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 430, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BNAV_GND_002', { eventDescription: 'GPS and Electronic Navigation', type: 'Ground', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 440, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BNAV_GND_003', { eventDescription: 'Flight Planning - Advanced', type: 'Ground', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 450, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('BNAV_SIM_001', { eventDescription: 'Advanced Navigation Simulator 1', type: 'Simulator', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 460, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNAV_SIM_002', { eventDescription: 'Advanced Navigation Simulator 2', type: 'Simulator', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 470, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNAV_FLT_001', { eventDescription: 'Advanced Navigation Flight 1', type: 'Flying', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 480, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNAV_FLT_002', { eventDescription: 'Advanced Navigation Flight 2', type: 'Flying', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 490, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('BNAV_FLT_003', { eventDescription: 'BNAV Final Test', type: 'Flying', phase: 'Basic Navigation', module: 'BNAV', courses: ['BNAV'], sortOrder: 500, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 }),
-
-      // FIC items
-      createSyllabusItem('FIC_GND_001', { eventDescription: 'Instructional Techniques', type: 'Ground', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 510, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('FIC_GND_002', { eventDescription: 'Teaching and Learning Theory', type: 'Ground', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 520, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('FIC_GND_003', { eventDescription: 'Lesson Planning', type: 'Ground', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 530, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('FIC_GND_004', { eventDescription: 'Airmanship and Airspace', type: 'Ground', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 540, totalEventHours: 2, duration: 2 }),
-      createSyllabusItem('FIC_SIM_001', { eventDescription: 'Instructional Simulator Exercise 1', type: 'Simulator', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 550, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_SIM_002', { eventDescription: 'Instructional Simulator Exercise 2', type: 'Simulator', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 560, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_FLT_001', { eventDescription: 'Instructional Flying - Effects of Controls', type: 'Flying', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 570, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_FLT_002', { eventDescription: 'Instructional Flying - Circuits', type: 'Flying', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 580, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_FLT_003', { eventDescription: 'Instructional Flying - Navigation', type: 'Flying', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 590, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_FLT_004', { eventDescription: 'Instructional Flying - Instruments', type: 'Flying', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 600, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_FLT_005', { eventDescription: 'FIC Progress Check', type: 'Flying', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 610, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-      createSyllabusItem('FIC_FLT_006', { eventDescription: 'FIC Final Handling Test', type: 'Flying', phase: 'Flight Instructor Course', module: 'FIC', courses: ['FIC'], sortOrder: 620, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 }),
-    ];
-
     // If force, delete existing items first
-    if (force && existingCount > 0) {
+    if (existingCount > 0) {
       await prisma.syllabusItem.deleteMany({});
-      await prisma.syllabusHistory.deleteMany({});
+      try { await prisma.syllabusHistory.deleteMany({}); } catch (e) {}
     }
 
     // Create all items
     let created = 0;
     const errors: string[] = [];
 
-    for (const item of items) {
+    for (const item of SYLLABUS_ITEMS) {
       try {
-        await prisma.syllabusItem.create({ data: item });
+        await prisma.syllabusItem.create({ data: item as any });
         created++;
       } catch (err: any) {
         errors.push(`${item.code}: ${err.message}`);
@@ -175,21 +358,24 @@ export async function GET(request: NextRequest) {
 
     // Log to history
     if (created > 0) {
-      await prisma.syllabusHistory.create({
-        data: {
-          syllabusItemId: 'bulk-seed',
-          changeType: 'SEED',
-          changeData: { itemsCreated: created, seededAt: new Date().toISOString() },
-          changedBy: 'seed-api',
-          changeReason: 'Initial database seed via API',
-        },
-      });
+      try {
+        await prisma.syllabusHistory.create({
+          data: {
+            syllabusItemId: 'bulk-seed',
+            changeType: 'SEED',
+            changeData: { itemsCreated: created, seededAt: new Date().toISOString(), codeStyle: 'matching-scores' } as any,
+            changedBy: 'seed-api',
+            changeReason: 'Re-seed with correct codes matching PT-051 score records (BGF1, BGF MB1, BGF FTD1, etc.)',
+          },
+        });
+      } catch (e) {}
     }
 
     return NextResponse.json({
       success: true,
-      message: `Successfully seeded ${created} syllabus items`,
+      message: `Successfully seeded ${created} syllabus items with codes matching PT-051 score records`,
       created,
+      total: SYLLABUS_ITEMS.length,
       errors: errors.length > 0 ? errors : undefined,
     });
 

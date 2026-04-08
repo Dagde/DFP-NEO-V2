@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
     });
 
     console.log(`📚 [API] /api/syllabus - Returning ${syllabusItems.length} items`);
-    return NextResponse.json({ syllabusItems }, { headers: CORS_HEADERS });
+    // Return as both 'syllabus' and 'syllabusItems' for compatibility
+    return NextResponse.json({ syllabus: syllabusItems, syllabusItems }, { headers: CORS_HEADERS });
   } catch (error) {
     console.error('❌ Error fetching syllabus:', error);
     return NextResponse.json(

@@ -119,10 +119,10 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA } from './mockData';
+import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
-import { loadSyllabusFromDB } from './lib/syllabusService';
+import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
 // --- DEFAULT PHRASE BANK (configuration data - not mock data) ---
 import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
 import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
@@ -601,11 +601,11 @@ const computeNextEventsForTrainee = (
     // Find Next Event
     for (let i = 0; i < individualLMP.length; i++) {
         const item = individualLMP[i];
-        if (completedEventIds.has(item.id) || item.code.includes(' MB')) {
+        if (completedEventIds.has(item.id) || completedEventIds.has(item.code) || item.code.includes(' MB')) {
             continue;
         }
 
-        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p) || completedEventIds.has(p));
         if (prereqsMet) {
             nextEvt = item;
             nextEventIndex = i;
@@ -4387,16 +4387,29 @@ useEffect(() => {
             try {
                 const result = await loadSyllabusFromDB();
                 if (result.syllabus.length > 0) {
-                    setSyllabusDetails(result.syllabus);
-                    if (result.source === 'expired-cache') {
-                        console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
-                        setSyllabusError(result.error || null);
+                    // Check if DB syllabus uses wrong codes (e.g. BGF_GND_001 instead of BGF1)
+                    // Wrong codes don't match PT-051 score records, so fall back to mockData syllabus
+                    const firstItem = result.syllabus[0];
+                    const hasWrongCodes = firstItem && firstItem.code && firstItem.code.includes('_GND_') || 
+                                         firstItem && firstItem.code && firstItem.code.includes('_FLT_') ||
+                                         firstItem && firstItem.code && firstItem.code.includes('_SIM_');
+                    if (hasWrongCodes) {
+                        console.warn(`⚠️ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Falling back to built-in syllabus (${INITIAL_SYLLABUS_DETAILS.length} items). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix permanently.`);
+                        clearSyllabusCache(); // Clear bad cache so next load re-fetches from DB
+                        setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
                     } else {
-                        console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+                        setSyllabusDetails(result.syllabus);
+                        if (result.source === 'expired-cache') {
+                            console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
+                            setSyllabusError(result.error || null);
+                        } else {
+                            console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+                        }
                     }
                 } else {
-                    console.error('❌ [Syllabus] No syllabus data available:', result.error);
-                    setSyllabusError(result.error || 'No syllabus data available');
+                    console.warn('⚠️ [Syllabus] No DB syllabus available - falling back to built-in syllabus');
+                    setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                    setSyllabusError(result.error || null);
                 }
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -4707,6 +4720,47 @@ useEffect(() => {
         };
         loadInitialData();
     }, []);
+
+    // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
+    // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
+    useEffect(() => {
+        if (!syllabusDetails.length || !allTraineesData.length) return;
+        console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
+        setTraineeLMPs(prev => {
+            const newLMPs = new Map(prev);
+            allTraineesData.forEach((trainee: any) => {
+                // Derive lmpType
+                let lmpType = trainee.lmpType || 'BPC+IPC';
+                if (lmpType === 'BPC+IPC' && trainee.course) {
+                    const courseUpper = (trainee.course as string).toUpperCase();
+                    if (courseUpper.startsWith('FIC')) {
+                        lmpType = 'FIC';
+                    }
+                }
+                const isFicTrainee = lmpType === 'FIC';
+                const alreadySet = newLMPs.has(trainee.fullName);
+                // Always set for FIC trainees; set for others only if not yet initialized
+                if (!alreadySet || isFicTrainee) {
+                    const masterLMP = syllabusDetails.filter(item => {
+                        if (lmpType === 'BPC+IPC') {
+                            return !item.lmpType || item.lmpType === 'Master LMP';
+                        }
+                        return item.courses && item.courses.includes(lmpType);
+                    });
+                    if (masterLMP.length > 0) {
+                        newLMPs.set(trainee.fullName, [...masterLMP]);
+                        console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
+                    } else {
+                        // Fallback: use entire syllabus if no specific match
+                        newLMPs.set(trainee.fullName, [...syllabusDetails]);
+                        console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => fallback to full syllabus (${syllabusDetails.length} events)`);
+                    }
+                }
+            });
+            console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
+            return newLMPs;
+        });
+    }, [syllabusDetails, allTraineesData]);
 
     // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
     useEffect(() => {
