@@ -4379,6 +4379,11 @@ useEffect(() => {
             setCurrentUser(userString);
         }
     }, [authUser, currentUser, currentUserName]);
+    // Syllabus state declared here before useEffects that reference it to avoid TDZ errors
+    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
+    const [syllabusLoading, setSyllabusLoading] = useState<boolean>(true);
+    const [syllabusError, setSyllabusError] = useState<string | null>(null);
+
 // Load syllabus from DB on mount (startup loading with cache)
     useEffect(() => {
         const loadSyllabus = async () => {
@@ -4976,9 +4981,6 @@ useEffect(() => {
     const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
-    const [syllabusLoading, setSyllabusLoading] = useState<boolean>(true);
-    const [syllabusError, setSyllabusError] = useState<string | null>(null);
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
     
     // Event Limits State (Lifted from SettingsView)
