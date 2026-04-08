@@ -7227,7 +7227,6 @@ const AircraftAvailabilityOverlay = ({
       })));
       const lastAvailable = data.snapshots[data.snapshots.length - 1]?.available ?? plannedAvailability;
       setCurrentAvailable(lastAvailable);
-      console.log("[LAST_SET] SET TO", lastAvailable, "(from localStorage load)");
       lastSetByOverlay.current = lastAvailable;
     } else {
       const initialSnapshot = {
@@ -7242,7 +7241,6 @@ const AircraftAvailabilityOverlay = ({
       };
       setSnapshots([initialSnapshot]);
       setCurrentAvailable(plannedAvailability);
-      console.log("[LAST_SET] SET TO", plannedAvailability, "(from initial snapshot)");
       lastSetByOverlay.current = plannedAvailability;
       const initialDescription = `Aircraft availability initialized at ${plannedAvailability} (${totalAircraft - plannedAvailability} aircraft unavailable)`;
       const initialDetails = `Time: ${(/* @__PURE__ */ new Date()).toLocaleTimeString()} | Initial: ${plannedAvailability} | Total: ${totalAircraft} | Type: Initial setup`;
@@ -7365,7 +7363,6 @@ const AircraftAvailabilityOverlay = ({
         valueChanged,
         snapshotsBeforeUpdate: snapshots.length
       });
-      console.log("[LAST_SET] SET TO", snappedCount, "(from drag end)");
       lastSetByOverlay.current = snappedCount;
       setCurrentAvailable(snappedCount);
       if (valueChanged) {
@@ -7392,41 +7389,14 @@ const AircraftAvailabilityOverlay = ({
           now2.getSeconds(),
           now2.getMilliseconds()
         );
-        console.log("🕐 TIMESTAMP DEBUG:", {
-          now: now2.toISOString(),
-          nowLocal: now2.toLocaleString(),
-          currentDate: currentDate.toISOString(),
-          currentDateLocal: currentDate.toLocaleString(),
-          snapshotTime: snapshotTime.toISOString(),
-          snapshotTimeLocal: snapshotTime.toLocaleString(),
-          nowHours: now2.getHours(),
-          nowMinutes: now2.getMinutes(),
-          snapshotHours: snapshotTime.getHours(),
-          snapshotMinutes: snapshotTime.getMinutes()
-        });
         const newSnapshot = {
           timestamp: snapshotTime,
           available: snappedCount,
           total: currentTotalAircraft,
           notes: `Availability changed to ${snappedCount}`
         };
-        console.log("📸 CREATING NEW SNAPSHOT:", {
-          newSnapshot: {
-            time: newSnapshot.timestamp.toLocaleTimeString(),
-            available: newSnapshot.available,
-            total: newSnapshot.total
-          },
-          snapshotsAfterUpdate: snapshots.length + 1
-        });
         setSnapshots((prev) => {
           const updated = [...prev, newSnapshot];
-          console.log("📊 SNAPSHOTS UPDATED:", {
-            count: updated.length,
-            all: updated.map((s) => ({
-              time: s.timestamp.toLocaleTimeString(),
-              available: s.available
-            }))
-          });
           return updated;
         });
       } else {
@@ -7465,40 +7435,22 @@ const AircraftAvailabilityOverlay = ({
   const endOfDayX = getEndOfDayX();
   const renderHistoricalLines = () => {
     if (snapshots.length === 0) {
-      console.log("📏 RENDER HISTORICAL LINES: No snapshots");
       return null;
     }
     const now2 = /* @__PURE__ */ new Date();
     const currentTimeX2 = getXPosition(now2);
     const filteredSnapshots = snapshots;
-    console.log("📏 RENDER HISTORICAL LINES:", {
-      originalCount: snapshots.length,
-      filteredCount: filteredSnapshots.length,
-      isDragging,
-      currentAvailable,
-      currentTimeX: currentTimeX2.toFixed(2)
-    });
     const lines = [];
     for (let i = 0; i < filteredSnapshots.length; i++) {
       const snapshot = filteredSnapshots[i];
       const snapshotX = getXPosition(snapshot.timestamp);
       if (i === filteredSnapshots.length - 1 && snapshotX >= currentTimeX2) {
-        console.log(`  ⏭️ Skipping Line ${i} (most recent, at/after current time)`);
         continue;
       }
       const startX = i === 0 ? 0 : snapshotX;
       const endX = i === filteredSnapshots.length - 1 ? currentTimeX2 : getXPosition(filteredSnapshots[i + 1].timestamp);
       const y = getYPosition(snapshot.available);
-      if (i === 0 || i === 5 || i === filteredSnapshots.length - 1) {
-        console.log(`  📍 Line ${i}:`, {
-          time: snapshot.timestamp.toLocaleTimeString(),
-          available: snapshot.available,
-          startX: startX.toFixed(2),
-          endX: endX.toFixed(2),
-          y: y.toFixed(2),
-          timestampRaw: snapshot.timestamp.toISOString()
-        });
-      }
+      if (i === 0 || i === 5 || i === filteredSnapshots.length - 1) ;
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
           "line",
@@ -7516,7 +7468,7 @@ const AircraftAvailabilityOverlay = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-            lineNumber: 410,
+            lineNumber: 362,
             columnNumber: 17
           },
           void 0
@@ -7543,7 +7495,7 @@ const AircraftAvailabilityOverlay = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-                lineNumber: 432,
+                lineNumber: 384,
                 columnNumber: 25
               },
               void 0
@@ -7558,36 +7510,7 @@ const AircraftAvailabilityOverlay = ({
   const lastChangeX = lastSnapshot ? getXPosition(lastSnapshot.timestamp) : 0;
   const now = /* @__PURE__ */ new Date();
   const currentTimeX = getXPosition(now);
-  if (lastSnapshot) {
-    console.log("🕐 TIMESTAMP COMPARISON:", {
-      now: now.toISOString(),
-      nowLocal: now.toLocaleTimeString(),
-      nowHours: now.getHours(),
-      nowMinutes: now.getMinutes(),
-      lastSnapshotTime: lastSnapshot.timestamp.toISOString(),
-      lastSnapshotLocal: lastSnapshot.timestamp.toLocaleTimeString(),
-      lastSnapshotHours: lastSnapshot.timestamp.getHours(),
-      lastSnapshotMinutes: lastSnapshot.timestamp.getMinutes(),
-      currentTimeX: currentTimeX.toFixed(2),
-      lastChangeX: lastChangeX.toFixed(2),
-      difference: (currentTimeX - lastChangeX).toFixed(2)
-    });
-  }
   const needsSplit = lastSnapshot && currentTimeX > lastChangeX && currentTimeX < endOfDayX;
-  console.log("🎯 SOLID LINE CALCULATION:", {
-    hasLastSnapshot: !!lastSnapshot,
-    lastSnapshotTime: lastSnapshot?.timestamp.toLocaleTimeString(),
-    lastSnapshotTimestamp: lastSnapshot?.timestamp.toISOString(),
-    lastSnapshotAvailable: lastSnapshot?.available,
-    lastChangeX: lastChangeX.toFixed(2),
-    currentTimeX: currentTimeX.toFixed(2),
-    endOfDayX: endOfDayX.toFixed(2),
-    displayY: displayY.toFixed(2),
-    isDragging,
-    needsSplit,
-    currentTime: now.toISOString(),
-    currentDate: currentDate.toISOString()
-  });
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     "svg",
     {
@@ -7612,7 +7535,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 508,
+              lineNumber: 433,
               columnNumber: 35
             },
             void 0
@@ -7633,14 +7556,14 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 518,
+              lineNumber: 443,
               columnNumber: 35
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 506,
+          lineNumber: 431,
           columnNumber: 31
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: currentTimeX < lastChangeX ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -7659,7 +7582,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 535,
+              lineNumber: 460,
               columnNumber: 45
             },
             void 0
@@ -7679,7 +7602,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 546,
+              lineNumber: 471,
               columnNumber: 45
             },
             void 0
@@ -7700,14 +7623,14 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 556,
+              lineNumber: 481,
               columnNumber: 45
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 533,
+          lineNumber: 458,
           columnNumber: 41
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -7726,7 +7649,7 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 570,
+              lineNumber: 495,
               columnNumber: 45
             },
             void 0
@@ -7747,22 +7670,22 @@ const AircraftAvailabilityOverlay = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-              lineNumber: 582,
+              lineNumber: 507,
               columnNumber: 49
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 568,
+          lineNumber: 493,
           columnNumber: 41
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 530,
+          lineNumber: 455,
           columnNumber: 33
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-          lineNumber: 504,
+          lineNumber: 429,
           columnNumber: 23
         }, void 0) : (
           // If no snapshot exists (shouldn't happen), render full draggable line from start of day
@@ -7782,7 +7705,7 @@ const AircraftAvailabilityOverlay = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-                lineNumber: 601,
+                lineNumber: 526,
                 columnNumber: 30
               },
               void 0
@@ -7803,14 +7726,14 @@ const AircraftAvailabilityOverlay = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-                lineNumber: 610,
+                lineNumber: 535,
                 columnNumber: 30
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-            lineNumber: 600,
+            lineNumber: 525,
             columnNumber: 26
           }, void 0)
         )
@@ -7820,13 +7743,13 @@ const AircraftAvailabilityOverlay = ({
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-      lineNumber: 494,
+      lineNumber: 419,
       columnNumber: 9
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-fresh/components/AircraftAvailabilityOverlay.tsx",
-    lineNumber: 493,
+    lineNumber: 418,
     columnNumber: 13
   }, void 0);
 };
@@ -89440,15 +89363,13 @@ async function initializeData() {
       console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
     });
     const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-    const includeStaffMockData = dataSourceSettings2.staff !== false;
+    const includeStaffMockData = dataSourceSettings.staff !== false;
     instructors = mergeInstructorData(instructors, allMockInstructors, includeStaffMockData);
     console.log("🔄 Loaded staff - DB always included, mock data:", includeStaffMockData ? "ENABLED" : "DISABLED");
     console.log("👨‍🎓 Fetching trainees from API...");
     trainees = await fetchTrainees();
     console.log("✅ Trainee DB loaded:", trainees.length);
-    const storedSettings = typeof localStorage !== "undefined" ? localStorage.getItem("dataSourceSettings") : null;
-    const dataSourceSettings2 = storedSettings ? JSON.parse(storedSettings) : null;
-    const includeTraineeMockData = dataSourceSettings2?.trainee !== false;
+    const includeTraineeMockData = dataSourceSettings.trainee !== false;
     console.log("🔄 Data Sources - Trainee MockData:", includeTraineeMockData ? "ENABLED" : "DISABLED");
     trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
     console.log("🔄 Loaded trainees (DB" + (includeTraineeMockData ? " + mock" : " only") + ") with _dataSource tags for UI filtering");
@@ -92862,10 +92783,10 @@ const App = () => {
             if (c.name && c.color) colors[c.name] = c.color;
           });
           setCourseColors((prev) => ({ ...prev, ...colors }));
+          setIsCoursesLoaded(true);
         } else {
           setIsCoursesLoaded(true);
           console.log("🎓 No courses in DB yet - keeping existing course state");
-          setIsCoursesLoaded(true);
         }
         {
           console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);

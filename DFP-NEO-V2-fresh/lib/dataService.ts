@@ -271,11 +271,8 @@ export async function initializeData() {
          trainees = await fetchTrainees();
          console.log('✅ Trainee DB loaded:', trainees.length);
 
-         // Read trainee mock data setting from localStorage
-         // If trainee mock data is enabled, merge mock trainees with DB trainees
-         const storedSettings = typeof localStorage !== 'undefined' ? localStorage.getItem('dataSourceSettings') : null;
-         const dataSourceSettings = storedSettings ? JSON.parse(storedSettings) : null;
-         const includeTraineeMockData = dataSourceSettings?.trainee !== false; // Default to true if not set
+         // Use the dataSourceSettings already loaded at the top of initializeData()
+         const includeTraineeMockData = dataSourceSettings.trainee !== false; // Default to true if not set
          
          console.log('🔄 Data Sources - Trainee MockData:', includeTraineeMockData ? 'ENABLED' : 'DISABLED');
          trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);

@@ -52,7 +52,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             })));
             const lastAvailable = data.snapshots[data.snapshots.length - 1]?.available ?? plannedAvailability;
             setCurrentAvailable(lastAvailable);
-            console.log('[LAST_SET] SET TO', lastAvailable, '(from localStorage load)');
             lastSetByOverlay.current = lastAvailable;
         } else {
             // Initialize with planned availability at start of day (0001)
@@ -64,7 +63,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             };
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
-            console.log('[LAST_SET] SET TO', plannedAvailability, '(from initial snapshot)');
             lastSetByOverlay.current = plannedAvailability;
                 
                 // Log audit record for initial availability setup
@@ -233,7 +231,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             
             // ALWAYS update lastSetByOverlay BEFORE any state/prop changes
             // This prevents the plannedAvailability sync useEffect from overwriting our drag result
-            console.log('[LAST_SET] SET TO', snappedCount, '(from drag end)');
             lastSetByOverlay.current = snappedCount;
             setCurrentAvailable(snappedCount);
 
@@ -271,18 +268,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                        now.getMilliseconds()
                    );
                 
-                console.log('🕐 TIMESTAMP DEBUG:', {
-                    now: now.toISOString(),
-                    nowLocal: now.toLocaleString(),
-                    currentDate: currentDate.toISOString(),
-                    currentDateLocal: currentDate.toLocaleString(),
-                    snapshotTime: snapshotTime.toISOString(),
-                    snapshotTimeLocal: snapshotTime.toLocaleString(),
-                    nowHours: now.getHours(),
-                    nowMinutes: now.getMinutes(),
-                    snapshotHours: snapshotTime.getHours(),
-                    snapshotMinutes: snapshotTime.getMinutes()
-                });
                 
                 const newSnapshot: AircraftAvailabilitySnapshot = {
                     timestamp: snapshotTime,
@@ -291,24 +276,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     notes: `Availability changed to ${snappedCount}`
                 };
                 
-                console.log('📸 CREATING NEW SNAPSHOT:', {
-                    newSnapshot: {
-                        time: newSnapshot.timestamp.toLocaleTimeString(),
-                        available: newSnapshot.available,
-                        total: newSnapshot.total
-                 },
-                    snapshotsAfterUpdate: snapshots.length + 1
-                });
                 
                 setSnapshots(prev => {
                     const updated = [...prev, newSnapshot];
-                    console.log('📊 SNAPSHOTS UPDATED:', {
-                        count: updated.length,
-                        all: updated.map(s => ({
-                            time: s.timestamp.toLocaleTimeString(),
-                            available: s.available
-                     }))
-                 });
                     return updated;
                 });
             } else {
@@ -355,7 +325,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     // Render historical segments - each segment between snapshots
     const renderHistoricalLines = () => {
         if (snapshots.length === 0) {
-            console.log('📏 RENDER HISTORICAL LINES: No snapshots');
             return null;
         }
         
@@ -366,13 +335,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
            // Use all snapshots without filtering
            const filteredSnapshots = snapshots;
 
-           console.log("📏 RENDER HISTORICAL LINES:", {
-               originalCount: snapshots.length,
-               filteredCount: filteredSnapshots.length,
-               isDragging: isDragging,
-               currentAvailable: currentAvailable,
-               currentTimeX: currentTimeX.toFixed(2)
-           });
 
         
         const lines = [];
@@ -383,7 +345,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             // Only render this segment if the snapshot is in the past (before current time)
             // Skip the last snapshot if it's at or after current time (it will be rendered separately)
             if (i === filteredSnapshots.length - 1 && snapshotX >= currentTimeX) {
-                console.log(`  ⏭️ Skipping Line ${i} (most recent, at/after current time)`);
                 continue;
             }
             
@@ -394,15 +355,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             
             // Only log specific lines to reduce spam
                if (i === 0 || i === 5 || i === filteredSnapshots.length - 1) {
-                   console.log(`  📍 Line ${i}:`, {
-                time: snapshot.timestamp.toLocaleTimeString(),
-                available: snapshot.available,
-                startX: startX.toFixed(2),
-                endX: endX.toFixed(2),
-                y: y.toFixed(2),
-                       timestampRaw: snapshot.timestamp.toISOString()
-
-               });
                }
             
             // Add horizontal line for this segment
@@ -457,38 +409,11 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     
     // Debug timestamp comparison
     if (lastSnapshot) {
-        console.log('🕐 TIMESTAMP COMPARISON:', {
-            now: now.toISOString(),
-            nowLocal: now.toLocaleTimeString(),
-            nowHours: now.getHours(),
-            nowMinutes: now.getMinutes(),
-            lastSnapshotTime: lastSnapshot.timestamp.toISOString(),
-            lastSnapshotLocal: lastSnapshot.timestamp.toLocaleTimeString(),
-            lastSnapshotHours: lastSnapshot.timestamp.getHours(),
-            lastSnapshotMinutes: lastSnapshot.timestamp.getMinutes(),
-            currentTimeX: currentTimeX.toFixed(2),
-            lastChangeX: lastChangeX.toFixed(2),
-            difference: (currentTimeX - lastChangeX).toFixed(2)
-        });
     }
     
     // Determine if we need to split the line into history (dashed) and future (solid)
     const needsSplit = lastSnapshot && currentTimeX > lastChangeX && currentTimeX < endOfDayX;
     
-    console.log('🎯 SOLID LINE CALCULATION:', {
-        hasLastSnapshot: !!lastSnapshot,
-        lastSnapshotTime: lastSnapshot?.timestamp.toLocaleTimeString(),
-           lastSnapshotTimestamp: lastSnapshot?.timestamp.toISOString(),
-        lastSnapshotAvailable: lastSnapshot?.available,
-        lastChangeX: lastChangeX.toFixed(2),
-        currentTimeX: currentTimeX.toFixed(2),
-        endOfDayX: endOfDayX.toFixed(2),
-        displayY: displayY.toFixed(2),
-        isDragging: isDragging,
-        needsSplit: needsSplit,
-           currentTime: now.toISOString(),
-           currentDate: currentDate.toISOString()
-    });
 
     return (<>
         <svg

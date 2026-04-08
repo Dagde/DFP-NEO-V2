@@ -4453,10 +4453,10 @@ useEffect(() => {
                     const colors: { [key: string]: string } = {};
                     data.courses.forEach((c: any) => { if (c.name && c.color) colors[c.name] = c.color; });
                     setCourseColors(prev => ({ ...prev, ...colors }));
+                    setIsCoursesLoaded(true); // FIX: was never called when courses exist in DB
                 } else {
                     setIsCoursesLoaded(true);
                     console.log('🎓 No courses in DB yet - keeping existing course state');
-                    setIsCoursesLoaded(true);
                 }
 
                 // --- Individual LMP Sync ---
