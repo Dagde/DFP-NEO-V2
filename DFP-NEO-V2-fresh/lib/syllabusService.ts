@@ -121,7 +121,7 @@ export async function loadSyllabusFromDB(): Promise<SyllabusLoadResult> {
     }
 
     const data = await response.json();
-    const rawItems: SyllabusItemDetail[] = data.syllabusItems || [];
+    const rawItems: SyllabusItemDetail[] = data.syllabus || data.syllabusItems || [];
 
     if (rawItems.length === 0) {
       throw new Error('No syllabus items returned from database');

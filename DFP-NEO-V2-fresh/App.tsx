@@ -1795,6 +1795,8 @@ function generateDfpInternal(
     // Uses deficit-based allocation: courses that are behind their target get priority
 const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (!rankedList.length) return [];
+        // If no course priorities configured, return list as-is (no mixing needed)
+        if (!coursePriorities.length) return rankedList;
         
         // STEP 1: Identify and extract Solo-with-TWR-DI block
         const soloWithTwrDiIndices: number[] = [];
