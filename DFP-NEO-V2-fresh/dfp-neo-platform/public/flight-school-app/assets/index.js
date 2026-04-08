@@ -92708,7 +92708,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("🌙 ===== NIGHT INSTRUCTOR SELECTION =====");
     console.log(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
     const nightEligiblePool = originalInstructors.filter((ip) => {
-      if (ip.role !== "QFI") return false;
+      if (ip.role !== "QFI" && !ip.isQFI) return false;
       if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, "flight")) return false;
       if (isPersonScheduledForDayEvents(ip.name)) {
         console.log(`🌙 ❌ ${ip.name} excluded - has day events (Active DFP or NEO-Build)`);
@@ -93055,12 +93055,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           (i) => i.role === "SIM IP" && !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
         );
         const availableQfis = instructors.filter(
-          (i) => i.role === "QFI" && !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+          (i) => (i.role === "QFI" || i.isQFI === true) && !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
         );
         candidates = [...simIps, ...availableQfis];
       } else {
         candidates = instructors.filter((ip) => {
-          if (type === "flight" && ip.role !== "QFI") return false;
+          if (type === "flight" && ip.role !== "QFI" && !ip.isQFI) return false;
           if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
           return true;
         });
@@ -95751,7 +95751,7 @@ ${"=".repeat(60)}`);
     const data = /* @__PURE__ */ new Map();
     const callsignPrefix = school === "ESL" ? "ROLR" : "VIPR";
     instructorsData.forEach((instructor) => {
-      if (instructor.name && instructor.role === "QFI" && instructor.callsignNumber > 0) {
+      if (instructor.name && (instructor.role === "QFI" || instructor.isQFI) && instructor.callsignNumber > 0) {
         data.set(instructor.name, {
           callsignPrefix,
           callsignNumber: instructor.callsignNumber

@@ -1,20 +1,23 @@
-# Multiple Fix Tasks
+# DFP-NEO-V2 Fix Session
 
-## 1. Fix Course Management Save Button
-- [ ] Find why Save Changes doesn't persist to database
-- [ ] Check built index.js for the actual handler
-- [ ] Fix and rebuild
+## Completed
+- [x] Fix btn-aluminium-brushed CSS (dark grey → light silver)
+- [x] Fix hex colour handling in all components (FlightTile, CourseDataWindow, Sidebar, etc.)
+- [x] Rebuild bundle and push (commit 8e756c74)
+- [x] Fix applyCoursePriority returning [] when coursePriorities=[] (commit 20a277bb)
+- [x] Fix TDZ crash: syllabusDetails useState before useEffects (commit 55bdd1ef)
+- [x] Fix syllabus code mismatch (item.id vs item.code in completedEventIds check)
+- [x] Fix blank Master LMP: init syllabusDetails with INITIAL_SYLLABUS_DETAILS,
+      remove from settings save/load, add catch fallback (commit ee2e3981)
 
-## 2. Fix Course Progress Graphs Not Displaying
-- [ ] Find CourseProgressGraph / CourseDataWindow component
-- [ ] Check what's broken in the rendering
-- [ ] Fix and rebuild
-
-## 3. Make Graph Guidelines Thinner
-- [ ] Find graph rendering code
-- [ ] Reduce gridline thickness
-
-## 4. Fix FIC211 Course Colour
-- [ ] Find how course colours are assigned
-- [ ] Find what colour FIC211 uses in the rest of the app
-- [ ] Apply correct teal/blue colour to FIC211 header in Course Progress page
+## Active - NEO Build STBY Issue
+- [ ] View neo2.jpg screenshot
+- [ ] Investigate why scheduleEvent() returns null for all trainees
+  - Check syllabusDetails population (now fixed - always INITIAL_SYLLABUS_DETAILS)
+  - Check instructorsData filtering / timing
+  - Check isInstructorEligibleByUnit()
+  - Check eventLimits
+  - Check time boundary / availability matching
+  - Check computeNextEventsForTrainee returns correct events
+- [ ] Implement fix for NEO Build STBY issue
+- [ ] Rebuild bundle and push fix

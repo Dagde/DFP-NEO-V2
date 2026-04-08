@@ -1943,7 +1943,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         
         // CRITICAL: Filter out instructors who already have day events (including from Active DFP)
         const nightEligiblePool = originalInstructors.filter(ip => {
-            if (ip.role !== 'QFI') return false;
+            if (ip.role !== 'QFI' && !ip.isQFI) return false;
             if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, 'flight')) return false;
             
             // NEW: Check if instructor has day events (including Active DFP)
@@ -2394,20 +2394,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
             if (type === 'ftd') {
-                // FTD: SIM IPs first, then QFIs
+                // FTD: SIM IPs first, then QFIs (role='QFI' OR isQFI=true)
                 const simIps = instructors.filter(i =>
                     i.role === 'SIM IP' &&
                     !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
                 );
                 const availableQfis = instructors.filter(i =>
-                    i.role === 'QFI' &&
+                    (i.role === 'QFI' || i.isQFI === true) &&
                     !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
                 );
                 candidates = [...simIps, ...availableQfis];
             } else {
-                // FLIGHT = QFI only; CPT/GROUND = any instructor
+                // FLIGHT = QFI only (role='QFI' OR isQFI=true); CPT/GROUND = any instructor
                 candidates = instructors.filter(ip => {
-                    if (type === 'flight' && ip.role !== 'QFI') return false;
+                    if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
                     if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
                     return true;
                 });
@@ -6121,7 +6121,7 @@ useEffect(() => {
         const callsignPrefix = school === 'ESL' ? 'ROLR' : 'VIPR';
         
         instructorsData.forEach(instructor => {
-            if (instructor.name && instructor.role === 'QFI' && instructor.callsignNumber > 0) {
+            if (instructor.name && (instructor.role === 'QFI' || instructor.isQFI) && instructor.callsignNumber > 0) {
                 data.set(instructor.name, {
                     callsignPrefix,
                     callsignNumber: instructor.callsignNumber
