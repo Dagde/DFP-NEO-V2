@@ -2149,7 +2149,6 @@ app.post('/api/syllabus', async (req, res) => {
     const body = req.body;
     const { randomUUID } = await import('crypto');
     const id = randomUUID();
-    const now = new Date().toISOString();
 
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
@@ -2165,7 +2164,7 @@ app.post('/api/syllabus', async (req, res) => {
         $14,$15,$16,$17,$18,
         $19,$20,$21,$22,$23,
         $24,$25,$26,$27,$28,$29,$30,$31,
-        $32,$33,$34,$35
+        $32,$33,NOW(),NOW()
       )`,
       id, body.code, body.eventDescription, body.phase, body.module, body.type,
       body.sortieType || null, body.dayNight || 'Day',
@@ -2178,7 +2177,7 @@ app.post('/api/syllabus', async (req, res) => {
       body.location || null, body.sortOrder || 0,
       body.lmpType || null, body.twrDiReqd || null, body.cctOnly || null,
       body.isRemedial || false, true, 1,
-      body.notes || null, body.createdBy || null, now, now
+      body.notes || null, body.createdBy || null
     );
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
@@ -2360,7 +2359,7 @@ app.get('/api/admin/seed-syllabus', async (req, res) => {
             $16,$17,$18,$19,$20,
             $21,$22,$23,$24,$25,
             $26,$27,$28,$29,$30,$31,
-            $32,$33,$34,$35
+            $32,$33,NOW(),NOW()
           )`,
           id, item.code, item.eventDescription, item.phase, item.module, item.type,
           null, 'Day',
@@ -2373,7 +2372,7 @@ app.get('/api/admin/seed-syllabus', async (req, res) => {
           null, item.sortOrder || 0,
           null, null, null,
           false, true, 1,
-          null, 'seed', now, now
+          null, 'seed'
         );
         created++;
       } catch (err) {
