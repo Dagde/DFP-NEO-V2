@@ -1,6 +1,6 @@
-console.log("DFP-NEO-V2 BUILD VERSION: a8c45f2e - RGBA-COLORS+GHOST-DIAG-V2");
-window.__DFP_VERSION__ = "a8c45f2e-RGBA-COLORS-GHOST-DIAG-V2";
-setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: a8c45f2e - RGBA COLORS + GHOST DIAG V2 - correct index.js loaded"),5000);
+console.log("DFP-NEO-V2 BUILD VERSION: f7e3a91c - MUTED-COLORS+GHOST-KEY-FIX");
+window.__DFP_VERSION__ = "f7e3a91c-MUTED-COLORS-GHOST-KEY-FIX";
+setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: f7e3a91c - MUTED COLORS + GHOST KEY FIX - correct index.js loaded"),5000);
 import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
@@ -6204,37 +6204,37 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
   const isHexColorEarly = (color) => color && (color.startsWith("#") || color.startsWith("rgb"));
   const _tailwindColorToHexForStyle = (cls) => {
-    // Use rgba values to replicate Tailwind /50 opacity on dark background
-    // These match the visual appearance of the original /50 opacity tiles
+    // Use rgba values matching Tailwind /50 composited appearance on bg-gray-900
+    // /50 variants use 0.35 alpha, /80 variants use 0.5 alpha - matching the muted/dark look
     const map = {
-      "bg-sky-400/80":    "rgba(56,189,248,0.7)",
-      "bg-sky-400/50":    "rgba(56,189,248,0.55)",
-      "bg-purple-400/80": "rgba(192,132,252,0.7)",
-      "bg-purple-400/50": "rgba(192,132,252,0.55)",
-      "bg-yellow-400/80": "rgba(250,204,21,0.7)",
-      "bg-yellow-400/50": "rgba(250,204,21,0.55)",
-      "bg-pink-400/80":   "rgba(244,114,182,0.7)",
-      "bg-pink-400/50":   "rgba(244,114,182,0.55)",
-      "bg-teal-400/80":   "rgba(45,212,191,0.7)",
-      "bg-teal-400/50":   "rgba(45,212,191,0.55)",
-      "bg-indigo-400/80": "rgba(129,140,248,0.7)",
-      "bg-indigo-400/50": "rgba(129,140,248,0.55)",
-      "bg-cyan-400/80":   "rgba(34,211,238,0.7)",
-      "bg-cyan-400/50":   "rgba(34,211,238,0.55)",
-      "bg-blue-400/80":   "rgba(96,165,250,0.7)",
-      "bg-blue-400/50":   "rgba(96,165,250,0.55)",
-      "bg-green-400/80":  "rgba(74,222,128,0.7)",
-      "bg-green-400/50":  "rgba(74,222,128,0.55)",
-      "bg-orange-400/80": "rgba(251,146,60,0.7)",
-      "bg-orange-400/50": "rgba(251,146,60,0.55)",
-      "bg-red-400/80":    "rgba(248,113,113,0.7)",
-      "bg-red-400/50":    "rgba(248,113,113,0.55)",
-      "bg-gray-400/50":   "rgba(156,163,175,0.55)",
-      "bg-gray-500":      "rgba(107,114,128,0.85)",
-      "bg-amber-500/50":  "rgba(245,158,11,0.55)",
-      "bg-sky-500/50":    "rgba(14,165,233,0.55)",
-      "bg-teal-400":      "rgba(45,212,191,0.7)",
-      "bg-sky-400":       "rgba(56,189,248,0.7)",
+      "bg-sky-400/80":    "rgba(56,189,248,0.5)",
+      "bg-sky-400/50":    "rgba(56,189,248,0.35)",
+      "bg-purple-400/80": "rgba(192,132,252,0.5)",
+      "bg-purple-400/50": "rgba(192,132,252,0.35)",
+      "bg-yellow-400/80": "rgba(250,204,21,0.5)",
+      "bg-yellow-400/50": "rgba(250,204,21,0.35)",
+      "bg-pink-400/80":   "rgba(244,114,182,0.5)",
+      "bg-pink-400/50":   "rgba(244,114,182,0.35)",
+      "bg-teal-400/80":   "rgba(45,212,191,0.5)",
+      "bg-teal-400/50":   "rgba(45,212,191,0.35)",
+      "bg-indigo-400/80": "rgba(129,140,248,0.5)",
+      "bg-indigo-400/50": "rgba(129,140,248,0.35)",
+      "bg-cyan-400/80":   "rgba(34,211,238,0.5)",
+      "bg-cyan-400/50":   "rgba(34,211,238,0.35)",
+      "bg-blue-400/80":   "rgba(96,165,250,0.5)",
+      "bg-blue-400/50":   "rgba(96,165,250,0.35)",
+      "bg-green-400/80":  "rgba(74,222,128,0.5)",
+      "bg-green-400/50":  "rgba(74,222,128,0.35)",
+      "bg-orange-400/80": "rgba(251,146,60,0.5)",
+      "bg-orange-400/50": "rgba(251,146,60,0.35)",
+      "bg-red-400/80":    "rgba(248,113,113,0.5)",
+      "bg-red-400/50":    "rgba(248,113,113,0.35)",
+      "bg-gray-400/50":   "rgba(156,163,175,0.4)",
+      "bg-gray-500":      "rgba(107,114,128,0.7)",
+      "bg-amber-500/50":  "rgba(245,158,11,0.4)",
+      "bg-sky-500/50":    "rgba(14,165,233,0.4)",
+      "bg-teal-400":      "rgba(45,212,191,0.5)",
+      "bg-sky-400":       "rgba(56,189,248,0.5)",
     };
     return map[cls] || null;
   };
@@ -6755,34 +6755,34 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   // Convert Tailwind color classes to rgba so they render correctly regardless of Tailwind CDN scan
   const tailwindColorToHex = (cls) => {
     const map = {
-      "bg-sky-400/80":    "rgba(56,189,248,0.7)",
-      "bg-sky-400/50":    "rgba(56,189,248,0.55)",
-      "bg-purple-400/80": "rgba(192,132,252,0.7)",
-      "bg-purple-400/50": "rgba(192,132,252,0.55)",
-      "bg-yellow-400/80": "rgba(250,204,21,0.7)",
-      "bg-yellow-400/50": "rgba(250,204,21,0.55)",
-      "bg-pink-400/80":   "rgba(244,114,182,0.7)",
-      "bg-pink-400/50":   "rgba(244,114,182,0.55)",
-      "bg-teal-400/80":   "rgba(45,212,191,0.7)",
-      "bg-teal-400/50":   "rgba(45,212,191,0.55)",
-      "bg-indigo-400/80": "rgba(129,140,248,0.7)",
-      "bg-indigo-400/50": "rgba(129,140,248,0.55)",
-      "bg-cyan-400/80":   "rgba(34,211,238,0.7)",
-      "bg-cyan-400/50":   "rgba(34,211,238,0.55)",
-      "bg-blue-400/80":   "rgba(96,165,250,0.7)",
-      "bg-blue-400/50":   "rgba(96,165,250,0.55)",
-      "bg-green-400/80":  "rgba(74,222,128,0.7)",
-      "bg-green-400/50":  "rgba(74,222,128,0.55)",
-      "bg-orange-400/80": "rgba(251,146,60,0.7)",
-      "bg-orange-400/50": "rgba(251,146,60,0.55)",
-      "bg-red-400/80":    "rgba(248,113,113,0.7)",
-      "bg-red-400/50":    "rgba(248,113,113,0.55)",
-      "bg-gray-400/50":   "rgba(156,163,175,0.55)",
-      "bg-gray-500":      "rgba(107,114,128,0.85)",
-      "bg-amber-500/50":  "rgba(245,158,11,0.55)",
-      "bg-sky-500/50":    "rgba(14,165,233,0.55)",
-      "bg-teal-400":      "rgba(45,212,191,0.7)",
-      "bg-sky-400":       "rgba(56,189,248,0.7)",
+      "bg-sky-400/80":    "rgba(56,189,248,0.5)",
+      "bg-sky-400/50":    "rgba(56,189,248,0.35)",
+      "bg-purple-400/80": "rgba(192,132,252,0.5)",
+      "bg-purple-400/50": "rgba(192,132,252,0.35)",
+      "bg-yellow-400/80": "rgba(250,204,21,0.5)",
+      "bg-yellow-400/50": "rgba(250,204,21,0.35)",
+      "bg-pink-400/80":   "rgba(244,114,182,0.5)",
+      "bg-pink-400/50":   "rgba(244,114,182,0.35)",
+      "bg-teal-400/80":   "rgba(45,212,191,0.5)",
+      "bg-teal-400/50":   "rgba(45,212,191,0.35)",
+      "bg-indigo-400/80": "rgba(129,140,248,0.5)",
+      "bg-indigo-400/50": "rgba(129,140,248,0.35)",
+      "bg-cyan-400/80":   "rgba(34,211,238,0.5)",
+      "bg-cyan-400/50":   "rgba(34,211,238,0.35)",
+      "bg-blue-400/80":   "rgba(96,165,250,0.5)",
+      "bg-blue-400/50":   "rgba(96,165,250,0.35)",
+      "bg-green-400/80":  "rgba(74,222,128,0.5)",
+      "bg-green-400/50":  "rgba(74,222,128,0.35)",
+      "bg-orange-400/80": "rgba(251,146,60,0.5)",
+      "bg-orange-400/50": "rgba(251,146,60,0.35)",
+      "bg-red-400/80":    "rgba(248,113,113,0.5)",
+      "bg-red-400/50":    "rgba(248,113,113,0.35)",
+      "bg-gray-400/50":   "rgba(156,163,175,0.4)",
+      "bg-gray-500":      "rgba(107,114,128,0.7)",
+      "bg-amber-500/50":  "rgba(245,158,11,0.4)",
+      "bg-sky-500/50":    "rgba(14,165,233,0.4)",
+      "bg-teal-400":      "rgba(45,212,191,0.5)",
+      "bg-sky-400":       "rgba(56,189,248,0.5)",
     };
     return map[cls] || null;
   };
@@ -99394,7 +99394,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               }
             }
           },
-          void 0,
+          date,
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-fresh/App.tsx",
