@@ -66,6 +66,7 @@ interface ScheduleViewProps {
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
+  isNeoBuild?: boolean;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -137,6 +138,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     timezoneOffset = 11, // Default to UTC+11
     onDateSelect,
     snapshotDates = [],
+    isNeoBuild = false,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showCalendarDropdown, setShowCalendarDropdown] = useState(false);
@@ -926,7 +928,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             >
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-                    <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative">
+                    <div className={`bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}>
+                        {isNeoBuild && (
+                            <div className="neo-build-label">NEO Build</div>
+                        )}
                         <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                             &lt;
                         </button>
