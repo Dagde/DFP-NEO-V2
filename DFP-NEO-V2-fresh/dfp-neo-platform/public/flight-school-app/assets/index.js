@@ -1,4 +1,6 @@
 console.log("DFP-NEO-V2 BUILD VERSION: ca2b20a4 - GHOST+COLOR FIXES ACTIVE");
+window.__DFP_VERSION__ = "ca2b20a4-GHOST+COLOR-FIXES-ACTIVE";
+setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: ca2b20a4 - GHOST+COLOR FIXES ACTIVE - If you see this, the correct index.js is loaded"),5000);
 import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
