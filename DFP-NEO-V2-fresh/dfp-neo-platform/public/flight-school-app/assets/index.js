@@ -4309,23 +4309,23 @@ const DataLoadingMonitor = ({
   }, void 0);
 };
 const ALL_COLORS = [
-  "bg-sky-400/50",
+  "bg-sky-400/80",
   // Light Blue
-  "bg-purple-400/50",
+  "bg-purple-400/80",
   // Purple
-  "bg-yellow-400/50",
+  "bg-yellow-400/80",
   // Yellow
-  "bg-pink-400/50",
+  "bg-pink-400/80",
   // Pink
-  "bg-teal-400/50",
+  "bg-teal-400/80",
   // Teal
-  "bg-indigo-400/50",
+  "bg-indigo-400/80",
   // Indigo
-  "bg-cyan-400/50",
+  "bg-cyan-400/80",
   // Cyan
-  "bg-fuchsia-400/50",
+  "bg-fuchsia-400/80",
   // Fuchsia
-  "bg-blue-400/50"
+  "bg-blue-400/80"
   // Blue
 ];
 const courseTypes = ["ADF", "FIC", "WSO", "IFIC", "OFI", "Pilot Conversion"];
@@ -10229,17 +10229,17 @@ const TraineeColumn = ({ trainees, rowHeight, onRowEnter, onRowLeave, onTraineeC
       return tailwindClass;
     }
     const colorMap = {
-      "bg-sky-400/50": "#38BDF8",
-      "bg-purple-400/50": "#C084FC",
-      "bg-yellow-400/50": "#FACC15",
-      "bg-pink-400/50": "#F472B6",
-      "bg-teal-400/50": "#2DD4BF",
-      "bg-indigo-400/50": "#818CF8",
-      "bg-cyan-400/50": "#22D3EE",
-      "bg-blue-400/50": "#60A5FA",
-      "bg-green-400/50": "#4ADE80",
-      "bg-orange-400/50": "#FB923C",
-      "bg-red-400/50": "#F87171",
+      "bg-sky-400/80": "#38BDF8",
+      "bg-purple-400/80": "#C084FC",
+      "bg-yellow-400/80": "#FACC15",
+      "bg-pink-400/80": "#F472B6",
+      "bg-teal-400/80": "#2DD4BF",
+      "bg-indigo-400/80": "#818CF8",
+      "bg-cyan-400/80": "#22D3EE",
+      "bg-blue-400/80": "#60A5FA",
+      "bg-green-400/80": "#4ADE80",
+      "bg-orange-400/80": "#FB923C",
+      "bg-red-400/80": "#F87171",
       "bg-gray-400/50": "#9CA3AF",
       "bg-amber-500/50": "#F59E0B"
     };
@@ -76549,7 +76549,7 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
       duration,
       startTime,
       resourceId: `FTD ${i + 1}`,
-      color: "bg-indigo-400/50",
+      color: "bg-indigo-400/80",
       flightType: "Dual",
       locationType: "Local",
       origin: location,
@@ -76576,7 +76576,7 @@ const generateFullSchedule = (instructors, trainees, courses, aircraftCount, loc
       duration: 1,
       startTime: 16,
       resourceId,
-      color: "bg-teal-400/50",
+      color: "bg-teal-400/80",
       flightType: "Dual",
       locationType: "Local",
       origin: location,
@@ -76626,17 +76626,17 @@ const generateHistoricalEvents = (instructors, trainees, syllabus) => {
   return events;
 };
 const eslCourses = [
-  { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
-  { name: "ADF302", color: "bg-purple-400/50", startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
-  { name: "ADF303", color: "bg-yellow-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
-  { name: "FIC 210", color: "bg-pink-400/50", startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF301", color: "bg-sky-400/80", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
+  { name: "ADF302", color: "bg-purple-400/80", startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
+  { name: "ADF303", color: "bg-yellow-400/80", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
+  { name: "FIC 210", color: "bg-pink-400/80", startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "bg-teal-400/80", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const peaCourses = [
-  { name: "ADF304", color: "bg-teal-400/50", startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
-  { name: "ADF305", color: "bg-indigo-400/50", startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
-  { name: "IFF 6", color: "bg-cyan-400/50", startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+  { name: "ADF304", color: "bg-teal-400/80", startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
+  { name: "ADF305", color: "bg-indigo-400/80", startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
+  { name: "IFF 6", color: "bg-cyan-400/80", startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "bg-teal-400/80", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
 ];
 const generateDataSet = (location) => {
   const isESL = location === "ESL";
@@ -94686,16 +94686,16 @@ const App = () => {
           }).catch((err) => console.warn("[LMP Fix] Could not fix lmpType:", err));
         }
         const defaultColors = [
-          "bg-sky-400/50",
-          "bg-purple-400/50",
-          "bg-yellow-400/50",
-          "bg-pink-400/50",
-          "bg-orange-400/50",
-          "bg-teal-400/50",
-          "bg-indigo-400/50",
-          "bg-green-400/50",
-          "bg-red-400/50",
-          "bg-cyan-400/50"
+          "bg-sky-400/80",
+          "bg-purple-400/80",
+          "bg-yellow-400/80",
+          "bg-pink-400/80",
+          "bg-orange-400/80",
+          "bg-teal-400/80",
+          "bg-indigo-400/80",
+          "bg-green-400/80",
+          "bg-red-400/80",
+          "bg-cyan-400/80"
         ];
         const dbTraineesFromLoad = data.trainees.filter((t) => t._dataSource === "database");
         const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t) => t.course).filter(Boolean))];
@@ -95803,7 +95803,7 @@ ${"=".repeat(60)}`);
     const todayEnd = new Date(todayStart);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
-    const prevDay2 = new Date(todayStart); prevDay2.setUTCDate(prevDay2.getUTCDate() - 1); const prevDateStr2 = prevDay2.toISOString().split("T")[0]; const allEvents = [...(publishedSchedules[prevDateStr2] || []), ...(publishedSchedules[date] || [])];
+    const allEvents = (publishedSchedules[date] || []);
     for (const event of allEvents) {
       let eventStartMs, eventEndMs;
       eventStartMs = (/* @__PURE__ */ new Date(`${event.date}T00:00:00Z`)).getTime() + event.startTime * 60 * 60 * 1e3;
@@ -95844,7 +95844,7 @@ ${"=".repeat(60)}`);
     const dayBeforeBuild = new Date(todayStart);
     dayBeforeBuild.setUTCDate(dayBeforeBuild.getUTCDate() - 1);
     const dayBeforeBuildStr = dayBeforeBuild.toISOString().split("T")[0];
-    const allEvents = [...publishedSchedules[dayBeforeBuildStr] || [], ...buildEventsWithDate];
+    const allEvents = buildEventsWithDate;
     for (const event of allEvents) {
       const eventStartMs = (/* @__PURE__ */ new Date(`${event.date}T00:00:00Z`)).getTime() + event.startTime * 60 * 60 * 1e3;
       const eventEndMs = eventStartMs + event.duration * 60 * 60 * 1e3;
@@ -97294,7 +97294,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           // Use requested time
           resourceId: "",
           // Will be assigned during scheduling
-          color: "bg-gray-500/50",
+          color: "bg-gray-500/80",
           // SCT events use grey color (red is for conflicts)
           flightType: sctReq.flightType,
           soloOrDual: sctReq.flightType,
@@ -97365,7 +97365,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           // Use requested time
           resourceId: "",
           // Will be assigned during scheduling
-          color: "bg-gray-500/50",
+          color: "bg-gray-500/80",
           // SCT events use grey color (red is for conflicts)
           flightType: "Dual",
           soloOrDual: "Dual",
@@ -97436,7 +97436,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               // Default start time
               resourceId: "",
               // Will be assigned during scheduling
-              color: "bg-orange-500/50",
+              color: "bg-orange-500/80",
               // Highlight as remedial
               flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
               locationType: "Local",
@@ -98222,16 +98222,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           return [...mockTrainees, ...dbTrainees];
         });
         const defaultColors = [
-          "bg-sky-400/50",
-          "bg-purple-400/50",
-          "bg-yellow-400/50",
-          "bg-pink-400/50",
-          "bg-orange-400/50",
-          "bg-teal-400/50",
-          "bg-indigo-400/50",
-          "bg-green-400/50",
-          "bg-red-400/50",
-          "bg-cyan-400/50"
+          "bg-sky-400/80",
+          "bg-purple-400/80",
+          "bg-yellow-400/80",
+          "bg-pink-400/80",
+          "bg-orange-400/80",
+          "bg-teal-400/80",
+          "bg-indigo-400/80",
+          "bg-green-400/80",
+          "bg-red-400/80",
+          "bg-cyan-400/80"
         ];
         const dbCourseNames = [...new Set(dbTrainees.map((t) => t.course).filter(Boolean))];
         setCourseColors((prev) => {
@@ -98309,7 +98309,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       instructor: data.instructor,
       attendees: data.attendees,
       resourceId: data.resourceId,
-      color: "bg-teal-400/50",
+      color: "bg-teal-400/80",
       flightType: "Dual",
       locationType: "Local",
       origin: school,
@@ -99127,7 +99127,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       duration: oraclePreviewEvent.duration,
       startTime: oraclePreviewEvent.startTime,
       resourceId: oraclePreviewEvent.resourceId,
-      color: "bg-sky-400/50",
+      color: "bg-sky-400/80",
       flightType: "Dual",
       locationType: "Local",
       origin: school,

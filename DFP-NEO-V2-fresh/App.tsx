@@ -4706,9 +4706,9 @@ useEffect(() => {
                 // Without this, DB-only mode shows zero trainees because CourseRosterView
                 // only renders courses that exist in courseColors
                 const defaultColors = [
-                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
-                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
-                    'bg-red-400/50', 'bg-cyan-400/50'
+                    'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',
+                    'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
+                    'bg-red-400/80', 'bg-cyan-400/80'
                 ];
                 const dbTraineesFromLoad = data.trainees.filter((t: any) => t._dataSource === 'database');
                 const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t: any) => t.course).filter(Boolean))] as string[];
@@ -6075,8 +6075,8 @@ useEffect(() => {
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
     
-        // FIX: Explicitly type allEvents to aid TypeScript's inference.
-        const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
+        // FIX: Only load events for the currently viewed date to avoid ghost tiles from other dates.
+        const allEvents: ScheduleEvent[] = (publishedSchedules[date] || []);
     
         for (const event of allEvents) {
             let eventStartMs: number, eventEndMs: number;
@@ -6126,11 +6126,7 @@ useEffect(() => {
         const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));
         console.log('🚀 [NEO-Build] buildEventsWithDate.length:', buildEventsWithDate.length);
         
-        const dayBeforeBuild = new Date(todayStart);
-        dayBeforeBuild.setUTCDate(dayBeforeBuild.getUTCDate() - 1);
-        const dayBeforeBuildStr = dayBeforeBuild.toISOString().split('T')[0];
-
-        const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
+        const allEvents = buildEventsWithDate;
 
         for (const event of allEvents) {
             const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
@@ -8063,7 +8059,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
+                    color: 'bg-gray-500/80', // SCT events use grey color (red is for conflicts)
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
                     locationType: 'Local',
@@ -8140,7 +8136,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
+                    color: 'bg-gray-500/80', // SCT events use grey color (red is for conflicts)
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
                     locationType: 'Local',
@@ -8228,7 +8224,7 @@ useEffect(() => {
                             duration: duration,
                             startTime: 8.0, // Default start time
                             resourceId: '', // Will be assigned during scheduling
-                            color: 'bg-orange-500/50', // Highlight as remedial
+                            color: 'bg-orange-500/80', // Highlight as remedial
                             flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
                             locationType: 'Local',
                             origin: school,
@@ -9242,9 +9238,9 @@ updates.forEach(update => {
 
                 // Register any DB trainee courses that aren't in courseColors yet
                 const defaultColors = [
-                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
-                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
-                    'bg-red-400/50', 'bg-cyan-400/50'
+                    'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',
+                    'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
+                    'bg-red-400/80', 'bg-cyan-400/80'
                 ];
                 const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
                 setCourseColors(prev => {
@@ -9332,7 +9328,7 @@ updates.forEach(update => {
             instructor: data.instructor,
             attendees: data.attendees,
             resourceId: data.resourceId,
-            color: 'bg-teal-400/50',
+            color: 'bg-teal-400/80',
             flightType: 'Dual',
             locationType: 'Local',
             origin: school,
@@ -10439,7 +10435,7 @@ updates.forEach(update => {
             duration: oraclePreviewEvent.duration,
             startTime: oraclePreviewEvent.startTime,
             resourceId: oraclePreviewEvent.resourceId,
-            color: 'bg-sky-400/50',
+            color: 'bg-sky-400/80',
             flightType: 'Dual',
             locationType: 'Local',
             origin: school,
