@@ -1,6 +1,6 @@
-console.log("DFP-NEO-V2 BUILD VERSION: f3d91a7b - INLINE-COLOR+GHOST-DIAG FIXES ACTIVE");
-window.__DFP_VERSION__ = "f3d91a7b-INLINE-COLOR-GHOST-DIAG";
-setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: f3d91a7b - INLINE COLOR + GHOST DIAG - If you see this, correct index.js is loaded"),5000);
+console.log("DFP-NEO-V2 BUILD VERSION: a8c45f2e - RGBA-COLORS+GHOST-DIAG-V2");
+window.__DFP_VERSION__ = "a8c45f2e-RGBA-COLORS-GHOST-DIAG-V2";
+setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: a8c45f2e - RGBA COLORS + GHOST DIAG V2 - correct index.js loaded"),5000);
 import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
@@ -6204,21 +6204,37 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
   const isHexColorEarly = (color) => color && (color.startsWith("#") || color.startsWith("rgb"));
   const _tailwindColorToHexForStyle = (cls) => {
+    // Use rgba values to replicate Tailwind /50 opacity on dark background
+    // These match the visual appearance of the original /50 opacity tiles
     const map = {
-      "bg-sky-400/80": "#0ea5e9", "bg-sky-400/50": "#0ea5e9",
-      "bg-purple-400/80": "#a855f7", "bg-purple-400/50": "#a855f7",
-      "bg-yellow-400/80": "#eab308", "bg-yellow-400/50": "#eab308",
-      "bg-pink-400/80": "#ec4899", "bg-pink-400/50": "#ec4899",
-      "bg-teal-400/80": "#14b8a6", "bg-teal-400/50": "#14b8a6",
-      "bg-indigo-400/80": "#6366f1", "bg-indigo-400/50": "#6366f1",
-      "bg-cyan-400/80": "#06b6d4", "bg-cyan-400/50": "#06b6d4",
-      "bg-blue-400/80": "#3b82f6", "bg-blue-400/50": "#3b82f6",
-      "bg-green-400/80": "#22c55e", "bg-green-400/50": "#22c55e",
-      "bg-orange-400/80": "#f97316", "bg-orange-400/50": "#f97316",
-      "bg-red-400/80": "#ef4444", "bg-red-400/50": "#ef4444",
-      "bg-gray-400/50": "#9ca3af", "bg-gray-500": "#6b7280",
-      "bg-amber-500/50": "#f59e0b", "bg-sky-500/50": "#0ea5e9",
-      "bg-teal-400": "#14b8a6", "bg-sky-400": "#0ea5e9",
+      "bg-sky-400/80":    "rgba(56,189,248,0.7)",
+      "bg-sky-400/50":    "rgba(56,189,248,0.55)",
+      "bg-purple-400/80": "rgba(192,132,252,0.7)",
+      "bg-purple-400/50": "rgba(192,132,252,0.55)",
+      "bg-yellow-400/80": "rgba(250,204,21,0.7)",
+      "bg-yellow-400/50": "rgba(250,204,21,0.55)",
+      "bg-pink-400/80":   "rgba(244,114,182,0.7)",
+      "bg-pink-400/50":   "rgba(244,114,182,0.55)",
+      "bg-teal-400/80":   "rgba(45,212,191,0.7)",
+      "bg-teal-400/50":   "rgba(45,212,191,0.55)",
+      "bg-indigo-400/80": "rgba(129,140,248,0.7)",
+      "bg-indigo-400/50": "rgba(129,140,248,0.55)",
+      "bg-cyan-400/80":   "rgba(34,211,238,0.7)",
+      "bg-cyan-400/50":   "rgba(34,211,238,0.55)",
+      "bg-blue-400/80":   "rgba(96,165,250,0.7)",
+      "bg-blue-400/50":   "rgba(96,165,250,0.55)",
+      "bg-green-400/80":  "rgba(74,222,128,0.7)",
+      "bg-green-400/50":  "rgba(74,222,128,0.55)",
+      "bg-orange-400/80": "rgba(251,146,60,0.7)",
+      "bg-orange-400/50": "rgba(251,146,60,0.55)",
+      "bg-red-400/80":    "rgba(248,113,113,0.7)",
+      "bg-red-400/50":    "rgba(248,113,113,0.55)",
+      "bg-gray-400/50":   "rgba(156,163,175,0.55)",
+      "bg-gray-500":      "rgba(107,114,128,0.85)",
+      "bg-amber-500/50":  "rgba(245,158,11,0.55)",
+      "bg-sky-500/50":    "rgba(14,165,233,0.55)",
+      "bg-teal-400":      "rgba(45,212,191,0.7)",
+      "bg-sky-400":       "rgba(56,189,248,0.7)",
     };
     return map[cls] || null;
   };
@@ -6736,23 +6752,37 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
   const eventColorIsHex = isHexColorEarly(event.color || "");
-  // Convert Tailwind color classes to solid hex so they render regardless of Tailwind CDN scan
+  // Convert Tailwind color classes to rgba so they render correctly regardless of Tailwind CDN scan
   const tailwindColorToHex = (cls) => {
     const map = {
-      "bg-sky-400/80": "#0ea5e9", "bg-sky-400/50": "#0ea5e9",
-      "bg-purple-400/80": "#a855f7", "bg-purple-400/50": "#a855f7",
-      "bg-yellow-400/80": "#eab308", "bg-yellow-400/50": "#eab308",
-      "bg-pink-400/80": "#ec4899", "bg-pink-400/50": "#ec4899",
-      "bg-teal-400/80": "#14b8a6", "bg-teal-400/50": "#14b8a6",
-      "bg-indigo-400/80": "#6366f1", "bg-indigo-400/50": "#6366f1",
-      "bg-cyan-400/80": "#06b6d4", "bg-cyan-400/50": "#06b6d4",
-      "bg-blue-400/80": "#3b82f6", "bg-blue-400/50": "#3b82f6",
-      "bg-green-400/80": "#22c55e", "bg-green-400/50": "#22c55e",
-      "bg-orange-400/80": "#f97316", "bg-orange-400/50": "#f97316",
-      "bg-red-400/80": "#ef4444", "bg-red-400/50": "#ef4444",
-      "bg-gray-400/50": "#9ca3af", "bg-gray-500": "#6b7280",
-      "bg-amber-500/50": "#f59e0b", "bg-sky-500/50": "#0ea5e9",
-      "bg-teal-400": "#14b8a6", "bg-sky-400": "#0ea5e9",
+      "bg-sky-400/80":    "rgba(56,189,248,0.7)",
+      "bg-sky-400/50":    "rgba(56,189,248,0.55)",
+      "bg-purple-400/80": "rgba(192,132,252,0.7)",
+      "bg-purple-400/50": "rgba(192,132,252,0.55)",
+      "bg-yellow-400/80": "rgba(250,204,21,0.7)",
+      "bg-yellow-400/50": "rgba(250,204,21,0.55)",
+      "bg-pink-400/80":   "rgba(244,114,182,0.7)",
+      "bg-pink-400/50":   "rgba(244,114,182,0.55)",
+      "bg-teal-400/80":   "rgba(45,212,191,0.7)",
+      "bg-teal-400/50":   "rgba(45,212,191,0.55)",
+      "bg-indigo-400/80": "rgba(129,140,248,0.7)",
+      "bg-indigo-400/50": "rgba(129,140,248,0.55)",
+      "bg-cyan-400/80":   "rgba(34,211,238,0.7)",
+      "bg-cyan-400/50":   "rgba(34,211,238,0.55)",
+      "bg-blue-400/80":   "rgba(96,165,250,0.7)",
+      "bg-blue-400/50":   "rgba(96,165,250,0.55)",
+      "bg-green-400/80":  "rgba(74,222,128,0.7)",
+      "bg-green-400/50":  "rgba(74,222,128,0.55)",
+      "bg-orange-400/80": "rgba(251,146,60,0.7)",
+      "bg-orange-400/50": "rgba(251,146,60,0.55)",
+      "bg-red-400/80":    "rgba(248,113,113,0.7)",
+      "bg-red-400/50":    "rgba(248,113,113,0.55)",
+      "bg-gray-400/50":   "rgba(156,163,175,0.55)",
+      "bg-gray-500":      "rgba(107,114,128,0.85)",
+      "bg-amber-500/50":  "rgba(245,158,11,0.55)",
+      "bg-sky-500/50":    "rgba(14,165,233,0.55)",
+      "bg-teal-400":      "rgba(45,212,191,0.7)",
+      "bg-sky-400":       "rgba(56,189,248,0.7)",
     };
     return map[cls] || null;
   };
@@ -95850,16 +95880,14 @@ ${"=".repeat(60)}`);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
     const allEvents = (publishedSchedules[date] || []);
-    console.group("🔍 [GHOST-DIAG] eventSegmentsForDate for date=" + date);
-    console.log("publishedSchedules keys:", Object.keys(publishedSchedules));
-    console.log("Events in publishedSchedules[" + date + "]:", allEvents.length);
-    const wrongDateEvents = allEvents.filter(function(e){return e.date !== date;});
-    if (wrongDateEvents.length > 0) {
-      console.warn("⚠️ WRONG DATE EVENTS in publishedSchedules[" + date + "]:", wrongDateEvents.map(function(e){return {id:e.id,eventDate:e.date,resourceId:e.resourceId,flightNumber:e.flightNumber};}));
-    } else {
-      console.log("✅ All events have correct date field");
-    }
-    console.groupEnd();
+    window.__GHOST_DIAG__ = {
+      viewedDate: date,
+      scheduleKeys: Object.keys(publishedSchedules),
+      eventsForDate: allEvents.length,
+      wrongDateEvents: allEvents.filter(function(e){return e.date !== date;}).map(function(e){return {id:e.id,eventDate:e.date,resourceId:e.resourceId,flightNumber:e.flightNumber};}),
+      allEventDates: allEvents.map(function(e){return e.date;}).filter(function(v,i,a){return a.indexOf(v)===i;})
+    };
+    console.error("🔍 GHOST-DIAG (type window.__GHOST_DIAG__ to see full data) | date=" + date + " | scheduleKeys=" + Object.keys(publishedSchedules).join(",") + " | events=" + allEvents.length + " | wrongDates=" + allEvents.filter(function(e){return e.date !== date;}).length);
     for (const event of allEvents) {
       let eventStartMs, eventEndMs;
       eventStartMs = (/* @__PURE__ */ new Date(`${event.date}T00:00:00Z`)).getTime() + event.startTime * 60 * 60 * 1e3;
