@@ -1,6 +1,6 @@
-console.log("DFP-NEO-V2 BUILD VERSION: ca2b20a4 - GHOST+COLOR FIXES ACTIVE");
-window.__DFP_VERSION__ = "ca2b20a4-GHOST+COLOR-FIXES-ACTIVE";
-setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: ca2b20a4 - GHOST+COLOR FIXES ACTIVE - If you see this, the correct index.js is loaded"),5000);
+console.log("DFP-NEO-V2 BUILD VERSION: f3d91a7b - INLINE-COLOR+GHOST-DIAG FIXES ACTIVE");
+window.__DFP_VERSION__ = "f3d91a7b-INLINE-COLOR-GHOST-DIAG";
+setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: f3d91a7b - INLINE COLOR + GHOST DIAG - If you see this, correct index.js is loaded"),5000);
 import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
@@ -6203,6 +6203,28 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const isEndSegment = segment.segmentType === "start";
   const flyoutToLeft = isEndSegment || effectiveStartTime + effectiveDuration > 22;
   const isHexColorEarly = (color) => color && (color.startsWith("#") || color.startsWith("rgb"));
+  const _tailwindColorToHexForStyle = (cls) => {
+    const map = {
+      "bg-sky-400/80": "#0ea5e9", "bg-sky-400/50": "#0ea5e9",
+      "bg-purple-400/80": "#a855f7", "bg-purple-400/50": "#a855f7",
+      "bg-yellow-400/80": "#eab308", "bg-yellow-400/50": "#eab308",
+      "bg-pink-400/80": "#ec4899", "bg-pink-400/50": "#ec4899",
+      "bg-teal-400/80": "#14b8a6", "bg-teal-400/50": "#14b8a6",
+      "bg-indigo-400/80": "#6366f1", "bg-indigo-400/50": "#6366f1",
+      "bg-cyan-400/80": "#06b6d4", "bg-cyan-400/50": "#06b6d4",
+      "bg-blue-400/80": "#3b82f6", "bg-blue-400/50": "#3b82f6",
+      "bg-green-400/80": "#22c55e", "bg-green-400/50": "#22c55e",
+      "bg-orange-400/80": "#f97316", "bg-orange-400/50": "#f97316",
+      "bg-red-400/80": "#ef4444", "bg-red-400/50": "#ef4444",
+      "bg-gray-400/50": "#9ca3af", "bg-gray-500": "#6b7280",
+      "bg-amber-500/50": "#f59e0b", "bg-sky-500/50": "#0ea5e9",
+      "bg-teal-400": "#14b8a6", "bg-sky-400": "#0ea5e9",
+    };
+    return map[cls] || null;
+  };
+  const _resolvedBgColor = event.type !== "deployment" && event.type !== "unavailability" && !isUnavailabilityConflict && !isConflicting
+    ? (isHexColorEarly(event.color || "") ? event.color : _tailwindColorToHexForStyle(event.color || ""))
+    : null;
   const style = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
@@ -6210,8 +6232,8 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     height: `${rowHeight - 4}px`,
     // a little padding
     marginTop: "2px",
-    // Handle hex color values (e.g. #0E7A6E) that can't be used as Tailwind CSS class names
-    ...isHexColorEarly(event.color || "") && event.type !== "deployment" && event.type !== "unavailability" && !isUnavailabilityConflict && !isConflicting ? { backgroundColor: event.color } : {}
+    // Apply background color as inline style to ensure Tailwind CDN picks it up
+    ...(_resolvedBgColor ? { backgroundColor: _resolvedBgColor } : {})
   };
   const getDynamicRingClass = () => {
     if (isConflicting || isUnavailabilityConflict) {
@@ -6714,13 +6736,34 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const shadowClass = isDragging ? "shadow-xl" : "shadow-md";
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
   const eventColorIsHex = isHexColorEarly(event.color || "");
-  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : eventColorIsHex ? "" : event.color;
+  // Convert Tailwind color classes to solid hex so they render regardless of Tailwind CDN scan
+  const tailwindColorToHex = (cls) => {
+    const map = {
+      "bg-sky-400/80": "#0ea5e9", "bg-sky-400/50": "#0ea5e9",
+      "bg-purple-400/80": "#a855f7", "bg-purple-400/50": "#a855f7",
+      "bg-yellow-400/80": "#eab308", "bg-yellow-400/50": "#eab308",
+      "bg-pink-400/80": "#ec4899", "bg-pink-400/50": "#ec4899",
+      "bg-teal-400/80": "#14b8a6", "bg-teal-400/50": "#14b8a6",
+      "bg-indigo-400/80": "#6366f1", "bg-indigo-400/50": "#6366f1",
+      "bg-cyan-400/80": "#06b6d4", "bg-cyan-400/50": "#06b6d4",
+      "bg-blue-400/80": "#3b82f6", "bg-blue-400/50": "#3b82f6",
+      "bg-green-400/80": "#22c55e", "bg-green-400/50": "#22c55e",
+      "bg-orange-400/80": "#f97316", "bg-orange-400/50": "#f97316",
+      "bg-red-400/80": "#ef4444", "bg-red-400/50": "#ef4444",
+      "bg-gray-400/50": "#9ca3af", "bg-gray-500": "#6b7280",
+      "bg-amber-500/50": "#f59e0b", "bg-sky-500/50": "#0ea5e9",
+      "bg-teal-400": "#14b8a6", "bg-sky-400": "#0ea5e9",
+    };
+    return map[cls] || null;
+  };
+  const eventColorHex = !eventColorIsHex && event.color ? tailwindColorToHex(event.color) : null;
+  const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : (eventColorIsHex || eventColorHex) ? "" : event.color;
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
   const finalClasses = [commonClasses];
   if (isPreview) {
-    finalClasses.push(eventColorIsHex ? "" : event.color);
+    finalClasses.push((eventColorIsHex || eventColorHex) ? "" : event.color);
     finalClasses.push("border-2 border-dashed border-sky-300");
   } else {
     finalClasses.push(backgroundClass);
@@ -95807,6 +95850,16 @@ ${"=".repeat(60)}`);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
     const allEvents = (publishedSchedules[date] || []);
+    console.group("🔍 [GHOST-DIAG] eventSegmentsForDate for date=" + date);
+    console.log("publishedSchedules keys:", Object.keys(publishedSchedules));
+    console.log("Events in publishedSchedules[" + date + "]:", allEvents.length);
+    const wrongDateEvents = allEvents.filter(function(e){return e.date !== date;});
+    if (wrongDateEvents.length > 0) {
+      console.warn("⚠️ WRONG DATE EVENTS in publishedSchedules[" + date + "]:", wrongDateEvents.map(function(e){return {id:e.id,eventDate:e.date,resourceId:e.resourceId,flightNumber:e.flightNumber};}));
+    } else {
+      console.log("✅ All events have correct date field");
+    }
+    console.groupEnd();
     for (const event of allEvents) {
       let eventStartMs, eventEndMs;
       eventStartMs = (/* @__PURE__ */ new Date(`${event.date}T00:00:00Z`)).getTime() + event.startTime * 60 * 60 * 1e3;
