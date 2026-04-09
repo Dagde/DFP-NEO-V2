@@ -430,7 +430,7 @@
 
 .neo-build-label {
     position: absolute;
-    top: -22px;
+    top: -28px;
     left: 50%;
     transform: translateX(-50%);
     background: linear-gradient(135deg, rgb(251, 146, 60), rgb(255, 165, 0));
