@@ -95803,7 +95803,7 @@ ${"=".repeat(60)}`);
     const todayEnd = new Date(todayStart);
     todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
     const todayEndTime = todayEnd.getTime();
-    const allEvents = Object.values(publishedSchedules).flat();
+    const prevDay2 = new Date(todayStart); prevDay2.setUTCDate(prevDay2.getUTCDate() - 1); const prevDateStr2 = prevDay2.toISOString().split("T")[0]; const allEvents = [...(publishedSchedules[prevDateStr2] || []), ...(publishedSchedules[date] || [])];
     for (const event of allEvents) {
       let eventStartMs, eventEndMs;
       eventStartMs = (/* @__PURE__ */ new Date(`${event.date}T00:00:00Z`)).getTime() + event.startTime * 60 * 60 * 1e3;
