@@ -71,7 +71,7 @@ const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
-const RESOURCE_COLUMN_WIDTH = 86; // 108 * 0.80 = 86px (PC-21 column, 20% narrower than header)
+const RESOURCE_COLUMN_WIDTH = 95; // 86 * 1.1 = 95px (10% wider) // 108 * 0.80 = 86px (PC-21 column, 20% narrower than header)
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
