@@ -213,8 +213,8 @@ export async function initializeData() {
     // Read data source settings from localStorage
     // Defaults match DataSourcesSettings.tsx: all ON by default
     let dataSourceSettings: { staff: boolean; trainee: boolean; course: boolean; staffDb: boolean; traineeDb: boolean } = {
-      staff: true,
-      trainee: true,
+      staff: false,
+      trainee: false,
       course: false,
       staffDb: true,
       traineeDb: true,
@@ -224,8 +224,8 @@ export async function initializeData() {
       if (settingsStr) {
         const parsed = JSON.parse(settingsStr);
         dataSourceSettings = {
-          staff: parsed.staff !== false,
-          trainee: parsed.trainee !== false,
+          staff: parsed.staff === true,
+          trainee: parsed.trainee === true,
           course: parsed.course === true,
           staffDb: parsed.staffDb !== false,
           traineeDb: parsed.traineeDb !== false,

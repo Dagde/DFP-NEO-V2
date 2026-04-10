@@ -4030,14 +4030,14 @@ const App: React.FC = () => {
             if (stored) {
                 const parsed = JSON.parse(stored);
                 return {
-                    staff: parsed.staff !== false,
-                    trainee: parsed.trainee !== false,
+                    staff: parsed.staff === true,
+                    trainee: parsed.trainee === true,
                     staffDb: parsed.staffDb !== false,
                     traineeDb: parsed.traineeDb !== false,
                 };
             }
         } catch (e) {}
-        return { staff: true, trainee: true, staffDb: true, traineeDb: true };
+        return { staff: false, trainee: false, staffDb: true, traineeDb: true };
     });
 
     // Data state
@@ -4438,6 +4438,27 @@ useEffect(() => {
 
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
+        // One-time migration: reset mock data toggles to OFF if they were previously defaulted ON
+        // This prevents mock data contaminating real staff/trainee lists after DB is populated
+        try {
+            const stored = localStorage.getItem('dataSourceSettings');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // If mock data toggles were saved as true (old default), reset them to false
+                // We detect "old default" by checking if staffDb is also true (new installs have DB on, mock off)
+                if (parsed.staff === true && parsed.staffDb === true && !parsed._mockDataMigrated) {
+                    parsed.staff = false;
+                    parsed.trainee = false;
+                    parsed._mockDataMigrated = true;
+                    localStorage.setItem('dataSourceSettings', JSON.stringify(parsed));
+                    setDataSourceSettings(prev => ({ ...prev, staff: false, trainee: false }));
+                    console.log('🔧 Migrated dataSourceSettings: mock data toggles reset to OFF');
+                }
+            }
+        } catch (e) {
+            console.warn('Could not migrate dataSourceSettings');
+        }
+
         const loadInitialData = async () => {
             console.log('🔄 Starting to load initial data...');
             try {

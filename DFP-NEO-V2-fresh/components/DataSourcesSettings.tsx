@@ -18,8 +18,8 @@ type MigrationState = 'idle' | 'running' | 'done' | 'error';
 
 const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess, onSettingsChanged }) => {
   const [settings, setSettings] = useState<DataSourceSettings>({
-    staff: true,
-    trainee: true,
+    staff: false,
+    trainee: false,
     staffDb: true,
     traineeDb: true,
   });
@@ -38,8 +38,8 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
       if (stored) {
         const parsed = JSON.parse(stored);
         setSettings({
-          staff: parsed.staff !== false,
-          trainee: parsed.trainee !== false,
+          staff: parsed.staff === true,
+          trainee: parsed.trainee === true,
           staffDb: parsed.staffDb !== false,
           traineeDb: parsed.traineeDb !== false,
         });
