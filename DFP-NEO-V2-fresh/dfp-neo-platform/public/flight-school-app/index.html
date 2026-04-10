@@ -51,6 +51,10 @@
   }
   .animate-pulse-neo-text { animation: pulse-neo-text 1s ease-in-out infinite; }
   .neo-tile-text { color: #fb923c; }
+  /* Override Tailwind CDN !important rules for flight tile background colors */
+  [data-is-flight-tile="true"][style*="--tile-bg"] {
+    background-color: var(--tile-bg) !important;
+  }
   .btn-shape-fill {
     background-color: #9ca3af; /* gray-400 fallback */
     background-image: linear-gradient(to bottom, #e5e7eb, #b8bec7); /* light gray to mid gray */
@@ -197,7 +201,7 @@
     );
   }
   </style>
-  <script type="module" crossorigin src="./assets/index.js?v=1775788774031"></script>
+  <script type="module" crossorigin src="./assets/index.js?v=1775789281417"></script>
   <link rel="modulepreload" crossorigin href="./assets/vendor-react.js">
   <link rel="modulepreload" crossorigin href="./assets/vendor-pdf.js">
   <link rel="stylesheet" crossorigin href="./assets/index.css">

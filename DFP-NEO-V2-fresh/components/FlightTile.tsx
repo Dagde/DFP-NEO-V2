@@ -1,5 +1,5 @@
 
-import React, { MouseEvent, useRef, useEffect } from 'react';
+import React, { MouseEvent } from 'react';
 import { ScheduleEvent, Trainee, EventSegment } from '../types';
 
 interface FlightTileProps {
@@ -189,6 +189,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     marginTop: '2px',
     // Apply resolved background color as inline style to override Tailwind CDN rendering
     ...(resolvedBgColor ? { backgroundColor: resolvedBgColor } : {}),
+    // Also set as CSS custom property for the !important override in index.html
+    ...(resolvedBgColor ? { ['--tile-bg' as any]: resolvedBgColor } : {}),
   };
   
   const getDynamicRingClass = () => {
@@ -667,21 +669,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       );
   }
 
-  // Use a ref to force background-color with !important, overriding Tailwind CDN's !important rules
-  const tileRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (tileRef.current && resolvedBgColor) {
-      tileRef.current.style.setProperty('background-color', resolvedBgColor, 'important');
-      // DEBUG: confirm setProperty was called
-      console.log('[TileRef] setProperty called:', resolvedBgColor, '| computed:', tileRef.current.style.backgroundColor);
-    } else if (tileRef.current && !resolvedBgColor) {
-      console.log('[TileRef] resolvedBgColor is NULL - event.color:', (event as any).color, 'event.type:', event.type);
-    }
-  }, [resolvedBgColor]);
-
   return (
     <div
-      ref={tileRef}
       data-is-flight-tile="true"
       style={style}
       className={finalClasses.join(' ')}

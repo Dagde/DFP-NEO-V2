@@ -19,14 +19,18 @@ function updateCSS(content) {
   
   content = content.replace(oldActivePattern, newActive);
   
-  // 2. Add NEO-Tile pulsing animation CSS
+  // 2. Add NEO-Tile pulsing animation CSS + flight tile background override
   const neoAnimationCSS = `
   @keyframes pulse-neo-text {
     0%, 100% { color: #fb923c; text-shadow: 0 0 4px rgba(251, 146, 60, 0.6); }
     50% { color: #fdba74; text-shadow: 0 0 8px rgba(251, 146, 60, 1); }
   }
   .animate-pulse-neo-text { animation: pulse-neo-text 1s ease-in-out infinite; }
-  .neo-tile-text { color: #fb923c; }`;
+  .neo-tile-text { color: #fb923c; }
+  /* Override Tailwind CDN !important rules for flight tile background colors */
+  [data-is-flight-tile="true"][style*="--tile-bg"] {
+    background-color: var(--tile-bg) !important;
+  }`;
   
   // Insert after .no-select class
   const noSelectPattern = /(\.no-select \{[^}]+\})/;
