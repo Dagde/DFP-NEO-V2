@@ -1,5 +1,5 @@
 console.log("DFP-NEO-V2 BUILD VERSION: f7e3a91c - MUTED-COLORS+GHOST-KEY-FIX");
-window.__DFP_VERSION__ = "a2b4c6d8-OPACITY-LIGHTENED-NEO-HEX-FIX";
+window.__DFP_VERSION__ = "b3c5d7e9-COLOR-DIAG-NEO-FIX";
 setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: f7e3a91c - MUTED COLORS + GHOST KEY FIX - correct index.js loaded"),5000);
 import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
@@ -6242,6 +6242,11 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const _resolvedBgColor = event.type !== "deployment" && event.type !== "unavailability" && !isUnavailabilityConflict && !isConflicting
     ? (isHexColorEarly(event.color || "") ? _hexToRgba(event.color, 0.57) : _tailwindColorToHexForStyle(event.color || ""))
     : null;
+  if (!window.__COLOR_DIAG_LOGGED__) window.__COLOR_DIAG_LOGGED__ = new Set();
+  if (event.color && !window.__COLOR_DIAG_LOGGED__.has(event.color)) {
+    window.__COLOR_DIAG_LOGGED__.add(event.color);
+    console.error("[COLOR-DIAG] color=" + event.color + " | isHex=" + isHexColorEarly(event.color||"") + " | _resolvedBgColor=" + _resolvedBgColor + " | type=" + event.type);
+  }
   const style = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
