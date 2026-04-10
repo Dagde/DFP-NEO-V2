@@ -208,33 +208,14 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
 }
 
 export async function initializeData() {
-  console.log('🔧 initializeData() v2.3-debug - Starting data initialization');
+  console.log('🔧 initializeData() v3.0 - Starting data initialization (DB-only, no mock data)');
   
-    // Read data source settings from localStorage
-    // Defaults match DataSourcesSettings.tsx: all ON by default
-    let dataSourceSettings: { staff: boolean; trainee: boolean; course: boolean; staffDb: boolean; traineeDb: boolean } = {
-      staff: false,
-      trainee: false,
-      course: false,
-      staffDb: true,
-      traineeDb: true,
-    };
-    try {
-      const settingsStr = localStorage.getItem('dataSourceSettings');
-      if (settingsStr) {
-        const parsed = JSON.parse(settingsStr);
-        dataSourceSettings = {
-          staff: parsed.staff === true,
-          trainee: parsed.trainee === true,
-          course: parsed.course === true,
-          staffDb: parsed.staffDb !== false,
-          traineeDb: parsed.traineeDb !== false,
-        };
-      }
-      console.log('🎛️ Data source settings:', dataSourceSettings);
-    } catch (e) {
-      console.log('⚠️ Could not read dataSourceSettings, using defaults');
-    }
+    // PERMANENT FIX: Mock data is NEVER loaded at startup regardless of localStorage settings.
+    // The UI DataSourcesSettings toggles only affect the instructorsData/traineesData useMemo
+    // filters in App.tsx which run AFTER data is loaded. Loading mock data here caused
+    // contamination of allInstructorsData with fake staff that persisted across sessions.
+    // If mock data is needed for testing, it must be explicitly re-enabled in the UI toggles
+    // which filter the already-loaded data - but it will never be in allInstructorsData by default.
     
   let instructors: any[] = [];
   let trainees: any[] = [];
@@ -257,12 +238,10 @@ export async function initializeData() {
            console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
          });
 
-         // Merge DB and mock instructor data based on the staff mock data toggle setting.
-         // Real DB data always takes priority. Mock data is only added if the toggle is ON.
-         const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-         const includeStaffMockData = dataSourceSettings.staff === true;
-         instructors = mergeInstructorData(instructors, allMockInstructors, includeStaffMockData);
-         console.log('🔄 Loaded staff - DB always included, mock data:', includeStaffMockData ? 'ENABLED' : 'DISABLED');
+         // DB-only: tag all personnel with _dataSource: 'database'
+         // Mock data is never merged here - UI toggles in DataSourcesSettings handle filtering
+         instructors = instructors.map((i: any) => ({ ...i, _dataSource: 'database' as const }));
+         console.log('🔄 Loaded staff from DB only:', instructors.length, 'records (mock data excluded at load time)');
    
 
          // Fetch trainees - ALWAYS load all data regardless of toggle settings
@@ -271,12 +250,10 @@ export async function initializeData() {
          trainees = await fetchTrainees();
          console.log('✅ Trainee DB loaded:', trainees.length);
 
-         // Use the dataSourceSettings already loaded at the top of initializeData()
-         const includeTraineeMockData = dataSourceSettings.trainee === true; // Only include mock data if explicitly enabled
-         
-         console.log('🔄 Data Sources - Trainee MockData:', includeTraineeMockData ? 'ENABLED' : 'DISABLED');
-         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
-         console.log('🔄 Loaded trainees (DB' + (includeTraineeMockData ? ' + mock' : ' only') + ') with _dataSource tags for UI filtering');
+         // DB-only: tag all trainees with _dataSource: 'database'
+         // Mock data is never merged here - UI toggles in DataSourcesSettings handle filtering
+         trainees = trainees.map((t: any) => ({ ...t, _dataSource: 'database' as const }));
+         console.log('🔄 Loaded trainees from DB only:', trainees.length, 'records (mock data excluded at load time)');
        
        // Assign trainees to instructors using the new assignment service
        // This ensures all instructors have minimum 2 primary and 2 secondary trainees
@@ -312,15 +289,14 @@ export async function initializeData() {
     const courses = await fetchCourses();
     console.log('✅ Courses loaded:', courses.length);
     
-    // If API returned no data, fallback to mock data (always tagged with _dataSource)
+    // PERMANENT: Never fall back to mock data - if API returns nothing, use empty arrays.
+    // Mock data contaminated real staff lists and must not be loaded at startup under any circumstance.
     if (instructors.length === 0) {
-        console.log('⚠️ No instructors from API, falling back to mock data');
-        instructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors].map((i: any) => ({ ...i, _dataSource: 'mockdata' }));
+        console.log('⚠️ No instructors from API - returning empty list (no mock data fallback)');
     }
     
     if (trainees.length === 0) {
-        console.log('⚠️ No trainees from API, falling back to mock data');
-        trainees = ESL_DATA.trainees.map((t: any) => ({ ...t, _dataSource: 'mockdata' }));
+        console.log('⚠️ No trainees from API - returning empty list (no mock data fallback)');
     }
     
     if (aircraft.length === 0) {
@@ -348,15 +324,16 @@ export async function initializeData() {
     
   } catch (error) {
     console.error('❌ Failed to load data from API:', error);
-    console.log('⚠️ Falling back to mock data (tagged with _dataSource: mockdata)');
+    console.log('⚠️ API error - returning empty data (no mock data fallback)');
     
-    // Tag all fallback mock data so the UI filtering still works correctly
+    // PERMANENT: Never fall back to mock data on API error.
+    // Return empty arrays - the app will show no staff/trainees until DB connection is restored.
     return {
-      instructors: ESL_DATA.instructors.map((i: any) => ({ ...i, _dataSource: 'mockdata' as const })),
-      trainees: ESL_DATA.trainees.map((t: any) => ({ ...t, _dataSource: 'mockdata' as const })),
-      aircraft: ESL_DATA.aircraft || [],
+      instructors: [],
+      trainees: [],
+      aircraft: [],
       scores: {},
-      events: (ESL_DATA.events || []).map((e: any) => ({ ...e, _dataSource: 'mockdata' as const })),
+      events: [],
       courses: [],
     };
   }
