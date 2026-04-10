@@ -70,7 +70,7 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const AIRFRAME_COLUMN_WIDTH = 108; // 166 * 0.65 = 108px (35% reduction)
+const AIRFRAME_COLUMN_WIDTH = 86; // 108 * 0.80 = 86px (further 20% reduction) // 166 * 0.65 = 108px (35% reduction)
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
