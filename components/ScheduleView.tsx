@@ -70,7 +70,7 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const AIRFRAME_COLUMN_WIDTH = 264; // 220 * 1.2 = 264px (20% wider)
+const AIRFRAME_COLUMN_WIDTH = 171; // 264 * 0.65 = 171px (35% reduction)
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
@@ -905,7 +905,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
                     <div className="flex items-center gap-1 h-full">
-                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`} style={{height: "100%", width: "100%"}}>
+                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-4 gap-3 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`} style={{height: "100%", width: "100%"}}>
                             <button onClick={() => onDateChange(-1)} className="p-0.5 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                                 &lt;
                             </button>
