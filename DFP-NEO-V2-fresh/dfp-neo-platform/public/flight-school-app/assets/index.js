@@ -1,5 +1,5 @@
 console.log("DFP-NEO-V2 BUILD VERSION: f7e3a91c - MUTED-COLORS+GHOST-KEY-FIX");
-window.__DFP_VERSION__ = "b3c5d7e9-COLOR-DIAG-NEO-FIX";
+window.__DFP_VERSION__ = "c4d6e8f0-NEO-CACHE-BUST-FIX";
 setTimeout(()=>console.warn("✅ DFP-NEO-V2 VERSION CHECK: f7e3a91c - MUTED COLORS + GHOST KEY FIX - correct index.js loaded"),5000);
 import { r as reactExports, j as jsxDevRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
@@ -6235,6 +6235,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       "bg-sky-500/50":    "rgba(14,165,233,0.4)",
       "bg-teal-400":      "rgba(45,212,191,0.57)",
       "bg-sky-400":       "rgba(56,189,248,0.57)",
+      "bg-fuchsia-400/80": "rgba(232,121,249,0.57)",
+      "bg-fuchsia-400/50": "rgba(232,121,249,0.42)",
+      "bg-lime-400/80":   "rgba(163,230,53,0.57)",
+      "bg-lime-400/50":   "rgba(163,230,53,0.42)",
+      "bg-violet-400/80": "rgba(167,139,250,0.57)",
+      "bg-violet-400/50": "rgba(167,139,250,0.42)",
+      "bg-rose-400/80":   "rgba(251,113,133,0.57)",
+      "bg-rose-400/50":   "rgba(251,113,133,0.42)",
     };
     return map[cls] || null;
   };
@@ -6242,11 +6250,6 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const _resolvedBgColor = event.type !== "deployment" && event.type !== "unavailability" && !isUnavailabilityConflict && !isConflicting
     ? (isHexColorEarly(event.color || "") ? _hexToRgba(event.color, 0.57) : _tailwindColorToHexForStyle(event.color || ""))
     : null;
-  if (!window.__COLOR_DIAG_LOGGED__) window.__COLOR_DIAG_LOGGED__ = new Set();
-  if (event.color && !window.__COLOR_DIAG_LOGGED__.has(event.color)) {
-    window.__COLOR_DIAG_LOGGED__.add(event.color);
-    console.error("[COLOR-DIAG] color=" + event.color + " | isHex=" + isHexColorEarly(event.color||"") + " | _resolvedBgColor=" + _resolvedBgColor + " | type=" + event.type);
-  }
   const style = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
@@ -6789,6 +6792,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       "bg-sky-500/50":    "rgba(14,165,233,0.4)",
       "bg-teal-400":      "rgba(45,212,191,0.57)",
       "bg-sky-400":       "rgba(56,189,248,0.57)",
+      "bg-fuchsia-400/80": "rgba(232,121,249,0.57)",
+      "bg-fuchsia-400/50": "rgba(232,121,249,0.42)",
+      "bg-lime-400/80":   "rgba(163,230,53,0.57)",
+      "bg-lime-400/50":   "rgba(163,230,53,0.42)",
+      "bg-violet-400/80": "rgba(167,139,250,0.57)",
+      "bg-violet-400/50": "rgba(167,139,250,0.42)",
+      "bg-rose-400/80":   "rgba(251,113,133,0.57)",
+      "bg-rose-400/50":   "rgba(251,113,133,0.42)",
     };
     return map[cls] || null;
   };
