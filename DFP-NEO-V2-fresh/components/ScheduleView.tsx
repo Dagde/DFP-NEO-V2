@@ -903,15 +903,15 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 }}
             >
                 {/* Date Control (Top Left) */}
-                <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-                    <div className="flex items-center gap-2 h-full">
-                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-2 gap-2 flex-1 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}>
-                            <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
-                                <
+                <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
+                    <div className="flex items-center gap-1 h-full">
+                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-1 gap-1 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`} style={{height: "100%"}}>
+                            <button onClick={() => onDateChange(-1)} className="p-0.5 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
+                                &lt;
                             </button>
-                            <span className="flex-grow min-w-0 text-center font-semibold text-white cursor-default truncate text-xs">{formattedDisplayDate}</span>
-                            <button onClick={() => onDateChange(1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
-                                >
+                            <span className="min-w-0 text-center font-semibold text-white cursor-default text-xs whitespace-nowrap">{formattedDisplayDate}</span>
+                            <button onClick={() => onDateChange(1)} className="p-0.5 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
+                                &gt;
                             </button>
                         </div>
                         {isNeoBuild && (
