@@ -1,4 +1,3 @@
-import { showDarkAlert } from './DarkMessageModal';
 
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, MouseEvent } from 'react';
@@ -13,8 +12,6 @@ import { VisualAdjustGuide } from './VisualAdjustGuide';
 interface ScheduleViewProps {
   date: string;
   onDateChange: (increment: number) => void;
-  onDateSelect?: (date: string) => void;
-  snapshotDates?: string[];
   events: ScheduleEvent[];
   resources: string[];
   instructors: string[];
@@ -43,6 +40,7 @@ interface ScheduleViewProps {
   setSelectedEventIds: (ids: Set<string>) => void;
   baselineEvents?: ScheduleEvent[];
   isOracleMode: boolean;
+  isNeoBuild?: boolean;
   oraclePreviewEvent: ScheduleEvent | null;
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
@@ -62,11 +60,9 @@ interface ScheduleViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
-  onUpdatePlannedAvailability?: (count: number) => void;
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
-  isNeoBuild?: boolean;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -132,16 +128,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds, unavailabilityConflicts,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, baselineEvents,
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
-    isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
+    isOracleMode,
+    isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUpdatePlannedAvailability,
-    timezoneOffset = 11, // Default to UTC+11
-    onDateSelect,
-    snapshotDates = [],
-    isNeoBuild = false,
+    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [showCalendarDropdown, setShowCalendarDropdown] = useState(false);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
@@ -243,10 +236,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         });
     }, [date]);
 
-    // Memoize currentDate so AircraftAvailabilityOverlay doesn't remount on every render
-    // (new Date(date) creates a new object reference each render, triggering the localStorage load effect)
-    const currentDateObj = useMemo(() => new Date(date), [date]);
-
     useEffect(() => {
         const scrollContainer = scrollContainerRef.current;
         if (!scrollContainer) return;
@@ -301,24 +290,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         return null;
     }, [syllabusDetails]);
 
-    const handleMouseDown = async (e: MouseEvent<HTMLDivElement>, event?: ScheduleEvent) => {
+    const handleMouseDown = (e: MouseEvent<HTMLDivElement>, event?: ScheduleEvent) => {
         console.log('handleMouseDown called, event:', event?.id, 'isMultiSelectMode:', isMultiSelectMode);
         console.log('Event target:', e.target);
         console.log('Current target:', e.currentTarget);
         if (e.button !== 0) return;
-        // System freeze check - prevent dragging when frozen (but allow click to open flight details)
-        let frozenNoDrag = false;
-        if (event) {
-            const freezeRaw = localStorage.getItem('systemFreezeState');
-            if (freezeRaw) {
-                try {
-                    const freeze = JSON.parse(freezeRaw);
-                    if (freeze.isFrozen) {
-                        frozenNoDrag = true;
-                    }
-                } catch { /* ignore */ }
-            }
-        }
         didDragRef.current = false;
         document.body.classList.add('no-select');
 
@@ -366,7 +342,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 processEvent(event);
             }
 
-            if (initialPositions.size > 0 && !frozenNoDrag) {
+            if (initialPositions.size > 0) {
                    console.log('Setting dragging state with', initialPositions.size, 'events for event:', event.id);                   console.log('initialPositions:', initialPositions);
                 setDraggingState({
                     mainEventId: event.id,
@@ -376,7 +352,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     originalResourceIds,
                 });
                    console.log('setDraggingState called with:', draggingState);
-            } else if (!frozenNoDrag) {
+            } else {
                 console.log('No initial positions - drag state not set');
             }
         } else {
@@ -404,8 +380,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
         
-        // Update validate overlay position when validate mode OR departure density overlay is ON
-        if (showValidation || showDepartureDensityOverlay) {
+        // Update validate overlay position when validate mode is ON
+        if (showValidation) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
         }
@@ -783,7 +759,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     // Render validate mode overlay
     const renderValidateOverlay = () => {
         
-        if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
+        if (!showValidation || validateOverlayTime === null || !showDepartureDensityOverlay) return null;
         
         // Calculate 1-hour window (30 minutes before and after mouse time)
         const windowStart = validateOverlayTime - 0.5;
@@ -844,15 +820,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     // Render loop for events
     const renderEvents = () => {
-        // Deduplicate events by ID to prevent stacked tiles causing alpha compositing brightness artifacts
-        const seenRenderIds = new Set<string>();
-        const uniqueEvents = events.filter(e => {
-            if (seenRenderIds.has(e.id)) return false;
-            seenRenderIds.add(e.id);
-            return true;
-        });
         return resources.flatMap((resource, rowIndex) => {
-            const resourceEvents = uniqueEvents.filter(e => e.resourceId === resource);
+            const resourceEvents = events.filter(e => e.resourceId === resource);
             return resourceEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
@@ -924,7 +893,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     return (
         <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none">
-            <div
+            <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
                     height: `${TIME_HEADER_HEIGHT + (resources.length * ROW_HEIGHT)}px`,
@@ -935,74 +904,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             >
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-                    <div className={`bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}>
-                        <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
-                            &lt;
-                        </button>
-                        <button
-                            onClick={() => setShowCalendarDropdown(v => !v)}
-                            className="flex-grow min-w-0 text-center font-semibold text-white hover:bg-gray-600 rounded px-1 truncate text-xs"
-                            title="Click to select date"
-                        >{formattedDisplayDate}</button>
-                        <button onClick={() => onDateChange(1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
-                            &gt;
-                        </button>
+                    <div className="flex items-center gap-2 h-full">
+                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-2 gap-2 flex-1 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}>
+                            <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
+                                <
+                            </button>
+                            <span className="flex-grow min-w-0 text-center font-semibold text-white cursor-default truncate text-xs">{formattedDisplayDate}</span>
+                            <button onClick={() => onDateChange(1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
+                                >
+                            </button>
+                        </div>
                         {isNeoBuild && (
                             <div className="neo-build-label">NEO Build</div>
-                        )}
-                        {/* Calendar dropdown */}
-                        {showCalendarDropdown && (
-                            <div className="absolute top-full left-0 z-50 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 w-64" style={{minWidth:'220px'}}>
-                                <div className="text-xs text-gray-400 mb-2 font-semibold">Select Date</div>
-                                <input
-                                    type="date"
-                                    defaultValue={date}
-                                    className="w-full bg-gray-700 text-white text-xs rounded px-2 py-1 border border-gray-500 mb-2"
-                                    onChange={e => {
-                                        if (e.target.value) {
-                                            if (onDateSelect) {
-                                                onDateSelect(e.target.value);
-                                            } else {
-                                                const target = new Date(`${e.target.value}T00:00:00Z`);
-                                                const current = new Date(`${date}T00:00:00Z`);
-                                                const diff = Math.round((target.getTime() - current.getTime()) / (86400000));
-                                                if (diff !== 0) onDateChange(diff);
-                                            }
-                                            setShowCalendarDropdown(false);
-                                        }
-                                    }}
-                                />
-                                {snapshotDates && snapshotDates.length > 0 && (
-                                    <>
-                                        <div className="text-xs text-gray-400 mb-1 font-semibold">Saved Schedules</div>
-                                        <div className="max-h-40 overflow-y-auto space-y-1">
-                                            {snapshotDates.slice(0, 30).map(d => (
-                                                <button
-                                                    key={d}
-                                                    onClick={() => {
-                                                        if (onDateSelect) {
-                                                            onDateSelect(d);
-                                                        } else {
-                                                            const target = new Date(`${d}T00:00:00Z`);
-                                                            const current = new Date(`${date}T00:00:00Z`);
-                                                            const diff = Math.round((target.getTime() - current.getTime()) / (86400000));
-                                                            if (diff !== 0) onDateChange(diff);
-                                                        }
-                                                        setShowCalendarDropdown(false);
-                                                    }}
-                                                    className={`w-full text-left text-xs px-2 py-1 rounded hover:bg-gray-600 ${d === date ? 'bg-blue-700 text-white' : 'text-gray-300'}`}
-                                                >
-                                                    {new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-                                <button
-                                    onClick={() => setShowCalendarDropdown(false)}
-                                    className="mt-2 w-full text-xs text-gray-400 hover:text-white text-center"
-                                >Close</button>
-                            </div>
                         )}
                     </div>
                 </div>
@@ -1045,7 +958,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     {/* Aircraft Availability Overlay */}
                     {showAircraftAvailability && plannedAvailability !== undefined && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && (
                         <AircraftAvailabilityOverlay
-                            currentDate={currentDateObj}
+                            currentDate={new Date(date)}
                             totalAircraft={airframeCount}
                             plannedAvailability={plannedAvailability}
                             dayFlyingStart={dayFlyingStart}
@@ -1055,7 +968,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                             startHour={START_HOUR}
                             onAvailabilityChange={onAvailabilityChange}
-                            onUpdatePlannedAvailability={onUpdatePlannedAvailability}
                         />
                     )}
                     

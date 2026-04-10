@@ -540,15 +540,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     const renderEvents = () => {
-        // Deduplicate events by ID to prevent stacked tiles causing visual alpha compositing artifacts
-        const seenIds = new Set<string>();
-        const uniqueEvents = events.filter(e => {
-            if (seenIds.has(e.id)) return false;
-            seenIds.add(e.id);
-            return true;
-        });
         return resources.flatMap((resource, rowIndex) => {
-            const resourceEvents = uniqueEvents.filter(e => e.resourceId === resource);
+            const resourceEvents = events.filter(e => e.resourceId === resource);
             return resourceEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
@@ -656,22 +649,24 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 }}
             >
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-                    <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center gap-2 relative neo-build-date-indicator">
-                        <button 
-                            onClick={() => handleDateNavigation('prev')}
-                            className="text-gray-400 hover:text-white transition-colors p-1"
-                            title="Previous day"
-                        >
-                            ←
-                        </button>
-                        <span className="text-xs text-gray-300 font-bold tracking-wider">{formatDate(date)}</span>
-                        <button 
-                            onClick={() => handleDateNavigation('next')}
-                            className="text-gray-400 hover:text-white transition-colors p-1"
-                            title="Next day"
-                        >
-                            →
-                        </button>
+                    <div className="flex items-center gap-2 h-full">
+                        <div className="bg-gray-700 rounded-md flex items-center justify-center gap-2 px-2 flex-1 neo-build-date-indicator">
+                            <button 
+                                onClick={() => handleDateNavigation('prev')}
+                                className="text-gray-400 hover:text-white transition-colors p-1"
+                                title="Previous day"
+                            >
+                                ←
+                            </button>
+                            <span className="text-xs text-gray-300 font-bold tracking-wider">{formatDate(date)}</span>
+                            <button 
+                                onClick={() => handleDateNavigation('next')}
+                                className="text-gray-400 hover:text-white transition-colors p-1"
+                                title="Next day"
+                            >
+                                →
+                            </button>
+                        </div>
                         <div className="neo-build-label">NEO Build</div>
                     </div>
                 </div>

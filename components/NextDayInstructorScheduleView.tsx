@@ -395,23 +395,25 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
         }}
       >
         <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-            <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center gap-2 relative neo-build-date-indicator">
+            <div className="flex items-center gap-2 h-full">
+                <div className="bg-gray-700 rounded-md flex items-center justify-center gap-2 px-2 flex-1 neo-build-date-indicator">
+                    <button 
+                        onClick={() => onDateChange('prev')}
+                        className="text-gray-400 hover:text-white transition-colors p-1"
+                        title="Previous day"
+                    >
+                        ←
+                    </button>
+                    <span className="text-xs text-gray-300 font-bold tracking-wider">{formattedDate}</span>
+                    <button 
+                        onClick={() => onDateChange('next')}
+                        className="text-gray-400 hover:text-white transition-colors p-1"
+                        title="Next day"
+                    >
+                        →
+                    </button>
+                </div>
                 <div className="neo-build-label">NEO Build</div>
-                <button 
-                    onClick={() => onDateChange('prev')}
-                    className="text-gray-400 hover:text-white transition-colors p-1"
-                    title="Previous day"
-                >
-                    ←
-                </button>
-                <span className="text-xs text-gray-300 font-bold tracking-wider">{formattedDate}</span>
-                <button 
-                    onClick={() => onDateChange('next')}
-                    className="text-gray-400 hover:text-white transition-colors p-1"
-                    title="Next day"
-                >
-                    →
-                </button>
             </div>
         </div>
         
