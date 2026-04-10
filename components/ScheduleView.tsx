@@ -70,7 +70,7 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const AIRFRAME_COLUMN_WIDTH = 220; // Wider date selector column for DFP page
+const AIRFRAME_COLUMN_WIDTH = 264; // 220 * 1.2 = 264px (20% wider)
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
