@@ -260,7 +260,7 @@ export async function initializeData() {
          // Merge DB and mock instructor data based on the staff mock data toggle setting.
          // Real DB data always takes priority. Mock data is only added if the toggle is ON.
          const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-         const includeStaffMockData = dataSourceSettings.staff !== false;
+         const includeStaffMockData = dataSourceSettings.staff === true;
          instructors = mergeInstructorData(instructors, allMockInstructors, includeStaffMockData);
          console.log('🔄 Loaded staff - DB always included, mock data:', includeStaffMockData ? 'ENABLED' : 'DISABLED');
    
@@ -272,7 +272,7 @@ export async function initializeData() {
          console.log('✅ Trainee DB loaded:', trainees.length);
 
          // Use the dataSourceSettings already loaded at the top of initializeData()
-         const includeTraineeMockData = dataSourceSettings.trainee !== false; // Default to true if not set
+         const includeTraineeMockData = dataSourceSettings.trainee === true; // Only include mock data if explicitly enabled
          
          console.log('🔄 Data Sources - Trainee MockData:', includeTraineeMockData ? 'ENABLED' : 'DISABLED');
          trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);

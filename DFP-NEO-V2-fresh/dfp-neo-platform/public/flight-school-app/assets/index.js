@@ -91038,13 +91038,13 @@ async function initializeData() {
       console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
     });
     const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-    const includeStaffMockData = dataSourceSettings.staff !== false;
+    const includeStaffMockData = dataSourceSettings.staff === true;
     instructors = mergeInstructorData(instructors, allMockInstructors, includeStaffMockData);
     console.log("🔄 Loaded staff - DB always included, mock data:", includeStaffMockData ? "ENABLED" : "DISABLED");
     console.log("👨‍🎓 Fetching trainees from API...");
     trainees = await fetchTrainees();
     console.log("✅ Trainee DB loaded:", trainees.length);
-    const includeTraineeMockData = dataSourceSettings.trainee !== false;
+    const includeTraineeMockData = dataSourceSettings.trainee === true;
     console.log("🔄 Data Sources - Trainee MockData:", includeTraineeMockData ? "ENABLED" : "DISABLED");
     trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
     console.log("🔄 Loaded trainees (DB" + (includeTraineeMockData ? " + mock" : " only") + ") with _dataSource tags for UI filtering");
