@@ -8898,14 +8898,9 @@ const ScheduleView = ({
       },
       children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative ${isNeoBuild ? "neo-build-date-indicator" : ""}`, children: [
-          isNeoBuild && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 933,
-            columnNumber: 29
-          }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(-1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: "<" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 935,
+            lineNumber: 932,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8920,15 +8915,20 @@ const ScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 938,
+              lineNumber: 935,
               columnNumber: 25
             },
             void 0
           ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(1), className: "p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: ">" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 943,
+            lineNumber: 940,
             columnNumber: 25
+          }, void 0),
+          isNeoBuild && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
+            lineNumber: 944,
+            columnNumber: 29
           }, void 0),
           showCalendarDropdown && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute top-full left-0 z-50 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 w-64", style: { minWidth: "220px" }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-gray-400 mb-2 font-semibold", children: "Select Date" }, void 0, false, {
@@ -24362,11 +24362,6 @@ const NextDayBuildView = ({
       },
       children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-md w-full h-full flex items-center justify-center gap-2 relative neo-build-date-indicator", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 660,
-            columnNumber: 25
-          }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "button",
             {
@@ -24379,14 +24374,14 @@ const NextDayBuildView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-              lineNumber: 661,
+              lineNumber: 660,
               columnNumber: 25
             },
             void 0
           ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-300 font-bold tracking-wider", children: formatDate2(date) }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 668,
+            lineNumber: 667,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -24401,11 +24396,16 @@ const NextDayBuildView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-              lineNumber: 669,
+              lineNumber: 668,
               columnNumber: 25
             },
             void 0
-          )
+          ),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
+            lineNumber: 675,
+            columnNumber: 25
+          }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
           lineNumber: 659,
@@ -90047,11 +90047,6 @@ const NextDayInstructorScheduleView = ({
       },
       children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-md w-full h-full flex items-center justify-center gap-2 relative neo-build-date-indicator", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 399,
-            columnNumber: 17
-          }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "button",
             {
@@ -90064,14 +90059,14 @@ const NextDayInstructorScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-              lineNumber: 400,
+              lineNumber: 399,
               columnNumber: 17
             },
             void 0
           ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-300 font-bold tracking-wider", children: formattedDate }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 407,
+            lineNumber: 406,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90086,11 +90081,16 @@ const NextDayInstructorScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-              lineNumber: 408,
+              lineNumber: 407,
               columnNumber: 17
             },
             void 0
-          )
+          ),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
+            lineNumber: 414,
+            columnNumber: 17
+          }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
           lineNumber: 398,
@@ -90629,11 +90629,6 @@ const NextDayTraineeScheduleView = ({
       },
       children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700 rounded-md w-full h-full flex items-center justify-center gap-2 relative neo-build-date-indicator", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
-            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-            lineNumber: 407,
-            columnNumber: 17
-          }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "button",
             {
@@ -90646,14 +90641,14 @@ const NextDayTraineeScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-              lineNumber: 408,
+              lineNumber: 407,
               columnNumber: 17
             },
             void 0
           ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-300 font-bold tracking-wider", children: formattedDate }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-            lineNumber: 415,
+            lineNumber: 414,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90668,11 +90663,16 @@ const NextDayTraineeScheduleView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-              lineNumber: 416,
+              lineNumber: 415,
               columnNumber: 17
             },
             void 0
-          )
+          ),
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
+            fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
+            lineNumber: 422,
+            columnNumber: 17
+          }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
           lineNumber: 406,

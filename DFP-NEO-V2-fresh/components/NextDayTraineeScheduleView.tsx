@@ -404,7 +404,6 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
       >
         <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
             <div className="bg-gray-700 rounded-md w-full h-full flex items-center justify-center gap-2 relative neo-build-date-indicator">
-                <div className="neo-build-label">NEO Build</div>
                 <button 
                     onClick={() => onDateChange('prev')}
                     className="text-gray-400 hover:text-white transition-colors p-1"
@@ -420,6 +419,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
                 >
                     →
                 </button>
+                <div className="neo-build-label">NEO Build</div>
             </div>
         </div>
         

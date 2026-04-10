@@ -929,9 +929,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
                     <div className={`bg-gray-700 rounded-md w-full h-full flex items-center justify-center px-2 space-x-2 relative ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}>
-                        {isNeoBuild && (
-                            <div className="neo-build-label">NEO Build</div>
-                        )}
                         <button onClick={() => onDateChange(-1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                             &lt;
                         </button>
@@ -943,6 +940,9 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         <button onClick={() => onDateChange(1)} className="p-1 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
                             &gt;
                         </button>
+                        {isNeoBuild && (
+                            <div className="neo-build-label">NEO Build</div>
+                        )}
                         {/* Calendar dropdown */}
                         {showCalendarDropdown && (
                             <div className="absolute top-full left-0 z-50 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-xl p-3 w-64" style={{minWidth:'220px'}}>

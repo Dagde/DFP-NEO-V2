@@ -5887,6 +5887,7 @@ useEffect(() => {
             seenEventIds.add(e.id);
             return true;
         });
+        console.log('[eventSegmentsForDate] date=' + date + ' totalEvents=' + allEvents.length + ' afterDedup=' + uniqueAllEvents.length + ' dateKeys=' + Object.keys(publishedSchedules).join(','));
 
         for (const event of uniqueAllEvents) {
             let eventStartMs: number, eventEndMs: number;
@@ -8484,10 +8485,24 @@ useEffect(() => {
         
         const newEventsForDate = nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
         
-        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
-            ...prev,
-            [buildDfpDate]: newEventsForDate
-        }));
+        // Debug: log publishedSchedules state before publish
+        console.log('[PUBLISH DEBUG] buildDfpDate:', buildDfpDate);
+        console.log('[PUBLISH DEBUG] nextDayBuildEvents.length:', nextDayBuildEvents.length);
+        console.log('[PUBLISH DEBUG] newEventsForDate sample IDs:', newEventsForDate.slice(0,3).map(e => e.id + '/' + e.date));
+        console.log('[PUBLISH DEBUG] publishedSchedules keys before:', Object.keys(publishedSchedules));
+        publishedSchedules[buildDfpDate]?.slice(0,3).forEach(e => 
+            console.log('[PUBLISH DEBUG] existing event in buildDfpDate key:', e.id, e.date)
+        );
+        
+        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+            const next = { ...prev, [buildDfpDate]: newEventsForDate };
+            console.log('[PUBLISH DEBUG] publishedSchedules keys after:', Object.keys(next));
+            console.log('[PUBLISH DEBUG] total events across all dates:', Object.values(next).flat().length);
+            const allIds = Object.values(next).flat().map(e => e.id);
+            const uniqueIds = new Set(allIds);
+            console.log('[PUBLISH DEBUG] unique IDs:', uniqueIds.size, 'vs total:', allIds.length, '- DUPES:', allIds.length - uniqueIds.size);
+            return next;
+        });
         
         // NEW APPROACH: Sync PT-051s with Active DFP after publish
         console.log('\u{1F4CB} Triggering PT-051 sync after publish...');
