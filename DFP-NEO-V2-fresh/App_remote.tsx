@@ -5963,8 +5963,15 @@ useEffect(() => {
                 });
             }
         }
-        console.log('🚀 [NEO-Build] Final segments.length:', segments.length);
-        return segments;
+        // Deduplicate segments by event ID to prevent stacked tiles (alpha compositing makes dupes look too bright)
+        const seenIds = new Set<string>();
+        const uniqueSegments = segments.filter(seg => {
+            if (seenIds.has(seg.id)) return false;
+            seenIds.add(seg.id);
+            return true;
+        });
+        console.log('🚀 [NEO-Build] Final segments.length:', segments.length, '→ after dedup:', uniqueSegments.length);
+        return uniqueSegments;
     }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
 
     useEffect(() => {

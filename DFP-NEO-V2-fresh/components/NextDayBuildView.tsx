@@ -540,8 +540,15 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     const renderEvents = () => {
+        // Deduplicate events by ID to prevent stacked tiles causing visual alpha compositing artifacts
+        const seenIds = new Set<string>();
+        const uniqueEvents = events.filter(e => {
+            if (seenIds.has(e.id)) return false;
+            seenIds.add(e.id);
+            return true;
+        });
         return resources.flatMap((resource, rowIndex) => {
-            const resourceEvents = events.filter(e => e.resourceId === resource);
+            const resourceEvents = uniqueEvents.filter(e => e.resourceId === resource);
             return resourceEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
