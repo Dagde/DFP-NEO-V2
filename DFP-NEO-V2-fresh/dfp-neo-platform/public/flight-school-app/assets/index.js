@@ -7994,7 +7994,7 @@ const ROW_HEIGHT$5 = 32;
 const START_HOUR$5 = 0;
 const END_HOUR$5 = 24;
 const TOTAL_HOURS$5 = END_HOUR$5 - START_HOUR$5;
-const AIRFRAME_COLUMN_WIDTH$1 = 166;
+const AIRFRAME_COLUMN_WIDTH$1 = 108;
 const TIME_HEADER_HEIGHT$5 = 40;
 const isOverlapping$2 = (f1, f2) => {
   if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
@@ -8880,13 +8880,13 @@ const ScheduleView = ({
       },
       children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-1 h-full", children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `bg-gray-700 rounded-md flex items-center justify-center px-1 gap-1 ${isNeoBuild ? "neo-build-date-indicator" : ""}`, style: { height: "100%" }, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 ${isNeoBuild ? "neo-build-date-indicator" : ""}`, style: { height: "100%", width: "100%" }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(-1), className: "p-0.5 rounded-full hover:bg-gray-600 text-white flex-shrink-0", children: "<" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
               lineNumber: 909,
               columnNumber: 29
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "min-w-0 text-center font-semibold text-white cursor-default text-xs whitespace-nowrap", children: formattedDisplayDate }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "min-w-0 text-center font-semibold text-white cursor-default text-sm whitespace-nowrap", children: formattedDisplayDate }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
               lineNumber: 912,
               columnNumber: 29
