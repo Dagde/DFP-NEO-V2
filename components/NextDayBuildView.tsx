@@ -49,7 +49,7 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const AIRFRAME_COLUMN_WIDTH = 144;
+const AIRFRAME_COLUMN_WIDTH = 200; // Wider to accommodate date selector + NEO Build label
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
