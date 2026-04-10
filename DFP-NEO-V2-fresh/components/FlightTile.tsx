@@ -604,6 +604,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     : event.type === 'unavailability'
     ? 'bg-red-900/80 border border-red-600/60'
     : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : (resolvedBgColor ? '' : event.color);
+  
+  // Debug: Log color values to understand what's being passed
+  console.log('[FlightTile Debug] event.color:', event.color, '| resolvedBgColor:', resolvedBgColor, '| event.type:', event.type);
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
