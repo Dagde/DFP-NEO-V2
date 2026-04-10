@@ -7995,7 +7995,7 @@ const START_HOUR$5 = 0;
 const END_HOUR$5 = 24;
 const TOTAL_HOURS$5 = END_HOUR$5 - START_HOUR$5;
 const AIRFRAME_COLUMN_WIDTH$1 = 108;
-const RESOURCE_COLUMN_WIDTH = 95;
+const RESOURCE_COLUMN_WIDTH = 105;
 const TIME_HEADER_HEIGHT$5 = 40;
 const isOverlapping$2 = (f1, f2) => {
   if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
