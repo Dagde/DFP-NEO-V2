@@ -402,27 +402,26 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
           gridTemplateRows: `${TIME_HEADER_HEIGHT}px 1fr`,
         }}
       >
-        <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1">
-            <div className="flex items-center gap-2 h-full">
-                <div className="bg-gray-700 rounded-md flex items-center justify-center gap-2 px-2 flex-1 neo-build-date-indicator">
+        <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
+            <div className="flex items-center gap-1 h-full">
+                <div className="bg-gray-700 rounded-md flex items-center justify-center gap-1 px-1 neo-build-date-indicator" style={{height: "100%"}}>
                     <button 
                         onClick={() => onDateChange('prev')}
-                        className="text-gray-400 hover:text-white transition-colors p-1"
+                        className="text-gray-400 hover:text-white transition-colors p-0.5"
                         title="Previous day"
                     >
                         ←
                     </button>
-                    <span className="text-xs text-gray-300 font-bold tracking-wider">{formattedDate}</span>
+                    <span className="text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap">{formattedDate}</span>
                     <button 
                         onClick={() => onDateChange('next')}
-                        className="text-gray-400 hover:text-white transition-colors p-1"
+                        className="text-gray-400 hover:text-white transition-colors p-0.5"
                         title="Next day"
                     >
                         →
                     </button>
                 </div>
                 <div className="neo-build-label">NEO Build</div>
-            </div>
             </div>
         </div>
         

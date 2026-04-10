@@ -9,13 +9,13 @@ import { assignTraineesToInstructors } from './traineeAssignmentService';
 // Merge database instructors with mock data, deduplicating by idNumber
 // Adds _dataSource field to track origin ('database' or 'mockdata')
 function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], includeMockData: boolean): any[] {
-  console.log('\ud83d\udd04 Merging instructor data...');
+  console.log('🔄 Merging instructor data...');
   console.log('  Database instructors:', dbInstructors.length);
   console.log('  Mock instructors:', mockInstructors.length);
   console.log('  Include MockData:', includeMockData);
   
   // Debug: Log DB instructor details
-  console.log('\ud83d\udcca DB INSTRUCTOR DETAILS:');
+  console.log('📊 DB INSTRUCTOR DETAILS:');
   dbInstructors.forEach((inst: any) => {
     console.log(`  DB: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit} | role: ${inst.role} | isQFI: ${inst.isQFI}`);
   });
@@ -26,42 +26,38 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
     mockByName.set(instructor.name, instructor);
   });
 
-  // Create a map of database instructors by idNumber for deduplication
-  // Also create a set of DB instructor names for name-based deduplication
+  // Create a map of database instructors for deduplication
+  // Key: use idNumber when non-null, otherwise fall back to the Prisma CUID (id field)
+  // This prevents all null-idNumber records from collapsing to a single map entry.
+  // Also create a set of DB instructor names for name-based mockdata deduplication.
   // Tag each database record with _dataSource: 'database'
   const dbInstructorMap = new Map();
   const dbInstructorNames = new Set<string>();
+  // Separate map keyed by idNumber (only for non-null idNumbers) used for mockdata dedup
+  const dbByIdNumber = new Map();
   dbInstructors.forEach((instructor: any) => {
-    // If DB instructor has empty permissions, inherit from mockData by name
-    if ((!instructor.permissions || instructor.permissions.length === 0) && mockByName.has(instructor.name)) {
-      const mockMatch = mockByName.get(instructor.name);
-      instructor = { ...instructor, permissions: mockMatch.permissions || [] };
-      console.log(`  \u2705 Inherited permissions for ${instructor.name} from mockData:`, instructor.permissions);
-    }
+    // NOTE: Permissions are NOT inherited from mock data.
+    // Real DB instructors keep their own permissions (even if empty).
+    // Empty permissions = no permissions assigned yet, which is correct.
     
-    // Extract currencyStatus from qualifications JSON field if present
-    if (instructor.qualifications && typeof instructor.qualifications === 'object' && (instructor.qualifications as any).currencyStatus) {
-      instructor = { ...instructor, currencyStatus: (instructor.qualifications as any).currencyStatus };
-    }
-
-    // Check for duplicate idNumbers - prefer the one with currencyStatus data
-    if (dbInstructorMap.has(instructor.idNumber)) {
-      const existing = dbInstructorMap.get(instructor.idNumber);
-      const existingHasData = existing.currencyStatus && existing.currencyStatus.length > 0;
-      const newHasData = instructor.currencyStatus && instructor.currencyStatus.length > 0;
-      if (!existingHasData && newHasData) {
-        console.log(`  Replacing duplicate idNumber: ${instructor.idNumber} with record that has currencyStatus data`);
-      } else {
-        console.log(`  Skipping duplicate idNumber: ${instructor.idNumber}`);
-        dbInstructorNames.add(instructor.name);
-        return; // Skip this duplicate
-      }
+    // Use idNumber as key if available, otherwise use CUID (id) to avoid null-key collisions
+    // All 102 restored staff have idNumber=null — without this fix they'd all overwrite each other
+    const mapKey = instructor.idNumber != null ? instructor.idNumber : (instructor.id || instructor.name);
+    
+    // Check for duplicate keys
+    if (dbInstructorMap.has(mapKey)) {
+      console.log(`  ⚠️ DUPLICATE KEY: ${mapKey} - ${instructor.name} overwrites ${dbInstructorMap.get(mapKey).name}`);
     }
     
     // Tag with dataSource
     const taggedInstructor = { ...instructor, _dataSource: 'database' as const };
-    dbInstructorMap.set(instructor.idNumber, taggedInstructor);
+    dbInstructorMap.set(mapKey, taggedInstructor);
     dbInstructorNames.add(instructor.name);
+    
+    // Track by idNumber for mockdata deduplication (only when non-null)
+    if (instructor.idNumber != null) {
+      dbByIdNumber.set(instructor.idNumber, taggedInstructor);
+    }
   });
   
   // Start with database instructors (already tagged)
@@ -72,12 +68,12 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
   // Only add mock instructors if includeMockData is true
   if (includeMockData) {
     mockInstructors.forEach((instructor: any) => {
-      if (dbInstructorMap.has(instructor.idNumber)) {
+      if (instructor.idNumber != null && dbByIdNumber.has(instructor.idNumber)) {
         skippedByIdNumber++;
-        console.log(`  \u23ed\ufe0f Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
+        console.log(`  ⏭️ Skipped mock instructor (idNumber match): ${instructor.name} (${instructor.idNumber})`);
       } else if (dbInstructorNames.has(instructor.name)) {
         skippedByName++;
-        console.log(`  \u23ed\ufe0f Skipped mock instructor (name match): ${instructor.name}`);
+        console.log(`  ⏭️ Skipped mock instructor (name match): ${instructor.name}`);
       } else {
         // Tag with dataSource: 'mockdata'
         merged.push({ ...instructor, _dataSource: 'mockdata' as const });
@@ -85,7 +81,7 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
     });
   }
   
-  console.log(`\ud83d\udcca MERGE SUMMARY:`);
+  console.log(`📊 MERGE SUMMARY:`);
   console.log(`  DB instructors after dedup: ${dbInstructorMap.size}`);
   console.log(`  Mock instructors skipped (idNumber): ${skippedByIdNumber}`);
   console.log(`  Mock instructors skipped (name): ${skippedByName}`);
@@ -101,9 +97,9 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
       qfisByUnit[unit] = (qfisByUnit[unit] || 0) + 1;
     }
   });
-  console.log('\ud83d\udcca QFIs BY UNIT:', qfisByUnit);
+  console.log('📊 QFIs BY UNIT:', qfisByUnit);
   
-  // Sort by: Unit \u2192 Rank \u2192 Name (alphabetical)
+  // Sort by: Unit → Rank → Name (alphabetical)
   merged.sort((a: any, b: any) => {
     // First by unit
     if (a.unit !== b.unit) {
@@ -128,36 +124,47 @@ function mergeInstructorData(dbInstructors: any[], mockInstructors: any[], inclu
 function assignTraineesToBurns(instructors: any[], trainees: any[]): void {
   const burns = instructors.find(i => i.name && i.name.toLowerCase().includes('burns'));
   if (!burns) {
-    console.log('\u26a0\ufe0f  Burns not found in instructors - skipping trainee assignment');
+    console.log('⚠️  Burns not found in instructors - skipping trainee assignment');
     return;
   }
   
-  console.log('\ud83d\udc68\u200d\u2708\ufe0f  Assigning trainees to Burns:', burns.name);
+  console.log('👨‍✈️  Assigning trainees to Burns:', burns.name);
   
   // Find unassigned trainees (no primary instructor)
-  const unassignedTrainees = trainees.filter(t => !t.primaryInstructor);
+  const unassignedTrainees = trainees.filter(t => {
+    const p = t.primaryInstructor;
+    return !p || (Array.isArray(p) && p.length === 0);
+  });
   console.log('  Found', unassignedTrainees.length, 'unassigned trainees');
   
   // Assign 2 primary trainees to Burns
   const primaryAssignments = unassignedTrainees.slice(0, 2);
   primaryAssignments.forEach(trainee => {
-    trainee.primaryInstructor = burns.name;
-    console.log('  Assigned primary:', trainee.name, '\u2192', burns.name);
+    if (Array.isArray(trainee.primaryInstructor)) {
+      if (!trainee.primaryInstructor.includes(burns.name)) trainee.primaryInstructor.push(burns.name);
+    } else {
+      trainee.primaryInstructor = [burns.name];
+    }
+    console.log('  Assigned primary:', trainee.name, '→', burns.name);
   });
   
   // Assign 2 secondary trainees to Burns (different from primary)
   const remainingTrainees = unassignedTrainees.slice(2);
   const secondaryAssignments = remainingTrainees.slice(0, 2);
   secondaryAssignments.forEach(trainee => {
-    trainee.secondaryInstructor = burns.name;
-    console.log('  Assigned secondary:', trainee.name, '\u2192', burns.name);
+    if (Array.isArray(trainee.secondaryInstructor)) {
+      if (!trainee.secondaryInstructor.includes(burns.name)) trainee.secondaryInstructor.push(burns.name);
+    } else {
+      trainee.secondaryInstructor = [burns.name];
+    }
+    console.log('  Assigned secondary:', trainee.name, '→', burns.name);
   });
 }
 
 // Merge database trainees with mock data, deduplicating by name
 // Adds _dataSource field to track origin ('database' or 'mockdata')
 function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockData: boolean): any[] {
-  console.log('\ud83d\udd04 Merging trainee data...');
+  console.log('🔄 Merging trainee data...');
   console.log('  Database trainees:', dbTrainees.length);
   console.log('  Mock trainees:', mockTrainees.length);
   console.log('  Include MockData:', includeMockData);
@@ -169,31 +176,17 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
   // Tag each database record with _dataSource: 'database'
   // Use idNumber as dedup key since it's unique (name could have duplicates)
   const dbTraineeMap = new Map();
-  const taggedDbTrainees = dbTrainees.map((trainee: any) => {
-    // Extract currencyStatus from qualifications JSON field if present
-    let extracted = { ...trainee, _dataSource: 'database' as const };
-    if (trainee.qualifications && typeof trainee.qualifications === 'object' && (trainee.qualifications as any).currencyStatus) {
-      extracted = { ...extracted, currencyStatus: (trainee.qualifications as any).currencyStatus };
-    }
-    return extracted;
-  });
+  const taggedDbTrainees = dbTrainees.map((trainee: any) => ({
+    ...trainee,
+    _dataSource: 'database' as const
+  }));
 
   taggedDbTrainees.forEach((trainee: any) => {
-    const existing = dbTraineeMap.get(trainee.idNumber);
-    if (!existing) {
-      dbTraineeMap.set(trainee.idNumber, trainee);
-    } else {
-      // Prefer record with currencyStatus data
-      const existingHasData = existing.currencyStatus && existing.currencyStatus.length > 0;
-      const newHasData = trainee.currencyStatus && trainee.currencyStatus.length > 0;
-      if (!existingHasData && newHasData) {
-        dbTraineeMap.set(trainee.idNumber, trainee);
-      }
-    }
+    dbTraineeMap.set(trainee.idNumber, trainee);
   });
 
-  // Start with database trainees (already tagged, deduped, currencyStatus extracted)
-  const merged = Array.from(dbTraineeMap.values());
+  // Start with database trainees (already tagged)
+  const merged = [...taggedDbTrainees];
 
   // Only add mock trainees if includeMockData is true
   if (includeMockData) {
@@ -215,33 +208,14 @@ function mergeTraineeData(dbTrainees: any[], mockTrainees: any[], includeMockDat
 }
 
 export async function initializeData() {
-  console.log('\ud83d\udd27 initializeData() v2.3-debug - Starting data initialization');
+  console.log('🔧 initializeData() v3.0 - Starting data initialization (DB-only, no mock data)');
   
-    // Read data source settings from localStorage
-    // Defaults match DataSourcesSettings.tsx: all ON by default
-    let dataSourceSettings: { staff: boolean; trainee: boolean; course: boolean; staffDb: boolean; traineeDb: boolean } = {
-      staff: true,
-      trainee: true,
-      course: false,
-      staffDb: true,
-      traineeDb: true,
-    };
-    try {
-      const settingsStr = localStorage.getItem('dataSourceSettings');
-      if (settingsStr) {
-        const parsed = JSON.parse(settingsStr);
-        dataSourceSettings = {
-          staff: parsed.staff !== false,
-          trainee: parsed.trainee !== false,
-          course: parsed.course === true,
-          staffDb: parsed.staffDb !== false,
-          traineeDb: parsed.traineeDb !== false,
-        };
-      }
-      console.log('\ud83c\udf9b\ufe0f Data source settings:', dataSourceSettings);
-    } catch (e) {
-      console.log('\u26a0\ufe0f Could not read dataSourceSettings, using defaults');
-    }
+    // PERMANENT FIX: Mock data is NEVER loaded at startup regardless of localStorage settings.
+    // The UI DataSourcesSettings toggles only affect the instructorsData/traineesData useMemo
+    // filters in App.tsx which run AFTER data is loaded. Loading mock data here caused
+    // contamination of allInstructorsData with fake staff that persisted across sessions.
+    // If mock data is needed for testing, it must be explicitly re-enabled in the UI toggles
+    // which filter the already-loaded data - but it will never be in allInstructorsData by default.
     
   let instructors: any[] = [];
   let trainees: any[] = [];
@@ -250,89 +224,91 @@ export async function initializeData() {
   let events: any[] = [];
 
   try {
-    console.log('\ud83c\udf10 Initializing data from API...');
+    console.log('🌐 Initializing data from API...');
     
          // Fetch instructors - ALWAYS load all data regardless of toggle settings
          // Filtering is handled in App.tsx UI layer, not here at load time
          // This ensures toggling ON after app load shows data correctly
-         console.log('\ud83d\udc68\u200d\ud83c\udfeb Fetching instructors from API...');
+         console.log('👨‍🏫 Fetching instructors from API...');
          const allPersonnel = await fetchInstructors();
          instructors = allPersonnel;
-         console.log('\u2705 Staff DB loaded:', instructors.length, 'personnel records');
+         console.log('✅ Staff DB loaded:', instructors.length, 'personnel records');
          allPersonnel.forEach((inst: any) => {
            const hasUserId = inst.userId && inst.userId !== '';
            console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || 'N/A'} | role: ${inst.role || 'N/A'} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? 'YES' : 'NO'}`);
          });
 
-         // Always merge both DB and mock data with _dataSource tags
-         // App.tsx filtering will decide what to show based on toggle state
-         // Merge both ESL and PEA mock instructors so both locations are available
-         const allMockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-         instructors = mergeInstructorData(instructors, allMockInstructors, true);
-         console.log('\ud83d\udd04 Loaded all staff (DB + mock) with _dataSource tags for UI filtering');
+         // DB-only: tag all personnel with _dataSource: 'database'
+         // Mock data is never merged here - UI toggles in DataSourcesSettings handle filtering
+         instructors = instructors.map((i: any) => ({ ...i, _dataSource: 'database' as const }));
+         console.log('🔄 Loaded staff from DB only:', instructors.length, 'records (mock data excluded at load time)');
    
 
          // Fetch trainees - ALWAYS load all data regardless of toggle settings
          // Filtering is handled in App.tsx UI layer, not here at load time
-         console.log('\ud83d\udc68\u200d\ud83c\udf93 Fetching trainees from API...');
+         console.log('👨‍🎓 Fetching trainees from API...');
          trainees = await fetchTrainees();
-         console.log('\u2705 Trainee DB loaded:', trainees.length);
+         console.log('✅ Trainee DB loaded:', trainees.length);
 
-         // Read trainee mock data setting from localStorage
-         // If trainee mock data is enabled, merge mock trainees with DB trainees
-         const storedSettings = typeof localStorage !== 'undefined' ? localStorage.getItem('dataSourceSettings') : null;
-         const dataSourceSettings = storedSettings ? JSON.parse(storedSettings) : null;
-         const includeTraineeMockData = dataSourceSettings?.trainee !== false; // Default to true if not set
-         
-         console.log('\ud83d\udd04 Data Sources - Trainee MockData:', includeTraineeMockData ? 'ENABLED' : 'DISABLED');
-         trainees = mergeTraineeData(trainees, ESL_DATA.trainees, includeTraineeMockData);
-         console.log('\ud83d\udd04 Loaded trainees (DB' + (includeTraineeMockData ? ' + mock' : ' only') + ') with _dataSource tags for UI filtering');
+         // DB-only: tag all trainees with _dataSource: 'database'
+         // Mock data is never merged here - UI toggles in DataSourcesSettings handle filtering
+         trainees = trainees.map((t: any) => ({ ...t, _dataSource: 'database' as const }));
+         console.log('🔄 Loaded trainees from DB only:', trainees.length, 'records (mock data excluded at load time)');
        
        // Assign trainees to instructors using the new assignment service
        // This ensures all instructors have minimum 2 primary and 2 secondary trainees
+       try {
        console.log('\ud83d\udd27 Applying trainee assignment logic...');
        const assignmentResult = assignTraineesToInstructors(trainees, instructors);
        trainees = assignmentResult.trainees;
        console.log('\u2705 Trainee assignment complete');
        console.log('\ud83d\udcca Assignment Summary:', assignmentResult.summary);
+       } catch (error) {
+         console.error('\\u274c Error during trainee assignment:', error);
+         console.warn('\\u26a0\ufe0f Continuing without trainee assignment - trainees will have no instructors assigned');
+         // Continue without assignment - trainees will keep their existing instructor assignments (if any)
+       }
    
     // Fetch aircraft
-    console.log('\u2708\ufe0f Fetching aircraft from API...');
+    console.log('✈️ Fetching aircraft from API...');
     aircraft = await fetchAircraft();
-    console.log('\u2705 Aircraft loaded:', aircraft.length);
+    console.log('✅ Aircraft loaded:', aircraft.length);
     
     // Fetch scores
-    console.log('\ud83d\udcca Fetching scores from API...');
+    console.log('📊 Fetching scores from API...');
     scores = await fetchScores();
-    console.log('\u2705 Scores loaded:', Object.keys(scores).length, 'trainees with scores');
+    console.log('✅ Scores loaded:', Object.keys(scores).length, 'trainees with scores');
     
     // Fetch schedule
-    console.log('\ud83d\udcc5 Fetching schedule from API...');
+    console.log('📅 Fetching schedule from API...');
     events = await fetchSchedule();
-    console.log('\u2705 Schedule loaded:', events.length);
+    console.log('✅ Schedule loaded:', events.length);
+
+    // Courses not fetched here - handled by App.tsx directly
+    const courses: any[] = [];
     
-    // If API returned no data, fallback to mock data (always tagged with _dataSource)
+    // PERMANENT: Never fall back to mock data - if API returns nothing, use empty arrays.
+    // Mock data contaminated real staff lists and must not be loaded at startup under any circumstance.
     if (instructors.length === 0) {
-        console.log('\u26a0\ufe0f No instructors from API, falling back to mock data');
-        instructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors].map((i: any) => ({ ...i, _dataSource: 'mockdata' }));
+        console.log('⚠️ No instructors from API - returning empty list (no mock data fallback)');
     }
     
     if (trainees.length === 0) {
-        console.log('\u26a0\ufe0f No trainees from API, falling back to mock data');
-        trainees = ESL_DATA.trainees.map((t: any) => ({ ...t, _dataSource: 'mockdata' }));
+        console.log('⚠️ No trainees from API - returning empty list (no mock data fallback)');
     }
     
     if (aircraft.length === 0) {
-      console.log('\u26a0\ufe0f No aircraft from API, using mock data');
+      console.log('⚠️ No aircraft from API, using mock data');
       aircraft = ESL_DATA.aircraft || [];
     }
     
-    console.log('\ud83d\udcca Data loaded successfully:', {
+    console.log('📊 Data loaded successfully:', {
       instructors: instructors.length,
       trainees: trainees.length,
       aircraft: aircraft.length,
       scores: Object.keys(scores).length,
       events: events.length,
+      courses: courses.length,
     });
     
     return {
@@ -341,21 +317,22 @@ export async function initializeData() {
       aircraft,
       scores,
       events,
+      courses,
     };
+    
   } catch (error) {
-    console.error('\u274c Error loading data from API:', error);
+    console.error('❌ Failed to load data from API:', error);
+    console.log('⚠️ API error - returning empty data (no mock data fallback)');
     
-    // Fallback to mock data
-    console.log('\ud83d\ude80 Falling back to mock data...');
-    const mockInstructors = [...ESL_DATA.instructors, ...PEA_DATA.instructors];
-    const mockTrainees = ESL_DATA.trainees;
-    
+    // PERMANENT: Never fall back to mock data on API error.
+    // Return empty arrays - the app will show no staff/trainees until DB connection is restored.
     return {
-      instructors: mockInstructors,
-      trainees: mockTrainees,
-      aircraft: ESL_DATA.aircraft || [],
+      instructors: [],
+      trainees: [],
+      aircraft: [],
       scores: {},
       events: [],
+      courses: [],
     };
   }
 }

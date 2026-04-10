@@ -4015,14 +4015,14 @@ const App: React.FC = () => {
             if (stored) {
                 const parsed = JSON.parse(stored);
                 return {
-                    staff: parsed.staff !== false,
-                    trainee: parsed.trainee !== false,
+                    staff: parsed.staff === true,
+                    trainee: parsed.trainee === true,
                     staffDb: parsed.staffDb !== false,
                     traineeDb: parsed.traineeDb !== false,
                 };
             }
         } catch (e) {}
-        return { staff: true, trainee: true, staffDb: true, traineeDb: true };
+        return { staff: false, trainee: false, staffDb: true, traineeDb: true };
     });
 
     // Data state
@@ -4345,6 +4345,22 @@ useEffect(() => {
     }, [authUser, currentUser, currentUserName]);
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
+        // One-time migration: force mock data toggles OFF permanently
+        // Clears any stale localStorage 'staff: true' settings from old defaults
+        try {
+            const stored = localStorage.getItem('dataSourceSettings');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed.staff === true || parsed.trainee === true) {
+                    parsed.staff = false;
+                    parsed.trainee = false;
+                    localStorage.setItem('dataSourceSettings', JSON.stringify(parsed));
+                    setDataSourceSettings(prev => ({ ...prev, staff: false, trainee: false }));
+                    console.log('🔧 Migrated dataSourceSettings: mock data toggles forced OFF');
+                }
+            }
+        } catch (e) {}
+
         const loadInitialData = async () => {
             console.log('🔄 Starting to load initial data...');
             try {

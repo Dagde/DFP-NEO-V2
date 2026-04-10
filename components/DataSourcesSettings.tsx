@@ -11,15 +11,15 @@ interface DataSourceSettings {
 
 interface DataSourcesSettingsProps {
   onShowSuccess: (message: string) => void;
-  onSettingsChanged?: () => void;
+  onSettingsChanged?: (newSettings: DataSourceSettings) => void;
 }
 
 type MigrationState = 'idle' | 'running' | 'done' | 'error';
 
 const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess, onSettingsChanged }) => {
   const [settings, setSettings] = useState<DataSourceSettings>({
-    staff: true,
-    trainee: true,
+    staff: false,
+    trainee: false,
     staffDb: true,
     traineeDb: true,
   });
@@ -38,8 +38,8 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
       if (stored) {
         const parsed = JSON.parse(stored);
         setSettings({
-          staff: parsed.staff !== false,
-          trainee: parsed.trainee !== false,
+          staff: parsed.staff === true,
+          trainee: parsed.trainee === true,
           staffDb: parsed.staffDb !== false,
           traineeDb: parsed.traineeDb !== false,
         });
@@ -62,8 +62,8 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
         traineeDb: 'Trainee Database',
       };
       const state = newSettings[key] ? 'enabled' : 'disabled';
-      onShowSuccess(`${labels[key]} ${state}. Reload the app to apply changes.`);
-      if (onSettingsChanged) onSettingsChanged();
+      onShowSuccess(`${labels[key]} ${state}.`);
+      if (onSettingsChanged) onSettingsChanged(newSettings);
     } catch (e) {
       console.error('Could not save dataSourceSettings to localStorage');
     }

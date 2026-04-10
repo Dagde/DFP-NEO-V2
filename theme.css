@@ -433,16 +433,20 @@
     color: white;
     font-size: 10px;
     font-weight: 700;
-    padding: 4px 12px;
+    padding: 0px 8px;
     border-radius: 6px;
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    height: 100%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin-left: 8px;
+    align-self: stretch;
+    flex-shrink: 0;
     z-index: 50;
+}
+
+.neo-build-header-cell {
+    overflow: visible !important;
 }
