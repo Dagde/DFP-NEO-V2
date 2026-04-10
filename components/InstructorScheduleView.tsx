@@ -31,7 +31,7 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const PERSONNEL_COLUMN_WIDTH = 160;
+const PERSONNEL_COLUMN_WIDTH = 192; // 160 * 1.2 = 192px (20% wider)
 const TIME_HEADER_HEIGHT = 40;
 
 // --- Utility functions ---
