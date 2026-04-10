@@ -464,10 +464,7 @@
 }
 
 .neo-build-label {
-    position: absolute;
-    top: -22px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: static;
     background: linear-gradient(135deg, rgb(251, 146, 60), rgb(255, 165, 0));
     color: white;
     font-size: 10px;
@@ -479,4 +476,6 @@
     letter-spacing: 0.5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     z-index: 50;
+    display: inline-flex;
+    align-items: center;
 }

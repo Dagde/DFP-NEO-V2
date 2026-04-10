@@ -5880,7 +5880,15 @@ useEffect(() => {
         // FIX: Explicitly type allEvents to aid TypeScript's inference.
         const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
     
-        for (const event of allEvents) {
+        // Deduplicate allEvents by ID to prevent stacked tiles from duplicate entries across date keys
+        const seenEventIds = new Set<string>();
+        const uniqueAllEvents = allEvents.filter(e => {
+            if (seenEventIds.has(e.id)) return false;
+            seenEventIds.add(e.id);
+            return true;
+        });
+
+        for (const event of uniqueAllEvents) {
             let eventStartMs: number, eventEndMs: number;
     
             eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
@@ -6644,6 +6652,8 @@ useEffect(() => {
         } else {
             currentDate.setUTCDate(currentDate.getUTCDate() + 1);
         }
+        // Clear build events when navigating to a different date to prevent ghost tiles
+        setNextDayBuildEvents([]);
         setBuildDfpDate(getLocalDateString(currentDate));
     };
     
