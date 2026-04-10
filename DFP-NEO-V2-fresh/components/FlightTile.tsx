@@ -672,6 +672,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   useEffect(() => {
     if (tileRef.current && resolvedBgColor) {
       tileRef.current.style.setProperty('background-color', resolvedBgColor, 'important');
+      // DEBUG: confirm setProperty was called
+      console.log('[TileRef] setProperty called:', resolvedBgColor, '| computed:', tileRef.current.style.backgroundColor);
+    } else if (tileRef.current && !resolvedBgColor) {
+      console.log('[TileRef] resolvedBgColor is NULL - event.color:', (event as any).color, 'event.type:', event.type);
     }
   }, [resolvedBgColor]);
 
