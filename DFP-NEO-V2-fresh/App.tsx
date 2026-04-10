@@ -6076,7 +6076,14 @@ useEffect(() => {
         const todayEndTime = todayEnd.getTime();
     
         // FIX: Only load events for the currently viewed date to avoid ghost tiles from other dates.
-        const allEvents: ScheduleEvent[] = (publishedSchedules[date] || []);
+        const rawEvents: ScheduleEvent[] = (publishedSchedules[date] || []);
+        // Deduplicate by event ID - publishedSchedules[date] may contain duplicate IDs causing stacked tiles
+        const seenEIds = new Set<string>();
+        const allEvents = rawEvents.filter(e => {
+            if (seenEIds.has(e.id)) return false;
+            seenEIds.add(e.id);
+            return true;
+        });
     
         for (const event of allEvents) {
             let eventStartMs: number, eventEndMs: number;
@@ -6157,8 +6164,15 @@ useEffect(() => {
                 });
             }
         }
-        console.log('🚀 [NEO-Build] Final segments.length:', segments.length);
-        return segments;
+        // Deduplicate segments by event ID to prevent stacked tiles (alpha compositing makes dupes look too bright)
+        const seenIds = new Set();
+        const uniqueSegments = segments.filter(seg => {
+            if (seenIds.has(seg.id)) return false;
+            seenIds.add(seg.id);
+            return true;
+        });
+        console.log('🚀 [NEO-Build] Final segments.length:', segments.length, '→ after dedup:', uniqueSegments.length);
+        return uniqueSegments;
     }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
 
     useEffect(() => {
@@ -6831,6 +6845,8 @@ useEffect(() => {
         } else {
             currentDate.setUTCDate(currentDate.getUTCDate() + 1);
         }
+        // Clear build events when navigating to a different date to prevent ghost tiles
+        setNextDayBuildEvents([]);
         setBuildDfpDate(getLocalDateString(currentDate));
     };
     
@@ -8776,7 +8792,16 @@ useEffect(() => {
         // Close the confirmation flyout immediately
         setShowPublishConfirm(false);
         
-        const newEventsForDate = nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
+        // Deduplicate build events by ID before publishing to prevent stacked tiles
+        const seenPublishIds = new Set<string>();
+        const dedupedBuildEvents = nextDayBuildEvents.filter(e => {
+            if (seenPublishIds.has(e.id)) return false;
+            seenPublishIds.add(e.id);
+            return true;
+        });
+        console.log('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
+        
+        const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
         
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
             ...prev,
