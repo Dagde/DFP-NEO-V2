@@ -1,5 +1,5 @@
 
-import React, { MouseEvent } from 'react';
+import React, { MouseEvent, useRef, useEffect } from 'react';
 import { ScheduleEvent, Trainee, EventSegment } from '../types';
 
 interface FlightTileProps {
@@ -605,8 +605,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     ? 'bg-red-900/80 border border-red-600/60'
     : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : (resolvedBgColor ? '' : event.color);
   
-  // Debug: Log color values to understand what's being passed
-  console.log('[FlightTile Debug] event.color:', event.color, '| resolvedBgColor:', resolvedBgColor, '| event.type:', event.type);
+  
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
@@ -668,8 +667,17 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       );
   }
 
+  // Use a ref to force background-color with !important, overriding Tailwind CDN's !important rules
+  const tileRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (tileRef.current && resolvedBgColor) {
+      tileRef.current.style.setProperty('background-color', resolvedBgColor, 'important');
+    }
+  }, [resolvedBgColor]);
+
   return (
     <div
+      ref={tileRef}
       data-is-flight-tile="true"
       style={style}
       className={finalClasses.join(' ')}

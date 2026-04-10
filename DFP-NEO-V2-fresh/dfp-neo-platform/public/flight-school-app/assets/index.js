@@ -6762,7 +6762,6 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
   const commonClasses = `absolute rounded-sm ${isDraggable ? "cursor-grab" : "cursor-pointer"} transition-all duration-200 ${isDragging ? "opacity-80 z-50" : "z-10"} ${shadowClass}`;
   isHexColorEarly(event.color || "");
   const backgroundClass = event.type === "deployment" ? "bg-gray-600/30 border border-white/60" : event.type === "unavailability" ? "bg-red-900/80 border border-red-600/60" : isUnavailabilityConflict ? "bg-red-800/90" : isConflicting ? "bg-red-600/70" : resolvedBgColor ? "" : event.color;
-  console.log("[FlightTile Debug] event.color:", event.color, "| resolvedBgColor:", resolvedBgColor, "| event.type:", event.type);
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? "border border-black" : "";
   const multiSelectRingClass = isSelected ? "ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900" : "";
@@ -6796,74 +6795,81 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           picName?.split(" – ")[0],
           picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 657,
+            lineNumber: 656,
             columnNumber: 136
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 657,
+          lineNumber: 656,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", ""), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           studentDisplay,
           studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 658,
+            lineNumber: 657,
             columnNumber: 159
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 658,
+          lineNumber: 657,
           columnNumber: 119
         }, void 0) : studentDisplay }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 658,
+          lineNumber: 657,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 656,
+        lineNumber: 655,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "h-6 w-px bg-gray-600" }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 660,
+        lineNumber: 659,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono font-semibold text-sky-400", children: event.flightNumber }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 662,
+          lineNumber: 661,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-gray-400", children: formatTime$5(effectiveStartTime) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 663,
+          lineNumber: 662,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 661,
+        lineNumber: 660,
         columnNumber: 21
       }, void 0),
       callsign && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign }, void 0, false, {
         fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 665,
+        lineNumber: 664,
         columnNumber: 34
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 655,
+      lineNumber: 654,
       columnNumber: 16
     }, void 0) }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 653,
+      lineNumber: 652,
       columnNumber: 11
     }, void 0);
   };
+  const tileRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (tileRef.current && resolvedBgColor) {
+      tileRef.current.style.setProperty("background-color", resolvedBgColor, "important");
+    }
+  }, [resolvedBgColor]);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     "div",
     {
+      ref: tileRef,
       "data-is-flight-tile": "true",
       style,
       className: finalClasses.join(" "),
@@ -6877,7 +6883,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
       children: [
         isChanged && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 686,
+          lineNumber: 694,
           columnNumber: 13
         }, void 0),
         isStbyEvent && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -6892,7 +6898,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 689,
+            lineNumber: 697,
             columnNumber: 13
           },
           void 0
@@ -6917,7 +6923,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                  lineNumber: 701,
+                  lineNumber: 709,
                   columnNumber: 17
                 },
                 void 0
@@ -6936,7 +6942,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                  lineNumber: 709,
+                  lineNumber: 717,
                   columnNumber: 17
                 },
                 void 0
@@ -6947,7 +6953,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 697,
+            lineNumber: 705,
             columnNumber: 13
           },
           void 0
@@ -6965,7 +6971,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                lineNumber: 722,
+                lineNumber: 730,
                 columnNumber: 21
               },
               void 0
@@ -6981,14 +6987,14 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                lineNumber: 728,
+                lineNumber: 736,
                 columnNumber: 21
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 721,
+            lineNumber: 729,
             columnNumber: 17
           }, void 0) : !isSmallTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "div",
@@ -7001,7 +7007,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
             false,
             {
               fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 737,
+              lineNumber: 745,
               columnNumber: 21
             },
             void 0
@@ -7010,7 +7016,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
           renderFlyout()
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 719,
+          lineNumber: 727,
           columnNumber: 9
         }, void 0)
       ]
@@ -7019,7 +7025,7 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 672,
+      lineNumber: 679,
       columnNumber: 5
     },
     void 0
