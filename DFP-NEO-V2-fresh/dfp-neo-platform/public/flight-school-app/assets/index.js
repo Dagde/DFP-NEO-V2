@@ -6229,9 +6229,9 @@ const FlightTile = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEn
     const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
     let alpha;
     if (opacity >= 75) alpha = 0.57;
-    else if (opacity >= 45) alpha = 0.25;
-    else if (opacity >= 30) alpha = 0.2;
-    else alpha = opacity / 100 * 0.5;
+    else if (opacity >= 45) alpha = 0.42;
+    else if (opacity >= 30) alpha = 0.35;
+    else alpha = opacity / 100 * 0.7;
     return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
   };
   const hexToRgba = (hex, alpha) => {
