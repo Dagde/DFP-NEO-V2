@@ -123,16 +123,72 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   // Helper: check if a color value is a hex/rgb value vs a Tailwind class (defined here for use in style)
   const isHexColorEarly = (color: string) => color && (color.startsWith('#') || color.startsWith('rgb'));
 
+  // Tailwind color palette: name -> shade -> [r, g, b]
+  const TAILWIND_COLORS: Record<string, Record<string, [number, number, number]>> = {
+    sky:     { '400': [56,189,248],  '500': [14,165,233] },
+    purple:  { '400': [192,132,252], '500': [168,85,247] },
+    yellow:  { '400': [250,204,21],  '500': [234,179,8] },
+    pink:    { '400': [244,114,182], '500': [236,72,153] },
+    teal:    { '400': [45,212,191],  '500': [20,184,166] },
+    indigo:  { '400': [129,140,248], '500': [99,102,241] },
+    cyan:    { '400': [34,211,238],  '500': [6,182,212] },
+    blue:    { '400': [96,165,250],  '500': [59,130,246] },
+    green:   { '400': [74,222,128],  '500': [34,197,94] },
+    orange:  { '400': [251,146,60],  '500': [249,115,22] },
+    red:     { '400': [248,113,113], '500': [239,68,68],  '800': [153,27,27],  '900': [127,29,29] },
+    gray:    { '400': [156,163,175], '500': [107,114,128],'600': [75,85,99] },
+    amber:   { '400': [251,191,36],  '500': [245,158,11], '700': [180,83,9] },
+    fuchsia: { '400': [232,121,249], '500': [217,70,239] },
+    lime:    { '400': [163,230,53],  '500': [132,204,22] },
+    violet:  { '400': [167,139,250], '500': [139,92,246] },
+    rose:    { '400': [251,113,133], '500': [244,63,94] },
+  };
+
+  // Convert any Tailwind bg class (e.g. 'bg-sky-400/80', 'bg-purple-400/50') to muted rgba.
+  // Tailwind /50 and /80 render at full 50%/80% opacity which is too bright for the dark UI.
+  // We remap to 0.42 and 0.57 alpha to match the intended muted design.
+  const tailwindBgToRgba = (cls: string): string | null => {
+    if (!cls || !cls.startsWith('bg-')) return null;
+    const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
+    if (!match) return null;
+    const [, colorName, shade, opacityStr] = match;
+    const rgb = TAILWIND_COLORS[colorName]?.[shade];
+    if (!rgb) return null;
+    const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
+    let alpha: number;
+    if (opacity >= 75) alpha = 0.57;
+    else if (opacity >= 45) alpha = 0.42;
+    else if (opacity >= 30) alpha = 0.35;
+    else alpha = (opacity / 100) * 0.7;
+    return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+  };
+
+  // Hex to rgba helper
+  const hexToRgba = (hex: string, alpha: number): string => {
+    try {
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    } catch { return hex; }
+  };
+
+  // Resolve background color as inline style for all non-special tiles
+  const resolvedBgColor: string | null = (() => {
+    if (event.type === 'deployment' || event.type === 'unavailability' || isUnavailabilityConflict || isConflicting) return null;
+    const c = event.color || '';
+    if (isHexColorEarly(c)) return hexToRgba(c, 0.57);
+    return tailwindBgToRgba(c);
+  })();
+
   const style: React.CSSProperties = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
     width: `${tileWidth}px`,
     height: `${rowHeight - 4}px`, // a little padding
     marginTop: '2px',
-    // Handle hex color values (e.g. #0E7A6E) that can't be used as Tailwind CSS class names
-    ...(isHexColorEarly(event.color || '') && event.type !== 'deployment' && event.type !== 'unavailability' && !isUnavailabilityConflict && !isConflicting
-      ? { backgroundColor: event.color }
-      : {}),
+    // Apply resolved background color as inline style to override Tailwind CDN rendering
+    ...(resolvedBgColor ? { backgroundColor: resolvedBgColor } : {}),
   };
   
   const getDynamicRingClass = () => {
@@ -542,11 +598,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const eventColorIsHex = isHexColorEarly(event.color || '');
 
   // Handle deployment tile special styling
+  // When resolvedBgColor is set as inline style, we don't need the Tailwind bg class
   const backgroundClass = event.type === 'deployment' 
     ? 'bg-gray-600/30 border border-white/60' 
     : event.type === 'unavailability'
     ? 'bg-red-900/80 border border-red-600/60'
-    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : (eventColorIsHex ? '' : event.color);
+    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : (resolvedBgColor ? '' : event.color);
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
@@ -554,7 +611,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const finalClasses = [commonClasses];
 
   if (isPreview) {
-      finalClasses.push(eventColorIsHex ? '' : event.color); // The color is set in App.tsx for oracle preview
+      // For preview tiles, use inline style if available, otherwise fall back to Tailwind class
+      finalClasses.push(resolvedBgColor ? '' : event.color);
       finalClasses.push('border-2 border-dashed border-sky-300');
   } else {
       finalClasses.push(backgroundClass);

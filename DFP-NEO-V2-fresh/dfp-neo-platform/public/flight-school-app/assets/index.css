@@ -465,19 +465,15 @@
 
 .neo-build-label {
     position: absolute;
-    top: 0;
-    left: 100%;
-    margin-left: 6px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
     background: linear-gradient(135deg, rgb(251, 146, 60), rgb(255, 165, 0));
     color: white;
     font-size: 10px;
     font-weight: 700;
-    padding: 0 10px;
-    border-radius: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.5px;
