@@ -37,39 +37,34 @@ const RANK_ORDER: Record<string, number> = {
   WGCDR: 1, SQNLDR: 2, FLTLT: 3, FLGOFF: 4, PLTOFF: 5, Mr: 6,
 };
 
-// ─── Large interactive tile — proportions derived directly from reference tile ──
+// ─── Scale constants for the large interactive tile ─────────────────────────
 //
-// Reference tile (screenshot_a) measured at actual pixel ratios:
-//   Tile height:    38px (real) → we use 5× = 190px
-//   Border radius:  4px  → 20px
-//   H padding:      6px  → 30px
-//   V padding:      3px  → 15px (top/bottom)
-//   Time font:      8px  → 40px  (monospace, dim white, top-left)
-//   PIC name font:  11px → 55px  (bold italic, bright, largest text)
-//   Copilot font:   9px  → 45px  (normal italic, dimmer)
-//   Right font:     8px  → 40px  ([dur] EVENT, top-right, same row as time)
-//   Bottom font:    7px  → 35px  (#aircraft left, area+callsign right)
-//   Name gap:       2px  → 10px  (vertical gap between two name lines)
+// Strategy: mirror the EXACT layout of FlightTile.tsx (the real schedule tile)
+// but scale everything up proportionally.
 //
-// Total vertical space check:
-//   topY = 15, timeRow bottom = 15+40 = 55
-//   name1Y ≈ 55+4 = 59, name1 bottom = 59+55 = 114
-//   name2Y = 114+10 = 124, name2 bottom = 124+45 = 169
-//   botY = 190-15-35 = 140  ← name2 bottom (169) > botY (140)
+// Real tile: rowHeight ≈ 34px, scaledFontSize = 11px
+// Modal tile target: ~3× scale factor
+//   Names font:   11px × 3 = 33px  (NAME_FONT)
+//   Time font:    11 × 0.75 × 3 = 25px  (TIME_FONT)
+//   Right font:   11 × 0.9 × 3 = 30px   ([dur] EVENT)
+//   Bottom font:  11 × 0.85 × 3 = 28px  (#aircraft, area, callsign)
+//   V padding:    4px × 3 = 12px
+//   H padding:    8px × 3 = 24px (10% of tile width ≈ left indent for names)
+//   Bottom strip height: 11px × 3 = 33px (bottom-1 of real tile)
 //
-// To keep names inside: increase tile height or reduce fonts slightly.
-// Using TILE_H = 210px (5.5× real height) gives comfortable fit.
+// The tile height is NOT hardcoded — it's determined by content (flexbox),
+// just like the real tile which gets height from rowHeight prop.
+// We add enough bottom padding so the bottom-strip doesn't overlap names.
 //
-const TILE_H      = 210;   // px — approx 5.5× the real 38px tile
-const TILE_RADIUS = 20;    // px
-const PAD_H       = 28;    // px — left/right padding
-const PAD_V       = 14;    // px — top/bottom padding
-const TIME_FONT   = 36;    // px — time top-left (monospace)
-const NAME1_FONT  = 52;    // px — PIC name (bold italic, largest)
-const NAME2_FONT  = 40;    // px — co-pilot name (italic)
-const RIGHT_FONT  = 36;    // px — [dur] EVENT top-right
-const BOT_FONT    = 30;    // px — bottom strip (#aircraft, area, callsign)
-const NAME_GAP    = 8;     // px — gap between name lines
+const SCALE       = 3.2;
+const NAME_FONT   = Math.round(11 * SCALE);   // 35px — both PIC and co-pilot name
+const TIME_FONT   = Math.round(11 * 0.75 * SCALE); // 26px — time top-left
+const RIGHT_FONT  = Math.round(11 * 0.9 * SCALE);  // 32px — [dur] EVENT top-right
+const BOT_FONT    = Math.round(11 * 0.85 * SCALE);  // 30px — bottom strip
+const PAD_H       = Math.round(8 * SCALE);    // 26px — left/right padding
+const PAD_TOP     = Math.round(4 * SCALE);    // 13px — top padding
+const PAD_BOT     = BOT_FONT + Math.round(6 * SCALE); // bottom padding = bottom strip height + gap
+const TILE_RADIUS = Math.round(4 * SCALE);    // 13px — border radius
 
 // Inline select / input style — invisible, sits on top of rendered text
 const ghostStyle = (
@@ -413,7 +408,13 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   );
 };
 
-// ─── Large Interactive Flight Tile ────────────────────────────────────────────
+// ─── Large Interactive Flight Tile ─────────────────────────────────────────
+// Layout mirrors real FlightTile.tsx exactly:
+//  - Outer wrapper: position:relative, paddingBottom large enough for bottom strip
+//  - Time: absolute top-0 left, tiny monospace (same as real tile)
+//  - Body: flex row — left column (PIC + co-pilot stacked) + right column ([dur] EVENT)
+//  - Bottom strip: absolute bottom, left (#aircraft) and right (area + callsign)
+//  - Height is content-driven (flexbox), never hardcoded
 interface TileProps {
   flightType: 'Dual' | 'Solo';
   startTime: number;
@@ -461,25 +462,17 @@ const FlightTile: React.FC<TileProps> = ({
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
 }) => {
-  // Colours matching the real tile exactly
-  const timeColor  = 'rgba(255,255,255,0.80)';   // time: slightly dim white
-  const name1Color = (v: string) => v ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)';  // PIC: bright
-  const name2Color = (v: string) => v ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)';  // Co-pilot: dimmer
-  const durColor   = 'rgba(255,255,255,0.95)';   // duration number: bright
-  const brkColor   = 'rgba(255,255,255,0.55)';   // [ ] brackets: dim
-  const evtColor   = (v: string) => v ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.30)';  // event code
-  const botColor   = (v: string) => v ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.30)';  // bottom row
-  const areaColor  = (v: string) => /^[A-H]$/.test(v) ? 'rgba(255,255,255,0.75)' : 'rgba(255,220,60,0.95)';
+  // ── Colours (matching real FlightTile.tsx) ──────────────────────────────
+  const timeColor    = 'rgba(255,255,255,0.60)';
+  const name1Color   = (v: string) => v ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)';
+  const name2Color   = (v: string) => v ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)';
+  const durColor     = 'rgba(255,255,255,0.80)';
+  const brkColor     = 'rgba(255,255,255,0.55)';
+  const evtColor     = (v: string) => v ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)';
+  const botColor     = (v: string) => v ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.30)';
+  const areaColor    = (v: string) => /^[A-H]$/.test(v) ? 'rgba(255,255,255,0.70)' : 'rgba(255,220,60,0.95)';
 
-  // Layout zones — all absolute y positions within TILE_H=210px
-  // topY=14: time row (height=36) → bottom at 50
-  // name1Y=56: PIC name (height=52) → bottom at 108
-  // name2Y=116: co-pilot (height=40) → bottom at 156
-  // botY=166: bottom strip (height=30) → bottom at 196 (inside TILE_H=210)
-  const topY   = PAD_V;                        // 14
-  const name1Y = topY + TIME_FONT + 6;         // 14+36+6 = 56
-  const name2Y = name1Y + NAME1_FONT + NAME_GAP; // 56+52+8 = 116
-  const botY   = TILE_H - PAD_V - BOT_FONT;    // 210-14-30 = 166
+  const monoFamily = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
 
   return (
     <div
@@ -487,31 +480,38 @@ const FlightTile: React.FC<TileProps> = ({
       style={{
         position: 'relative',
         width: '100%',
-        height: TILE_H,
         borderRadius: TILE_RADIUS,
         overflow: 'visible',
         boxShadow: '0 3px 14px rgba(0,0,0,0.45)',
-        flexShrink: 0,
         userSelect: 'none',
+        // paddingTop leaves room above names for the time label
+        // paddingBottom leaves room below names for the bottom strip
+        paddingTop: PAD_TOP + TIME_FONT + 4,
+        paddingBottom: PAD_BOT,
+        paddingLeft: PAD_H,
+        paddingRight: PAD_H,
+        boxSizing: 'border-box',
       }}
     >
-      {/* ══ TOP-LEFT: start time ══ */}
-      <div style={{ position: 'absolute', top: topY, left: PAD_H, zIndex: 5 }}>
-        {/* Visible label */}
+      {/* ══ TOP-LEFT: start time (absolute, same as real tile "absolute -top-px left-1") ══ */}
+      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H, display: 'flex', alignItems: 'center', gap: 0 }}>
         <span style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-          fontSize: TIME_FONT, fontWeight: 400, color: timeColor, lineHeight: 1,
+          fontFamily: monoFamily,
+          fontSize: TIME_FONT,
+          fontWeight: 400,
+          color: timeColor,
+          lineHeight: 1,
           pointerEvents: 'none',
         }}>
           {formatTime(startTime)}
         </span>
-        {/* Invisible select overlay */}
+        {/* Invisible select overlaid on time label */}
         <select
           value={String(startTime)}
           onChange={e => onStartTimeChange(parseFloat(e.target.value))}
           style={{
             position: 'absolute', top: 0, left: 0,
-            width: TIME_FONT * 3.4, height: TIME_FONT + 8,
+            width: '100%', height: '100%',
             opacity: 0, cursor: 'pointer', zIndex: 10,
           }}
         >
@@ -519,119 +519,127 @@ const FlightTile: React.FC<TileProps> = ({
         </select>
       </div>
 
-      {/* ══ TOP-RIGHT: [duration] EVENT ══ */}
+      {/* ══ BODY: flex row — names (left) + [dur] EVENT (right) ══ */}
       <div style={{
-        position: 'absolute', top: topY, right: PAD_H,
-        display: 'flex', alignItems: 'baseline', gap: 3,
-        zIndex: 10, whiteSpace: 'nowrap',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        gap: 8,
       }}>
-        {/* [ */}
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }}>
-          [
-        </span>
-        {/* duration — visible label + invisible select */}
-        <div style={{ position: 'relative' }}>
-          <span style={{
-            fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-            fontSize: RIGHT_FONT, fontWeight: 700, color: durColor, lineHeight: 1, pointerEvents: 'none',
-          }}>
-            {duration.toFixed(1)}
-          </span>
-          <select
-            value={String(duration)}
-            onChange={e => onDurationChange(parseFloat(e.target.value))}
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: RIGHT_FONT * 2.5, height: RIGHT_FONT + 8,
-              opacity: 0, cursor: 'pointer', zIndex: 10,
-            }}
-          >
-            {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-        {/* ] */}
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }}>
-          ]
-        </span>
-        {/* EVENT code — cascading dropdown */}
-        <EventDropdown
-          value={flightNumber}
-          onChange={onFlightNumberChange}
-          courseOptions={courseOptions}
-          getEventsForCourse={getEventsForCourse}
-          nextLMPEvent={nextLMPEvent}
-          fontSize={RIGHT_FONT}
-          color={evtColor(flightNumber)}
-          disabled={eventCategory === 'lmp_currency'}
-        />
-      </div>
-
-      {/* ══ MIDDLE-LEFT: Name 1 — PIC (bold, large) ══ */}
-      <div style={{ position: 'absolute', top: name1Y, left: PAD_H, right: PAD_H, zIndex: 5 }}>
-        <PersonDropdown
-          value={picName}
-          onChange={onPicNameChange}
-          allUnits={allUnits}
-          getLayer2={getLayer2}
-          getNames={getNames}
-          placeholder="Surname, First (N)"
-          fontSize={NAME1_FONT}
-          color={name1Color(picName)}
-          bold
-        />
-      </div>
-
-      {/* ══ MIDDLE-LEFT: Name 2 — Co-pilot / SOLO badge ══ */}
-      <div style={{ position: 'absolute', top: name2Y, left: PAD_H, right: PAD_H, zIndex: 5 }}>
-        {flightType === 'Dual' ? (
+        {/* LEFT column: PIC name on top, co-pilot below (same as real tile flex-1 overflow-hidden) */}
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          {/* PIC name — bold, largest */}
           <PersonDropdown
-            value={studentName}
-            onChange={(name) => onStudentNameChange(name)}
+            value={picName}
+            onChange={onPicNameChange}
             allUnits={allUnits}
             getLayer2={getLayer2}
             getNames={getNames}
             placeholder="Surname, First (N)"
-            fontSize={NAME2_FONT}
-            color={name2Color(studentName)}
-            allowSolo
-            onSoloSelect={() => onFlightTypeChange('Solo')}
+            fontSize={NAME_FONT}
+            color={name1Color(picName)}
+            bold
           />
-        ) : (
-          <span
-            onClick={() => onFlightTypeChange('Dual')}
-            style={{
-              display: 'inline-block',
-              fontSize: NAME2_FONT * 0.8,
-              fontWeight: 800,
-              letterSpacing: 1,
-              color: 'rgba(255,220,60,0.95)',
-              background: 'rgba(255,200,0,0.20)',
-              padding: `${NAME2_FONT * 0.12}px ${NAME2_FONT * 0.28}px`,
-              borderRadius: 4,
-              lineHeight: 1.25,
-              cursor: 'pointer',
-              userSelect: 'none',
-            }}
-            title="Click to switch to Dual"
-          >
-            SOLO
-          </span>
-        )}
+          {/* Co-pilot / SOLO */}
+          {flightType === 'Dual' ? (
+            <PersonDropdown
+              value={studentName}
+              onChange={(name) => onStudentNameChange(name)}
+              allUnits={allUnits}
+              getLayer2={getLayer2}
+              getNames={getNames}
+              placeholder="Surname, First (N)"
+              fontSize={Math.round(NAME_FONT * 0.88)}
+              color={name2Color(studentName)}
+              allowSolo
+              onSoloSelect={() => onFlightTypeChange('Solo')}
+            />
+          ) : (
+            <span
+              onClick={() => onFlightTypeChange('Dual')}
+              style={{
+                display: 'inline-block',
+                fontSize: Math.round(NAME_FONT * 0.75),
+                fontWeight: 800,
+                letterSpacing: 1,
+                color: 'rgba(255,220,60,0.95)',
+                background: 'rgba(255,200,0,0.20)',
+                padding: `${Math.round(NAME_FONT * 0.1)}px ${Math.round(NAME_FONT * 0.25)}px`,
+                borderRadius: 4,
+                lineHeight: 1.25,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+              title="Click to switch to Dual"
+            >
+              SOLO
+            </span>
+          )}
+        </div>
+
+        {/* RIGHT column: [duration] EVENT — same as real tile "flex flex-col items-end justify-between h-full" */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
+        }}>
+          {/* [duration] */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
+            <span style={{ fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }}>[</span>
+            <div style={{ position: 'relative' }}>
+              <span style={{
+                fontFamily: monoFamily, fontSize: RIGHT_FONT,
+                fontWeight: 700, color: durColor, lineHeight: 1, pointerEvents: 'none',
+              }}>
+                {duration.toFixed(1)}
+              </span>
+              <select
+                value={String(duration)}
+                onChange={e => onDurationChange(parseFloat(e.target.value))}
+                style={{
+                  position: 'absolute', top: 0, left: 0,
+                  width: '100%', height: '100%',
+                  opacity: 0, cursor: 'pointer', zIndex: 10,
+                }}
+              >
+                {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+              </select>
+            </div>
+            <span style={{ fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }}>]</span>
+          </div>
+          {/* EVENT code */}
+          <EventDropdown
+            value={flightNumber}
+            onChange={onFlightNumberChange}
+            courseOptions={courseOptions}
+            getEventsForCourse={getEventsForCourse}
+            nextLMPEvent={nextLMPEvent}
+            fontSize={RIGHT_FONT}
+            color={evtColor(flightNumber)}
+            disabled={eventCategory === 'lmp_currency'}
+          />
+        </div>
       </div>
 
-      {/* ══ BOTTOM-LEFT: #aircraft ══ */}
+      {/* ══ BOTTOM STRIP: absolute bottom — mirrors real tile exactly ══ */}
+      {/* Left: #aircraft */}
       <div style={{
-        position: 'absolute', bottom: PAD_V, left: PAD_H,
-        display: 'flex', alignItems: 'baseline', gap: 1, zIndex: 5,
+        position: 'absolute',
+        bottom: Math.round(PAD_BOT * 0.35),
+        left: PAD_H,
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 1,
+        zIndex: 5,
       }}>
-        <span style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-          fontSize: BOT_FONT, color: 'rgba(255,255,255,0.50)', lineHeight: 1,
-        }}>#</span>
+        <span style={{ fontFamily: monoFamily, fontSize: BOT_FONT, color: 'rgba(255,255,255,0.50)', lineHeight: 1 }}>#</span>
         <div style={{ position: 'relative' }}>
           <span style={{
-            fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-            fontSize: BOT_FONT, color: botColor(aircraftNumber), lineHeight: 1, pointerEvents: 'none',
+            fontFamily: monoFamily, fontSize: BOT_FONT,
+            color: botColor(aircraftNumber), lineHeight: 1, pointerEvents: 'none',
           }}>
             {aircraftNumber || '---'}
           </span>
@@ -640,7 +648,7 @@ const FlightTile: React.FC<TileProps> = ({
             onChange={e => onAircraftChange(e.target.value)}
             style={{
               position: 'absolute', top: 0, left: 0,
-              width: BOT_FONT * 2.6, height: BOT_FONT + 6,
+              width: BOT_FONT * 2.8, height: BOT_FONT + 6,
               opacity: 0, cursor: 'pointer', zIndex: 10,
             }}
           >
@@ -649,10 +657,15 @@ const FlightTile: React.FC<TileProps> = ({
         </div>
       </div>
 
-      {/* ══ BOTTOM-RIGHT: area + callsign ══ */}
+      {/* Right: area + callsign */}
       <div style={{
-        position: 'absolute', bottom: PAD_V, right: PAD_H,
-        display: 'flex', alignItems: 'baseline', gap: BOT_FONT * 0.5, zIndex: 5,
+        position: 'absolute',
+        bottom: Math.round(PAD_BOT * 0.35),
+        right: PAD_H,
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: BOT_FONT * 0.4,
+        zIndex: 5,
       }}>
         {/* Area */}
         <div style={{ position: 'relative' }}>
@@ -664,19 +677,18 @@ const FlightTile: React.FC<TileProps> = ({
             onChange={e => onAreaChange(e.target.value)}
             style={{
               position: 'absolute', top: 0, left: 0,
-              width: BOT_FONT * 1.8, height: BOT_FONT + 6,
+              width: BOT_FONT * 2, height: BOT_FONT + 6,
               opacity: 0, cursor: 'pointer', zIndex: 10,
             }}
           >
             {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
           </select>
         </div>
-
         {/* Callsign */}
         {callsignOptions.length > 1 ? (
           <div style={{ position: 'relative' }}>
             <span style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+              fontFamily: monoFamily,
               fontSize: BOT_FONT, fontStyle: 'italic', lineHeight: 1,
               color: callsign ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)',
               pointerEvents: 'none',
@@ -703,7 +715,7 @@ const FlightTile: React.FC<TileProps> = ({
             onChange={e => onCallsignChange(e.target.value)}
             style={{
               background: 'transparent', border: 'none', outline: 'none',
-              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+              fontFamily: monoFamily,
               fontSize: BOT_FONT, fontStyle: 'italic', lineHeight: 1,
               color: callsign ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)',
               width: BOT_FONT * 6, padding: 0, cursor: 'text', textAlign: 'right',
