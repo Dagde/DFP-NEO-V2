@@ -34,20 +34,20 @@ const formatDate = (dateStr: string): string => {
 };
 
 // ─── Flight Tile Preview — exact replica of reference, 4× scaled ─────────────
-const S = 4; // scale factor (kept for reference, not used for sizing)
+const S = 4; // scale factor
 
-// Large interactive tile — 50% of original 4× scale, all text 20px
-const TILE_H        = Math.round(38 * S * 0.5);  // 76px (50% of 152px)
-const TILE_RADIUS   = 8;
-const PAD_H         = 12;
-const PAD_V         = 6;
-const TIME_FONT     = 20;
-const NAME_FONT     = 20;
-const RIGHT_FONT    = 20;
-const BOT_FONT      = 20;
+// Scaled values (large interactive tile — exact 4x replica)
+const TILE_H        = 38  * S;  // 152px
+const TILE_RADIUS   = 4   * S;  // 16px
+const PAD_H         = 6   * S;  // 24px
+const PAD_V         = 4   * S;  // 16px
+const TIME_FONT     = 9   * S;  // 36px
+const NAME_FONT     = 10  * S;  // 40px
+const RIGHT_FONT    = 10  * S;  // 40px
+const BOT_FONT      = 9   * S;  // 36px
 const NAME_INDENT   = '15%';
-const NAME_GAP      = 12;
-const RIGHT_GAP     = 6;
+const NAME_GAP      = 3   * S;  // 12px gap between two name lines
+const RIGHT_GAP     = 4   * S;  // 16px gap between right lines
 
 // ─── Real-size tile constants (matching actual schedule tile) ─────────────────
 const RT_H          = 38;   // px — same as real tile
