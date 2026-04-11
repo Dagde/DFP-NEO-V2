@@ -463,51 +463,56 @@ const FlightTile: React.FC<TileProps> = ({
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
 }) => {
   // ── Design constants ──────────────────────────────────────────────────
-  const TILE_BG       = '#7a6a2a';
-  const TILE_BORDER   = '#1a2340';
-  const WHITE_FULL    = 'rgba(255,255,255,0.95)';
-  const WHITE_DIM     = 'rgba(255,255,255,0.75)';
-  const WHITE_GHOST   = 'rgba(255,255,255,0.35)';
-  const TILE_H        = 110;
-  const monoFamily    = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
+  const TILE_BG    = '#7a6a2a';
+  const TILE_BORDER= '#1a2340';
+  const WHITE_FULL = 'rgba(255,255,255,0.95)';
+  const WHITE_DIM  = 'rgba(255,255,255,0.75)';
+  const WHITE_GHOST= 'rgba(255,255,255,0.35)';
+  const TILE_H     = 110;
+  const monoFamily = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
 
-  // ── Edit mode state ───────────────────────────────────────────────────
-  const [editMode, setEditMode] = useState(false);
-
-  // Per-element position offsets (x, y) from their default position
-  // Stored as absolute positions inside the tile when in edit mode
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft';
 
-  const tileRef = useRef<HTMLDivElement>(null);
+  // Default positions — used for first render and after Cancel
+  const DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
+    startTime: { x: 14,  y: 12 },
+    picName:   { x: 110, y: 14 },
+    coPilot:   { x: 110, y: 58 },
+    duration:  { x: 420, y: 10 },
+    event:     { x: 490, y: 10 },
+    area:      { x: 490, y: 62 },
+    aircraft:  { x: 420, y: 62 },
+  };
 
-  // Default positions (set when entering edit mode by measuring actual DOM positions)
-  const [positions, setPositions] = useState<Record<ElemKey, { x: number; y: number }>>({
-    startTime: { x: 14, y: 30 },
-    picName:   { x: 110, y: 18 },
-    coPilot:   { x: 110, y: 62 },
-    duration:  { x: 0, y: 10 },   // will be set from right edge
-    event:     { x: 0, y: 10 },
-    area:      { x: 0, y: 62 },
-    aircraft:  { x: 0, y: 62 },
-  });
+  // ── State ──────────────────────────────────────────────────────────────
+  const [editMode,     setEditMode]     = useState(false);
+  const [layoutSaved,  setLayoutSaved]  = useState(false);  // true = use absolute positions in normal view
+  const [positions,    setPositions]    = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
+  const [savedPositions, setSavedPositions] = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
 
-  // Track which element is being dragged
-  const dragging = useRef<{ key: ElemKey; startMouseX: number; startMouseY: number; startPosX: number; startPosY: number } | null>(null);
+  const tileRef   = useRef<HTMLDivElement>(null);
+  const elemRefs  = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
+  const dragging  = useRef<{ key: ElemKey; startMouseX: number; startMouseY: number; startPosX: number; startPosY: number } | null>(null);
 
-  // Measure actual element positions when entering edit mode
-  const elemRefs = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
-
+  // When entering edit mode, capture the real DOM positions of each element
   const enterEditMode = () => {
     if (!tileRef.current) { setEditMode(true); return; }
     const tileRect = tileRef.current.getBoundingClientRect();
-    const newPos: Record<ElemKey, { x: number; y: number }> = { ...positions };
+    // If layout was already saved, start from saved positions
+    if (layoutSaved) {
+      setPositions({ ...savedPositions });
+      setEditMode(true);
+      return;
+    }
+    // Otherwise measure from DOM
+    const newPos: Record<ElemKey, { x: number; y: number }> = { ...DEFAULT_POSITIONS };
     (Object.keys(elemRefs.current) as ElemKey[]).forEach(key => {
       const el = elemRefs.current[key];
       if (el) {
         const r = el.getBoundingClientRect();
         newPos[key] = {
-          x: r.left - tileRect.left,
-          y: r.top - tileRect.top,
+          x: Math.round(r.left - tileRect.left),
+          y: Math.round(r.top  - tileRect.top),
         };
       }
     });
@@ -516,17 +521,13 @@ const FlightTile: React.FC<TileProps> = ({
   };
 
   const exitEditMode = (save: boolean) => {
-    if (!save) {
-      // reset to defaults
-      setPositions({
-        startTime: { x: 14, y: 30 },
-        picName:   { x: 110, y: 18 },
-        coPilot:   { x: 110, y: 62 },
-        duration:  { x: 0, y: 10 },
-        event:     { x: 0, y: 10 },
-        area:      { x: 0, y: 62 },
-        aircraft:  { x: 0, y: 62 },
-      });
+    if (save) {
+      // Lock the current dragged positions as the saved layout
+      setSavedPositions({ ...positions });
+      setLayoutSaved(true);
+    } else {
+      // Revert to the last saved (or default) positions
+      setPositions({ ...savedPositions });
     }
     setEditMode(false);
   };
@@ -552,346 +553,248 @@ const FlightTile: React.FC<TileProps> = ({
       const tileRect = tileRef.current.getBoundingClientRect();
       const dx = e.clientX - startMouseX;
       const dy = e.clientY - startMouseY;
-      const newX = Math.max(0, Math.min(tileRect.width - 20, startPosX + dx));
+      const newX = Math.max(0, Math.min(tileRect.width  - 20, startPosX + dx));
       const newY = Math.max(0, Math.min(TILE_H - 20, startPosY + dy));
-      setPositions(prev => ({ ...prev, [key]: { x: newX, y: newY } }));
+      setPositions(prev => ({ ...prev, [key]: { x: Math.round(newX), y: Math.round(newY) } }));
     };
     const onMouseUp = () => { dragging.current = null; };
     window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('mouseup',   onMouseUp);
     return () => {
       window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('mouseup',   onMouseUp);
     };
-  }, [editMode]);
+  }, [editMode, positions]);
 
   // ── Oval wrapper ──────────────────────────────────────────────────────
   const Oval: React.FC<{
     children: React.ReactNode;
     style?: React.CSSProperties;
-    minW?: number;
-    px?: number;
-    py?: number;
+    minW?: number; px?: number; py?: number;
   }> = ({ children, style, minW = 0, px = 10, py = 5 }) => (
     <div style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 50,
-      padding: `${py}px ${px}px`,
-      minWidth: minW,
-      boxSizing: 'border-box',
-      lineHeight: 1,
-      ...style,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      borderRadius: 50, padding: `${py}px ${px}px`,
+      minWidth: minW, boxSizing: 'border-box', lineHeight: 1, ...style,
     }}>
       {children}
     </div>
   );
 
-  // ── Draggable wrapper for edit mode ──────────────────────────────────
-  const Draggable: React.FC<{
+  // ── Absolutely-positioned element (used in both edit mode and saved layout) ──
+  const AbsElem: React.FC<{
     elemKey: ElemKey;
     children: React.ReactNode;
-    defaultStyle?: React.CSSProperties;
-  }> = ({ elemKey, children, defaultStyle }) => {
-    if (!editMode) {
-      return (
-        <div
-          ref={el => { elemRefs.current[elemKey] = el; }}
-          style={{ display: 'inline-flex', ...defaultStyle }}
-        >
-          {children}
-        </div>
-      );
-    }
-    const pos = positions[elemKey];
+    draggable?: boolean;
+  }> = ({ elemKey, children, draggable: isDraggable = false }) => {
+    const pos = (editMode ? positions : savedPositions)[elemKey];
     return (
       <div
         ref={el => { elemRefs.current[elemKey] = el; }}
-        onMouseDown={onMouseDown(elemKey)}
+        onMouseDown={isDraggable ? onMouseDown(elemKey) : undefined}
         style={{
           position: 'absolute',
           left: pos.x,
-          top: pos.y,
-          cursor: 'grab',
-          zIndex: 100,
-          outline: '2px dashed rgba(255,220,60,0.9)',
-          outlineOffset: 3,
+          top:  pos.y,
+          cursor: isDraggable ? 'grab' : 'default',
+          zIndex: isDraggable ? 100 : 5,
+          outline: isDraggable ? '2px dashed rgba(255,220,60,0.9)' : 'none',
+          outlineOffset: isDraggable ? 3 : 0,
           borderRadius: 4,
-          padding: 2,
+          padding: isDraggable ? 2 : 0,
           userSelect: 'none',
           display: 'inline-flex',
           alignItems: 'center',
         }}
-        title="Drag to reposition"
+        title={isDraggable ? 'Drag to reposition' : undefined}
       >
         {children}
       </div>
     );
   };
 
-  // ── Normal (non-edit) layout ──────────────────────────────────────────
-  const normalLayout = (
-    <>
-      {/* LEFT SECTION */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        paddingLeft: 14,
-        paddingRight: 10,
-        flex: 1,
-        minWidth: 0,
-        gap: 14,
-      }}>
-        {/* Start Time */}
-        <div
-          ref={el => { elemRefs.current['startTime'] = el; }}
-          style={{ position: 'relative', flexShrink: 0, marginTop: -15 }}
-        >
-          <Oval px={12} py={6} minW={72}>
-            <span style={{ fontFamily: monoFamily, fontSize: 22, fontWeight: 600, color: WHITE_FULL, lineHeight: 1, letterSpacing: 1 }}>
-              {formatTime(startTime)}
-            </span>
-          </Oval>
-          <select value={String(startTime)} onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
-            {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
+  // ── Flex ref wrapper (used in normal non-saved layout) ────────────────
+  const FlexElem: React.FC<{ elemKey: ElemKey; children: React.ReactNode; style?: React.CSSProperties }> = ({ elemKey, children, style }) => (
+    <div ref={el => { elemRefs.current[elemKey] = el; }} style={{ display: 'inline-flex', ...style }}>
+      {children}
+    </div>
+  );
 
-        {/* Names column */}
+  // ── All element content definitions ──────────────────────────────────
+  const startTimeContent = (zOverride?: number) => (
+    <div style={{ position: 'relative' }}>
+      <Oval px={12} py={6} minW={72}>
+        <span style={{ fontFamily: monoFamily, fontSize: 22, fontWeight: 600, color: WHITE_FULL, lineHeight: 1, letterSpacing: 1 }}>
+          {formatTime(startTime)}
+        </span>
+      </Oval>
+      <select value={String(startTime)} onChange={e => onStartTimeChange(parseFloat(e.target.value))}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
+        {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+
+  const picNameContent = () => (
+    <PersonDropdown value={picName} onChange={onPicNameChange} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
+      placeholder="Surname, First (N)" fontSize={30} color={picName ? WHITE_FULL : WHITE_GHOST} bold />
+  );
+
+  const coPilotContent = () => (
+    flightType === 'Dual' ? (
+      <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
+        placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')} />
+    ) : (
+      <span onClick={() => onFlightTypeChange('Dual')}
+        style={{ display: 'inline-block', fontSize: 18, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)', padding: '3px 10px', borderRadius: 4, lineHeight: 1.25, cursor: 'pointer' }}
+        title="Click to switch to Dual">SOLO</span>
+    )
+  );
+
+  const durationContent = (zOverride?: number) => (
+    <div style={{ position: 'relative' }}>
+      <Oval px={10} py={5} minW={58}>
+        <span style={{ fontFamily: monoFamily, fontSize: 20, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
+      </Oval>
+      <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
+        {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+
+  const eventContent = () => (
+    <div style={{ position: 'relative' }}>
+      <Oval px={10} py={5} minW={58}>
+        <EventDropdown value={flightNumber} onChange={onFlightNumberChange} courseOptions={courseOptions} getEventsForCourse={getEventsForCourse}
+          nextLMPEvent={nextLMPEvent} fontSize={20} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
+      </Oval>
+    </div>
+  );
+
+  const areaContent = (zOverride?: number) => (
+    <div style={{ position: 'relative' }}>
+      <Oval px={10} py={5} minW={42}>
+        <span style={{ fontSize: 20, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
+      </Oval>
+      <select value={area} onChange={e => onAreaChange(e.target.value)}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
+        {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+
+  const aircraftContent = (zOverride?: number) => (
+    <div style={{ position: 'relative' }}>
+      <span style={{ fontFamily: monoFamily, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
+      <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
+        {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+
+  const callsignContent = () => (
+    callsignOptions.length > 1 ? (
+      <div style={{ position: 'relative' }}>
+        <span style={{ fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', lineHeight: 1 }}>
+          {callsign || 'CALLSGN'}
+        </span>
+        <select value={callsign} onChange={e => onCallsignChange(e.target.value)}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
+          <option value="" style={{ background: '#1a2f4a' }}>—</option>
+          {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
+        </select>
+      </div>
+    ) : (
+      <input type="text" value={callsign} onChange={e => onCallsignChange(e.target.value)}
+        style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', lineHeight: 1,
+          color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', width: 80, padding: 0, cursor: 'text' }}
+        placeholder="CALLSGN" />
+    )
+  );
+
+  // ── Normal flex layout (before any save) ─────────────────────────────
+  const normalFlexLayout = (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 14, paddingRight: 10, flex: 1, minWidth: 0, gap: 14 }}>
+        <FlexElem elemKey="startTime" style={{ position: 'relative', flexShrink: 0, marginTop: -15 }}>
+          {startTimeContent()}
+        </FlexElem>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
-          <div ref={el => { elemRefs.current['picName'] = el; }}>
-            <PersonDropdown value={picName} onChange={onPicNameChange} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-              placeholder="Surname, First (N)" fontSize={30} color={picName ? WHITE_FULL : WHITE_GHOST} bold />
-          </div>
-          <div ref={el => { elemRefs.current['coPilot'] = el; }}>
-            {flightType === 'Dual' ? (
-              <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-                placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')} />
-            ) : (
-              <span onClick={() => onFlightTypeChange('Dual')}
-                style={{ display: 'inline-block', fontSize: 18, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)', padding: '3px 10px', borderRadius: 4, lineHeight: 1.25, cursor: 'pointer' }}
-                title="Click to switch to Dual">SOLO</span>
-            )}
-          </div>
+          <FlexElem elemKey="picName">{picNameContent()}</FlexElem>
+          <FlexElem elemKey="coPilot">{coPilotContent()}</FlexElem>
         </div>
       </div>
-
-      {/* RIGHT SECTION */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', paddingRight: 16, paddingLeft: 8, paddingTop: 10, paddingBottom: 10, flexShrink: 0, gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Duration */}
-          <div ref={el => { elemRefs.current['duration'] = el; }} style={{ position: 'relative' }}>
-            <Oval px={10} py={5} minW={58}>
-              <span style={{ fontFamily: monoFamily, fontSize: 20, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
-            </Oval>
-            <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
-              {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-            </select>
-          </div>
-          {/* Event */}
-          <div ref={el => { elemRefs.current['event'] = el; }} style={{ position: 'relative' }}>
-            <Oval px={10} py={5} minW={58}>
-              <EventDropdown value={flightNumber} onChange={onFlightNumberChange} courseOptions={courseOptions} getEventsForCourse={getEventsForCourse}
-                nextLMPEvent={nextLMPEvent} fontSize={20} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
-            </Oval>
-          </div>
+          <FlexElem elemKey="duration">{durationContent()}</FlexElem>
+          <FlexElem elemKey="event">{eventContent()}</FlexElem>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Area */}
-          <div ref={el => { elemRefs.current['area'] = el; }} style={{ position: 'relative' }}>
-            <Oval px={10} py={5} minW={42}>
-              <span style={{ fontSize: 20, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
-            </Oval>
-            <select value={area} onChange={e => onAreaChange(e.target.value)}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
-              {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-            </select>
-          </div>
-          {/* Aircraft */}
-          <div ref={el => { elemRefs.current['aircraft'] = el; }} style={{ position: 'relative' }}>
-            <span style={{ fontFamily: monoFamily, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
-            <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
-              {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-            </select>
-          </div>
-          {/* Callsign */}
-          {callsignOptions.length > 1 ? (
-            <div style={{ position: 'relative' }}>
-              <span style={{ fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', lineHeight: 1 }}>
-                {callsign || 'CALLSGN'}
-              </span>
-              <select value={callsign} onChange={e => onCallsignChange(e.target.value)}
-                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
-                <option value="" style={{ background: '#1a2f4a' }}>—</option>
-                {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
-              </select>
-            </div>
-          ) : (
-            <input type="text" value={callsign} onChange={e => onCallsignChange(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', lineHeight: 1,
-                color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', width: 80, padding: 0, cursor: 'text' }}
-              placeholder="CALLSGN" />
-          )}
+          <FlexElem elemKey="area">{areaContent()}</FlexElem>
+          <FlexElem elemKey="aircraft">{aircraftContent()}</FlexElem>
+          {callsignContent()}
         </div>
       </div>
     </>
   );
 
-  // ── Edit layout (all elements absolutely positioned + draggable) ──────
-  const editLayout = (
+  // ── Saved layout (absolute, positions from savedPositions) ────────────
+  const savedAbsLayout = (
     <>
-      {/* Dim overlay hint */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)', borderRadius: 8, zIndex: 1, pointerEvents: 'none' }} />
-
-      {/* Start Time */}
-      <Draggable elemKey="startTime">
-        <div style={{ position: 'relative' }}>
-          <Oval px={12} py={6} minW={72}>
-            <span style={{ fontFamily: monoFamily, fontSize: 22, fontWeight: 600, color: WHITE_FULL, lineHeight: 1, letterSpacing: 1 }}>
-              {formatTime(startTime)}
-            </span>
-          </Oval>
-          <select value={String(startTime)} onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 110 }}>
-            {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-      </Draggable>
-
-      {/* PIC name */}
-      <Draggable elemKey="picName">
-        <PersonDropdown value={picName} onChange={onPicNameChange} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-          placeholder="Surname, First (N)" fontSize={30} color={picName ? WHITE_FULL : WHITE_GHOST} bold />
-      </Draggable>
-
-      {/* Co-pilot */}
-      <Draggable elemKey="coPilot">
-        {flightType === 'Dual' ? (
-          <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-            placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')} />
-        ) : (
-          <span onClick={() => onFlightTypeChange('Dual')}
-            style={{ display: 'inline-block', fontSize: 18, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)', padding: '3px 10px', borderRadius: 4, lineHeight: 1.25, cursor: 'pointer' }}
-            title="Click to switch to Dual">SOLO</span>
-        )}
-      </Draggable>
-
-      {/* Duration */}
-      <Draggable elemKey="duration">
-        <div style={{ position: 'relative' }}>
-          <Oval px={10} py={5} minW={58}>
-            <span style={{ fontFamily: monoFamily, fontSize: 20, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
-          </Oval>
-          <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 110 }}>
-            {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-      </Draggable>
-
-      {/* Event */}
-      <Draggable elemKey="event">
-        <div style={{ position: 'relative' }}>
-          <Oval px={10} py={5} minW={58}>
-            <EventDropdown value={flightNumber} onChange={onFlightNumberChange} courseOptions={courseOptions} getEventsForCourse={getEventsForCourse}
-              nextLMPEvent={nextLMPEvent} fontSize={20} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
-          </Oval>
-        </div>
-      </Draggable>
-
-      {/* Area */}
-      <Draggable elemKey="area">
-        <div style={{ position: 'relative' }}>
-          <Oval px={10} py={5} minW={42}>
-            <span style={{ fontSize: 20, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
-          </Oval>
-          <select value={area} onChange={e => onAreaChange(e.target.value)}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 110 }}>
-            {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-      </Draggable>
-
-      {/* Aircraft */}
-      <Draggable elemKey="aircraft">
-        <div style={{ position: 'relative' }}>
-          <span style={{ fontFamily: monoFamily, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
-          <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 110 }}>
-            {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-      </Draggable>
+      <AbsElem elemKey="startTime">{startTimeContent()}</AbsElem>
+      <AbsElem elemKey="picName">{picNameContent()}</AbsElem>
+      <AbsElem elemKey="coPilot">{coPilotContent()}</AbsElem>
+      <AbsElem elemKey="duration">{durationContent()}</AbsElem>
+      <AbsElem elemKey="event">{eventContent()}</AbsElem>
+      <AbsElem elemKey="area">{areaContent()}</AbsElem>
+      <AbsElem elemKey="aircraft">{aircraftContent()}</AbsElem>
+      <div style={{ position: 'absolute', bottom: 8, right: 16 }}>{callsignContent()}</div>
     </>
   );
+
+  // ── Edit layout (absolute, draggable, positions from positions state) ─
+  const editAbsLayout = (
+    <>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.12)', borderRadius: 8, zIndex: 1, pointerEvents: 'none' }} />
+      <AbsElem elemKey="startTime" draggable>{startTimeContent(110)}</AbsElem>
+      <AbsElem elemKey="picName"   draggable>{picNameContent()}</AbsElem>
+      <AbsElem elemKey="coPilot"   draggable>{coPilotContent()}</AbsElem>
+      <AbsElem elemKey="duration"  draggable>{durationContent(110)}</AbsElem>
+      <AbsElem elemKey="event"     draggable>{eventContent()}</AbsElem>
+      <AbsElem elemKey="area"      draggable>{areaContent(110)}</AbsElem>
+      <AbsElem elemKey="aircraft"  draggable>{aircraftContent(110)}</AbsElem>
+    </>
+  );
+
+  const showAbsolute = editMode || layoutSaved;
 
   return (
     <div style={{ width: '100%' }}>
-      {/* ── EDIT / SAVE / CANCEL buttons above tile ── */}
+      {/* EDIT / SAVE / CANCEL buttons */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginBottom: 6 }}>
         {!editMode ? (
-          <button
-            type="button"
-            onClick={enterEditMode}
-            style={{
-              padding: '4px 14px',
-              fontSize: 12,
-              fontWeight: 600,
-              borderRadius: 6,
-              border: '1px solid rgba(255,255,255,0.25)',
-              background: 'rgba(255,255,255,0.10)',
-              color: 'rgba(255,255,255,0.85)',
-              cursor: 'pointer',
-              letterSpacing: 0.5,
-            }}
-          >
+          <button type="button" onClick={enterEditMode}
+            style={{ padding: '4px 14px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.85)', cursor: 'pointer', letterSpacing: 0.5 }}>
             ✎ EDIT LAYOUT
           </button>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => exitEditMode(false)}
-              style={{
-                padding: '4px 12px',
-                fontSize: 12,
-                fontWeight: 600,
-                borderRadius: 6,
-                border: '1px solid rgba(255,100,100,0.5)',
-                background: 'rgba(200,50,50,0.25)',
-                color: 'rgba(255,180,180,0.95)',
-                cursor: 'pointer',
-              }}
-            >
+            <button type="button" onClick={() => exitEditMode(false)}
+              style={{ padding: '4px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(255,100,100,0.5)', background: 'rgba(200,50,50,0.25)', color: 'rgba(255,180,180,0.95)', cursor: 'pointer' }}>
               ✕ CANCEL
             </button>
-            <button
-              type="button"
-              onClick={() => exitEditMode(true)}
-              style={{
-                padding: '4px 14px',
-                fontSize: 12,
-                fontWeight: 600,
-                borderRadius: 6,
-                border: '1px solid rgba(60,200,100,0.5)',
-                background: 'rgba(30,150,60,0.35)',
-                color: 'rgba(120,255,160,0.95)',
-                cursor: 'pointer',
-              }}
-            >
+            <button type="button" onClick={() => exitEditMode(true)}
+              style={{ padding: '4px 14px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: '1px solid rgba(60,200,100,0.5)', background: 'rgba(30,150,60,0.35)', color: 'rgba(120,255,160,0.95)', cursor: 'pointer' }}>
               ✔ SAVE LAYOUT
             </button>
           </>
         )}
       </div>
 
-      {/* ── Tile ── */}
-      <div
-        ref={tileRef}
+      {/* Tile */}
+      <div ref={tileRef}
         style={{
           position: 'relative',
           width: '100%',
@@ -901,13 +804,13 @@ const FlightTile: React.FC<TileProps> = ({
           borderRadius: 10,
           boxShadow: '0 4px 18px rgba(0,0,0,0.55)',
           userSelect: 'none',
-          overflow: editMode ? 'visible' : 'visible',
+          overflow: 'visible',
           boxSizing: 'border-box',
-          display: editMode ? 'block' : 'flex',
-          alignItems: editMode ? undefined : 'stretch',
+          display: showAbsolute ? 'block' : 'flex',
+          alignItems: showAbsolute ? undefined : 'stretch',
         }}
       >
-        {editMode ? editLayout : normalLayout}
+        {editMode ? editAbsLayout : layoutSaved ? savedAbsLayout : normalFlexLayout}
       </div>
 
       {editMode && (
