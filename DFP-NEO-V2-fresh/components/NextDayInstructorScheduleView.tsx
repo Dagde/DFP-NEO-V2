@@ -255,9 +255,16 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
 
   const renderPrePostBars = () => {
     const bars: React.ReactElement[] = [];
+    // Deduplicate events by ID to prevent double-counting in pre/post bar logic
+    const seenPrePostIds = new Set<string>();
+    const uniqueEventsForBars = events.filter(e => {
+      if (seenPrePostIds.has(e.id)) return false;
+      seenPrePostIds.add(e.id);
+      return true;
+    });
   
     instructors.forEach((instructor, rowIndex) => {
-      const instructorEvents = events
+      const instructorEvents = uniqueEventsForBars
         .filter(e => e.instructor === instructor.name)
         .sort((a, b) => a.startTime - b.startTime);
   
@@ -439,12 +446,21 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
             className="relative"
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
         >
             {renderGridLines()}
             {renderNightShade()}
             {renderDaylightLines()}
             {renderPrePostBars()}
-            {instructors.flatMap((instructor, rowIndex) => {
+            {(() => {
+              // Deduplicate events by ID to prevent stacked tiles causing visual alpha compositing artifacts
+              const seenIds = new Set<string>();
+              const uniqueEvents = events.filter(e => {
+                if (seenIds.has(e.id)) return false;
+                seenIds.add(e.id);
+                return true;
+              });
+              return instructors.flatMap((instructor, rowIndex) => {
               // Render row highlight if this row is hovered
               const rowHighlight = hoveredRowIndex === rowIndex ? (
                 <div
@@ -458,7 +474,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
                 />
               ) : null;
 
-              const instructorEvents = events.filter(event => getPersonnel(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+              const instructorEvents = uniqueEvents.filter(event => getPersonnel(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
               const eventTiles = instructorEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
@@ -497,7 +513,8 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
               });
               
               return [rowHighlight, ...eventTiles];
-            })}
+            })
+            })()}
         </div>
       </div>
     </div>

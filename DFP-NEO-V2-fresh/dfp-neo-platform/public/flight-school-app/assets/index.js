@@ -89765,8 +89765,14 @@ const NextDayInstructorScheduleView = ({
   };
   const renderPrePostBars = () => {
     const bars = [];
+    const seenPrePostIds = /* @__PURE__ */ new Set();
+    const uniqueEventsForBars = events.filter((e) => {
+      if (seenPrePostIds.has(e.id)) return false;
+      seenPrePostIds.add(e.id);
+      return true;
+    });
     instructors.forEach((instructor, rowIndex) => {
-      const instructorEvents = events.filter((e) => e.instructor === instructor.name).sort((a, b) => a.startTime - b.startTime);
+      const instructorEvents = uniqueEventsForBars.filter((e) => e.instructor === instructor.name).sort((a, b) => a.startTime - b.startTime);
       for (let i = 0; i < instructorEvents.length; i++) {
         const currentEvent = instructorEvents[i];
         const prevEvent = instructorEvents[i - 1];
@@ -89805,7 +89811,7 @@ const NextDayInstructorScheduleView = ({
           };
           bars.push(/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style, className }, key, false, {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 311,
+            lineNumber: 318,
             columnNumber: 21
           }, void 0));
         };
@@ -89821,7 +89827,7 @@ const NextDayInstructorScheduleView = ({
     });
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: bars }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-      lineNumber: 328,
+      lineNumber: 335,
       columnNumber: 12
     }, void 0);
   };
@@ -89839,7 +89845,7 @@ const NextDayInstructorScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 338,
+          lineNumber: 345,
           columnNumber: 17
         },
         void 0
@@ -89854,14 +89860,14 @@ const NextDayInstructorScheduleView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 344,
+          lineNumber: 351,
           columnNumber: 18
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-      lineNumber: 336,
+      lineNumber: 343,
       columnNumber: 9
     }, void 0);
   };
@@ -89882,7 +89888,7 @@ const NextDayInstructorScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 360,
+            lineNumber: 367,
             columnNumber: 13
           },
           void 0
@@ -89903,7 +89909,7 @@ const NextDayInstructorScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 371,
+            lineNumber: 378,
             columnNumber: 13
           },
           void 0
@@ -89912,7 +89918,7 @@ const NextDayInstructorScheduleView = ({
     }
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: shades }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-      lineNumber: 378,
+      lineNumber: 385,
       columnNumber: 12
     }, void 0);
   };
@@ -89945,14 +89951,14 @@ const NextDayInstructorScheduleView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-                lineNumber: 400,
+                lineNumber: 407,
                 columnNumber: 21
               },
               void 0
             ),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDate }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-              lineNumber: 407,
+              lineNumber: 414,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -89967,37 +89973,37 @@ const NextDayInstructorScheduleView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-                lineNumber: 408,
+                lineNumber: 415,
                 columnNumber: 21
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 399,
+            lineNumber: 406,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 416,
+            lineNumber: 423,
             columnNumber: 17
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 398,
+          lineNumber: 405,
           columnNumber: 13
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 397,
+          lineNumber: 404,
           columnNumber: 9
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative", style: { width: timelineWidth, height: TIME_HEADER_HEIGHT$1 }, children: renderTimeHeaders() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 421,
+          lineNumber: 428,
           columnNumber: 13
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 420,
+          lineNumber: 427,
           columnNumber: 9
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90014,13 +90020,13 @@ const NextDayInstructorScheduleView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 427,
+            lineNumber: 434,
             columnNumber: 11
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-          lineNumber: 426,
+          lineNumber: 433,
           columnNumber: 9
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90030,86 +90036,95 @@ const NextDayInstructorScheduleView = ({
             className: "relative",
             onMouseMove: handleMouseMove,
             onMouseUp: handleMouseUp,
+            onMouseLeave: handleMouseUp,
             children: [
               renderGridLines(),
               renderNightShade(),
               renderDaylightLines(),
               renderPrePostBars(),
-              instructors.flatMap((instructor, rowIndex) => {
-                const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "div",
-                  {
-                    className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
-                    style: {
-                      height: ROW_HEIGHT$1,
-                      top: rowIndex * ROW_HEIGHT$1,
-                      backgroundColor: "rgba(255, 255, 255, 0.05)"
-                    }
-                  },
-                  `row-highlight-${rowIndex}`,
-                  false,
-                  {
-                    fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-                    lineNumber: 450,
-                    columnNumber: 17
-                  },
-                  void 0
-                ) : null;
-                const instructorEvents = events.filter((event) => getPersonnel$2(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
-                const eventTiles = instructorEvents.map((event) => {
-                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
-                  const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                  const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
-                  let personToHighlight = null;
-                  if (realtimeConflict) {
-                    const personnelOnThisTile = getPersonnel$2(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
-                      personToHighlight = realtimeConflict.conflictedPersonName;
-                    }
-                  }
-                  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                    FlightTile,
+              (() => {
+                const seenIds = /* @__PURE__ */ new Set();
+                const uniqueEvents = events.filter((e) => {
+                  if (seenIds.has(e.id)) return false;
+                  seenIds.add(e.id);
+                  return true;
+                });
+                return instructors.flatMap((instructor, rowIndex) => {
+                  const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                    "div",
                     {
-                      event,
-                      traineesData,
-                      onSelectEvent: () => {
-                        if (!didDragRef.current) onSelectEvent(event);
-                      },
-                      onMouseDown: (e) => handleMouseDown(e, event),
-                      onMouseEnter: () => setHoveredEventId(event.id),
-                      onMouseLeave: () => setHoveredEventId(null),
-                      pixelsPerHour: PIXELS_PER_HOUR$1 * zoomLevel,
-                      rowHeight: ROW_HEIGHT$1,
-                      startHour: START_HOUR$1,
-                      row: rowIndex,
-                      isDragging: isDraggedTile,
-                      isConflicting,
-                      isUnavailabilityConflict: false,
-                      conflictedPersonnelName: personToHighlight,
-                      personnelData,
-                      seatConfigs,
-                      isDraggable: true,
-                      currentTime
+                      className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
+                      style: {
+                        height: ROW_HEIGHT$1,
+                        top: rowIndex * ROW_HEIGHT$1,
+                        backgroundColor: "rgba(255, 255, 255, 0.05)"
+                      }
                     },
-                    `${event.id}-${instructor.name}`,
+                    `row-highlight-${rowIndex}`,
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-                      lineNumber: 475,
-                      columnNumber: 19
+                      lineNumber: 466,
+                      columnNumber: 17
                     },
                     void 0
-                  );
+                  ) : null;
+                  const instructorEvents = uniqueEvents.filter((event) => getPersonnel$2(event).includes(instructor.name)).sort((a, b) => a.startTime - b.startTime);
+                  const eventTiles = instructorEvents.map((event) => {
+                    const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                    const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
+                    const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                    let personToHighlight = null;
+                    if (realtimeConflict) {
+                      const personnelOnThisTile = getPersonnel$2(event);
+                      if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                        personToHighlight = realtimeConflict.conflictedPersonName;
+                      }
+                    }
+                    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                      FlightTile,
+                      {
+                        event,
+                        traineesData,
+                        onSelectEvent: () => {
+                          if (!didDragRef.current) onSelectEvent(event);
+                        },
+                        onMouseDown: (e) => handleMouseDown(e, event),
+                        onMouseEnter: () => setHoveredEventId(event.id),
+                        onMouseLeave: () => setHoveredEventId(null),
+                        pixelsPerHour: PIXELS_PER_HOUR$1 * zoomLevel,
+                        rowHeight: ROW_HEIGHT$1,
+                        startHour: START_HOUR$1,
+                        row: rowIndex,
+                        isDragging: isDraggedTile,
+                        isConflicting,
+                        isUnavailabilityConflict: false,
+                        conflictedPersonnelName: personToHighlight,
+                        personnelData,
+                        seatConfigs,
+                        isDraggable: true,
+                        currentTime
+                      },
+                      `${event.id}-${instructor.name}`,
+                      false,
+                      {
+                        fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
+                        lineNumber: 491,
+                        columnNumber: 19
+                      },
+                      void 0
+                    );
+                  });
+                  return [rowHighlight, ...eventTiles];
                 });
-                return [rowHighlight, ...eventTiles];
-              })
+              })()
             ]
           },
           void 0,
           true,
           {
             fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-            lineNumber: 437,
+            lineNumber: 444,
             columnNumber: 9
           },
           void 0
@@ -90120,13 +90135,13 @@ const NextDayInstructorScheduleView = ({
     true,
     {
       fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-      lineNumber: 384,
+      lineNumber: 391,
       columnNumber: 7
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayInstructorScheduleView.tsx",
-    lineNumber: 383,
+    lineNumber: 390,
     columnNumber: 5
   }, void 0);
 };
@@ -90609,134 +90624,142 @@ const NextDayTraineeScheduleView = ({
               renderGridLines(),
               renderNightShade(),
               renderDaylightLines(),
-              sortedTrainees.flatMap((trainee, rowIndex) => {
-                const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "div",
-                  {
-                    className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
-                    style: {
-                      height: ROW_HEIGHT,
-                      top: rowIndex * ROW_HEIGHT,
-                      backgroundColor: "rgba(255, 255, 255, 0.05)"
-                    }
-                  },
-                  `row-highlight-${rowIndex}`,
-                  false,
-                  {
-                    fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-                    lineNumber: 451,
-                    columnNumber: 17
-                  },
-                  void 0
-                ) : null;
-                const barsForThisRow = [];
-                if (showValidation) {
-                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee).sort((a, b) => a.startTime - b.startTime);
-                  for (let i = 0; i < traineeEventsForBars.length; i++) {
-                    const currentEvent = traineeEventsForBars[i];
-                    const prevEvent = traineeEventsForBars[i - 1];
-                    const nextEvent = traineeEventsForBars[i + 1];
-                    const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
-                    if (!currentSyllabus) continue;
-                    const hasPreConflict = prevEvent && (() => {
-                      const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
-                      if (!prevSyllabus) return false;
-                      const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
-                      const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
-                      return prevPostEnd > currentPreStart;
-                    })();
-                    const hasPostConflict = nextEvent && (() => {
-                      const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
-                      if (!nextSyllabus) return false;
-                      const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
-                      const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
-                      return currentPostEnd > nextPreStart;
-                    })();
-                    const isHovered = hoveredEventId === currentEvent.id;
-                    const hasAnyConflict = hasPreConflict || hasPostConflict;
-                    if (!isHovered && !hasAnyConflict) continue;
-                    const renderBar = (duration, startTime, isConflicting, key) => {
-                      const barWidth = duration * PIXELS_PER_HOUR * zoomLevel;
-                      const barHeight = ROW_HEIGHT * 0.25;
-                      const barTop = rowIndex * ROW_HEIGHT + (ROW_HEIGHT - barHeight) / 2;
-                      const barLeft = (startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
-                      const baseClassName = "absolute pointer-events-none z-20 rounded-full border shadow-lg backdrop-blur-sm transition-colors duration-200";
-                      const className = `${baseClassName} ${isConflicting ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30"}`;
-                      const style = {
-                        left: `${barLeft}px`,
-                        top: `${barTop}px`,
-                        width: `${barWidth}px`,
-                        height: `${barHeight}px`
-                      };
-                      barsForThisRow.push(/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style, className }, key, false, {
-                        fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-                        lineNumber: 515,
-                        columnNumber: 41
-                      }, void 0));
-                    };
-                    if (currentSyllabus.preFlightTime > 0) {
-                      const preStartTime = currentEvent.startTime - currentSyllabus.preFlightTime;
-                      renderBar(currentSyllabus.preFlightTime, preStartTime, hasPreConflict || false, `${currentEvent.id}-pre-${rowIndex}`);
-                    }
-                    if (currentSyllabus.postFlightTime > 0) {
-                      const postStartTime = currentEvent.startTime + currentEvent.duration;
-                      renderBar(currentSyllabus.postFlightTime, postStartTime, hasPostConflict || false, `${currentEvent.id}-post-${rowIndex}`);
-                    }
-                  }
-                }
-                const traineeEvents = events.filter(
-                  (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee
-                ).sort((a, b) => a.startTime - b.startTime);
-                const eventTiles = traineeEvents.map((event) => {
-                  const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
-                  const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                  const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
-                  const isUnavailability = false;
-                  const unavailablePeople = [];
-                  let personToHighlight = null;
-                  if (realtimeConflict) {
-                    const personnelOnThisTile = getPersonnel$1(event);
-                    if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
-                      personToHighlight = realtimeConflict.conflictedPersonName;
-                    }
-                  }
-                  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                    FlightTile,
+              (() => {
+                const seenIds = /* @__PURE__ */ new Set();
+                const uniqueEvents = events.filter((e) => {
+                  if (seenIds.has(e.id)) return false;
+                  seenIds.add(e.id);
+                  return true;
+                });
+                return sortedTrainees.flatMap((trainee, rowIndex) => {
+                  const rowHighlight = hoveredRowIndex === rowIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                    "div",
                     {
-                      event,
-                      traineesData,
-                      onSelectEvent: () => {
-                        if (!didDragRef.current) onSelectEvent(event);
-                      },
-                      onMouseDown: (e) => handleMouseDown(e, event),
-                      onMouseEnter: () => setHoveredEventId(event.id),
-                      onMouseLeave: () => setHoveredEventId(null),
-                      pixelsPerHour: PIXELS_PER_HOUR * zoomLevel,
-                      rowHeight: ROW_HEIGHT,
-                      startHour: START_HOUR,
-                      row: rowIndex,
-                      isDragging: isDraggedTile,
-                      isConflicting,
-                      isUnavailabilityConflict: isUnavailability,
-                      unavailablePersonnel: unavailablePeople,
-                      conflictedPersonnelName: personToHighlight,
-                      personnelData,
-                      seatConfigs,
-                      isDraggable: true,
-                      currentTime
+                      className: "absolute top-0 left-0 right-0 pointer-events-none z-10",
+                      style: {
+                        height: ROW_HEIGHT,
+                        top: rowIndex * ROW_HEIGHT,
+                        backgroundColor: "rgba(255, 255, 255, 0.05)"
+                      }
                     },
-                    `${event.id}-${trainee}`,
+                    `row-highlight-${rowIndex}`,
                     false,
                     {
                       fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-                      lineNumber: 556,
-                      columnNumber: 19
+                      lineNumber: 459,
+                      columnNumber: 17
                     },
                     void 0
-                  );
+                  ) : null;
+                  const barsForThisRow = [];
+                  if (showValidation) {
+                    const traineeEventsForBars = uniqueEvents.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee).sort((a, b) => a.startTime - b.startTime);
+                    for (let i = 0; i < traineeEventsForBars.length; i++) {
+                      const currentEvent = traineeEventsForBars[i];
+                      const prevEvent = traineeEventsForBars[i - 1];
+                      const nextEvent = traineeEventsForBars[i + 1];
+                      const currentSyllabus = syllabusDetails.find((d) => d.id === currentEvent.flightNumber);
+                      if (!currentSyllabus) continue;
+                      const hasPreConflict = prevEvent && (() => {
+                        const prevSyllabus = syllabusDetails.find((d) => d.id === prevEvent.flightNumber);
+                        if (!prevSyllabus) return false;
+                        const prevPostEnd = prevEvent.startTime + prevEvent.duration + prevSyllabus.postFlightTime;
+                        const currentPreStart = currentEvent.startTime - currentSyllabus.preFlightTime;
+                        return prevPostEnd > currentPreStart;
+                      })();
+                      const hasPostConflict = nextEvent && (() => {
+                        const nextSyllabus = syllabusDetails.find((d) => d.id === nextEvent.flightNumber);
+                        if (!nextSyllabus) return false;
+                        const currentPostEnd = currentEvent.startTime + currentEvent.duration + currentSyllabus.postFlightTime;
+                        const nextPreStart = nextEvent.startTime - nextSyllabus.preFlightTime;
+                        return currentPostEnd > nextPreStart;
+                      })();
+                      const isHovered = hoveredEventId === currentEvent.id;
+                      const hasAnyConflict = hasPreConflict || hasPostConflict;
+                      if (!isHovered && !hasAnyConflict) continue;
+                      const renderBar = (duration, startTime, isConflicting, key) => {
+                        const barWidth = duration * PIXELS_PER_HOUR * zoomLevel;
+                        const barHeight = ROW_HEIGHT * 0.25;
+                        const barTop = rowIndex * ROW_HEIGHT + (ROW_HEIGHT - barHeight) / 2;
+                        const barLeft = (startTime - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+                        const baseClassName = "absolute pointer-events-none z-20 rounded-full border shadow-lg backdrop-blur-sm transition-colors duration-200";
+                        const className = `${baseClassName} ${isConflicting ? "bg-red-500/50 border-red-400/30" : "bg-white/50 border-white/30"}`;
+                        const style = {
+                          left: `${barLeft}px`,
+                          top: `${barTop}px`,
+                          width: `${barWidth}px`,
+                          height: `${barHeight}px`
+                        };
+                        barsForThisRow.push(/* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style, className }, key, false, {
+                          fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
+                          lineNumber: 523,
+                          columnNumber: 41
+                        }, void 0));
+                      };
+                      if (currentSyllabus.preFlightTime > 0) {
+                        const preStartTime = currentEvent.startTime - currentSyllabus.preFlightTime;
+                        renderBar(currentSyllabus.preFlightTime, preStartTime, hasPreConflict || false, `${currentEvent.id}-pre-${rowIndex}`);
+                      }
+                      if (currentSyllabus.postFlightTime > 0) {
+                        const postStartTime = currentEvent.startTime + currentEvent.duration;
+                        renderBar(currentSyllabus.postFlightTime, postStartTime, hasPostConflict || false, `${currentEvent.id}-post-${rowIndex}`);
+                      }
+                    }
+                  }
+                  const traineeEvents = uniqueEvents.filter(
+                    (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee
+                  ).sort((a, b) => a.startTime - b.startTime);
+                  const eventTiles = traineeEvents.map((event) => {
+                    const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
+                    const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
+                    const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                    const isUnavailability = false;
+                    const unavailablePeople = [];
+                    let personToHighlight = null;
+                    if (realtimeConflict) {
+                      const personnelOnThisTile = getPersonnel$1(event);
+                      if ((isDraggedTile || isStationaryConflictTile) && personnelOnThisTile.includes(realtimeConflict.conflictedPersonName)) {
+                        personToHighlight = realtimeConflict.conflictedPersonName;
+                      }
+                    }
+                    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                      FlightTile,
+                      {
+                        event,
+                        traineesData,
+                        onSelectEvent: () => {
+                          if (!didDragRef.current) onSelectEvent(event);
+                        },
+                        onMouseDown: (e) => handleMouseDown(e, event),
+                        onMouseEnter: () => setHoveredEventId(event.id),
+                        onMouseLeave: () => setHoveredEventId(null),
+                        pixelsPerHour: PIXELS_PER_HOUR * zoomLevel,
+                        rowHeight: ROW_HEIGHT,
+                        startHour: START_HOUR,
+                        row: rowIndex,
+                        isDragging: isDraggedTile,
+                        isConflicting,
+                        isUnavailabilityConflict: isUnavailability,
+                        unavailablePersonnel: unavailablePeople,
+                        conflictedPersonnelName: personToHighlight,
+                        personnelData,
+                        seatConfigs,
+                        isDraggable: true,
+                        currentTime
+                      },
+                      `${event.id}-${trainee}`,
+                      false,
+                      {
+                        fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
+                        lineNumber: 564,
+                        columnNumber: 19
+                      },
+                      void 0
+                    );
+                  });
+                  return [rowHighlight, ...barsForThisRow, ...eventTiles];
                 });
-                return [rowHighlight, ...barsForThisRow, ...eventTiles];
-              })
+              })()
             ]
           },
           void 0,

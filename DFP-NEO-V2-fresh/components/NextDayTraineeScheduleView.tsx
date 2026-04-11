@@ -445,7 +445,15 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
             {renderGridLines()}
             {renderNightShade()}
             {renderDaylightLines()}
-            {sortedTrainees.flatMap((trainee, rowIndex) => {
+            {(() => {
+              // Deduplicate events by ID to prevent stacked tiles causing visual alpha compositing artifacts
+              const seenIds = new Set<string>();
+              const uniqueEvents = events.filter(e => {
+                if (seenIds.has(e.id)) return false;
+                seenIds.add(e.id);
+                return true;
+              });
+              return sortedTrainees.flatMap((trainee, rowIndex) => {
               // Render row highlight if this row is hovered
               const rowHighlight = hoveredRowIndex === rowIndex ? (
                 <div
@@ -463,7 +471,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
               const barsForThisRow: React.ReactElement[] = [];
               
               if (showValidation) {
-                const traineeEventsForBars = events
+                const traineeEventsForBars = uniqueEvents
                   .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee))
                   .sort((a, b) => a.startTime - b.startTime);
                 
@@ -527,7 +535,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
                 }
               }
               
-              const traineeEvents = events.filter(event => 
+              const traineeEvents = uniqueEvents.filter(event => 
                 event.student === trainee || 
                 (event.flightType === 'Solo' && event.pilot === trainee)
               ).sort((a, b) => a.startTime - b.startTime);
@@ -579,7 +587,8 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
               });
               
               return [rowHighlight, ...barsForThisRow, ...eventTiles];
-            })}
+            })
+            })()}
         </div>
       </div>
     </div>
