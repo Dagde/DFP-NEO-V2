@@ -494,7 +494,7 @@ const FlightTile: React.FC<TileProps> = ({
       }}
     >
       {/* ══ TOP-LEFT: start time (absolute, same as real tile "absolute -top-px left-1") ══ */}
-      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H + 50, display: 'flex', alignItems: 'center', gap: 0 }}>
+      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H, display: 'flex', alignItems: 'center', gap: 0 }}>
         <span style={{
           fontFamily: monoFamily,
           fontSize: TIME_FONT,

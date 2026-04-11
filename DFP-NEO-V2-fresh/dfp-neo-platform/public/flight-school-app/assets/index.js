@@ -21973,7 +21973,7 @@ const FlightTile = ({
         boxSizing: "border-box"
       },
       children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "absolute", top: PAD_TOP, left: PAD_H + 50, display: "flex", alignItems: "center", gap: 0 }, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "absolute", top: PAD_TOP, left: PAD_H, display: "flex", alignItems: "center", gap: 0 }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
             fontFamily: monoFamily,
             fontSize: TIME_FONT,
