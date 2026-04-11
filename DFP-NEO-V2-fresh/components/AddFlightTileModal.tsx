@@ -631,7 +631,7 @@ const FlightTile: React.FC<TileProps> = ({
       <div style={{
         position: 'absolute',
         bottom: Math.round(PAD_BOT * 0.35),
-        left: PAD_H + 50,
+        left: PAD_H + 20,
         display: 'flex',
         alignItems: 'baseline',
         gap: 1,
