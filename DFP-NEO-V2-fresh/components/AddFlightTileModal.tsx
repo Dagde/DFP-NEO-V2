@@ -488,7 +488,7 @@ const FlightTile: React.FC<TileProps> = ({
         // paddingBottom leaves room below names for the bottom strip
         paddingTop: PAD_TOP + TIME_FONT - 13,
         paddingBottom: PAD_BOT,
-        paddingLeft: PAD_H + 50,
+        paddingLeft: PAD_H + 70,
         paddingRight: PAD_H,
         boxSizing: 'border-box',
       }}
@@ -578,13 +578,15 @@ const FlightTile: React.FC<TileProps> = ({
           )}
         </div>
 
-        {/* RIGHT column: [duration] EVENT — same as real tile "flex flex-col items-end justify-between h-full" */}
+        {/* RIGHT column: [duration] EVENT — moved left 40px */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-end',
           flexShrink: 0,
           whiteSpace: 'nowrap',
+          marginTop: -20,  // Move Event up by 20px
+          marginRight: -40,  // Move duration and event left by 40px
         }}>
           {/* [duration] */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
