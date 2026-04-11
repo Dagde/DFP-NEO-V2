@@ -37,21 +37,39 @@ const RANK_ORDER: Record<string, number> = {
   WGCDR: 1, SQNLDR: 2, FLTLT: 3, FLGOFF: 4, PLTOFF: 5, Mr: 6,
 };
 
-// ─── Scale constants for the large interactive tile (4× the real tile) ───────
-// Real tile is 38px tall. At 4× scale = 152px.
-// All measurements taken from reference screenshot proportions.
-const S           = 4;
-const TILE_H      = 38 * S;   // 152px total height
-const TILE_RADIUS = 4  * S;   // 16px border radius
-const PAD_H       = 6  * S;   // 24px left/right padding
-const PAD_V       = 3  * S;   // 12px top/bottom padding
-const TIME_FONT   = 8  * S;   // 32px — small monospace time top-left
-const NAME1_FONT  = 11 * S;   // 44px — PIC name (bold, largest text)
-const NAME2_FONT  = 9  * S;   // 36px — Co-pilot name (italic, smaller)
-const RIGHT_FONT  = 8  * S;   // 32px — [dur] EVENT top-right (same visual size as time)
-const BOT_FONT    = 7  * S;   // 28px — #aircraft, area, callsign bottom strip
-const NAME_INDENT = PAD_H;    // names start at same x as time
-const NAME_GAP    = 2  * S;   // 8px gap between name lines
+// ─── Large interactive tile — proportions derived directly from reference tile ──
+//
+// Reference tile (screenshot_a) measured at actual pixel ratios:
+//   Tile height:    38px (real) → we use 5× = 190px
+//   Border radius:  4px  → 20px
+//   H padding:      6px  → 30px
+//   V padding:      3px  → 15px (top/bottom)
+//   Time font:      8px  → 40px  (monospace, dim white, top-left)
+//   PIC name font:  11px → 55px  (bold italic, bright, largest text)
+//   Copilot font:   9px  → 45px  (normal italic, dimmer)
+//   Right font:     8px  → 40px  ([dur] EVENT, top-right, same row as time)
+//   Bottom font:    7px  → 35px  (#aircraft left, area+callsign right)
+//   Name gap:       2px  → 10px  (vertical gap between two name lines)
+//
+// Total vertical space check:
+//   topY = 15, timeRow bottom = 15+40 = 55
+//   name1Y ≈ 55+4 = 59, name1 bottom = 59+55 = 114
+//   name2Y = 114+10 = 124, name2 bottom = 124+45 = 169
+//   botY = 190-15-35 = 140  ← name2 bottom (169) > botY (140)
+//
+// To keep names inside: increase tile height or reduce fonts slightly.
+// Using TILE_H = 210px (5.5× real height) gives comfortable fit.
+//
+const TILE_H      = 210;   // px — approx 5.5× the real 38px tile
+const TILE_RADIUS = 20;    // px
+const PAD_H       = 28;    // px — left/right padding
+const PAD_V       = 14;    // px — top/bottom padding
+const TIME_FONT   = 36;    // px — time top-left (monospace)
+const NAME1_FONT  = 52;    // px — PIC name (bold italic, largest)
+const NAME2_FONT  = 40;    // px — co-pilot name (italic)
+const RIGHT_FONT  = 36;    // px — [dur] EVENT top-right
+const BOT_FONT    = 30;    // px — bottom strip (#aircraft, area, callsign)
+const NAME_GAP    = 8;     // px — gap between name lines
 
 // Inline select / input style — invisible, sits on top of rendered text
 const ghostStyle = (
@@ -453,20 +471,15 @@ const FlightTile: React.FC<TileProps> = ({
   const botColor   = (v: string) => v ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.30)';  // bottom row
   const areaColor  = (v: string) => /^[A-H]$/.test(v) ? 'rgba(255,255,255,0.75)' : 'rgba(255,220,60,0.95)';
 
-  // Layout zones (all absolute positions within TILE_H=152px):
-  // Top strip:    y=PAD_V (12px)              → time (left) + [dur] event (right)   height≈TIME_FONT(32px)
-  // Middle zone:  centred between top & bot   → name1 (bold large) + name2 (smaller italic)
-  // Bottom strip: y=TILE_H-PAD_V-BOT_FONT     → #aircraft (left) + area callsign (right)
-
-  const topY    = PAD_V;                               // 12px from top
-  const botY    = TILE_H - PAD_V - BOT_FONT;           // 12px from bottom, font-height up
-  // Middle zone: between bottom of time row and top of bottom row
-  const midTop  = topY + TIME_FONT + 4;                // just below time
-  const midBot  = botY - 4;                            // just above bottom strip
-  const midH    = midBot - midTop;                     // available height for names
-  // Name1 sits at top of middle zone; name2 sits below with NAME_GAP
-  const name1Y  = midTop + Math.max(0, (midH - NAME1_FONT - NAME_GAP - NAME2_FONT) / 2);
-  const name2Y  = name1Y + NAME1_FONT + NAME_GAP;
+  // Layout zones — all absolute y positions within TILE_H=210px
+  // topY=14: time row (height=36) → bottom at 50
+  // name1Y=56: PIC name (height=52) → bottom at 108
+  // name2Y=116: co-pilot (height=40) → bottom at 156
+  // botY=166: bottom strip (height=30) → bottom at 196 (inside TILE_H=210)
+  const topY   = PAD_V;                        // 14
+  const name1Y = topY + TIME_FONT + 6;         // 14+36+6 = 56
+  const name2Y = name1Y + NAME1_FONT + NAME_GAP; // 56+52+8 = 116
+  const botY   = TILE_H - PAD_V - BOT_FONT;    // 210-14-30 = 166
 
   return (
     <div
