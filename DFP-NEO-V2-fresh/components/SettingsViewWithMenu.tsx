@@ -21,6 +21,8 @@ interface SettingsViewWithMenuProps {
     onUpdateUnits: (units: string[]) => void;
     unitLocations: Record<string, string>;
     onUpdateUnitLocations: (locations: Record<string, string>) => void;
+    locationOpAreas?: Record<string, string[]>;
+    onUpdateLocationOpAreas?: (areas: Record<string, string[]>) => void;
     instructorsData: Instructor[];
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];

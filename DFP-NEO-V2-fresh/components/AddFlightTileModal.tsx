@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +15,10 @@ interface AddFlightTileModalProps {
   date: string;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   scores?: Map<string, Score[]>;
+  locationOpAreas?: Record<string, string[]>;
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatTime = (time: number): string => {
   const hours = Math.floor(time);
@@ -23,238 +26,33 @@ const formatTime = (time: number): string => {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-// Format date as DD Mmm YY (e.g., "06 Jun 25")
 const formatDate = (dateStr: string): string => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const date = new Date(dateStr + 'T00:00:00');
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = months[date.getMonth()];
-  const year = String(date.getFullYear()).slice(-2);
-  return `${day} ${month} ${year}`;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
 };
 
-// ─── Flight Tile Preview — exact replica of reference, 4× scaled ─────────────
-const S = 4; // scale factor
-
-// Scaled values (large interactive tile — exact 4x replica)
-const TILE_H        = 38  * S;  // 152px
-const TILE_RADIUS   = 4   * S;  // 16px
-const PAD_H         = 6   * S;  // 24px
-const PAD_V         = 4   * S;  // 16px
-const TIME_FONT     = 9   * S;  // 36px
-const NAME_FONT     = 10  * S;  // 40px
-const RIGHT_FONT    = 10  * S;  // 40px
-const BOT_FONT      = 9   * S;  // 36px
-const NAME_INDENT   = '15%';
-const NAME_GAP      = 3   * S;  // 12px gap between two name lines
-const RIGHT_GAP     = 4   * S;  // 16px gap between right lines
-
-// ─── Real-size tile constants (matching actual schedule tile) ─────────────────
-const RT_H          = 38;   // px — same as real tile
-const RT_RADIUS     = 4;
-const RT_PAD_H      = 6;
-const RT_PAD_V      = 4;
-const RT_TIME_FONT  = 9;
-const RT_NAME_FONT  = 10;
-const RT_RIGHT_FONT = 10;
-const RT_BOT_FONT   = 9;
-const RT_NAME_INDENT = '15%';
-const RT_NAME_GAP   = 3;
-const RT_RIGHT_GAP  = 4;
-
-// ─── Real-size read-only tile (synced preview) ────────────────────────────────
-interface RealTilePreviewProps {
-  flightType: 'Dual' | 'Solo';
-  startTime: number;
-  picName: string;
-  studentName: string;
-  duration: number;
-  flightNumber: string;
-  area: string;
-  aircraftNumber: string;
-  callsign: string;
-  color: string;
-}
-
-const RealTilePreview: React.FC<RealTilePreviewProps> = ({
-  flightType, startTime, picName, studentName, duration, flightNumber, area, aircraftNumber, callsign, color,
-}) => {
-  const timeColor    = 'rgba(255,255,255,0.95)';
-  const nameColor    = (v: string) => v ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.35)';
-  const rightColor   = (v: string) => v ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.35)';
-  const botColor     = (v: string) => v ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)';
-  const bracketColor = 'rgba(255,255,255,0.70)';
-  const durBoldColor = 'rgba(255,255,255,0.95)';
-
-  const picLabel = picName || 'Surname, First (N)';
-  const studentLabel = studentName || 'Surname, First (N)';
-
-  return (
-    <div
-      className={color}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: RT_H,
-        borderRadius: RT_RADIUS,
-        overflow: 'hidden',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.35)',
-        flexShrink: 0,
-        pointerEvents: 'none', // read-only
-      }}
-    >
-      {/* TOP-LEFT: time */}
-      <div style={{
-        position: 'absolute', top: RT_PAD_V, left: RT_PAD_H,
-        fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-        fontSize: RT_TIME_FONT, fontWeight: 400, color: timeColor,
-        lineHeight: 1, whiteSpace: 'nowrap',
-      }}>
-        {formatTime(startTime)}
-      </div>
-
-      {/* MAIN BODY: names left, flight info right */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        paddingLeft: RT_PAD_H, paddingRight: RT_PAD_H,
-        paddingTop: RT_TIME_FONT + RT_PAD_V + 4,
-        paddingBottom: RT_BOT_FONT + RT_PAD_V + 2,
-      }}>
-        {/* LEFT: two name lines */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          justifyContent: 'center', gap: RT_NAME_GAP,
-          paddingLeft: RT_NAME_INDENT, minWidth: 0, overflow: 'hidden',
-          marginTop: 6,
-        }}>
-          <div style={{
-            fontSize: RT_NAME_FONT, fontStyle: 'italic',
-            color: nameColor(picName), lineHeight: 1.2,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            {picLabel}
-          </div>
-          {flightType === 'Dual' ? (
-            <div style={{
-              fontSize: RT_NAME_FONT, fontStyle: 'italic',
-              color: nameColor(studentName), lineHeight: 1.2,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              {studentLabel}
-            </div>
-          ) : (
-            <span style={{
-              fontSize: RT_NAME_FONT * 0.75, fontWeight: 700,
-              color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)',
-              padding: '1px 3px', borderRadius: 2, display: 'inline-block', lineHeight: 1.2,
-            }}>SOLO</span>
-          )}
-        </div>
-
-        {/* RIGHT: [dur] flightnum */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
-          justifyContent: 'center', gap: RT_RIGHT_GAP, flexShrink: 0, paddingLeft: RT_PAD_H,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, whiteSpace: 'nowrap' }}>
-            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, color: bracketColor, lineHeight: 1.2 }}>[ </span>
-            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, fontWeight: 700, color: durBoldColor, lineHeight: 1.2 }}>{duration.toFixed(1)}</span>
-            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, color: bracketColor, lineHeight: 1.2 }}> ]</span>
-            <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_RIGHT_FONT, fontStyle: 'italic', color: rightColor(flightNumber), lineHeight: 1.2, marginLeft: 2 }}>
-              {flightNumber || 'FLT#'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* BOTTOM-LEFT: #aircraft */}
-      <div style={{
-        position: 'absolute', bottom: RT_PAD_V, left: RT_PAD_H,
-        display: 'flex', alignItems: 'baseline', gap: 1, zIndex: 2,
-      }}>
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: 'rgba(255,255,255,0.70)', lineHeight: 1 }}>#</span>
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RT_BOT_FONT, color: botColor(aircraftNumber), lineHeight: 1 }}>{aircraftNumber || '---'}</span>
-      </div>
-
-      {/* BOTTOM-RIGHT: area + callsign */}
-      <div style={{
-        position: 'absolute', bottom: RT_PAD_V, right: RT_PAD_H,
-        display: 'flex', alignItems: 'baseline', gap: RT_RIGHT_GAP, zIndex: 2,
-      }}>
-        <span style={{
-          fontSize: RT_BOT_FONT, lineHeight: 1,
-          color: ['A','B','C','D','E','F','G','H'].includes(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
-        }}>{area}</span>
-        <span style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-          fontSize: RT_BOT_FONT, fontStyle: 'italic', lineHeight: 1,
-          color: callsign && callsign !== 'CALLSGN' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)',
-        }}>{callsign || 'CALLSGN'}</span>
-      </div>
-    </div>
-  );
+// Rank sort order for instructors
+const RANK_ORDER: Record<string, number> = {
+  WGCDR: 1, SQNLDR: 2, FLTLT: 3, FLGOFF: 4, PLTOFF: 5, Mr: 6,
 };
 
-interface FlightTilePreviewProps {
-  flightType: 'Dual' | 'Solo';
-  startTime: number;
-  picName: string;
-  studentName: string;
-  duration: number;
-  flightNumber: string;
-  area: string;
-  aircraftNumber: string;
-  color: string; // tailwind bg class
-  instructorOptions: { value: string; label: string }[];
-  traineeOptions: { value: string; label: string }[];
-  syllabusOptions: { value: string; label: string }[];
-  areaOptions: { value: string; label: string }[];
-  aircraftOptions: { value: string; label: string }[];
-  timeOptions: { value: string; label: string }[];
-  durationOptions: { value: string; label: string }[];
-  callsign: string;
-  // 3-layer cascading dropdown props
-  allUnits: string[];
-  getLayer2OptionsForUnit: (unit: string) => string[];
-  getNamesForUnitAndSelection: (unit: string, selection: string) => { name: string; label: string; type: 'instructor' | 'trainee' }[];
-  // PIC dropdown state
-  showPicDropdown: boolean;
-  hoveredPicUnit: string | null;
-  hoveredPicLayer2: string | null;
-  // Student dropdown state
-  showStudentDropdown: boolean;
-  hoveredStudentUnit: string | null;
-  hoveredStudentLayer2: string | null;
-  onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
-  onStartTimeChange: (v: number) => void;
-  onPicNameChange: (v: string) => void;
-  onStudentNameChange: (v: string) => void;
-  onDurationChange: (v: number) => void;
-  onFlightNumberChange: (v: string) => void;
-  onAreaChange: (v: string) => void;
-  onAircraftChange: (v: string) => void;
-  onCallsignChange: (v: string) => void;
-  onShowPicDropdownChange: (v: boolean) => void;
-  onHoveredPicUnitChange: (v: string | null) => void;
-  onHoveredPicLayer2Change: (v: string | null) => void;
-  onShowStudentDropdownChange: (v: boolean) => void;
-  onHoveredStudentUnitChange: (v: string | null) => void;
-  onHoveredStudentLayer2Change: (v: string | null) => void;
-  // Event dropdown props
-  showEventDropdown: boolean;
-  hoveredCourse: string | null;
-  courseOptions: string[];
-  getEventsForCourse: (course: string) => SyllabusItemDetail[];
-  getNextLMPEvent: SyllabusItemDetail | null;
-  onShowEventDropdownChange: (v: boolean) => void;
-  onHoveredCourseChange: (v: string | null) => void;
-  // Event category for disabling dropdown on LMP Currency
-  eventCategory: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di';
-}
+// ─── Scale constants for the large interactive tile (4× the real tile) ───────
+const S           = 4;
+const TILE_H      = 38 * S;   // 152px
+const TILE_RADIUS = 4  * S;   // 16px
+const PAD_H       = 6  * S;   // 24px
+const PAD_V       = 4  * S;   // 16px
+const TIME_FONT   = 9  * S;   // 36px
+const NAME_FONT   = 10 * S;   // 40px
+const RIGHT_FONT  = 10 * S;   // 40px
+const BOT_FONT    = 9  * S;   // 36px
+const NAME_INDENT = '13%';
+const NAME_GAP    = 3  * S;   // 12px
+const RIGHT_GAP   = 4  * S;   // 16px
 
-// Shared style for all invisible inline selects inside the tile
-const inlineSelectStyle = (
+// Inline select / input style — invisible, sits on top of rendered text
+const ghostStyle = (
   fontSize: number,
   color: string,
   width: number | string,
@@ -284,33 +82,370 @@ const inlineSelectStyle = (
   textAlign,
 });
 
-const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
+// ─── Cascading dropdown for Person selection (3 layers: Unit→Staff/Course→Names) ─
+interface PersonDropdownProps {
+  value: string;
+  onChange: (name: string, callsigns: string[]) => void;
+  allUnits: string[];
+  getLayer2: (unit: string) => string[];
+  getNames: (unit: string, sel: string) => { name: string; label: string; color?: string }[];
+  placeholder: string;
+  fontSize: number;
+  color: string;
+  allowSolo?: boolean;    // shows SOLO as first option
+  onSoloSelect?: () => void;
+}
+
+const PersonDropdown: React.FC<PersonDropdownProps> = ({
+  value, onChange, allUnits, getLayer2, getNames,
+  placeholder, fontSize, color, allowSolo, onSoloSelect,
+}) => {
+  const [open, setOpen] = useState(false);
+  const [hovUnit, setHovUnit] = useState<string | null>(null);
+  const [hovL2, setHovL2] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          fontSize,
+          fontWeight: 700,
+          fontStyle: 'italic',
+          color,
+          cursor: 'pointer',
+          userSelect: 'none',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          minWidth: 120,
+          padding: '2px 4px',
+          borderRadius: 3,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+      >
+        {value || placeholder}
+      </div>
+
+      {open && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            zIndex: 2000,
+            display: 'flex',
+            width: 520,
+            maxHeight: 300,
+            backgroundColor: '#1a2f4a',
+            borderRadius: 8,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            overflow: 'hidden',
+            marginTop: 4,
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          {/* Col 1: Units */}
+          <div style={{ width: 110, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300 }}>
+            {allowSolo && (
+              <div
+                onClick={() => { onSoloSelect?.(); setOpen(false); }}
+                style={{
+                  padding: '9px 12px', color: '#ffd43b', fontWeight: 700, fontSize: 13,
+                  cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.12)',
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,212,59,0.15)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                SOLO
+              </div>
+            )}
+            {allUnits.map(unit => (
+              <div
+                key={unit}
+                onMouseEnter={() => { setHovUnit(unit); setHovL2(null); }}
+                onClick={() => setHovUnit(unit)}
+                style={{
+                  padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  color: hovUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
+                  backgroundColor: hovUnit === unit ? 'rgba(255,255,255,0.12)' : 'transparent',
+                }}
+              >
+                {unit}
+                <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Col 2: STAFF / Courses */}
+          <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+            {hovUnit ? (
+              getLayer2(hovUnit).map(opt => (
+                <div
+                  key={opt}
+                  onMouseEnter={() => setHovL2(opt)}
+                  onClick={() => setHovL2(opt)}
+                  style={{
+                    padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    fontWeight: opt === 'STAFF' ? 600 : 400,
+                    color: hovL2 === opt ? '#fff' : 'rgba(255,255,255,0.8)',
+                    backgroundColor: hovL2 === opt ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  }}
+                >
+                  {opt}
+                  <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
+                Select unit
+              </div>
+            )}
+          </div>
+
+          {/* Col 3: Names */}
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: 'rgba(0,0,0,0.2)' }}>
+            {hovUnit && hovL2 ? (
+              getNames(hovUnit, hovL2).map(person => (
+                <div
+                  key={person.name}
+                  onClick={() => {
+                    onChange(person.name, []);
+                    setOpen(false);
+                    setHovUnit(null);
+                    setHovL2(null);
+                  }}
+                  style={{
+                    padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                    color: person.color || '#fff',
+                    backgroundColor: 'transparent',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {person.label}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
+                {hovUnit ? 'Select category' : 'Select unit'}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Event (syllabus) cascading dropdown (2 layers: Course→Events) ─────────
+interface EventDropdownProps {
+  value: string;
+  onChange: (code: string, durationHrs?: number) => void;
+  courseOptions: string[];
+  getEventsForCourse: (course: string) => SyllabusItemDetail[];
+  nextLMPEvent: SyllabusItemDetail | null;
+  fontSize: number;
+  color: string;
+  disabled?: boolean;
+}
+
+const EventDropdown: React.FC<EventDropdownProps> = ({
+  value, onChange, courseOptions, getEventsForCourse, nextLMPEvent,
+  fontSize, color, disabled,
+}) => {
+  const [open, setOpen] = useState(false);
+  const [hovCourse, setHovCourse] = useState<string | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div
+        onClick={() => { if (!disabled) setOpen(o => !o); }}
+        style={{
+          fontSize,
+          fontStyle: 'italic',
+          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+          color,
+          cursor: disabled ? 'default' : 'pointer',
+          userSelect: 'none',
+          whiteSpace: 'nowrap',
+          minWidth: 80,
+          padding: '2px 4px',
+          borderRadius: 3,
+        }}
+        onMouseEnter={e => { if (!disabled) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
+        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+      >
+        {value || 'EVENT'}
+      </div>
+
+      {open && !disabled && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            zIndex: 2000,
+            display: 'flex',
+            width: 400,
+            maxHeight: 320,
+            backgroundColor: '#1a2f4a',
+            borderRadius: 8,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            overflow: 'hidden',
+            marginTop: 4,
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          {/* Col 1: Courses */}
+          <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 320 }}>
+            {courseOptions.map(course => (
+              <div
+                key={course}
+                onMouseEnter={() => setHovCourse(course)}
+                onClick={() => {
+                  if (course === 'SCT') {
+                    onChange('SCT');
+                    setOpen(false);
+                  }
+                }}
+                style={{
+                  padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  color: hovCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
+                  backgroundColor: hovCourse === course ? 'rgba(255,255,255,0.12)' : 'transparent',
+                  fontWeight: course === 'SCT' ? 600 : 400,
+                }}
+              >
+                {course}
+                {course !== 'SCT' && <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* Col 2: Events */}
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: 'rgba(0,0,0,0.15)' }}>
+            {hovCourse && hovCourse !== 'SCT' ? (
+              getEventsForCourse(hovCourse).map(ev => {
+                const code = ev.code || ev.id || '';
+                const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
+                return (
+                  <div
+                    key={code}
+                    onClick={() => {
+                      onChange(code, ev.flightOrSimHours || ev.duration || undefined);
+                      setOpen(false);
+                      setHovCourse(null);
+                    }}
+                    style={{
+                      padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                      color: isNext ? '#22c55e' : '#fff',
+                      backgroundColor: isNext ? 'rgba(34,197,94,0.12)' : 'transparent',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = isNext ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.1)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isNext ? 'rgba(34,197,94,0.12)' : 'transparent')}
+                    title={ev.eventDescription || code}
+                  >
+                    <span>{code}</span>
+                    {isNext && <span style={{ fontSize: 10, color: '#22c55e', marginLeft: 6 }}>NEXT</span>}
+                  </div>
+                );
+              })
+            ) : (
+              <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
+                {hovCourse === 'SCT' ? 'SCT selected' : 'Hover a course'}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Large Interactive Flight Tile ────────────────────────────────────────────
+interface TileProps {
+  flightType: 'Dual' | 'Solo';
+  startTime: number;
+  picName: string;
+  studentName: string;
+  duration: number;
+  flightNumber: string;
+  area: string;
+  aircraftNumber: string;
+  callsign: string;
+  color: string;
+  // options
+  timeOptions: { value: string; label: string }[];
+  durationOptions: { value: string; label: string }[];
+  areaOptions: { value: string; label: string }[];
+  aircraftOptions: { value: string; label: string }[];
+  callsignOptions: string[];
+  // cascading dropdown helpers
+  allUnits: string[];
+  getLayer2: (unit: string) => string[];
+  getNames: (unit: string, sel: string) => { name: string; label: string; color?: string }[];
+  // event dropdown helpers
+  courseOptions: string[];
+  getEventsForCourse: (course: string) => SyllabusItemDetail[];
+  nextLMPEvent: SyllabusItemDetail | null;
+  eventCategory: string;
+  // change handlers
+  onFlightTypeChange: (v: 'Dual' | 'Solo') => void;
+  onStartTimeChange: (v: number) => void;
+  onPicNameChange: (name: string, callsigns: string[]) => void;
+  onStudentNameChange: (name: string) => void;
+  onDurationChange: (v: number) => void;
+  onFlightNumberChange: (code: string, durationHrs?: number) => void;
+  onAreaChange: (v: string) => void;
+  onAircraftChange: (v: string) => void;
+  onCallsignChange: (v: string) => void;
+}
+
+const FlightTile: React.FC<TileProps> = ({
   flightType, startTime, picName, studentName, duration, flightNumber,
-  area, aircraftNumber, color, callsign,
-  instructorOptions, traineeOptions, syllabusOptions, areaOptions,
-  aircraftOptions, timeOptions, durationOptions,
-  allUnits, getLayer2OptionsForUnit, getNamesForUnitAndSelection,
-  showPicDropdown, hoveredPicUnit, hoveredPicLayer2,
-  showStudentDropdown, hoveredStudentUnit, hoveredStudentLayer2,
+  area, aircraftNumber, callsign, color,
+  timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
+  allUnits, getLayer2, getNames,
+  courseOptions, getEventsForCourse, nextLMPEvent, eventCategory,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
-  onShowPicDropdownChange, onHoveredPicUnitChange, onHoveredPicLayer2Change,
-  onShowStudentDropdownChange, onHoveredStudentUnitChange, onHoveredStudentLayer2Change,
-  // Event dropdown props
-  showEventDropdown, hoveredCourse, courseOptions, getEventsForCourse, getNextLMPEvent,
-  onShowEventDropdownChange, onHoveredCourseChange,
-  // Event category for disabling dropdown on LMP Currency
-  eventCategory,
 }) => {
-  const picOptions = flightType === 'Solo' ? traineeOptions : instructorOptions;
-
-  // Colours matching the reference screenshot exactly
-  const timeColor     = 'rgba(255,255,255,0.95)';  // bright white — time top-left
-  const nameColor     = (v: string) => v ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.45)';
-  const rightColor    = (v: string) => v ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.45)';
-  const botColor      = (v: string) => v ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)';
-  const bracketColor  = 'rgba(255,255,255,0.70)';
-  const durBoldColor  = 'rgba(255,255,255,0.95)';  // [1.5] — bold white
+  const tc   = 'rgba(255,255,255,0.95)';
+  const nc   = (v: string) => v ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.40)';
+  const rc   = (v: string) => v ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.40)';
+  const bc   = (v: string) => v ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.40)';
+  const brk  = 'rgba(255,255,255,0.60)';
+  const dur  = 'rgba(255,255,255,0.95)';
 
   return (
     <div
@@ -321,646 +456,187 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
         height: TILE_H,
         borderRadius: TILE_RADIUS,
         overflow: 'visible',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+        boxShadow: '0 3px 12px rgba(0,0,0,0.4)',
         flexShrink: 0,
+        userSelect: 'none',
       }}
     >
-      {/* ── TOP-LEFT: start time ── */}
-      {/* We show the formatted time as a visible label, with an invisible select on top */}
-      <div
-        style={{
-          position: 'absolute',
-          top: PAD_V,
-          left: PAD_H,
+      {/* ── TOP-LEFT: start time (visible label + invisible select overlay) ── */}
+      <div style={{ position: 'absolute', top: PAD_V, left: PAD_H, zIndex: 5 }}>
+        <div style={{
           fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-          fontSize: TIME_FONT,
-          fontWeight: 400,
-          color: timeColor,
-          lineHeight: 1,
-          pointerEvents: 'none',
-          zIndex: 1,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {formatTime(startTime)}
-      </div>
-      {/* Invisible select overlay for time */}
-      <select
-        value={String(startTime)}
-        onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-        style={{
-          position: 'absolute',
-          top: PAD_V,
-          left: PAD_H,
-          width: TIME_FONT * 3,
-          height: TIME_FONT + 4,
-          opacity: 0,
-          cursor: 'pointer',
-          zIndex: 5,
-        }}
-      >
-        {timeOptions.map(o => (
-          <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
-        ))}
-      </select>
-
-      {/* ── TOP-RIGHT: [duration] FLT# ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: PAD_V,
-          right: PAD_H,
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 4,
-          zIndex: 5,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}>[ </span>
-        <select
-          value={String(duration)}
-          onChange={e => onDurationChange(parseFloat(e.target.value))}
-          style={inlineSelectStyle(RIGHT_FONT, durBoldColor, RIGHT_FONT * 2.2, 700, 'normal', true, 'center')}
-        >
-          {durationOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f', fontStyle: 'normal' }}>{o.label}</option>
-          ))}
-        </select>
-        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: bracketColor, lineHeight: 1 }}> ]</span>
-        {/* Event dropdown - 2-layer cascading */}
-        <div style={{ position: 'relative' }}>
-          <div
-            onClick={() => {
-              // Disable dropdown for LMP Currency - CURR is auto-set
-              if (eventCategory === 'lmp_currency') return;
-              onShowEventDropdownChange(!showEventDropdown);
-            }}
-            style={{
-              ...inlineSelectStyle(RIGHT_FONT, rightColor(flightNumber), RIGHT_FONT * 4, 400, 'italic', true),
-              cursor: eventCategory === 'lmp_currency' ? 'default' : 'pointer',
-              minWidth: 80,
-              opacity: eventCategory === 'lmp_currency' ? 0.9 : 1,
-            }}
-          >
-            {flightNumber || 'EVENT'}
-          </div>
-          {showEventDropdown && eventCategory !== 'lmp_currency' && (
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                zIndex: 1000,
-                display: 'flex',
-                width: 400,
-                maxHeight: 320,
-                backgroundColor: '#1e3a5f',
-                borderRadius: 6,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                overflow: 'hidden',
-                marginTop: 4,
-              }}
-            >
-              {/* Column 1: Courses */}
-              <div
-                style={{
-                  width: 120,
-                  borderRight: '1px solid rgba(255,255,255,0.2)',
-                  maxHeight: 320,
-                  overflowY: 'auto',
-                }}
-              >
-                {courseOptions.map(course => (
-                  <div
-                    key={course}
-                    onClick={() => {
-                      if (course === 'SCT') {
-                        onFlightNumberChange('SCT');
-                        onShowEventDropdownChange(false);
-                        onHoveredCourseChange(null);
-                      }
-                    }}
-                    onMouseEnter={() => onHoveredCourseChange(course)}
-                    style={{
-                      padding: '10px 12px',
-                      color: hoveredCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
-                      backgroundColor: hoveredCourse === course ? 'rgba(255,255,255,0.15)' : 'transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: 13,
-                      fontWeight: course === 'SCT' ? 600 : 400,
-                    }}
-                  >
-                    {course}
-                    {course !== 'SCT' && <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>}
-                    {course === 'SCT' && <span style={{ fontSize: 10, opacity: 0.8, color: '#ffd43b' }}>SELECT</span>}
-                  </div>
-                ))}
-              </div>
-              {/* Column 2: Events within course */}
-              <div
-                style={{
-                  flex: 1,
-                  maxHeight: 320,
-                  overflowY: 'auto',
-                  backgroundColor: 'rgba(0,0,0,0.1)',
-                }}
-              >
-                {hoveredCourse && hoveredCourse !== 'SCT' ? (
-                  getEventsForCourse(hoveredCourse).map(event => {
-                    const eventCode = event.code || event.id || '';
-                    const isNextLMP = getNextLMPEvent?.code === eventCode || getNextLMPEvent?.id === eventCode;
-                    return (
-                      <div
-                        key={eventCode}
-                        onClick={() => {
-                          onFlightNumberChange(eventCode);
-                          onShowEventDropdownChange(false);
-                          onHoveredCourseChange(null);
-                        }}
-                        style={{
-                          padding: '10px 12px',
-                          color: isNextLMP ? '#22c55e' : '#fff',
-                          backgroundColor: isNextLMP ? 'rgba(34, 197, 94, 0.2)' : 'transparent',
-                          cursor: 'pointer',
-                          fontSize: 13,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                        onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = isNextLMP ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255,255,255,0.1)'}
-                        onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = isNextLMP ? 'rgba(34, 197, 94, 0.2)' : 'transparent'}
-                        title={event.eventDescription || eventCode}
-                      >
-                        {eventCode}
-                        {isNextLMP && <span style={{ marginLeft: 6, fontSize: 10, color: '#22c55e' }}>NEXT</span>}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                    {hoveredCourse === 'SCT' ? 'SCT selected' : 'Select a course'}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          fontSize: TIME_FONT, fontWeight: 400, color: tc, lineHeight: 1, pointerEvents: 'none',
+        }}>
+          {formatTime(startTime)}
         </div>
+        <select
+          value={String(startTime)}
+          onChange={e => onStartTimeChange(parseFloat(e.target.value))}
+          style={{ position: 'absolute', top: 0, left: 0, width: TIME_FONT * 3.2, height: TIME_FONT + 6, opacity: 0, cursor: 'pointer', zIndex: 10 }}
+        >
+          {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+        </select>
       </div>
 
-      {/* ── MAIN BODY: left names | right flight info ── */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingLeft: PAD_H,
-          paddingRight: PAD_H,
-          paddingTop: TIME_FONT + PAD_V + 2,
-          paddingBottom: BOT_FONT + PAD_V + 2,
-        }}
-      >
-        {/* LEFT: two name lines, indented */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: NAME_GAP,
-            paddingLeft: NAME_INDENT,
-            minWidth: 0,
-            overflow: 'visible',
-          }}
-        >
-          {/* Line 1: PIC / Instructor with 3-layer cascading dropdown */}
-          {/* Structure: Unit → STAFF or Course → Names */}
-          <div style={{ position: 'relative', marginTop: 0 }}>
-            <div
-              onClick={() => onShowPicDropdownChange(!showPicDropdown)}
-              style={{
-                ...inlineSelectStyle(NAME_FONT, nameColor(picName), '100%', 700, 'italic'),
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-            >
-              {picName || 'Surname, First (N)'}
-            </div>
-            {showPicDropdown && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  zIndex: 1000,
-                  width: 540,
-                  backgroundColor: '#1e3a5f',
-                  borderRadius: 8,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-                  maxHeight: 320,
-                  display: 'flex',
-                  flexDirection: 'row',
-                }}
-              >
-                {/* Column 1: Units list */}
-                <div
-                  style={{
-                    width: 120,
-                    borderRight: '1px solid rgba(255,255,255,0.2)',
-                    maxHeight: 320,
-                    overflowY: 'auto',
-                  }}
-                >
-                  {allUnits.map(unit => (
-                    <div
-                      key={unit}
-                      onMouseEnter={() => onHoveredPicUnitChange(unit)}
-                      onClick={() => onHoveredPicUnitChange(unit)}
-                      style={{
-                        padding: '10px 12px',
-                        color: hoveredPicUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
-                        backgroundColor: hoveredPicUnit === unit ? 'rgba(255,255,255,0.15)' : 'transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: 13,
-                      }}
-                    >
-                      {unit}
-                      <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
-                    </div>
-                  ))}
-                </div>
-                {/* Column 2: STAFF or Courses */}
-                <div
-                  style={{
-                    width: 140,
-                    borderRight: '1px solid rgba(255,255,255,0.2)',
-                    maxHeight: 320,
-                    overflowY: 'auto',
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                  }}
-                >
-                  {hoveredPicUnit ? (
-                    getLayer2OptionsForUnit(hoveredPicUnit).map(option => (
-                      <div
-                        key={option}
-                        onMouseEnter={() => onHoveredPicLayer2Change(option)}
-                        onClick={() => onHoveredPicLayer2Change(option)}
-                        style={{
-                          padding: '10px 12px',
-                          color: hoveredPicLayer2 === option ? '#fff' : 'rgba(255,255,255,0.8)',
-                          backgroundColor: hoveredPicLayer2 === option ? 'rgba(255,255,255,0.15)' : 'transparent',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          fontSize: 13,
-                          fontWeight: option === 'STAFF' ? 600 : 400,
-                        }}
-                      >
-                        {option}
-                        <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      Select unit
-                    </div>
-                  )}
-                </div>
-                {/* Column 3: Names (Staff or Trainees) */}
-                <div
-                  style={{
-                    flex: 1,
-                    maxHeight: 320,
-                    overflowY: 'auto',
-                    backgroundColor: 'rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {hoveredPicUnit && hoveredPicLayer2 ? (
-                    getNamesForUnitAndSelection(hoveredPicUnit, hoveredPicLayer2).map(person => (
-                      <div
-                        key={person.name}
-                        onClick={() => {
-                          onPicNameChange(person.name);
-                          onShowPicDropdownChange(false);
-                          onHoveredPicUnitChange(null);
-                          onHoveredPicLayer2Change(null);
-                        }}
-                        style={{
-                          padding: '10px 12px',
-                          color: '#fff',
-                          backgroundColor: 'transparent',
-                          cursor: 'pointer',
-                          fontSize: 13,
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                        onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                      >
-                        {person.label}
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                      {hoveredPicUnit ? 'Select STAFF or course' : 'Select unit'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+      {/* ── TOP-RIGHT: [duration] EVENT ── */}
+      <div style={{ position: 'absolute', top: PAD_V, right: PAD_H, display: 'flex', alignItems: 'baseline', gap: 4, zIndex: 10 }}>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: brk, lineHeight: 1 }}>[ </span>
+        <div style={{ position: 'relative' }}>
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, fontWeight: 700, color: dur, lineHeight: 1, pointerEvents: 'none' }}>
+            {duration.toFixed(1)}
+          </span>
+          <select
+            value={String(duration)}
+            onChange={e => onDurationChange(parseFloat(e.target.value))}
+            style={{ position: 'absolute', top: 0, left: 0, width: RIGHT_FONT * 2.4, height: RIGHT_FONT + 6, opacity: 0, cursor: 'pointer', zIndex: 10 }}
+          >
+            {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+          </select>
+        </div>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: RIGHT_FONT, color: brk, lineHeight: 1 }}> ]</span>
+        <EventDropdown
+          value={flightNumber}
+          onChange={onFlightNumberChange}
+          courseOptions={courseOptions}
+          getEventsForCourse={getEventsForCourse}
+          nextLMPEvent={nextLMPEvent}
+          fontSize={RIGHT_FONT}
+          color={rc(flightNumber)}
+          disabled={eventCategory === 'lmp_currency'}
+        />
+      </div>
 
-          {/* Line 2: Student (Dual) or SOLO badge */}
-          {/* Structure: Unit → STAFF or Course → Names (same as PIC dropdown) */}
+      {/* ── MAIN BODY: names left, (nothing right — duration+event are top-right) ── */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+        display: 'flex', alignItems: 'center',
+        paddingLeft: PAD_H,
+        paddingRight: PAD_H,
+        paddingTop: TIME_FONT + PAD_V + 4,
+        paddingBottom: BOT_FONT + PAD_V + 4,
+      }}>
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          justifyContent: 'center', gap: NAME_GAP,
+          paddingLeft: NAME_INDENT, overflow: 'visible',
+        }}>
+          {/* PIC / Instructor */}
+          <PersonDropdown
+            value={picName}
+            onChange={onPicNameChange}
+            allUnits={allUnits}
+            getLayer2={getLayer2}
+            getNames={getNames}
+            placeholder="Surname, First (N)"
+            fontSize={NAME_FONT}
+            color={nc(picName)}
+          />
+
+          {/* Co-Pilot / Student — shows SOLO badge when Solo flight */}
           {flightType === 'Dual' ? (
-            <div style={{ position: 'relative' }}>
-              {/* Student name display - triggers dropdown */}
-              <div
-                onClick={() => onShowStudentDropdownChange(!showStudentDropdown)}
-                style={{
-                  fontSize: NAME_FONT,
-                  fontWeight: 400,
-                  fontStyle: 'italic',
-                  color: nameColor(studentName),
-                  cursor: 'pointer',
-                  padding: '2px 4px',
-                  borderRadius: 2,
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-              >
-                {studentName || 'Surname, First (N)'}
-              </div>
-
-              {/* 3-layer cascading dropdown: Units -> STAFF/Courses -> Names */}
-              {showStudentDropdown && (
-                <div
-                  onClick={e => e.stopPropagation()}
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    zIndex: 100,
-                    display: 'flex',
-                    width: 540,
-                    maxHeight: 320,
-                    backgroundColor: '#1e3a5f',
-                    borderRadius: 6,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                    overflow: 'hidden',
-                    marginTop: 4,
-                  }}
-                >
-                  {/* Column 1: Units list */}
-                  <div
-                    style={{
-                      width: 120,
-                      borderRight: '1px solid rgba(255,255,255,0.2)',
-                      maxHeight: 320,
-                      overflowY: 'auto',
-                    }}
-                  >
-                    {/* SOLO option - first, no cascading */}
-                    <div
-                      onClick={() => {
-                        onStudentNameChange('SOLO');
-                        onShowStudentDropdownChange(false);
-                        onHoveredStudentUnitChange(null);
-                        onHoveredStudentLayer2Change(null);
-                      }}
-                      style={{
-                        padding: '10px 12px',
-                        color: '#ffd43b',
-                        backgroundColor: hoveredStudentUnit === 'SOLO' ? 'rgba(255,212,59,0.2)' : 'transparent',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        borderBottom: '1px solid rgba(255,255,255,0.2)',
-                      }}
-                      onMouseEnter={() => onHoveredStudentUnitChange('SOLO')}
-                      onMouseLeave={() => onHoveredStudentUnitChange(null)}
-                    >
-                      SOLO
-                      <span style={{ fontSize: 10, opacity: 0.8, color: '#ffd43b' }}>SELECT</span>
-                    </div>
-                    {allUnits.map(unit => (
-                      <div
-                        key={unit}
-                        onMouseEnter={() => onHoveredStudentUnitChange(unit)}
-                        onClick={() => onHoveredStudentUnitChange(unit)}
-                        style={{
-                          padding: '10px 12px',
-                          color: hoveredStudentUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
-                          backgroundColor: hoveredStudentUnit === unit ? 'rgba(255,255,255,0.15)' : 'transparent',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          fontSize: 13,
-                        }}
-                      >
-                        {unit}
-                        <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Column 2: STAFF or Courses (not shown for SOLO) */}
-                  <div
-                    style={{
-                      width: 140,
-                      borderRight: '1px solid rgba(255,255,255,0.2)',
-                      maxHeight: 320,
-                      overflowY: 'auto',
-                      backgroundColor: 'rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    {hoveredStudentUnit && hoveredStudentUnit !== 'SOLO' ? (
-                      getLayer2OptionsForUnit(hoveredStudentUnit).map(option => (
-                        <div
-                          key={option}
-                          onMouseEnter={() => onHoveredStudentLayer2Change(option)}
-                          onClick={() => onHoveredStudentLayer2Change(option)}
-                          style={{
-                            padding: '10px 12px',
-                            color: hoveredStudentLayer2 === option ? '#fff' : 'rgba(255,255,255,0.8)',
-                            backgroundColor: hoveredStudentLayer2 === option ? 'rgba(255,255,255,0.15)' : 'transparent',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            fontSize: 13,
-                            fontWeight: option === 'STAFF' ? 600 : 400,
-                          }}
-                        >
-                          {option}
-                          <span style={{ fontSize: 10, opacity: 0.6 }}>▶</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                        Select unit
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Column 3: Names (Staff or Trainees) */}
-                  <div
-                    style={{
-                      flex: 1,
-                      maxHeight: 320,
-                      overflowY: 'auto',
-                      backgroundColor: 'rgba(0,0,0,0.2)',
-                    }}
-                  >
-                    {hoveredStudentUnit && hoveredStudentLayer2 ? (
-                      getNamesForUnitAndSelection(hoveredStudentUnit, hoveredStudentLayer2).map(person => (
-                        <div
-                          key={person.name}
-                          onClick={() => {
-                            onStudentNameChange(person.name);
-                            onShowStudentDropdownChange(false);
-                            onHoveredStudentUnitChange(null);
-                            onHoveredStudentLayer2Change(null);
-                          }}
-                          style={{
-                            padding: '10px 12px',
-                            color: '#fff',
-                            backgroundColor: 'transparent',
-                            cursor: 'pointer',
-                            fontSize: 13,
-                            whiteSpace: 'nowrap',
-                          }}
-                          onMouseEnter={e => (e.target as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.1)'}
-                          onMouseLeave={e => (e.target as HTMLElement).style.backgroundColor = 'transparent'}
-                        >
-                          {person.label}
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center' }}>
-                        {hoveredStudentUnit === 'SOLO' ? 'SOLO selected' : hoveredStudentUnit ? 'Select STAFF or course' : 'Select unit'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <PersonDropdown
+              value={studentName}
+              onChange={(name) => onStudentNameChange(name)}
+              allUnits={allUnits}
+              getLayer2={getLayer2}
+              getNames={getNames}
+              placeholder="Surname, First (N)"
+              fontSize={NAME_FONT}
+              color={nc(studentName)}
+              allowSolo
+              onSoloSelect={() => { onFlightTypeChange('Solo'); }}
+            />
           ) : (
             <span
+              onClick={() => onFlightTypeChange('Dual')}
               style={{
-                fontSize: NAME_FONT * 0.75,
-                fontWeight: 700,
+                fontSize: NAME_FONT * 0.65, fontWeight: 800,
                 color: 'rgba(255,220,60,0.95)',
-                background: 'rgba(255,200,0,0.20)',
-                padding: `4px 8px`,
-                borderRadius: 4,
-                display: 'inline-block',
-                lineHeight: 1.2,
+                background: 'rgba(255,200,0,0.22)',
+                padding: `${NAME_FONT * 0.15}px ${NAME_FONT * 0.3}px`,
+                borderRadius: 6, display: 'inline-block', lineHeight: 1.2,
+                cursor: 'pointer', userSelect: 'none',
               }}
+              title="Click to switch to Dual"
             >
               SOLO
             </span>
           )}
         </div>
-
-        </div>
+      </div>
 
       {/* ── BOTTOM-LEFT: #aircraft ── */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: PAD_V,
-          left: PAD_H,
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 2,
-          zIndex: 2,
-        }}
-      >
-        <span style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-          fontSize: BOT_FONT,
-          color: 'rgba(255,255,255,0.70)',
-          lineHeight: 1,
-        }}>#</span>
-        <select
-          value={aircraftNumber}
-          onChange={e => onAircraftChange(e.target.value)}
-          style={inlineSelectStyle(BOT_FONT, botColor(aircraftNumber), BOT_FONT * 2.2, 400, 'normal', true)}
-        >
-          {aircraftOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
-          ))}
-        </select>
+      <div style={{ position: 'absolute', bottom: PAD_V, left: PAD_H, display: 'flex', alignItems: 'baseline', gap: 2, zIndex: 5 }}>
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: BOT_FONT, color: 'rgba(255,255,255,0.60)', lineHeight: 1 }}>#</span>
+        <div style={{ position: 'relative' }}>
+          <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace', fontSize: BOT_FONT, color: bc(aircraftNumber), lineHeight: 1, pointerEvents: 'none' }}>
+            {aircraftNumber || '---'}
+          </span>
+          <select
+            value={aircraftNumber}
+            onChange={e => onAircraftChange(e.target.value)}
+            style={{ position: 'absolute', top: 0, left: 0, width: BOT_FONT * 2.4, height: BOT_FONT + 4, opacity: 0, cursor: 'pointer', zIndex: 10 }}
+          >
+            {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* ── BOTTOM-RIGHT: area + callsign ── */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: PAD_V,
-          right: PAD_H,
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 6,
-          zIndex: 2,
-        }}
-      >
-        {/* Area — left of callsign, below [1.5] */}
-        <select
-          value={area}
-          onChange={e => onAreaChange(e.target.value)}
-          style={inlineSelectStyle(
-            BOT_FONT,
-            ['A','B','C','D','E','F','G','H'].includes(area)
-              ? 'rgba(255,255,255,0.80)'
-              : 'rgba(255,220,60,0.95)',
-            BOT_FONT * 1.4,
-            400, 'normal', false
-          )}
-        >
-          {areaOptions.map(o => (
-            <option key={o.value} value={o.value} style={{ background: '#1e3a5f' }}>{o.label}</option>
-          ))}
-        </select>
-        {/* Callsign */}
-        <input
-          type="text"
-          value={callsign}
-          onChange={e => onCallsignChange(e.target.value)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-            fontSize: BOT_FONT,
-            color: callsign && callsign !== 'CALLSGN' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)',
-            fontStyle: 'italic',
-            lineHeight: 1,
-            textAlign: 'right',
-            width: BOT_FONT * 5,
-            padding: 0,
-            cursor: 'text',
-          }}
-          placeholder="CALLSGN"
-        />
+      <div style={{ position: 'absolute', bottom: PAD_V, right: PAD_H, display: 'flex', alignItems: 'baseline', gap: RIGHT_GAP, zIndex: 5 }}>
+        {/* Area */}
+        <div style={{ position: 'relative' }}>
+          <span style={{
+            fontSize: BOT_FONT, lineHeight: 1,
+            color: /^[A-H]$/.test(area) ? 'rgba(255,255,255,0.80)' : 'rgba(255,220,60,0.95)',
+            pointerEvents: 'none',
+          }}>
+            {area || '-'}
+          </span>
+          <select
+            value={area}
+            onChange={e => onAreaChange(e.target.value)}
+            style={{ position: 'absolute', top: 0, left: 0, width: BOT_FONT * 1.6, height: BOT_FONT + 4, opacity: 0, cursor: 'pointer', zIndex: 10 }}
+          >
+            {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+          </select>
+        </div>
+
+        {/* Callsign — dropdown if options exist, else text input */}
+        {callsignOptions.length > 1 ? (
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+              fontSize: BOT_FONT, fontStyle: 'italic', lineHeight: 1,
+              color: callsign ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.40)',
+              pointerEvents: 'none',
+            }}>
+              {callsign || 'CALLSGN'}
+            </span>
+            <select
+              value={callsign}
+              onChange={e => onCallsignChange(e.target.value)}
+              style={{ position: 'absolute', top: 0, left: 0, width: BOT_FONT * 5.5, height: BOT_FONT + 4, opacity: 0, cursor: 'pointer', zIndex: 10 }}
+            >
+              <option value="" style={{ background: '#1a2f4a' }}>—</option>
+              {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
+            </select>
+          </div>
+        ) : (
+          <input
+            type="text"
+            value={callsign}
+            onChange={e => onCallsignChange(e.target.value)}
+            style={{
+              background: 'transparent', border: 'none', outline: 'none',
+              fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+              fontSize: BOT_FONT, fontStyle: 'italic', lineHeight: 1,
+              color: callsign ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.40)',
+              width: BOT_FONT * 5.5, padding: 0, cursor: 'text', textAlign: 'right',
+            }}
+            placeholder="CALLSGN"
+          />
+        )}
       </div>
     </div>
   );
@@ -970,67 +646,56 @@ const FlightTilePreview: React.FC<FlightTilePreviewProps> = ({
 const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   onClose, onSave, instructors, trainees, syllabusDetails, school,
   traineesData, instructorsData, courseColors, date, traineeLMPs, scores,
+  locationOpAreas = {},
 }) => {
-  const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di'>('lmp_event');
-  const [flightType, setFlightType] = useState<'Dual' | 'Solo'>('Dual');
-  const [picName, setPicName] = useState('');
-  const [studentName, setStudentName] = useState('');
-  const [flightNumber, setFlightNumber] = useState('');
-  const [startTime, setStartTime] = useState(8.0);
-  const [duration, setDuration] = useState(1.5);
-  const [area, setArea] = useState('A');
-  const [aircraftNumber, setAircraftNumber] = useState('001');
-  const [locationType, setLocationType] = useState<'Local' | 'Land Away'>('Local');
-  const [isDeploy, setIsDeploy] = useState(false);
-  const [deploymentStartDate, setDeploymentStartDate] = useState(date);
-  const [deploymentStartTime, setDeploymentStartTime] = useState('08:00');
-  const [deploymentEndDate, setDeploymentEndDate] = useState(date);
-  const [deploymentEndTime, setDeploymentEndTime] = useState('08:00');
+  const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
+  const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>('Dual');
+  const [picName,       setPicName]       = useState('');
+  const [studentName,   setStudentName]   = useState('');
+  const [flightNumber,  setFlightNumber]  = useState('');
+  const [startTime,     setStartTime]     = useState(8.0);
+  const [duration,      setDuration]      = useState(1.2);
+  const [area,          setArea]          = useState('');
+  const [aircraftNumber,setAircraftNumber]= useState('001');
+  const [locationType,  setLocationType]  = useState<'Local'|'Land Away'>('Local');
+  const [callsign,      setCallsign]      = useState('');
+  const [callsignOptions, setCallsignOptions] = useState<string[]>([]);
+  const [notes,         setNotes]         = useState('');
+  const [errors,        setErrors]        = useState<string[]>([]);
+  const [isDeploy,      setIsDeploy]      = useState(false);
+  const [deploymentStartDate,  setDeploymentStartDate]  = useState(date);
+  const [deploymentStartTime,  setDeploymentStartTime]  = useState('08:00');
+  const [deploymentEndDate,    setDeploymentEndDate]    = useState(date);
+  const [deploymentEndTime,    setDeploymentEndTime]    = useState('08:00');
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
-  const [callsign, setCallsign] = useState('CALLSGN');
-  const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<string[]>([]);
-  const [showPicDropdown, setShowPicDropdown] = useState(false);
-  const [hoveredPicUnit, setHoveredPicUnit] = useState<string | null>(null);
-  const [hoveredPicLayer2, setHoveredPicLayer2] = useState<string | null>(null);
-  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
-  const [hoveredStudentUnit, setHoveredStudentUnit] = useState<string | null>(null);
-  const [hoveredStudentLayer2, setHoveredStudentLayer2] = useState<string | null>(null);
-  // Event dropdown state
-  const [showEventDropdown, setShowEventDropdown] = useState(false);
-  const [hoveredCourse, setHoveredCourse] = useState<string | null>(null);
 
-  // Tile colour from student's course (default sky-blue matching reference)
-  const tileColor = useMemo(() => {
-    const name = flightType === 'Solo' ? picName : studentName;
-    if (!name) return 'bg-sky-500';
-    const trainee = traineesData.find(t => t.fullName === name || t.name === name);
-    if (!trainee?.course) return 'bg-sky-500';
-    return courseColors[trainee.course] || 'bg-sky-500';
-  }, [picName, studentName, flightType, traineesData, courseColors]);
+  // ── Determine the current location full name from school ──────────────────
+  const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
 
-  const areas = ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'];
-  const areaOptions = areas.map(a => ({ value: a, label: a }));
+  // ── Op Areas for this location ────────────────────────────────────────────
+  const opAreas = useMemo(() => {
+    const areas = locationOpAreas[locationFullName];
+    if (areas && areas.length > 0) return areas;
+    // fallback defaults
+    if (school === 'ESL') return ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'];
+    return ['-'];
+  }, [locationOpAreas, locationFullName, school]);
 
+  // Set default area from opAreas
+  useEffect(() => {
+    setArea(opAreas[0] || '-');
+  }, [opAreas]);
+
+  const areaOptions = useMemo(() => opAreas.map(a => ({ value: a, label: a })), [opAreas]);
+
+  // ── Aircraft options ──────────────────────────────────────────────────────
   const aircraftOptions = useMemo(() =>
     Array.from({ length: 49 }, (_, i) => {
       const n = String(i + 1).padStart(3, '0');
       return { value: n, label: n };
     }), []);
 
-  // Time options with 30-minute intervals for deployment (0000 to 2330)
-  const deploymentTimeOptions = useMemo(() => {
-    const opts: { value: string; label: string }[] = [];
-    for (let h = 0; h <= 23; h++) {
-      for (let m = 0; m < 60; m += 30) {
-        const hours = String(h).padStart(2, '0');
-        const minutes = String(m).padStart(2, '0');
-        opts.push({ value: `${hours}:${minutes}`, label: `${hours}:${minutes}` });
-      }
-    }
-    return opts;
-  }, []);
-
+  // ── Time options (06:00–23:45, 15-min intervals) ──────────────────────────
   const timeOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [];
     for (let h = 6; h <= 23; h++) {
@@ -1042,342 +707,225 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return opts;
   }, []);
 
+  // ── Duration options (0.3–4.0, 0.1 steps) ────────────────────────────────
   const durationOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [];
-    for (let d = 0.5; d <= 4.0; d = Math.round((d + 0.1) * 10) / 10) {
+    for (let d = 0.3; d <= 4.01; d = Math.round((d + 0.1) * 10) / 10) {
       opts.push({ value: String(d), label: d.toFixed(1) });
     }
     return opts;
   }, []);
 
-  const instructorOptions = useMemo(() =>
-    instructorsData.map(i => ({ value: i.name, label: `${i.rank ? i.rank + ' ' : ''}${i.name}` })),
-    [instructorsData]
-  );
-
-  // Combined 3-layer structure: Unit → "STAFF" or Course → Names
-  // Layer 1: Units (1FTS, CFS)
-  // Layer 2: "STAFF" or Courses (ADF301, ADF302, etc.)
-  // Layer 3: Staff list (if STAFF) or Trainees (if course)
-
-  // Get all unique units from both instructors and trainees
+  // ── All units ─────────────────────────────────────────────────────────────
   const allUnits = useMemo(() => {
-    const units = new Set<string>();
-    instructorsData.forEach(inst => units.add(inst.unit || 'Unassigned'));
-    traineesData.forEach(trainee => units.add(trainee.unit || 'Unassigned'));
-    return Array.from(units).sort();
+    const s = new Set<string>();
+    instructorsData.forEach(i => s.add(i.unit || 'Unassigned'));
+    traineesData.forEach(t => s.add(t.unit || 'Unassigned'));
+    return Array.from(s).sort();
   }, [instructorsData, traineesData]);
 
-  // Get Layer 2 options for a unit: ["STAFF", ...courses]
-  const getLayer2OptionsForUnit = (unit: string): string[] => {
-    const options: string[] = [];
-    
-    // Check if unit has instructors (add STAFF option)
-    const hasInstructors = instructorsData.some(inst => (inst.unit || 'Unassigned') === unit);
-    if (hasInstructors) {
-      options.push('STAFF');
-    }
-    
-    // Get unique courses for this unit from trainees
+  // ── Layer 2: STAFF or course list for a unit ──────────────────────────────
+  const getLayer2 = (unit: string): string[] => {
+    const opts: string[] = [];
+    if (instructorsData.some(i => (i.unit || 'Unassigned') === unit)) opts.push('STAFF');
     const courses = new Set<string>();
-    traineesData.forEach(trainee => {
-      if ((trainee.unit || 'Unassigned') === unit && trainee.course) {
-        courses.add(trainee.course);
-      }
-    });
-    options.push(...Array.from(courses).sort());
-    
-    return options;
+    traineesData.forEach(t => { if ((t.unit || 'Unassigned') === unit && t.course) courses.add(t.course); });
+    opts.push(...Array.from(courses).sort());
+    return opts;
   };
 
-  // Get Layer 3 names based on unit and selection (STAFF or course)
-  const getNamesForUnitAndSelection = (unit: string, selection: string): { name: string; label: string; type: 'instructor' | 'trainee' }[] => {
+  // ── Layer 3: Names for unit+selection ────────────────────────────────────
+  // Staff sorted by rank order then alphabetically; trainees coloured by course
+  const getNames = (unit: string, selection: string): { name: string; label: string; color?: string }[] => {
     if (selection === 'STAFF') {
-      // Return instructors for this unit
       return instructorsData
-        .filter(inst => (inst.unit || 'Unassigned') === unit)
-        .map(inst => ({
-          name: inst.name,
-          label: `${inst.rank ? inst.rank + ' ' : ''}${inst.name}`,
-          type: 'instructor' as const
-        }));
-    } else {
-      // Return trainees for this unit and course
-      return traineesData
-        .filter(trainee => 
-          (trainee.unit || 'Unassigned') === unit && 
-          trainee.course === selection
-        )
-        .map(trainee => ({
-          name: trainee.fullName || trainee.name,
-          label: `${trainee.rank ? trainee.rank + ' ' : ''}${trainee.fullName || trainee.name}`,
-          type: 'trainee' as const
+        .filter(i => (i.unit || 'Unassigned') === unit)
+        .sort((a, b) => {
+          const ra = RANK_ORDER[a.rank] ?? 99;
+          const rb = RANK_ORDER[b.rank] ?? 99;
+          if (ra !== rb) return ra - rb;
+          return a.name.localeCompare(b.name);
+        })
+        .map(i => ({
+          name: i.name,
+          label: `${i.rank ? i.rank + ' ' : ''}${i.name}`,
+          color: '#fff',
         }));
     }
+    // Trainee course — sort alphabetically, colour by course
+    return traineesData
+      .filter(t => (t.unit || 'Unassigned') === unit && t.course === selection)
+      .sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name))
+      .map(t => {
+        // courseColors stores Tailwind class like 'bg-sky-500'; extract a CSS colour hint
+        const twClass = courseColors[t.course] || '';
+        // Map common Tailwind colours to readable hex for dropdown text
+        const colourMap: Record<string, string> = {
+          'bg-sky-500': '#38bdf8', 'bg-sky-400': '#38bdf8',
+          'bg-violet-500': '#8b5cf6', 'bg-purple-500': '#a855f7',
+          'bg-emerald-500': '#10b981', 'bg-green-500': '#22c55e',
+          'bg-rose-500': '#f43f5e', 'bg-red-500': '#ef4444',
+          'bg-amber-500': '#f59e0b', 'bg-yellow-500': '#eab308',
+          'bg-orange-500': '#f97316', 'bg-teal-500': '#14b8a6',
+          'bg-cyan-500': '#06b6d4', 'bg-pink-500': '#ec4899',
+          'bg-indigo-500': '#6366f1', 'bg-blue-500': '#3b82f6',
+          'bg-lime-500': '#84cc16', 'bg-fuchsia-500': '#d946ef',
+        };
+        const textColor = colourMap[twClass] || '#fff';
+        return {
+          name: t.fullName || t.name,
+          label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}`,
+          color: textColor,
+        };
+      });
   };
 
-  // Legacy support - keep for reference but not used in new dropdown
-  const instructorsByUnitAndFlight = useMemo(() => {
-    const grouped = new Map<string, Map<string, typeof instructorsData>>();
-    instructorsData.forEach(inst => {
-      const unit = inst.unit || 'Unassigned';
-      const flight = inst.flight || inst.role || 'Staff';
-      if (!grouped.has(unit)) {
-        grouped.set(unit, new Map());
-      }
-      if (!grouped.get(unit)!.has(flight)) {
-        grouped.get(unit)!.set(flight, []);
-      }
-      grouped.get(unit)!.get(flight)!.push(inst);
-    });
-    return grouped;
-  }, [instructorsData]);
+  // ── Tile colour from trainee course ──────────────────────────────────────
+  const tileColor = useMemo(() => {
+    const name = flightType === 'Solo' ? picName : studentName;
+    if (!name) return 'bg-sky-500';
+    const t = traineesData.find(t => (t.fullName || t.name) === name);
+    return (t?.course && courseColors[t.course]) || 'bg-sky-500';
+  }, [picName, studentName, flightType, traineesData, courseColors]);
 
-  const traineesByUnitAndCourse = useMemo(() => {
-    const grouped = new Map<string, Map<string, typeof traineesData>>();
-    traineesData.forEach(trainee => {
-      const unit = trainee.unit || 'Unassigned';
-      const course = trainee.course || 'Unassigned';
-      if (!grouped.has(unit)) {
-        grouped.set(unit, new Map());
-      }
-      if (!grouped.get(unit)!.has(course)) {
-        grouped.get(unit)!.set(course, []);
-      }
-      grouped.get(unit)!.get(course)!.push(trainee);
-    });
-    return grouped;
-  }, [traineesData]);
-
-  const traineeOptions = useMemo(() =>
-    traineesData.map(t => ({ value: t.fullName || t.name, label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}` })),
-    [traineesData]
-  );
-
-  // Group syllabus items by course for 2-layer cascading dropdown
+  // ── Syllabus by course (for event dropdown) ───────────────────────────────
   const syllabusByCourse = useMemo(() => {
     const grouped = new Map<string, SyllabusItemDetail[]>();
-
-    // Filter for flight items only
     const flightItems = syllabusDetails.filter(d =>
-      d.type === 'Flight' || d.type === 'flight' || (!d.type && !d.id?.includes('FTD') && !d.id?.includes('CPT'))
+      d.type === 'Flight' || d.type === 'flight' ||
+      (!d.type && !d.id?.includes('FTD') && !d.id?.includes('CPT'))
     );
-
-    // Group by course
     flightItems.forEach(item => {
-      const courses = item.courses || [];
-      if (courses.length === 0) {
-        // Items without course go to "Other"
+      (item.courses || []).forEach(course => {
+        if (!grouped.has(course)) grouped.set(course, []);
+        grouped.get(course)!.push(item);
+      });
+      if (!item.courses || item.courses.length === 0) {
         if (!grouped.has('Other')) grouped.set('Other', []);
         grouped.get('Other')!.push(item);
-      } else {
-        courses.forEach(course => {
-          if (!grouped.has(course)) grouped.set(course, []);
-          grouped.get(course)!.push(item);
-        });
       }
     });
-
-    // Sort events within each course using natural/numeric sort
-    // This ensures BGF1, BGF2, BGF3...BGF9, BGF10, BGF11 (not BGF1, BGF10, BGF11...BGF2)
-    const naturalSort = (a: string, b: string): number => {
-      // Extract leading letters and trailing numbers
-      const parse = (s: string): { letters: string; num: number } => {
-        const match = s.match(/^([A-Za-z]*)(\d*)$/);
-        if (match) {
-          return { letters: match[1].toUpperCase(), num: match[2] ? parseInt(match[2], 10) : 0 };
-        }
-        return { letters: s.toUpperCase(), num: 0 };
-      };
-      const aParsed = parse(a);
-      const bParsed = parse(b);
-      
-      // First compare letters
-      const letterCompare = aParsed.letters.localeCompare(bParsed.letters);
-      if (letterCompare !== 0) return letterCompare;
-      
-      // Then compare numbers
-      return aParsed.num - bParsed.num;
+    // Natural sort within each course
+    const natSort = (a: string, b: string) => {
+      const parse = (s: string) => { const m = s.match(/^([A-Za-z]*)(\d*)$/); return { l: (m?.[1] || s).toUpperCase(), n: m?.[2] ? parseInt(m[2]) : 0 }; };
+      const ap = parse(a), bp = parse(b);
+      const lc = ap.l.localeCompare(bp.l);
+      return lc !== 0 ? lc : ap.n - bp.n;
     };
-    
-    grouped.forEach((items, course) => {
-      grouped.set(course, items.sort((a, b) => naturalSort(a.code || a.id || '', b.code || b.id || '')));
-    });
-
+    grouped.forEach((items, c) => grouped.set(c, items.sort((a, b) => natSort(a.code || a.id || '', b.code || b.id || ''))));
     return grouped;
   }, [syllabusDetails]);
 
-  // Get unique course names sorted
   const courseOptions = useMemo(() => {
     const courses = Array.from(syllabusByCourse.keys()).sort();
-    // Add SCT as a special option at the beginning
     return ['SCT', ...courses.filter(c => c !== 'SCT')];
   }, [syllabusByCourse]);
 
-  // Get events for a specific course
-  const getEventsForCourse = (course: string): SyllabusItemDetail[] => {
-    if (course === 'SCT') return []; // SCT has no second level
-    return syllabusByCourse.get(course) || [];
-  };
+  const getEventsForCourse = (course: string): SyllabusItemDetail[] =>
+    course === 'SCT' ? [] : (syllabusByCourse.get(course) || []);
 
-  // Get the next uncompleted FLIGHT event for a trainee from their LMP
-  // Skips non-flight events (Ground School, FTD) to find the next actual flight
-  // Uses the same logic as computeNextEventsForTrainee in App.tsx
-  const getNextLMPEvent = useMemo(() => {
-    // Only compute for LMP Event category
+  // ── Next LMP event for the selected trainee ───────────────────────────────
+  const nextLMPEvent = useMemo(() => {
     if (eventCategory !== 'lmp_event') return null;
-
-    // Get the trainee name (for Solo, picName is the trainee; for Dual, studentName is the trainee)
     const name = flightType === 'Solo' ? picName : studentName;
     if (!name || !traineeLMPs) return null;
-
     const lmp = traineeLMPs.get(name);
-    if (!lmp || lmp.length === 0) return null;
-
-    // Get completed events from scores
-    const traineeScores = scores?.get(name) || [];
-    const completedEventIds = new Set(traineeScores.map(s => s.event));
-
-    // Helper to check if an item is a Flight event
-    const isFlightEvent = (item: SyllabusItemDetail): boolean => {
-      return item.type === 'Flight' || item.type === 'flight' ||
-             (!item.type && !item.id?.includes('FTD') && !item.id?.includes('CPT') && !item.id?.includes('GS'));
-    };
-
-    // Find the first FLIGHT event that:
-    // 1. Is a Flight event (not Ground School, FTD, etc.)
-    // 2. Is not already completed
-    // 3. Has all prerequisites met
-    for (let i = 0; i < lmp.length; i++) {
-      const item = lmp[i];
-
-      // Skip non-flight events - we only want to highlight the next FLIGHT
-      if (!isFlightEvent(item)) {
-        continue;
-      }
-
-      // Skip completed events
-      if (completedEventIds.has(item.id) || completedEventIds.has(item.code)) {
-        continue;
-      }
-
-      // Skip remedial events for now (they have special handling)
-      if (item.isRemedial) {
-        continue;
-      }
-
-      // Check prerequisites - all must be completed
-      const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
-
-      if (prereqsMet) {
-        return item;
-      }
+    if (!lmp?.length) return null;
+    const done = new Set((scores?.get(name) || []).map(s => s.event));
+    const isFlight = (item: SyllabusItemDetail) =>
+      item.type === 'Flight' || item.type === 'flight' ||
+      (!item.type && !item.id?.includes('FTD') && !item.id?.includes('CPT') && !item.id?.includes('GS'));
+    for (const item of lmp) {
+      if (!isFlight(item) || item.isRemedial) continue;
+      if (done.has(item.id) || done.has(item.code)) continue;
+      if (item.prerequisites.every(p => done.has(p))) return item;
     }
-
-    // If no flight event found with met prerequisites, return the first uncompleted flight event
-    for (let i = 0; i < lmp.length; i++) {
-      const item = lmp[i];
-      if (isFlightEvent(item) && !completedEventIds.has(item.id) && !completedEventIds.has(item.code)) {
-        return item;
-      }
-    }
-
-    return null;
+    return lmp.find(item => isFlight(item) && !done.has(item.id) && !done.has(item.code)) || null;
   }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
 
-  // Legacy syllabusOptions for backward compatibility
-  const syllabusOptions = useMemo(() => {
-    const flightItems = syllabusDetails
-      .filter(d => d.type === 'Flight' || d.type === 'flight' || (!d.type && !d.id?.includes('FTD') && !d.id?.includes('CPT')))
-      .map(d => d.id || d.code || '')
-      .filter(Boolean);
-    const unique = Array.from(new Set(flightItems)).sort();
-    const base = eventCategory === 'sct' ? ['SCT FORM', ...unique] : unique;
-    return base.map(s => ({ value: s, label: s }));
-  }, [syllabusDetails, eventCategory]);
+  // ── Auto-fill callsign from PIC profile ──────────────────────────────────
+  useEffect(() => {
+    if (!picName) { setCallsign(''); setCallsignOptions([]); return; }
+    // Check instructor first
+    const inst = instructorsData.find(i => i.name === picName);
+    if (inst) {
+      const primary   = inst.callsign || '';
+      const secondary = inst.secondaryCallsign || '';
+      const opts = [primary, secondary].filter(Boolean);
+      setCallsignOptions(opts);
+      setCallsign(primary);
+      return;
+    }
+    // Check trainee
+    const trainee = traineesData.find(t => (t.fullName || t.name) === picName);
+    if (trainee) {
+      const cs = trainee.traineeCallsign || '';
+      setCallsignOptions(cs ? [cs] : []);
+      setCallsign(cs);
+      return;
+    }
+    setCallsign('');
+    setCallsignOptions([]);
+  }, [picName, instructorsData, traineesData]);
 
+  // ── Auto-set duration from selected LMP event ─────────────────────────────
+  // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
+
+  // ── Reset on category change ──────────────────────────────────────────────
+  useEffect(() => {
+    setPicName(''); setStudentName(''); setFlightNumber('');
+    setStartTime(8.0); setDuration(1.2);
+    setArea(opAreas[0] || '-'); setAircraftNumber('001');
+    setCallsign(''); setCallsignOptions(''); setNotes(''); setErrors([]);
+  }, [eventCategory]);
+
+  useEffect(() => {
+    if (eventCategory === 'sct' || eventCategory === 'twr_di') setFlightType('Solo');
+    else setFlightType('Dual');
+  }, [eventCategory]);
+
+  useEffect(() => {
+    if (eventCategory === 'lmp_currency') setFlightNumber('CURR');
+  }, [eventCategory]);
+
+  // ── Set sortie type from LMP item when event chosen ───────────────────────
   useEffect(() => {
     const name = flightType === 'Solo' ? picName : studentName;
     if (!name || !flightNumber || !traineeLMPs) return;
     const lmp = traineeLMPs.get(name);
     if (!lmp) return;
     const item = lmp.find(i => i.id === flightNumber || i.code === flightNumber);
-    if (item?.sortieType) setFlightType(item.sortieType as 'Dual' | 'Solo');
+    if (item?.sortieType) setFlightType(item.sortieType as 'Dual'|'Solo');
   }, [picName, studentName, flightNumber, traineeLMPs]);
 
-  // Auto-populate callsign from Captain's profile (primary callsign)
-  useEffect(() => {
-    if (!picName) return;
-    const instructor = instructorsData.find(i => i.name === picName);
-    if (instructor?.callsignNumber) {
-      // Format full callsign with prefix (e.g., "ROLR042", "VIPR023")
-      const prefix = school === 'ESL' ? 'ROLR' : 'VIPR';
-      setCallsign(`${prefix}${String(instructor.callsignNumber).padStart(3, '0')}`);
-    }
-  }, [picName, instructorsData, school]);
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const handleFlightNumberChange = (code: string, durationHrs?: number) => {
+    setFlightNumber(code);
+    if (durationHrs && durationHrs > 0) setDuration(durationHrs);
+  };
 
-  // Reset form data when event category changes
-  useEffect(() => {
-    setPicName('');
-    setStudentName('');
-    setFlightNumber('');
-    setStartTime(8.0);
-    setDuration(1.5);
-    setArea('A');
-    setAircraftNumber('001');
-    setCallsign('CALLSGN');
-    setNotes('');
-    setErrors([]);
-  }, [eventCategory]);
-
-  // Default to Solo for SCT and TWR DI event categories, Dual for others
-  useEffect(() => {
-    if (eventCategory === 'sct' || eventCategory === 'twr_di') {
-      setFlightType('Solo');
-    } else {
-      setFlightType('Dual');
-    }
-  }, [eventCategory]);
-
-  // Auto-set CURR for LMP Currency category
-  useEffect(() => {
-    if (eventCategory === 'lmp_currency') {
-      setFlightNumber('CURR');
-    }
-  }, [eventCategory]);
+  const handlePicNameChange = (name: string) => {
+    setPicName(name);
+  };
 
   const handleSave = () => {
-    console.log('[AddFlightTileModal] handleSave CALLED');
-    console.log('[AddFlightTileModal] isDeploy:', isDeploy);
     const errs: string[] = [];
-
-    // If deployment tile is checked, only validate deployment fields
     if (isDeploy) {
-      if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime) {
+      if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)
         errs.push('Deployment start/end date and time are required.');
-      }
-      console.log('[AddFlightTileModal] Deployment validation errors:', errs);
-      if (errs.length > 0) { setErrors(errs); return; }
     } else {
-      // Normal flight tile validation
-      if (!flightNumber) errs.push('Syllabus item is required.');
-      if (flightType === 'Dual' && !picName) errs.push('Instructor is required for Dual flights.');
-      if (flightType === 'Dual' && !studentName) errs.push('Student is required for Dual flights.');
+      if (!flightNumber) errs.push('Syllabus event is required.');
+      if (flightType === 'Dual' && !picName) errs.push('Instructor / PIC is required for Dual flights.');
+      if (flightType === 'Dual' && !studentName) errs.push('Co-Pilot / Student is required for Dual flights.');
       if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
       if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
-      console.log('[AddFlightTileModal] Flight validation errors:', errs);
-      if (errs.length > 0) { setErrors(errs); return; }
     }
-
-    // Determine if we should create a flight tile
-    // Only create flight tile if flightNumber is provided OR if isDeploy is false
-    const shouldCreateFlightTile = !isDeploy || (flightNumber && picName);
+    if (errs.length > 0) { setErrors(errs); return; }
 
     const eventsToSave: ScheduleEvent[] = [];
 
-    // Create flight tile if needed
-    if (shouldCreateFlightTile) {
-      const newEvent: ScheduleEvent = {
+    if (!isDeploy) {
+      eventsToSave.push({
         id: uuidv4(),
         date,
         type: 'flight',
@@ -1391,106 +939,63 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         duration,
         area,
         aircraftNumber,
+        callsign,
         locationType,
         color: tileColor,
-        resourceId: '', // Will be assigned by handleSaveEvents
+        resourceId: '',
         notes,
         group: '',
         groupTraineeIds: [],
         attendees: [],
-        isDeploy: isDeploy || undefined,
-        deploymentStartDate: isDeploy ? deploymentStartDate : undefined,
-        deploymentStartTime: isDeploy ? deploymentStartTime : undefined,
-        deploymentEndDate: isDeploy ? deploymentEndDate : undefined,
-        deploymentEndTime: isDeploy ? deploymentEndTime : undefined,
-        deploymentAircraftCount: isDeploy ? deploymentAircraftCount : undefined,
-      } as any;
-      eventsToSave.push(newEvent);
-    }
-
-    // Create Deployment Tiles if isDeploy is true
-    console.log('[AddFlightTileModal] handleSave called');
-    console.log('[AddFlightTileModal] isDeploy:', isDeploy);
-    console.log('[AddFlightTileModal] deploymentStartDate:', deploymentStartDate);
-    console.log('[AddFlightTileModal] deploymentStartTime:', deploymentStartTime);
-    console.log('[AddFlightTileModal] deploymentEndDate:', deploymentEndDate);
-    console.log('[AddFlightTileModal] deploymentEndTime:', deploymentEndTime);
-    console.log('[AddFlightTileModal] deploymentAircraftCount:', deploymentAircraftCount);
-
-    if (isDeploy && deploymentStartDate && deploymentStartTime && deploymentEndDate && deploymentEndTime) {
-      console.log('[AddFlightTileModal] Creating deployment tiles...');
-
-      // Parse deployment times
-      const parseTimeStringToHours = (timeStr: string): number => {
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        return hours + minutes / 60;
-      };
-
-      const deployStartHour = parseTimeStringToHours(deploymentStartTime);
-      const deployEndHour = parseTimeStringToHours(deploymentEndTime);
-
-      // Calculate deployment duration
-      const startDate = new Date(deploymentStartDate);
-      const endDate = new Date(deploymentEndDate);
-      const daysDifference = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      let deployDuration = (daysDifference * 24) + (deployEndHour - deployStartHour);
-      if (deployDuration <= 0) deployDuration = 1;
-
-      console.log('[AddFlightTileModal] deployStartHour:', deployStartHour);
-      console.log('[AddFlightTileModal] deployEndHour:', deployEndHour);
-      console.log('[AddFlightTileModal] deployDuration:', deployDuration);
-
-      // Create deployment tiles for each aircraft
-      // Use the current schedule date (date prop) so the tile appears in the daily view
-      // The deployment start/end dates are stored as metadata for reference
+        origin: '',
+        destination: '',
+      } as any);
+    } else {
+      // Deployment tiles
+      const parseHrs = (t: string) => { const [h,m] = t.split(':').map(Number); return h + m/60; };
+      const dStart = parseHrs(deploymentStartTime);
+      const dEnd   = parseHrs(deploymentEndTime);
+      const dayDiff = Math.floor((new Date(deploymentEndDate).getTime() - new Date(deploymentStartDate).getTime()) / 86400000);
+      const deployDur = Math.max(1, dayDiff * 24 + (dEnd - dStart));
       for (let i = 0; i < deploymentAircraftCount; i++) {
-        const deploymentTile: ScheduleEvent = {
+        eventsToSave.push({
           id: `deployment-${uuidv4()}-${i}`,
-          date: date, // Use current schedule date so it appears in the daily view
+          date,
           type: 'deployment',
-          startTime: deployStartHour,
-          duration: deployDuration,
-          resourceId: '', // Empty so handleSaveEvents assigns correct 'Deployed N' resourceId
+          startTime: dStart,
+          duration: deployDur,
+          resourceId: '',
           color: 'bg-gray-600/30',
           flightNumber: 'DEPLOYMENT',
           flightType: 'Dual',
           locationType: 'Land Away',
-          origin: 'DEPLOY',
-          destination: 'DEPLOY',
-          instructor: '',
-          student: '',
-          pilot: '',
+          origin: 'DEPLOY', destination: 'DEPLOY',
+          instructor: '', student: '', pilot: '',
           isDeploy: true,
-          deploymentStartDate,
-          deploymentStartTime,
-          deploymentEndDate,
-          deploymentEndTime,
+          deploymentStartDate, deploymentStartTime,
+          deploymentEndDate, deploymentEndTime,
           deploymentAircraftCount,
-        } as any;
-        console.log('[AddFlightTileModal] Created deployment tile:', deploymentTile.id, 'for date:', date);
-        eventsToSave.push(deploymentTile);
+        } as any);
       }
     }
-
-    console.log('[AddFlightTileModal] Total events to save:', eventsToSave.length);
-    console.log('[AddFlightTileModal] Events:', eventsToSave.map(e => ({ id: e.id, type: e.type, date: e.date })));
 
     onSave(eventsToSave);
     onClose();
   };
 
   const categoryLabels: Record<string, string> = {
-    lmp_event: 'LMP Event',
-    lmp_currency: 'LMP Currency',
-    sct: 'SCT',
-    staff_cat: 'Staff CAT',
-    twr_di: 'TWR DI',
+    lmp_event: 'LMP Event', lmp_currency: 'LMP Currency',
+    sct: 'SCT', staff_cat: 'Staff CAT', twr_di: 'TWR DI',
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+      onClick={onClose}
+    >
       <div
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-full max-w-2xl flex flex-col max-h-[90vh]"
+        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col"
+        style={{ width: '90vw', maxWidth: 720, maxHeight: '92vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -1505,15 +1010,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-          {/* Event Category - hidden when deployment is checked */}
+          {/* Event Category */}
           {!isDeploy && (
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(categoryLabels).map(([key, label]) => (
                   <button
-                    key={key}
-                    type="button"
+                    key={key} type="button"
                     onClick={() => setEventCategory(key as any)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       eventCategory === key
@@ -1528,216 +1032,158 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
             </div>
           )}
 
-          {/* Flight Tile label + tile - hidden when deployment is checked */}
+          {/* Large Flight Tile */}
           {!isDeploy && (
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Flight Tile</label>
-              <FlightTilePreview
-              flightType={flightType}
-              startTime={startTime}
-              picName={picName}
-              studentName={studentName}
-              duration={duration}
-              flightNumber={flightNumber}
-              area={area}
-              aircraftNumber={aircraftNumber}
-              color={tileColor}
-              instructorOptions={instructorOptions}
-              traineeOptions={traineeOptions}
-              syllabusOptions={syllabusOptions}
-              areaOptions={areaOptions}
-              aircraftOptions={aircraftOptions}
-              timeOptions={timeOptions}
-              durationOptions={durationOptions}
-              callsign={callsign}
-              allUnits={allUnits}
-              getLayer2OptionsForUnit={getLayer2OptionsForUnit}
-              getNamesForUnitAndSelection={getNamesForUnitAndSelection}
-              showPicDropdown={showPicDropdown}
-              hoveredPicUnit={hoveredPicUnit}
-              hoveredPicLayer2={hoveredPicLayer2}
-              showStudentDropdown={showStudentDropdown}
-              hoveredStudentUnit={hoveredStudentUnit}
-              hoveredStudentLayer2={hoveredStudentLayer2}
-              onFlightTypeChange={setFlightType}
-              onStartTimeChange={setStartTime}
-              onPicNameChange={setPicName}
-              onStudentNameChange={setStudentName}
-              onDurationChange={setDuration}
-              onFlightNumberChange={setFlightNumber}
-              onAreaChange={setArea}
-              onAircraftChange={setAircraftNumber}
-              onCallsignChange={setCallsign}
-              onShowPicDropdownChange={setShowPicDropdown}
-              onHoveredPicUnitChange={setHoveredPicUnit}
-              onHoveredPicLayer2Change={setHoveredPicLayer2}
-              onShowStudentDropdownChange={setShowStudentDropdown}
-              onHoveredStudentUnitChange={setHoveredStudentUnit}
-              onHoveredStudentLayer2Change={setHoveredStudentLayer2}
-              // Event dropdown props
-              showEventDropdown={showEventDropdown}
-              hoveredCourse={hoveredCourse}
-              courseOptions={courseOptions}
-              getEventsForCourse={getEventsForCourse}
-              getNextLMPEvent={getNextLMPEvent}
-              onShowEventDropdownChange={setShowEventDropdown}
-              onHoveredCourseChange={setHoveredCourse}
-            />
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Flight Tile</label>
+              <div style={{ padding: '0 2px' }}>
+                <FlightTile
+                  flightType={flightType}
+                  startTime={startTime}
+                  picName={picName}
+                  studentName={studentName}
+                  duration={duration}
+                  flightNumber={flightNumber}
+                  area={area}
+                  aircraftNumber={aircraftNumber}
+                  callsign={callsign}
+                  color={tileColor}
+                  timeOptions={timeOptions}
+                  durationOptions={durationOptions}
+                  areaOptions={areaOptions}
+                  aircraftOptions={aircraftOptions}
+                  callsignOptions={callsignOptions}
+                  allUnits={allUnits}
+                  getLayer2={getLayer2}
+                  getNames={getNames}
+                  courseOptions={courseOptions}
+                  getEventsForCourse={getEventsForCourse}
+                  nextLMPEvent={nextLMPEvent}
+                  eventCategory={eventCategory}
+                  onFlightTypeChange={setFlightType}
+                  onStartTimeChange={setStartTime}
+                  onPicNameChange={handlePicNameChange}
+                  onStudentNameChange={setStudentName}
+                  onDurationChange={setDuration}
+                  onFlightNumberChange={handleFlightNumberChange}
+                  onAreaChange={setArea}
+                  onAircraftChange={setAircraftNumber}
+                  onCallsignChange={setCallsign}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right. Click SOLO badge to switch to Dual.
+              </p>
             </div>
           )}
 
-          {/* Additional Fields */}
+          {/* Deployment checkbox + fields */}
           <div className="border-t border-gray-700 pt-4">
-            {/* Deployment Checkbox - ALWAYS VISIBLE */}
-            <div className="mb-4">
-              <label className="flex items-center gap-2 cursor-pointer py-2">
-                <input
-                  type="checkbox"
-                  checked={isDeploy}
-                  onChange={e => {
-                    const checked = e.target.checked;
-                    setIsDeploy(checked);
-                    if (checked) {
-                      setLocationType('Land Away');
-                    }
-                  }}
-                  className="h-5 w-5 accent-sky-500 bg-gray-600 rounded border-gray-500 focus:ring-sky-500"
-                />
-                <span className="text-sm text-white">Add Deployment Tile</span>
-              </label>
-            </div>
+            <label className="flex items-center gap-2 cursor-pointer py-2 mb-3">
+              <input
+                type="checkbox"
+                checked={isDeploy}
+                onChange={e => { setIsDeploy(e.target.checked); if (e.target.checked) setLocationType('Land Away'); }}
+                className="h-5 w-5 accent-sky-500 bg-gray-600 rounded border-gray-500"
+              />
+              <span className="text-sm text-white">Add Deployment Tile</span>
+            </label>
 
-            {/* Flight-related fields - HIDDEN when deployment is checked */}
-            {!isDeploy && (
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFlightType('Dual')}
-                    className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${
-                      flightType === 'Dual'
-                        ? 'bg-sky-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    Dual
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFlightType('Solo')}
-                    className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${
-                      flightType === 'Solo'
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    Solo
-                  </button>
-                </div>
-              </div>
-            </div>
-            )}
-            
-            {/* Deployment Fields (shown when isDeploy is checked) */}
             {isDeploy && (
               <div className="bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600">
                 <h4 className="text-sm font-semibold text-white mb-3">Deployment Details</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Start Date</label>
-                    <input
-                      type="date"
-                      value={deploymentStartDate}
-                      onChange={e => setDeploymentStartDate(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
-                    />
+                    <input type="date" value={deploymentStartDate} onChange={e => setDeploymentStartDate(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Start Time (24hr)</label>
-                    <input
-                      type="time"
-                      value={deploymentStartTime}
-                      onChange={e => setDeploymentStartTime(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
-                    />
+                    <input type="time" value={deploymentStartTime} onChange={e => setDeploymentStartTime(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">End Date</label>
-                    <input
-                      type="date"
-                      value={deploymentEndDate}
-                      onChange={e => setDeploymentEndDate(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
-                    />
+                    <input type="date" value={deploymentEndDate} onChange={e => setDeploymentEndDate(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">End Time (24hr)</label>
-                    <input
-                      type="time"
-                      value={deploymentEndTime}
-                      onChange={e => setDeploymentEndTime(e.target.value)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm min-w-[140px]"
-                    />
+                    <input type="time" value={deploymentEndTime} onChange={e => setDeploymentEndTime(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm" />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs text-gray-400 mb-1">Aircraft Count</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={deploymentAircraftCount}
+                    <input type="number" min="1" max="10" value={deploymentAircraftCount}
                       onChange={e => setDeploymentAircraftCount(parseInt(e.target.value) || 1)}
-                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm"
-                    />
+                      className="w-full bg-gray-700 border border-gray-600 rounded py-1 px-2 text-white text-sm" />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Flight-related fields continued - HIDDEN when deployment is checked */}
+            {/* Flight type toggle + Location + Date + Notes — hidden when deploying */}
             {!isDeploy && (
-            <>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
-                <select
-                  value={locationType}
-                  onChange={e => setLocationType(e.target.value as 'Local' | 'Land Away')}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500"
-                  disabled={isDeploy}
-                >
-                  <option value="Local">Local</option>
-                  <option value="Land Away">Land Away</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
-                <div className="w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono">
-                  {formatDate(date)}
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Flight Type</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFlightType('Dual')}
+                        className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Dual' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Dual
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFlightType('Solo')}
+                        className={`flex-1 py-2 px-3 rounded-md text-sm font-semibold transition-colors ${flightType === 'Solo' ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Solo
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="mt-3">
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={2}
-                placeholder="Optional notes..."
-                className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 resize-none"
-              />
-            </div>
-            </>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
+                    <select
+                      value={locationType}
+                      onChange={e => setLocationType(e.target.value as 'Local'|'Land Away')}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                    >
+                      <option value="Local">Local</option>
+                      <option value="Land Away">Land Away</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Date</label>
+                    <div className="w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono">
+                      {formatDate(date)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
+                  <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder="Optional notes..."
+                    className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
+                  />
+                </div>
+              </>
             )}
           </div>
+
           {/* Errors */}
           {errors.length > 0 && (
             <div className="bg-red-900/30 border border-red-700 rounded-lg p-3">
-              {errors.map((e, i) => (
-                <p key={i} className="text-red-300 text-sm">• {e}</p>
-              ))}
+              {errors.map((e, i) => <p key={i} className="text-red-300 text-sm">• {e}</p>)}
             </div>
           )}
         </div>

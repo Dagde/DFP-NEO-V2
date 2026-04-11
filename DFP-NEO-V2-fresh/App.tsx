@@ -5624,6 +5624,11 @@ useEffect(() => {
 
     // Settings state
     const [locations, setLocations] = useState<string[]>(['East Sale', 'Pearce', 'Williamtown', 'Amberley', 'Tindal', 'Edinburgh']);
+    const [locationOpAreas, setLocationOpAreas] = useState<Record<string, string[]>>({
+        'East Sale': ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'],
+        'Pearce': [],
+        'Williamtown': [],
+    });
     const [sctEvents, setSctEvents] = useState<string[]>(['SCT GF', 'SCT IF', 'SCT FORM', 'SCT Nav', 'Night SCT']);
     const [units, setUnits] = useState<string[]>(['1FTS', 'CFS', '2FTS', '76SQN', '77SQN', '1SQN', '6SQN', '2SQN', '10SQN']);
     const [unitLocations, setUnitLocations] = useState<Record<string, string>>({
@@ -5662,6 +5667,7 @@ useEffect(() => {
                 if (saved.locations?.length) setLocations(saved.locations);
                 if (saved.units?.length) setUnits(saved.units);
                 if (saved.unitLocations) setUnitLocations(saved.unitLocations);
+                if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
                 if (saved.eventLimits) setEventLimits(saved.eventLimits);
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
@@ -5747,6 +5753,7 @@ useEffect(() => {
             locations,
             units,
             unitLocations,
+            locationOpAreas,
             eventLimits,
             preferredDutyPeriod,
             maxCrewDutyPeriod,
@@ -5785,7 +5792,7 @@ useEffect(() => {
         saveSettingsToDB(snapshot, sessionUser?.userId);
     }, [
         settingsLoaded,
-        locations, units, unitLocations,
+        locations, units, unitLocations, locationOpAreas,
         eventLimits,
         preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
         flightTurnaround, ftdTurnaround, cptTurnaround,
@@ -12026,6 +12033,8 @@ updates.forEach(update => {
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
+                    locationOpAreas={locationOpAreas}
+                    onUpdateLocationOpAreas={setLocationOpAreas}
                     instructorsData={instructorsData}
                     traineesData={traineesData}
                     onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
@@ -12533,6 +12542,7 @@ updates.forEach(update => {
                     date={selectedEvent.date || date}
                     traineeLMPs={traineeLMPs}
                     scores={scores}
+                    locationOpAreas={locationOpAreas}
                 />
             )}
             {selectedEvent && !isAddingTile && (

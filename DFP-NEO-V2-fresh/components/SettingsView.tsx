@@ -37,6 +37,8 @@ interface SettingsViewProps {
     onUpdateUnits: (units: string[]) => void;
     unitLocations: Record<string, string>;
     onUpdateUnitLocations: (locations: Record<string, string>) => void;
+    locationOpAreas?: Record<string, string[]>;
+    onUpdateLocationOpAreas?: (areas: Record<string, string[]>) => void;
     instructorsData: Instructor[];
     traineesData: Trainee[];
     syllabusDetails: SyllabusItemDetail[];
@@ -416,6 +418,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     locations, onUpdateLocations, 
     units, onUpdateUnits, 
     unitLocations, onUpdateUnitLocations,
+    locationOpAreas = {}, onUpdateLocationOpAreas,
     instructorsData, traineesData, syllabusDetails,
     onBulkUpdateInstructors, onReplaceInstructors,
     onBulkUpdateTrainees, onReplaceTrainees,
@@ -465,6 +468,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [isEditingLocations, setIsEditingLocations] = useState(false);
     const [tempLocations, setTempLocations] = useState<string[]>([]);
     const [newLocation, setNewLocation] = useState('');
+
+    // Op Areas State
+    const [isEditingOpAreas, setIsEditingOpAreas] = useState(false);
+    const [selectedOpAreaLocation, setSelectedOpAreaLocation] = useState<string>('');
+    const [tempOpAreas, setTempOpAreas] = useState<Record<string, string[]>>({});
+    const [newOpArea, setNewOpArea] = useState('');
 
     // Unit State
     const [isEditingUnits, setIsEditingUnits] = useState(false);
@@ -590,6 +599,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const refreshFiles = async () => {
         const files = await getAllFiles();
         setRepoFiles(files);
+    };
+
+    // Op Areas Handlers
+    const handleEditOpAreas = () => {
+        setTempOpAreas({ ...locationOpAreas });
+        setSelectedOpAreaLocation(locations[0] || '');
+        setIsEditingOpAreas(true);
+    };
+    const handleSaveOpAreas = () => {
+        if (onUpdateLocationOpAreas) onUpdateLocationOpAreas(tempOpAreas);
+        setIsEditingOpAreas(false);
+        logAudit('Settings - Op Areas', 'Update', 'Updated operating areas per location');
+    };
+    const handleCancelOpAreas = () => {
+        setIsEditingOpAreas(false);
+        setNewOpArea('');
+    };
+    const handleAddOpArea = () => {
+        const val = newOpArea.trim().toUpperCase();
+        if (!val || !selectedOpAreaLocation) return;
+        const existing = tempOpAreas[selectedOpAreaLocation] || [];
+        if (existing.includes(val)) return;
+        setTempOpAreas({ ...tempOpAreas, [selectedOpAreaLocation]: [...existing, val].sort() });
+        setNewOpArea('');
+    };
+    const handleRemoveOpArea = (loc: string, area: string) => {
+        const existing = tempOpAreas[loc] || [];
+        setTempOpAreas({ ...tempOpAreas, [loc]: existing.filter(a => a !== area) });
     };
 
     // Location Handlers
@@ -1656,6 +1693,94 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                    )}
 
+
+                      {/* Op Areas Window */}
+                      {shouldShowSection('location') && (
+                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
+                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
+                                <h2 className="text-lg font-semibold text-gray-200">Op Areas</h2>
+                                {isEditingOpAreas ? (
+                                    <div className="flex space-x-2">
+                                        <button onClick={handleSaveOpAreas} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
+                                        <button onClick={handleCancelOpAreas} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleEditOpAreas}
+                                        disabled={!canEditSettings}
+                                        className={`px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                                    >
+                                        Edit
+                                    </button>
+                                )}
+                            </div>
+                            <div className="p-4 space-y-3">
+                                {isEditingOpAreas ? (
+                                    <>
+                                        <p className="text-sm text-gray-400">Set training areas available for each location.</p>
+                                        <div className="flex gap-1 flex-wrap">
+                                            {locations.map(loc => (
+                                                <button
+                                                    key={loc}
+                                                    onClick={() => setSelectedOpAreaLocation(loc)}
+                                                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${selectedOpAreaLocation === loc ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                                                >
+                                                    {loc}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {selectedOpAreaLocation && (
+                                            <>
+                                                <div className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{selectedOpAreaLocation}</div>
+                                                <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
+                                                    {(tempOpAreas[selectedOpAreaLocation] || []).map(area => (
+                                                        <span key={area} className="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded text-white text-xs">
+                                                            {area}
+                                                            <button onClick={() => handleRemoveOpArea(selectedOpAreaLocation, area)} className="text-gray-400 hover:text-red-400 ml-1">×</button>
+                                                        </span>
+                                                    ))}
+                                                    {(tempOpAreas[selectedOpAreaLocation] || []).length === 0 && (
+                                                        <span className="text-gray-500 text-xs italic">No areas configured</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex space-x-2">
+                                                    <input
+                                                        type="text"
+                                                        value={newOpArea}
+                                                        onChange={e => setNewOpArea(e.target.value.toUpperCase())}
+                                                        onKeyDown={e => e.key === 'Enter' && handleAddOpArea()}
+                                                        maxLength={4}
+                                                        placeholder="Area (e.g. A)"
+                                                        className="flex-grow bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500 uppercase"
+                                                    />
+                                                    <button onClick={handleAddOpArea} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-sm text-gray-400">Configured operating areas per location.</p>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {locations.map(loc => (
+                                                <div key={loc} className="p-2 bg-gray-700/50 rounded">
+                                                    <div className="text-xs text-gray-400 font-semibold uppercase mb-1">{loc}</div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {(locationOpAreas[loc] || []).map(area => (
+                                                            <span key={area} className="px-2 py-0.5 bg-gray-600 rounded text-white text-xs">{area}</span>
+                                                        ))}
+                                                        {(locationOpAreas[loc] || []).length === 0 && (
+                                                            <span className="text-gray-500 text-xs italic">None</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                      )}
 
                       {/* Formation Callsigns Window */}
                       {shouldShowSection('location') && (

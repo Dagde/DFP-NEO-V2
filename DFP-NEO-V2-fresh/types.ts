@@ -141,6 +141,8 @@ export interface Instructor {
   email?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
+  callsign?: string;           // Primary callsign string (e.g. "ROLR042")
+  secondaryCallsign?: string;  // Secondary callsign string (e.g. "VIPR007")
 }
 
 export interface ScheduleEvent {

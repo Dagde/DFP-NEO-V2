@@ -9,6 +9,7 @@ export interface AppSettingsData {
   locations: string[];
   units: string[];
   unitLocations: Record<string, string>;
+  locationOpAreas: Record<string, string[]>; // Per-location training areas e.g. { "East Sale": ["A","B","C",...] }
 
   // Event Limits
   eventLimits: {
@@ -249,6 +250,7 @@ export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSetti
     locations: state.locations || [],
     units: state.units || [],
     unitLocations: state.unitLocations || {},
+    locationOpAreas: state.locationOpAreas || {},
     eventLimits: state.eventLimits || {
       exec: { maxFlightFtd: 1, maxDutySup: 2, maxTotal: 2 },
       instructor: { maxFlightFtd: 2, maxDutySup: 31, maxTotal: 3 },
