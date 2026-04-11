@@ -22215,7 +22215,7 @@ const FlightTile = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
           position: "absolute",
           bottom: Math.round(PAD_BOT * 0.35),
-          left: PAD_H + 20,
+          left: PAD_H,
           display: "flex",
           alignItems: "baseline",
           gap: 1,
