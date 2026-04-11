@@ -462,74 +462,99 @@ const FlightTile: React.FC<TileProps> = ({
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
 }) => {
-  // ── Colours (matching real FlightTile.tsx) ──────────────────────────────
-  const timeColor    = 'rgba(255,255,255,0.60)';
-  const name1Color   = (v: string) => v ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.35)';
-  const name2Color   = (v: string) => v ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)';
-  const durColor     = 'rgba(255,255,255,0.80)';
-  const brkColor     = 'rgba(255,255,255,0.55)';
-  const evtColor     = (v: string) => v ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)';
-  const botColor     = (v: string) => v ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.30)';
-  const areaColor    = (v: string) => /^[A-H]$/.test(v) ? 'rgba(255,255,255,0.70)' : 'rgba(255,220,60,0.95)';
+  // ── Design constants ──────────────────────────────────────────────────
+  const TILE_BG       = '#7a6a2a';          // olive/golden-brown background
+  const TILE_BORDER   = '#1a2340';          // dark navy border
+  const OVAL_STROKE   = 'rgba(220,200,60,0.85)'; // yellow oval outline colour
+  const WHITE_FULL    = 'rgba(255,255,255,0.95)';
+  const WHITE_DIM     = 'rgba(255,255,255,0.75)';
+  const WHITE_GHOST   = 'rgba(255,255,255,0.35)';
+  const TILE_H        = 110;                // tile height px
+  const monoFamily    = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
 
-  const monoFamily = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
+  // ── Oval wrapper component ─────────────────────────────────────────────
+  // Renders content inside a yellow-outlined ellipse (like in the reference image)
+  const Oval: React.FC<{
+    children: React.ReactNode;
+    style?: React.CSSProperties;
+    minW?: number;
+    px?: number;
+    py?: number;
+  }> = ({ children, style, minW = 0, px = 10, py = 5 }) => (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      border: `2px solid ${OVAL_STROKE}`,
+      borderRadius: 50,
+      padding: `${py}px ${px}px`,
+      minWidth: minW,
+      boxSizing: 'border-box',
+      lineHeight: 1,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
 
   return (
     <div
-      className={color}
       style={{
         position: 'relative',
         width: '100%',
-        borderRadius: TILE_RADIUS,
-        overflow: 'visible',
-        boxShadow: '0 3px 14px rgba(0,0,0,0.45)',
+        height: TILE_H,
+        backgroundColor: TILE_BG,
+        border: `3px solid ${TILE_BORDER}`,
+        borderRadius: 10,
+        boxShadow: '0 4px 18px rgba(0,0,0,0.55)',
         userSelect: 'none',
-        // paddingTop leaves room above names for the time label
-        // paddingBottom leaves room below names for the bottom strip
-        paddingTop: PAD_TOP + TIME_FONT - 13,
-        paddingBottom: PAD_BOT,
-        paddingLeft: PAD_H + 70,
-        paddingRight: PAD_H,
+        overflow: 'visible',
         boxSizing: 'border-box',
+        display: 'flex',
+        alignItems: 'stretch',
       }}
     >
-      {/* ══ TOP-LEFT: start time (absolute, same as real tile "absolute -top-px left-1") ══ */}
-      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H, display: 'flex', alignItems: 'center', gap: 0 }}>
-        <span style={{
-          fontFamily: monoFamily,
-          fontSize: TIME_FONT,
-          fontWeight: 400,
-          color: timeColor,
-          lineHeight: 1,
-          pointerEvents: 'none',
-        }}>
-          {formatTime(startTime)}
-        </span>
-        {/* Invisible select overlaid on time label */}
-        <select
-          value={String(startTime)}
-          onChange={e => onStartTimeChange(parseFloat(e.target.value))}
-          style={{
-            position: 'absolute', top: 0, left: 0,
-            width: '100%', height: '100%',
-            opacity: 0, cursor: 'pointer', zIndex: 10,
-          }}
-        >
-          {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-        </select>
-      </div>
-
-      {/* ══ BODY: flex row — names (left) + [dur] EVENT (right) ══ */}
+      {/* ══ LEFT SECTION: Start Time oval + Names ══ */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        gap: 8,
+        paddingLeft: 14,
+        paddingRight: 10,
+        flex: 1,
+        minWidth: 0,
+        gap: 14,
       }}>
-        {/* LEFT column: PIC name on top, co-pilot below (same as real tile flex-1 overflow-hidden) */}
-        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          {/* PIC name — bold, same size as co-pilot */}
+        {/* Start Time oval — clickable select overlay */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <Oval px={12} py={6} minW={72}>
+            <span style={{
+              fontFamily: monoFamily,
+              fontSize: 22,
+              fontWeight: 600,
+              color: WHITE_FULL,
+              lineHeight: 1,
+              letterSpacing: 1,
+            }}>
+              {formatTime(startTime)}
+            </span>
+          </Oval>
+          {/* invisible select overlaid on oval */}
+          <select
+            value={String(startTime)}
+            onChange={e => onStartTimeChange(parseFloat(e.target.value))}
+            style={{
+              position: 'absolute', top: 0, left: 0,
+              width: '100%', height: '100%',
+              opacity: 0, cursor: 'pointer', zIndex: 10,
+            }}
+          >
+            {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+          </select>
+        </div>
+
+        {/* PIC + Co-pilot names column */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
+          {/* PIC name — large bold */}
           <PersonDropdown
             value={picName}
             onChange={onPicNameChange}
@@ -537,8 +562,8 @@ const FlightTile: React.FC<TileProps> = ({
             getLayer2={getLayer2}
             getNames={getNames}
             placeholder="Surname, First (N)"
-            fontSize={Math.round(NAME_FONT * 0.88)}
-            color={name1Color(picName)}
+            fontSize={30}
+            color={picName ? WHITE_FULL : WHITE_GHOST}
             bold
           />
           {/* Co-pilot / SOLO */}
@@ -550,8 +575,8 @@ const FlightTile: React.FC<TileProps> = ({
               getLayer2={getLayer2}
               getNames={getNames}
               placeholder="Surname, First (N)"
-              fontSize={Math.round(NAME_FONT * 0.88)}
-              color={name2Color(studentName)}
+              fontSize={22}
+              color={studentName ? WHITE_DIM : WHITE_GHOST}
               allowSolo
               onSoloSelect={() => onFlightTypeChange('Solo')}
             />
@@ -560,12 +585,12 @@ const FlightTile: React.FC<TileProps> = ({
               onClick={() => onFlightTypeChange('Dual')}
               style={{
                 display: 'inline-block',
-                fontSize: Math.round(NAME_FONT * 0.75),
+                fontSize: 18,
                 fontWeight: 800,
                 letterSpacing: 1,
                 color: 'rgba(255,220,60,0.95)',
                 background: 'rgba(255,200,0,0.20)',
-                padding: `${Math.round(NAME_FONT * 0.1)}px ${Math.round(NAME_FONT * 0.25)}px`,
+                padding: '3px 10px',
                 borderRadius: 4,
                 lineHeight: 1.25,
                 cursor: 'pointer',
@@ -577,160 +602,160 @@ const FlightTile: React.FC<TileProps> = ({
             </span>
           )}
         </div>
+      </div>
 
-        {/* RIGHT column: [duration] EVENT — moved left 50px */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          flexShrink: 0,
-          whiteSpace: 'nowrap',
-          marginTop: -20,  // Move Event up by 20px
-          position: 'relative',
-          right: 50,  // Move duration 50px left
-        }}>
-          {/* [duration] */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-            <span style={{ fontFamily: monoFamily, fontSize: TIME_FONT, color: brkColor, lineHeight: 1 }}>[</span>
+      {/* ══ RIGHT SECTION: Duration oval, Event oval, Op Area oval ══ */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'space-evenly',
+        paddingRight: 16,
+        paddingLeft: 8,
+        paddingTop: 10,
+        paddingBottom: 10,
+        flexShrink: 0,
+        gap: 6,
+      }}>
+        {/* Top row: [duration] + Event side by side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Flight Duration oval */}
+          <div style={{ position: 'relative' }}>
+            <Oval px={10} py={5} minW={58}>
+              <span style={{
+                fontFamily: monoFamily,
+                fontSize: 20,
+                fontWeight: 700,
+                color: WHITE_FULL,
+                lineHeight: 1,
+              }}>
+                [{duration.toFixed(1)}]
+              </span>
+            </Oval>
+            {/* invisible select */}
+            <select
+              value={String(duration)}
+              onChange={e => onDurationChange(parseFloat(e.target.value))}
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%',
+                opacity: 0, cursor: 'pointer', zIndex: 10,
+              }}
+            >
+              {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Event Number oval */}
+          <div style={{ position: 'relative' }}>
+            <Oval px={10} py={5} minW={58}>
+              <EventDropdown
+                value={flightNumber}
+                onChange={onFlightNumberChange}
+                courseOptions={courseOptions}
+                getEventsForCourse={getEventsForCourse}
+                nextLMPEvent={nextLMPEvent}
+                fontSize={20}
+                color={flightNumber ? WHITE_FULL : WHITE_GHOST}
+                disabled={eventCategory === 'lmp_currency'}
+              />
+            </Oval>
+          </div>
+        </div>
+
+        {/* Bottom row: Op Area oval */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Op Area oval */}
+          <div style={{ position: 'relative' }}>
+            <Oval px={10} py={5} minW={42}>
+              <span style={{
+                fontSize: 20,
+                fontWeight: 600,
+                color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)',
+                lineHeight: 1,
+              }}>
+                {area || '-'}
+              </span>
+            </Oval>
+            <select
+              value={area}
+              onChange={e => onAreaChange(e.target.value)}
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%',
+                opacity: 0, cursor: 'pointer', zIndex: 10,
+              }}
+            >
+              {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Aircraft number (small, subtle) */}
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              fontFamily: monoFamily,
+              fontSize: 14,
+              color: 'rgba(255,255,255,0.55)',
+              lineHeight: 1,
+            }}>#{aircraftNumber || '001'}</span>
+            <select
+              value={aircraftNumber}
+              onChange={e => onAircraftChange(e.target.value)}
+              style={{
+                position: 'absolute', top: 0, left: 0,
+                width: '100%', height: '100%',
+                opacity: 0, cursor: 'pointer', zIndex: 10,
+              }}
+            >
+              {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Callsign */}
+          {callsignOptions.length > 1 ? (
             <div style={{ position: 'relative' }}>
               <span style={{
-                fontFamily: monoFamily, fontSize: TIME_FONT,
-                fontWeight: 700, color: durColor, lineHeight: 1, pointerEvents: 'none',
+                fontFamily: monoFamily,
+                fontSize: 14,
+                fontStyle: 'italic',
+                color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
+                lineHeight: 1,
               }}>
-                {duration.toFixed(1)}
+                {callsign || 'CALLSGN'}
               </span>
               <select
-                value={String(duration)}
-                onChange={e => onDurationChange(parseFloat(e.target.value))}
+                value={callsign}
+                onChange={e => onCallsignChange(e.target.value)}
                 style={{
                   position: 'absolute', top: 0, left: 0,
                   width: '100%', height: '100%',
                   opacity: 0, cursor: 'pointer', zIndex: 10,
                 }}
               >
-                {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
+                <option value="" style={{ background: '#1a2f4a' }}>—</option>
+                {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
               </select>
             </div>
-            <span style={{ fontFamily: monoFamily, fontSize: TIME_FONT, color: brkColor, lineHeight: 1 }}>]</span>
-          </div>
-          {/* EVENT code */}
-          <EventDropdown
-            value={flightNumber}
-            onChange={onFlightNumberChange}
-            courseOptions={courseOptions}
-            getEventsForCourse={getEventsForCourse}
-            nextLMPEvent={nextLMPEvent}
-            fontSize={RIGHT_FONT}
-            color={evtColor(flightNumber)}
-            disabled={eventCategory === 'lmp_currency'}
-          />
-        </div>
-      </div>
-
-      {/* ══ BOTTOM STRIP: absolute bottom — mirrors real tile exactly ══ */}
-      {/* Left: #aircraft */}
-      <div style={{
-        position: 'absolute',
-        bottom: Math.round(PAD_BOT * 0.35),
-        left: PAD_H,
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: 1,
-        zIndex: 5,
-      }}>
-        <span style={{ fontFamily: monoFamily, fontSize: BOT_FONT, color: 'rgba(255,255,255,0.50)', lineHeight: 1 }}>#</span>
-        <div style={{ position: 'relative' }}>
-          <span style={{
-            fontFamily: monoFamily, fontSize: BOT_FONT,
-            color: botColor(aircraftNumber), lineHeight: 1, pointerEvents: 'none',
-          }}>
-            {aircraftNumber || '---'}
-          </span>
-          <select
-            value={aircraftNumber}
-            onChange={e => onAircraftChange(e.target.value)}
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: BOT_FONT * 2.8, height: BOT_FONT + 6,
-              opacity: 0, cursor: 'pointer', zIndex: 10,
-            }}
-          >
-            {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Right: area + callsign */}
-      <div style={{
-        position: 'absolute',
-        bottom: Math.round(PAD_BOT * 0.35),
-        right: PAD_H,
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: BOT_FONT * 0.4,
-        zIndex: 5,
-      }}>
-        {/* Area */}
-        <div style={{ position: 'relative' }}>
-          <span style={{ fontSize: BOT_FONT, lineHeight: 1, color: areaColor(area), pointerEvents: 'none' }}>
-            {area || '-'}
-          </span>
-          <select
-            value={area}
-            onChange={e => onAreaChange(e.target.value)}
-            style={{
-              position: 'absolute', top: 0, left: 0,
-              width: BOT_FONT * 2, height: BOT_FONT + 6,
-              opacity: 0, cursor: 'pointer', zIndex: 10,
-            }}
-          >
-            {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
-          </select>
-        </div>
-        {/* Callsign */}
-        {callsignOptions.length > 1 ? (
-          <div style={{ position: 'relative' }}>
-            <span style={{
-              fontFamily: monoFamily,
-              fontSize: BOT_FONT, fontStyle: 'italic', lineHeight: 1,
-              color: callsign ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)',
-              pointerEvents: 'none',
-            }}>
-              {callsign || 'CALLSGN'}
-            </span>
-            <select
+          ) : (
+            <input
+              type="text"
               value={callsign}
               onChange={e => onCallsignChange(e.target.value)}
               style={{
-                position: 'absolute', top: 0, left: 0,
-                width: BOT_FONT * 6, height: BOT_FONT + 6,
-                opacity: 0, cursor: 'pointer', zIndex: 10,
+                background: 'transparent', border: 'none', outline: 'none',
+                fontFamily: monoFamily,
+                fontSize: 14, fontStyle: 'italic', lineHeight: 1,
+                color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
+                width: 80, padding: 0, cursor: 'text',
               }}
-            >
-              <option value="" style={{ background: '#1a2f4a' }}>—</option>
-              {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
-            </select>
-          </div>
-        ) : (
-          <input
-            type="text"
-            value={callsign}
-            onChange={e => onCallsignChange(e.target.value)}
-            style={{
-              background: 'transparent', border: 'none', outline: 'none',
-              fontFamily: monoFamily,
-              fontSize: BOT_FONT, fontStyle: 'italic', lineHeight: 1,
-              color: callsign ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.30)',
-              width: BOT_FONT * 6, padding: 0, cursor: 'text', textAlign: 'right',
-            }}
-            placeholder="CALLSGN"
-          />
-        )}
+              placeholder="CALLSGN"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
 };
-
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   onClose, onSave, instructors, trainees, syllabusDetails, school,
