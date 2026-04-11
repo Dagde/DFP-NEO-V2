@@ -22113,10 +22113,9 @@ const FlightTile = ({
             alignItems: "flex-end",
             flexShrink: 0,
             whiteSpace: "nowrap",
-            marginTop: -20,
+            marginTop: -20
             // Move Event up by 20px
-            paddingRight: 80
-            // Move duration and event left by adding right padding
+            // duration and event at normal position
           }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "baseline", gap: 2 }, children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }, children: "[" }, void 0, false, {
