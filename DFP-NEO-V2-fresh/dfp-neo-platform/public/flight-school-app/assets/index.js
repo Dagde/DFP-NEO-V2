@@ -21985,7 +21985,7 @@ const FlightTile = ({
           minWidth: 0,
           gap: 14
         }, children: [
-          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative", flexShrink: 0 }, children: [
+          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative", flexShrink: 0, marginTop: -15 }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Oval, { px: 12, py: 6, minW: 72, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
               fontFamily: monoFamily,
               fontSize: 22,

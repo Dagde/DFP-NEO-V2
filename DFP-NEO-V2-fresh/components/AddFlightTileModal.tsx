@@ -525,7 +525,7 @@ const FlightTile: React.FC<TileProps> = ({
         gap: 14,
       }}>
         {/* Start Time oval — clickable select overlay */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{ position: 'relative', flexShrink: 0, marginTop: -15 }}>
           <Oval px={12} py={6} minW={72}>
             <span style={{
               fontFamily: monoFamily,
