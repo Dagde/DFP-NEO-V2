@@ -486,15 +486,15 @@ const FlightTile: React.FC<TileProps> = ({
         userSelect: 'none',
         // paddingTop leaves room above names for the time label
         // paddingBottom leaves room below names for the bottom strip
-        paddingTop: PAD_TOP + TIME_FONT + 4,
+        paddingTop: PAD_TOP + TIME_FONT + 2,
         paddingBottom: PAD_BOT,
-        paddingLeft: PAD_H,
+        paddingLeft: PAD_H + 10,
         paddingRight: PAD_H,
         boxSizing: 'border-box',
       }}
     >
       {/* ══ TOP-LEFT: start time (absolute, same as real tile "absolute -top-px left-1") ══ */}
-      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H, display: 'flex', alignItems: 'center', gap: 0 }}>
+      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H + 10, display: 'flex', alignItems: 'center', gap: 0 }}>
         <span style={{
           fontFamily: monoFamily,
           fontSize: TIME_FONT,
@@ -529,7 +529,7 @@ const FlightTile: React.FC<TileProps> = ({
       }}>
         {/* LEFT column: PIC name on top, co-pilot below (same as real tile flex-1 overflow-hidden) */}
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          {/* PIC name — bold, largest */}
+          {/* PIC name — bold, same size as co-pilot */}
           <PersonDropdown
             value={picName}
             onChange={onPicNameChange}
@@ -537,7 +537,7 @@ const FlightTile: React.FC<TileProps> = ({
             getLayer2={getLayer2}
             getNames={getNames}
             placeholder="Surname, First (N)"
-            fontSize={NAME_FONT}
+            fontSize={Math.round(NAME_FONT * 0.88)}
             color={name1Color(picName)}
             bold
           />
@@ -629,7 +629,7 @@ const FlightTile: React.FC<TileProps> = ({
       <div style={{
         position: 'absolute',
         bottom: Math.round(PAD_BOT * 0.35),
-        left: PAD_H,
+        left: PAD_H + 10,
         display: 'flex',
         alignItems: 'baseline',
         gap: 1,

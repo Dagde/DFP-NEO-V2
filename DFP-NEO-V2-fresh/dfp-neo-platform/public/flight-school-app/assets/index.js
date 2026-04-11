@@ -21966,14 +21966,14 @@ const FlightTile = ({
         userSelect: "none",
         // paddingTop leaves room above names for the time label
         // paddingBottom leaves room below names for the bottom strip
-        paddingTop: PAD_TOP + TIME_FONT + 4,
+        paddingTop: PAD_TOP + TIME_FONT + 2,
         paddingBottom: PAD_BOT,
-        paddingLeft: PAD_H,
+        paddingLeft: PAD_H + 10,
         paddingRight: PAD_H,
         boxSizing: "border-box"
       },
       children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "absolute", top: PAD_TOP, left: PAD_H, display: "flex", alignItems: "center", gap: 0 }, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "absolute", top: PAD_TOP, left: PAD_H + 10, display: "flex", alignItems: "center", gap: 0 }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
             fontFamily: monoFamily,
             fontSize: TIME_FONT,
@@ -22038,7 +22038,7 @@ const FlightTile = ({
                 getLayer2,
                 getNames,
                 placeholder: "Surname, First (N)",
-                fontSize: NAME_FONT,
+                fontSize: Math.round(NAME_FONT * 0.88),
                 color: name1Color(picName),
                 bold: true
               },
@@ -22212,7 +22212,7 @@ const FlightTile = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
           position: "absolute",
           bottom: Math.round(PAD_BOT * 0.35),
-          left: PAD_H,
+          left: PAD_H + 10,
           display: "flex",
           alignItems: "baseline",
           gap: 1,
