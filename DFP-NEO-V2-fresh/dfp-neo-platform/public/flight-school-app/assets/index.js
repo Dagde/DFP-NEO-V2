@@ -22113,12 +22113,13 @@ const FlightTile = ({
             alignItems: "flex-end",
             flexShrink: 0,
             whiteSpace: "nowrap",
-            marginTop: -20
+            marginTop: -20,
             // Move Event up by 20px
-            // duration and event at normal position
+            paddingRight: 40
+            // Move duration 40px left
           }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "baseline", gap: 2 }, children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }, children: "[" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontFamily: monoFamily, fontSize: TIME_FONT, color: brkColor, lineHeight: 1 }, children: "[" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
                 lineNumber: 593,
                 columnNumber: 13
@@ -22126,7 +22127,7 @@ const FlightTile = ({
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative" }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
                   fontFamily: monoFamily,
-                  fontSize: RIGHT_FONT,
+                  fontSize: TIME_FONT,
                   fontWeight: 700,
                   color: durColor,
                   lineHeight: 1,
@@ -22171,7 +22172,7 @@ const FlightTile = ({
                 lineNumber: 594,
                 columnNumber: 13
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }, children: "]" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontFamily: monoFamily, fontSize: TIME_FONT, color: brkColor, lineHeight: 1 }, children: "]" }, void 0, false, {
                 fileName: "/workspace/DFP-NEO-V2-git/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
                 lineNumber: 613,
                 columnNumber: 13

@@ -586,14 +586,14 @@ const FlightTile: React.FC<TileProps> = ({
           flexShrink: 0,
           whiteSpace: 'nowrap',
           marginTop: -20,  // Move Event up by 20px
-          // duration and event at normal position
+          paddingRight: 40,  // Move duration 40px left
         }}>
           {/* [duration] */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
-            <span style={{ fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }}>[</span>
+            <span style={{ fontFamily: monoFamily, fontSize: TIME_FONT, color: brkColor, lineHeight: 1 }}>[</span>
             <div style={{ position: 'relative' }}>
               <span style={{
-                fontFamily: monoFamily, fontSize: RIGHT_FONT,
+                fontFamily: monoFamily, fontSize: TIME_FONT,
                 fontWeight: 700, color: durColor, lineHeight: 1, pointerEvents: 'none',
               }}>
                 {duration.toFixed(1)}
@@ -610,7 +610,7 @@ const FlightTile: React.FC<TileProps> = ({
                 {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
               </select>
             </div>
-            <span style={{ fontFamily: monoFamily, fontSize: RIGHT_FONT, color: brkColor, lineHeight: 1 }}>]</span>
+            <span style={{ fontFamily: monoFamily, fontSize: TIME_FONT, color: brkColor, lineHeight: 1 }}>]</span>
           </div>
           {/* EVENT code */}
           <EventDropdown
