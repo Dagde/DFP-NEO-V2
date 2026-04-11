@@ -471,7 +471,7 @@ const FlightTile: React.FC<TileProps> = ({
   const TILE_H     = 110;
   const monoFamily = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
 
-  type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft';
+  type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
 
   // Default positions — used for first render and after Cancel
   const DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
@@ -482,6 +482,7 @@ const FlightTile: React.FC<TileProps> = ({
     event:     { x: 490, y: 10 },
     area:      { x: 490, y: 62 },
     aircraft:  { x: 420, y: 62 },
+    callsign:  { x: 530, y: 62 },
   };
 
   // ── State ──────────────────────────────────────────────────────────────
@@ -694,14 +695,14 @@ const FlightTile: React.FC<TileProps> = ({
     </div>
   );
 
-  const callsignContent = () => (
+  const callsignContent = (zOverride?: number) => (
     callsignOptions.length > 1 ? (
       <div style={{ position: 'relative' }}>
         <span style={{ fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', lineHeight: 1 }}>
           {callsign || 'CALLSGN'}
         </span>
         <select value={callsign} onChange={e => onCallsignChange(e.target.value)}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: 10 }}>
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
           <option value="" style={{ background: '#1a2f4a' }}>—</option>
           {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
         </select>
@@ -734,7 +735,7 @@ const FlightTile: React.FC<TileProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <FlexElem elemKey="area">{areaContent()}</FlexElem>
           <FlexElem elemKey="aircraft">{aircraftContent()}</FlexElem>
-          {callsignContent()}
+          <FlexElem elemKey="callsign">{callsignContent()}</FlexElem>
         </div>
       </div>
     </>
@@ -750,7 +751,7 @@ const FlightTile: React.FC<TileProps> = ({
       <AbsElem elemKey="event">{eventContent()}</AbsElem>
       <AbsElem elemKey="area">{areaContent()}</AbsElem>
       <AbsElem elemKey="aircraft">{aircraftContent()}</AbsElem>
-      <div style={{ position: 'absolute', bottom: 8, right: 16 }}>{callsignContent()}</div>
+      <AbsElem elemKey="callsign">{callsignContent()}</AbsElem>
     </>
   );
 
@@ -765,6 +766,7 @@ const FlightTile: React.FC<TileProps> = ({
       <AbsElem elemKey="event"     draggable>{eventContent()}</AbsElem>
       <AbsElem elemKey="area"      draggable>{areaContent(110)}</AbsElem>
       <AbsElem elemKey="aircraft"  draggable>{aircraftContent(110)}</AbsElem>
+      <AbsElem elemKey="callsign"  draggable>{callsignContent(110)}</AbsElem>
     </>
   );
 
