@@ -586,7 +586,7 @@ const FlightTile: React.FC<TileProps> = ({
           flexShrink: 0,
           whiteSpace: 'nowrap',
           marginTop: -20,  // Move Event up by 20px
-          paddingRight: 40,  // Move duration 40px left
+          paddingRight: 90,  // Move duration 90px left (40px original + 50px additional)
         }}>
           {/* [duration] */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
