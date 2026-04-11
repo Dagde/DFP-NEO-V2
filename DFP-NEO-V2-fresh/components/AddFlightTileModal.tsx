@@ -578,7 +578,7 @@ const FlightTile: React.FC<TileProps> = ({
           )}
         </div>
 
-        {/* RIGHT column: [duration] EVENT — moved left 40px */}
+        {/* RIGHT column: [duration] EVENT — moved left 50px */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -586,7 +586,7 @@ const FlightTile: React.FC<TileProps> = ({
           flexShrink: 0,
           whiteSpace: 'nowrap',
           marginTop: -20,  // Move Event up by 20px
-          paddingRight: 90,  // Move duration 90px left (40px original + 50px additional)
+          marginRight: 50,  // Move duration 50px left
         }}>
           {/* [duration] */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 2 }}>
