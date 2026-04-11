@@ -485,7 +485,7 @@ const FlightTile: React.FC<TileProps> = ({
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      border: `2px solid ${OVAL_STROKE}`,
+      // border: `2px solid ${OVAL_STROKE}`, // yellow border removed
       borderRadius: 50,
       padding: `${py}px ${px}px`,
       minWidth: minW,

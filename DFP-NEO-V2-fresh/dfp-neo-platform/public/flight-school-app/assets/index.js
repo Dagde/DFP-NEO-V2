@@ -21937,7 +21937,6 @@ const FlightTile = ({
 }) => {
   const TILE_BG = "#7a6a2a";
   const TILE_BORDER = "#1a2340";
-  const OVAL_STROKE = "rgba(220,200,60,0.85)";
   const WHITE_FULL = "rgba(255,255,255,0.95)";
   const WHITE_DIM = "rgba(255,255,255,0.75)";
   const WHITE_GHOST = "rgba(255,255,255,0.35)";
@@ -21947,7 +21946,7 @@ const FlightTile = ({
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    border: `2px solid ${OVAL_STROKE}`,
+    // border: `2px solid ${OVAL_STROKE}`, // yellow border removed
     borderRadius: 50,
     padding: `${py}px ${px}px`,
     minWidth: minW,
