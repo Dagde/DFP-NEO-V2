@@ -486,15 +486,15 @@ const FlightTile: React.FC<TileProps> = ({
         userSelect: 'none',
         // paddingTop leaves room above names for the time label
         // paddingBottom leaves room below names for the bottom strip
-        paddingTop: PAD_TOP + TIME_FONT + 2,
+        paddingTop: PAD_TOP + TIME_FONT - 13,
         paddingBottom: PAD_BOT,
-        paddingLeft: PAD_H + 10,
+        paddingLeft: PAD_H + 50,
         paddingRight: PAD_H,
         boxSizing: 'border-box',
       }}
     >
       {/* ══ TOP-LEFT: start time (absolute, same as real tile "absolute -top-px left-1") ══ */}
-      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H + 10, display: 'flex', alignItems: 'center', gap: 0 }}>
+      <div style={{ position: 'absolute', top: PAD_TOP, left: PAD_H + 50, display: 'flex', alignItems: 'center', gap: 0 }}>
         <span style={{
           fontFamily: monoFamily,
           fontSize: TIME_FONT,
@@ -629,7 +629,7 @@ const FlightTile: React.FC<TileProps> = ({
       <div style={{
         position: 'absolute',
         bottom: Math.round(PAD_BOT * 0.35),
-        left: PAD_H + 10,
+        left: PAD_H + 50,
         display: 'flex',
         alignItems: 'baseline',
         gap: 1,
