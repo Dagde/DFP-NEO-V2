@@ -67,6 +67,7 @@ import CourseRosterView from './components/CourseRosterView';
 import HateSheetView from './components/HateSheetView';
 import ScoreDetailView from './components/ScoreDetailView';
 import { EventDetailModal } from './components/FlightDetailModal';
+import AddFlightTileModal from './components/AddFlightTileModal';
 import ConflictModal from './components/ConflictModal';
 import AddGroundEventFlyout from './components/AddGroundEventFlyout';
 import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
@@ -12511,7 +12512,30 @@ updates.forEach(update => {
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 
-            {selectedEvent && (
+            {selectedEvent && isAddingTile && (
+                <AddFlightTileModal
+                    onClose={() => {
+                        setSelectedEvent(null);
+                        setIsAddingTile(false);
+                    }}
+                    onSave={(events) => {
+                        handleSaveEvents(events, false);
+                        setSelectedEvent(null);
+                        setIsAddingTile(false);
+                    }}
+                    instructors={instructorsData.map(i => i.name)}
+                    trainees={allTraineesData.map(t => t.fullName)}
+                    syllabusDetails={syllabusDetails}
+                    school={school}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
+                    courseColors={courseColors}
+                    date={selectedEvent.date || date}
+                    traineeLMPs={traineeLMPs}
+                    scores={scores}
+                />
+            )}
+            {selectedEvent && !isAddingTile && (
                 <EventDetailModal
                     key={`${selectedEvent.id}-${selectedEvent.instructor || 'no-instructor'}`}
                     event={isVisualAdjustMode && visualAdjustEvent ? visualAdjustEvent : selectedEvent}
