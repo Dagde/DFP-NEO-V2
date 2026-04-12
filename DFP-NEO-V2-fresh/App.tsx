@@ -8107,6 +8107,27 @@ const App: React.FC = () => {
         const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Marked as cancelled`;
         
         logAudit(pageName, "Cancel", description, changes);
+
+        // ── Deployment unavailability cleanup after cancel ─────────────────────────────
+        // When a flight is cancelled, remove its __deploy__ tag from all personnel
+        // (the person is no longer required to fly, so the Deployed unavailability block
+        // created for this flight should be removed).
+        // If it was a deployment tile being cancelled, re-run the full check.
+        const _cancelledId   = selectedEvent.id;
+        const _cancelledType = selectedEvent.type;
+        setTimeout(() => {
+            if (_cancelledType === 'deployment') {
+                setPublishedSchedules(prevSchedules => {
+                    const allEvents = Object.values(prevSchedules).flat();
+                    handleDeploymentUnavailability(allEvents);
+                    return prevSchedules;
+                });
+            } else {
+                removeDeployedUnavailability(_cancelledId);
+            }
+        }, 600);
+        // ─────────────────────────────────────────────────────────────────────────────
+
         setSelectedEvent(null);
         
         
@@ -9705,6 +9726,10 @@ updates.forEach(update => {
                     // and other in-memory reads can find it at person.currencyStatus
                     currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
+                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
+                    unavailability: Array.isArray(p.unavailability)
+                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : p.unavailability,
                 }));
                 
                 // Update instructors - remove old database entries and add fresh ones
@@ -9722,6 +9747,10 @@ updates.forEach(update => {
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
                     ...t,
                     _dataSource: 'database' as const,
+                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
+                    unavailability: Array.isArray(t.unavailability)
+                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : t.unavailability,
                 }));
                 
                 // Update trainees - replace old database entries with fresh ones, preserve mock
