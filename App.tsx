@@ -341,8 +341,9 @@ const calculateProjectedDuty = (
 
 const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
     if (!dateStr) return 999; // Treated as very long ago if undefined
-    const eventDate = new Date(dateStr + 'T00:00:00Z');
-    const baseDate = new Date(relativeTo + 'T00:00:00Z');
+    const eventDate = safeParseDate(dateStr);
+    const baseDate = safeParseDate(relativeTo);
+    if (!eventDate || !baseDate) return 999; // Invalid dates - treat as very long ago
     return Math.floor((baseDate.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
 };
 
@@ -511,7 +512,7 @@ const getEffectiveLastCompletedEvent = (
     buildDate: string
 ): string | null => {
     // Calculate yesterday's date
-    const buildDateObj = new Date(buildDate + 'T00:00:00Z');
+    const buildDateObj = safeParseDate(buildDate);
     buildDateObj.setDate(buildDateObj.getDate() - 1);
     const yesterdayStr = buildDateObj.toISOString().split('T')[0];
     
@@ -635,9 +636,17 @@ const calculateTraineePriorityScore = (
     traineeProgress: number,
     isRemedial: boolean
 ): number => {
-    const today = new Date(buildDate + 'T00:00:00Z').getTime();
-    const lastEvent = trainee.lastEventDate ? new Date(trainee.lastEventDate + 'T00:00:00Z').getTime() : 0;
-    const lastFlight = trainee.lastFlightDate ? new Date(trainee.lastFlightDate + 'T00:00:00Z').getTime() : 0;
+    const todayDate = safeParseDate(buildDate);
+    if (!todayDate) { return 999; } // Invalid build date
+    const today = todayDate.getTime();
+    const lastEvent = trainee.lastEventDate ? (() => {
+        const d = safeParseDate(trainee.lastEventDate);
+        return d ? d.getTime() : 0;
+    })() : 0;
+    const lastFlight = trainee.lastFlightDate ? (() => {
+        const d = safeParseDate(trainee.lastFlightDate);
+        return d ? d.getTime() : 0;
+    })() : 0;
 
     const daysSinceEvent = lastEvent === 0 ? 100 : Math.floor((today - lastEvent) / (1000 * 3600 * 24));
     const daysSinceFlight = lastFlight === 0 ? 100 : Math.floor((today - lastFlight) / (1000 * 3600 * 24));
@@ -1674,10 +1683,12 @@ function generateDfpInternal(
     const courseMedians = new Map<string, number>();
     coursePriorities.forEach(c => courseMedians.set(c, getMedianProgress(c)));
 
-    const today = new Date(buildDate + 'T00:00:00Z');
+    const today = safeParseDate(buildDate);
+    if (!today) { return []; } // Invalid build date - cannot proceed
     const daysSince = (dateStr?: string): number => {
         if (!dateStr) return 999;
-        const eventDate = new Date(dateStr + 'T00:00:00Z');
+        const eventDate = safeParseDate(dateStr);
+        if (!eventDate) return 999; // Invalid date - treat as very long ago
         return Math.floor((today.getTime() - eventDate.getTime()) / (1000 * 3600 * 24));
     };
 
@@ -5596,7 +5607,9 @@ useEffect(() => {
         
         if (activeView === 'Program Schedule' || activeView === 'DailyFlyingProgram' || activeView === 'InstructorSchedule' || activeView === 'TraineeSchedule') {
             // Check all events across all dates for deployments that overlap with current date
-            const todayStart = new Date(`${date}T00:00:00Z`).getTime();
+            const todayDate = safeParseDate(date);
+            if (!todayDate) { return resources; }
+            const todayStart = todayDate.getTime();
             const todayEnd = new Date(todayStart);
             todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
             const todayEndTime = todayEnd.getTime();
@@ -5605,7 +5618,9 @@ useEffect(() => {
             const overlappingDeployments = allEvents.filter(event => {
                 if (event.type !== 'deployment') return false;
                 
-                const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+                const eventDate = safeParseDate(event.date);
+                if (!eventDate) { return false; }
+                const eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
                 const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
                 
                 return eventStartMs < todayEndTime && eventEndMs > todayStart;
@@ -5867,7 +5882,9 @@ useEffect(() => {
 
     const eventSegmentsForDate = useMemo(() => {
         const segments: EventSegment[] = [];
-        const todayStart = new Date(`${date}T00:00:00Z`).getTime();
+        const todayDate = safeParseDate(date);
+        if (!todayDate) { return segments; }
+        const todayStart = todayDate.getTime();
         const todayEnd = new Date(todayStart);
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
@@ -5878,7 +5895,9 @@ useEffect(() => {
         for (const event of allEvents) {
             let eventStartMs: number, eventEndMs: number;
     
-            eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+            const eventDate = safeParseDate(event.date);
+            if (!eventDate) { continue; }
+            eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
             eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
     
             if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
@@ -5915,7 +5934,8 @@ useEffect(() => {
         console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
         
         const segments: EventSegment[] = [];
-        const todayStart = new Date(`${buildDfpDate}T00:00:00Z`).getTime();
+        const todayDate = safeParseDate(buildDfpDate);
+        const todayStart = todayDate.getTime();
         const todayEnd = new Date(todayStart);
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
@@ -5930,7 +5950,9 @@ useEffect(() => {
         const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
 
         for (const event of allEvents) {
-            const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+            const const eventDate = safeParseDate(event.date);
+            if (!eventDate) { continue; }
+            eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
             const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
 
             if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
@@ -6626,7 +6648,7 @@ useEffect(() => {
     };
 
     const handleBuildDateChange = (direction: 'prev' | 'next') => {
-        const currentDate = new Date(buildDfpDate + 'T00:00:00Z');
+        const currentDate = safeParseDate(buildDfpDate);
         if (direction === 'prev') {
             currentDate.setUTCDate(currentDate.getUTCDate() - 1);
         } else {
@@ -6958,7 +6980,7 @@ useEffect(() => {
     };
 
     const handleDateChange = (increment: number) => {
-        const currentDate = new Date(`${date}T00:00:00Z`);
+        const currentDate = safeParseDate(date);
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
@@ -11944,7 +11966,7 @@ updates.forEach(update => {
                                                 if (!dateValue) continue;
                                                 
                                                 const validityDays = 'validityDays' in def ? def.validityDays : 365;
-                                                const expiryDate = new Date(dateValue + 'T00:00:00Z');
+                                                const expiryDate = safeParseDate(dateValue);
                                                 expiryDate.setDate(expiryDate.getDate() + validityDays);
                                                 const expStr = expiryDate.toISOString().slice(0, 10);
                                                 const today = new Date();
