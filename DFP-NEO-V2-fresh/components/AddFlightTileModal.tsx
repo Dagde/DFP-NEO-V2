@@ -870,25 +870,58 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
   const LAYOUT_PREF_KEY = 'flightTileLayout_v1';
 
-  const [tileEditMode,      setTileEditMode]      = useState(false);
-  const [tileLayoutSaved,   setTileLayoutSaved]   = useState(false);
-  const [tilePositions,     setTilePositions]     = useState<Record<ElemKey, { x: number; y: number }>>(MODAL_DEFAULT_POSITIONS);
-  const [tileSavedPositions,setTileSavedPositions]= useState<Record<ElemKey, { x: number; y: number }>>(MODAL_DEFAULT_POSITIONS);
+  // Helper: validate a positions object has all required keys
+  const isValidPositions = (posData: any): posData is Record<ElemKey, { x: number; y: number }> => {
+    return posData && typeof posData === 'object' &&
+      LAYOUT_ELEM_KEYS.every((k: ElemKey) => posData[k] && typeof posData[k].x === 'number');
+  };
 
-  // Load persisted layout from DB once when userId is available
+  // Helper: read from localStorage fallback
+  const readLocalLayout = (): Record<ElemKey, { x: number; y: number }> | null => {
+    try {
+      const raw = localStorage.getItem(LAYOUT_PREF_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.positions && isValidPositions(parsed.positions)) return parsed.positions;
+      }
+    } catch { /* ignore */ }
+    return null;
+  };
+
+  // Helper: write to localStorage fallback
+  const writeLocalLayout = (pos: Record<ElemKey, { x: number; y: number }>) => {
+    try { localStorage.setItem(LAYOUT_PREF_KEY, JSON.stringify({ positions: pos })); } catch { /* ignore */ }
+  };
+
+  // Initialise from localStorage immediately (synchronous, no flash)
+  const _localInit = readLocalLayout();
+  const [tileEditMode,      setTileEditMode]      = useState(false);
+  const [tileLayoutSaved,   setTileLayoutSaved]   = useState(_localInit !== null);
+  const [tilePositions,     setTilePositions]     = useState<Record<ElemKey, { x: number; y: number }>>(_localInit ?? MODAL_DEFAULT_POSITIONS);
+  const [tileSavedPositions,setTileSavedPositions]= useState<Record<ElemKey, { x: number; y: number }>>(_localInit ?? MODAL_DEFAULT_POSITIONS);
+
+  // Load from DB when userId is available — DB is authoritative over localStorage
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('[TileLayout] No userId available — using localStorage only');
+      return;
+    }
+    console.log('[TileLayout] Loading layout from DB for userId:', userId);
     loadUserPreferences(userId).then(prefs => {
       const stored = prefs[LAYOUT_PREF_KEY];
       if (stored && typeof stored === 'object' && 'positions' in stored) {
         const posData = stored.positions as Record<ElemKey, { x: number; y: number }>;
-        if (LAYOUT_ELEM_KEYS.every(k => posData[k] && typeof posData[k].x === 'number')) {
+        if (isValidPositions(posData)) {
+          console.log('[TileLayout] Restored layout from DB');
           setTilePositions(posData);
           setTileSavedPositions(posData);
           setTileLayoutSaved(true);
+          writeLocalLayout(posData); // keep localStorage in sync
         }
+      } else {
+        console.log('[TileLayout] No layout found in DB');
       }
-    });
+    }).catch(err => console.warn('[TileLayout] DB load failed:', err));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
@@ -899,8 +932,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     if (save) {
       setTileSavedPositions({ ...tilePositions });
       setTileLayoutSaved(true);
+      // Write to localStorage immediately (synchronous — no flash on next open)
+      writeLocalLayout(tilePositions);
+      // Write to DB (async — authoritative store)
       if (userId) {
-        saveUserPreference(userId, LAYOUT_PREF_KEY, { positions: tilePositions });
+        console.log('[TileLayout] Saving layout to DB for userId:', userId);
+        saveUserPreference(userId, LAYOUT_PREF_KEY, { positions: tilePositions })
+          .then(ok => console.log('[TileLayout] DB save result:', ok))
+          .catch(err => console.warn('[TileLayout] DB save failed:', err));
+      } else {
+        console.warn('[TileLayout] No userId — layout saved to localStorage only');
       }
     } else {
       setTilePositions({ ...tileSavedPositions });
