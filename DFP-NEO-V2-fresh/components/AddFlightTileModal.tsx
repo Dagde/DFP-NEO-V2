@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { loadUserPreferences, saveUserPreference } from '../utils/userPreferencesService';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -17,6 +18,7 @@ interface AddFlightTileModalProps {
   scores?: Map<string, Score[]>;
   locationOpAreas?: Record<string, string[]>;
   formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
+  userId?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -434,6 +436,7 @@ interface TileProps {
   aircraftOptions: { value: string; label: string }[];
   callsignOptions: string[];
   formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
+  userId?: string;
   // cascading dropdown helpers
   allUnits: string[];
   getLayer2: (unit: string) => string[];
@@ -460,6 +463,7 @@ const FlightTile: React.FC<TileProps> = ({
   area, aircraftNumber, callsign, color,
   timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
   formationCallsigns,
+  userId: tileUserId,
   allUnits, getLayer2, getNames,
   courseOptions, getEventsForCourse, nextLMPEvent, eventCategory,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
@@ -489,33 +493,31 @@ const FlightTile: React.FC<TileProps> = ({
   };
 
   // ── State ──────────────────────────────────────────────────────────────
-  // ── localStorage persistence ──────────────────────────────────────────────────────────
-  const LAYOUT_STORAGE_KEY = 'flightTileLayout_v1';
-
-  const loadPersistedLayout = (): { pos: Record<ElemKey, { x: number; y: number }>; saved: boolean } => {
-    try {
-      const raw = localStorage.getItem('flightTileLayout_v1');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object' && 'positions' in parsed) {
-          // Validate all keys exist
-          const keys: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
-          const posData = parsed.positions as Record<ElemKey, { x: number; y: number }>;
-          if (keys.every(k => posData[k] && typeof posData[k].x === 'number')) {
-            return { pos: posData, saved: true };
-          }
-        }
-      }
-    } catch { /* ignore */ }
-    return { pos: DEFAULT_POSITIONS, saved: false };
-  };
-
-  const _persisted = loadPersistedLayout();
+  // ── Layout state (persisted to DB per-user) ───────────────────────────────────────
+  const LAYOUT_PREF_KEY = 'flightTileLayout_v1';
 
   const [editMode,     setEditMode]     = useState(false);
-  const [layoutSaved,  setLayoutSaved]  = useState(_persisted.saved);
-  const [positions,    setPositions]    = useState<Record<ElemKey, { x: number; y: number }>>(_persisted.pos);
-  const [savedPositions, setSavedPositions] = useState<Record<ElemKey, { x: number; y: number }>>(_persisted.pos);
+  const [layoutSaved,  setLayoutSaved]  = useState(false);
+  const [positions,    setPositions]    = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
+  const [savedPositions, setSavedPositions] = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
+
+  // Load persisted layout from DB on mount (when userId is available)
+  useEffect(() => {
+    if (!tileUserId) return;
+    loadUserPreferences(tileUserId).then(prefs => {
+      const stored = prefs[LAYOUT_PREF_KEY];
+      if (stored && typeof stored === 'object' && 'positions' in stored) {
+        const keys: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
+        const posData = stored.positions as Record<ElemKey, { x: number; y: number }>;
+        if (keys.every(k => posData[k] && typeof posData[k].x === 'number')) {
+          setPositions(posData);
+          setSavedPositions(posData);
+          setLayoutSaved(true);
+        }
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tileUserId]);
 
   const tileRef   = useRef<HTMLDivElement>(null);
   const elemRefs  = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
@@ -552,10 +554,10 @@ const FlightTile: React.FC<TileProps> = ({
       // Lock the current dragged positions as the saved layout
       setSavedPositions({ ...positions });
       setLayoutSaved(true);
-      // Persist to localStorage so layout survives navigation, refresh, and restarts
-      try {
-        localStorage.setItem('flightTileLayout_v1', JSON.stringify({ positions }));
-      } catch { /* ignore storage errors */ }
+      // Persist to DB so layout survives navigation, refresh, and restarts for this user
+      if (tileUserId) {
+        saveUserPreference(tileUserId, 'flightTileLayout_v1', { positions });
+      }
     } else {
       // Revert to the last saved (or default) positions
       setPositions({ ...savedPositions });
@@ -858,6 +860,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   traineesData, instructorsData, courseColors, date, traineeLMPs, scores,
   locationOpAreas = {},
   formationCallsigns = [],
+  userId,
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
   const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>('Dual');
@@ -1280,6 +1283,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   aircraftOptions={aircraftOptions}
                   callsignOptions={callsignOptions}
                   formationCallsigns={formationCallsigns}
+                  userId={userId}
                   allUnits={allUnits}
                   getLayer2={getLayer2}
                   getNames={getNames}
