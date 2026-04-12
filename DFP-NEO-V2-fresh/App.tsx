@@ -4092,6 +4092,12 @@ useEffect(() => {
     const [allTraineesData, setTraineesData] = useState<Trainee[]>([]);
     const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
 
+    // Refs so async callbacks always read latest instructor/trainee data (avoids stale closures)
+    const allInstructorsDataRef = useRef<Instructor[]>([]);
+    const allTraineesDataRef    = useRef<Trainee[]>([]);
+    useEffect(() => { allInstructorsDataRef.current = allInstructorsData; }, [allInstructorsData]);
+    useEffect(() => { allTraineesDataRef.current    = allTraineesData;    }, [allTraineesData]);
+
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
     // Also filters by location (ESL = East Sale, PEA = Pearce) to prevent wrong-location staff entering the build
@@ -9228,6 +9234,21 @@ useEffect(() => {
             for (const flight of flightTiles) {
                 await removeDeployedUnavailability(flight.id);
             }
+            // Also call server-side cleanup to remove any __deploy__ tags that may still be in the DB
+            // (catches cases where previous PATCH calls failed or the data was loaded from a stale DB state)
+            try {
+                const cleanupRes = await fetch('/api/cleanup-deploy-unavailability', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                });
+                if (cleanupRes.ok) {
+                    const cleanupData = await cleanupRes.json();
+                    if (cleanupData.personnelFixed > 0 || cleanupData.traineesFixed > 0) {
+                        console.log('[DeployUnavail] Server cleanup fixed', cleanupData.personnelFixed, 'personnel and', cleanupData.traineesFixed, 'trainees in DB');
+                    }
+                }
+            } catch (err) { console.error('[DeployUnavail] Server cleanup call failed:', err); }
             return;
         }
 
@@ -9322,9 +9343,13 @@ useEffect(() => {
         console.log('Personnel to tag:', personnelNames);
         // ────────────────────────────────────────────────────────────────────
 
+        // Use refs for latest data (avoid stale closures)
+        const latestInstructorsForUpsert = allInstructorsDataRef.current;
+        const latestTraineesForUpsert    = allTraineesDataRef.current;
+
         for (const personName of personnelNames) {
             // Check instructors
-            const instructor = allInstructorsData.find(i => i.name === personName);
+            const instructor = latestInstructorsForUpsert.find(i => i.name === personName);
             if (instructor) {
                 const existing = (instructor.unavailability || []);
                 const alreadyHas = existing.some(p => p.notes === tag);
@@ -9348,7 +9373,7 @@ useEffect(() => {
                 continue;
             }
             // Check trainees
-            const trainee = allTraineesData.find(t => t.name === personName || t.fullName === personName);
+            const trainee = latestTraineesForUpsert.find(t => t.name === personName || t.fullName === personName);
             if (trainee) {
                 const existing = (trainee.unavailability || []);
                 const alreadyHas = existing.some(p => p.notes === tag);
@@ -9377,19 +9402,21 @@ useEffect(() => {
     const removeDeployedUnavailability = async (flightId: string) => {
         const tag = `__deploy__${flightId}`;
 
-        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
-        const instructorsWithTag = allInstructorsData.filter(i => (i.unavailability || []).some(p => p.notes === tag));
-        const traineesWithTag    = allTraineesData.filter(t => (t.unavailability || []).some(p => p.notes === tag));
-        if (instructorsWithTag.length > 0 || traineesWithTag.length > 0) {
-            console.log('[DeployUnavail] removeDeployedUnavailability for flightId="' + flightId + '" tag="' + tag + '"',
-                'Removing from instructors:', instructorsWithTag.map(i => i.name),
-                'Removing from trainees:', traineesWithTag.map(t => t.name)
-            );
-        }
-        // ────────────────────────────────────────────────────────────────────
+        // Use refs to always read the LATEST instructor/trainee data (avoids stale closures
+        // when called from setTimeout or inside state-setter callbacks).
+        const latestInstructors = allInstructorsDataRef.current;
+        const latestTrainees    = allTraineesDataRef.current;
+
+        // Diagnostic logging
+        const instructorsWithTag = latestInstructors.filter(i => (i.unavailability || []).some(p => p.notes === tag));
+        const traineesWithTag    = latestTrainees.filter(t => (t.unavailability || []).some(p => p.notes === tag));
+        console.log('[DeployUnavail] removeDeployedUnavailability flightId="' + flightId + '" tag="' + tag + '"',
+            'instructors with tag:', instructorsWithTag.map(i => i.name),
+            'trainees with tag:', traineesWithTag.map(t => t.name)
+        );
 
         // Instructors
-        const affectedInstructors = allInstructorsData.filter(i =>
+        const affectedInstructors = latestInstructors.filter(i =>
             (i.unavailability || []).some(p => p.notes === tag)
         );
         for (const instructor of affectedInstructors) {
@@ -9399,18 +9426,20 @@ useEffect(() => {
             const dbId = (instructor as any).id;
             if (dbId && (instructor as any)._dataSource === 'database') {
                 try {
-                    await fetch(`/api/personnel/${dbId}`, {
+                    const resp = await fetch(`/api/personnel/${dbId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({ unavailability: updated }),
                     });
-                } catch (err) { console.error('Failed to remove Deployed unavailability for instructor:', instructor.name, err); }
+                    if (!resp.ok) console.error('[DeployUnavail] PATCH instructor failed:', instructor.name, resp.status);
+                    else console.log('[DeployUnavail] PATCH instructor OK:', instructor.name, 'removed tag', tag);
+                } catch (err) { console.error('[DeployUnavail] Failed to remove Deployed unavailability for instructor:', instructor.name, err); }
             }
         }
 
         // Trainees
-        const affectedTrainees = allTraineesData.filter(t =>
+        const affectedTrainees = latestTrainees.filter(t =>
             (t.unavailability || []).some(p => p.notes === tag)
         );
         for (const trainee of affectedTrainees) {
@@ -9420,13 +9449,15 @@ useEffect(() => {
             const dbId = (trainee as any).id;
             if (dbId && (trainee as any)._dataSource === 'database') {
                 try {
-                    await fetch(`/api/trainees/${dbId}`, {
+                    const resp = await fetch(`/api/trainees/${dbId}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({ unavailability: updated }),
                     });
-                } catch (err) { console.error('Failed to remove Deployed unavailability for trainee:', trainee.name, err); }
+                    if (!resp.ok) console.error('[DeployUnavail] PATCH trainee failed:', trainee.name, resp.status);
+                    else console.log('[DeployUnavail] PATCH trainee OK:', trainee.name, 'removed tag', tag);
+                } catch (err) { console.error('[DeployUnavail] Failed to remove Deployed unavailability for trainee:', trainee.name, err); }
             }
         }
     };

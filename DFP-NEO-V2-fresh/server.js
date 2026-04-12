@@ -466,6 +466,46 @@ app.patch('/api/personnel/:id', async (req, res) => {
   }
 });
 
+// POST /api/cleanup-deploy-unavailability - Remove all __deploy__ tagged unavailability periods
+// from all personnel and trainees in the DB. One-time fix for stuck "Deployed" conflicts.
+app.post('/api/cleanup-deploy-unavailability', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    let personnelFixed = 0;
+    let traineesFixed = 0;
+
+    // Fix personnel (instructors)
+    const allPersonnel = await db.personnel.findMany({ select: { id: true, name: true, unavailability: true } });
+    for (const person of allPersonnel) {
+      const unavail = Array.isArray(person.unavailability) ? person.unavailability : [];
+      const filtered = unavail.filter(p => !p || !p.notes || !String(p.notes).startsWith('__deploy__'));
+      if (filtered.length !== unavail.length) {
+        await db.personnel.update({ where: { id: person.id }, data: { unavailability: filtered } });
+        console.log(`[CleanupDeploy] Cleaned ${unavail.length - filtered.length} deploy tag(s) from personnel: ${person.name}`);
+        personnelFixed++;
+      }
+    }
+
+    // Fix trainees
+    const allTrainees = await db.trainee.findMany({ select: { id: true, fullName: true, unavailability: true } });
+    for (const trainee of allTrainees) {
+      const unavail = Array.isArray(trainee.unavailability) ? trainee.unavailability : [];
+      const filtered = unavail.filter(p => !p || !p.notes || !String(p.notes).startsWith('__deploy__'));
+      if (filtered.length !== unavail.length) {
+        await db.trainee.update({ where: { id: trainee.id }, data: { unavailability: filtered } });
+        console.log(`[CleanupDeploy] Cleaned ${unavail.length - filtered.length} deploy tag(s) from trainee: ${trainee.fullName}`);
+        traineesFixed++;
+      }
+    }
+
+    console.log(`✅ POST /api/cleanup-deploy-unavailability - fixed ${personnelFixed} personnel, ${traineesFixed} trainees`);
+    res.json({ success: true, personnelFixed, traineesFixed });
+  } catch (error) {
+    console.error('❌ POST /api/cleanup-deploy-unavailability error:', error);
+    res.status(500).json({ error: 'Failed to cleanup deploy unavailability', details: error.message });
+  }
+});
+
 // GET /api/personnel/:id/currencies - Get currency status for an instructor
 // :id can be a UUID string (DB id) or a numeric idNumber
 app.get('/api/personnel/:id/currencies', async (req, res) => {
@@ -2503,7 +2543,7 @@ async function ensureAircraftAvailabilityEventTable(db) {
         "date" TEXT NOT NULL,
         "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "availableCount" INTEGER NOT NULL,
-        "totalFleet" INTEGER NOT NULL,
+        "totalAircraft" INTEGER NOT NULL,
         "notes" TEXT,
         CONSTRAINT "AircraftAvailabilityEvent_pkey" PRIMARY KEY ("id")
       );
@@ -2618,7 +2658,7 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     }
     const ts = timestamp ? new Date(timestamp) : new Date();
     await db.$executeRawUnsafe(
-      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalFleet", "notes")
+      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
        VALUES ($1::text, $2::text, $3::int, $4::int, $5::text)`,
       date, ts, availableCount, totalFleet, notes || null
     );
@@ -2732,7 +2772,8 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
     res.json({
       current: {
         availableCount: latest.availableCount,
-        totalFleet: latest.totalFleet,
+        totalFleet: latest.totalAircraft ?? latest.totalFleet,
+        totalAircraft: latest.totalAircraft ?? latest.totalFleet,
         timestamp: latest.timestamp,
         id: Number(latest.id)
       },
