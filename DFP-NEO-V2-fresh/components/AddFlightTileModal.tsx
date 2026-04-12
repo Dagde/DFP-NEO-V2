@@ -436,7 +436,6 @@ interface TileProps {
   aircraftOptions: { value: string; label: string }[];
   callsignOptions: string[];
   formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
-  userId?: string;
   // cascading dropdown helpers
   allUnits: string[];
   getLayer2: (unit: string) => string[];
@@ -456,6 +455,14 @@ interface TileProps {
   onAreaChange: (v: string) => void;
   onAircraftChange: (v: string) => void;
   onCallsignChange: (v: string) => void;
+  // lifted layout state (owned by AddFlightTileModal)
+  editMode: boolean;
+  layoutSaved: boolean;
+  positions: Record<string, { x: number; y: number }>;
+  savedPositions: Record<string, { x: number; y: number }>;
+  onEnterEditMode: () => void;
+  onExitEditMode: (save: boolean) => void;
+  onDragPosition: (key: string, pos: { x: number; y: number }) => void;
 }
 
 const FlightTile: React.FC<TileProps> = ({
@@ -463,11 +470,12 @@ const FlightTile: React.FC<TileProps> = ({
   area, aircraftNumber, callsign, color,
   timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
   formationCallsigns,
-  userId: tileUserId,
   allUnits, getLayer2, getNames,
   courseOptions, getEventsForCourse, nextLMPEvent, eventCategory,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
+  editMode, layoutSaved, positions, savedPositions,
+  onEnterEditMode, onExitEditMode, onDragPosition,
 }) => {
   // ── Design constants ──────────────────────────────────────────────────
   const TILE_BG    = '#7a6a2a';
@@ -493,31 +501,9 @@ const FlightTile: React.FC<TileProps> = ({
   };
 
   // ── State ──────────────────────────────────────────────────────────────
-  // ── Layout state (persisted to DB per-user) ───────────────────────────────────────
-  const LAYOUT_PREF_KEY = 'flightTileLayout_v1';
-
-  const [editMode,     setEditMode]     = useState(false);
-  const [layoutSaved,  setLayoutSaved]  = useState(false);
-  const [positions,    setPositions]    = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
-  const [savedPositions, setSavedPositions] = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
-
-  // Load persisted layout from DB on mount (when userId is available)
-  useEffect(() => {
-    if (!tileUserId) return;
-    loadUserPreferences(tileUserId).then(prefs => {
-      const stored = prefs[LAYOUT_PREF_KEY];
-      if (stored && typeof stored === 'object' && 'positions' in stored) {
-        const keys: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
-        const posData = stored.positions as Record<ElemKey, { x: number; y: number }>;
-        if (keys.every(k => posData[k] && typeof posData[k].x === 'number')) {
-          setPositions(posData);
-          setSavedPositions(posData);
-          setLayoutSaved(true);
-        }
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tileUserId]);
+  // Layout state is LIFTED to AddFlightTileModal — received via props:
+  //   editMode, layoutSaved, positions, savedPositions
+  //   onEnterEditMode, onExitEditMode, onDragPosition
 
   const tileRef   = useRef<HTMLDivElement>(null);
   const elemRefs  = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
@@ -525,44 +511,30 @@ const FlightTile: React.FC<TileProps> = ({
 
   // When entering edit mode, capture the real DOM positions of each element
   const enterEditMode = () => {
-    if (!tileRef.current) { setEditMode(true); return; }
-    const tileRect = tileRef.current.getBoundingClientRect();
-    // If layout was already saved, start from saved positions
-    if (layoutSaved) {
-      setPositions({ ...savedPositions });
-      setEditMode(true);
-      return;
+    // Capture current DOM positions if no layout saved yet, then delegate to parent
+    if (!layoutSaved && tileRef.current) {
+      const tileRect = tileRef.current.getBoundingClientRect();
+      const measuredPos: Record<string, { x: number; y: number }> = { ...DEFAULT_POSITIONS };
+      (Object.keys(elemRefs.current) as ElemKey[]).forEach(key => {
+        const el = elemRefs.current[key];
+        if (el) {
+          const r = el.getBoundingClientRect();
+          measuredPos[key] = {
+            x: Math.round(r.left - tileRect.left),
+            y: Math.round(r.top  - tileRect.top),
+          };
+        }
+      });
+      // Push measured positions to parent before entering edit mode
+      (Object.keys(measuredPos) as ElemKey[]).forEach(k =>
+        onDragPosition(k, measuredPos[k])
+      );
     }
-    // Otherwise measure from DOM
-    const newPos: Record<ElemKey, { x: number; y: number }> = { ...DEFAULT_POSITIONS };
-    (Object.keys(elemRefs.current) as ElemKey[]).forEach(key => {
-      const el = elemRefs.current[key];
-      if (el) {
-        const r = el.getBoundingClientRect();
-        newPos[key] = {
-          x: Math.round(r.left - tileRect.left),
-          y: Math.round(r.top  - tileRect.top),
-        };
-      }
-    });
-    setPositions(newPos);
-    setEditMode(true);
+    onEnterEditMode();
   };
 
   const exitEditMode = (save: boolean) => {
-    if (save) {
-      // Lock the current dragged positions as the saved layout
-      setSavedPositions({ ...positions });
-      setLayoutSaved(true);
-      // Persist to DB so layout survives navigation, refresh, and restarts for this user
-      if (tileUserId) {
-        saveUserPreference(tileUserId, 'flightTileLayout_v1', { positions });
-      }
-    } else {
-      // Revert to the last saved (or default) positions
-      setPositions({ ...savedPositions });
-    }
-    setEditMode(false);
+    onExitEditMode(save);
   };
 
   // Mouse drag handlers
@@ -588,7 +560,7 @@ const FlightTile: React.FC<TileProps> = ({
       const dy = e.clientY - startMouseY;
       const newX = Math.max(0, Math.min(tileRect.width  - 20, startPosX + dx));
       const newY = Math.max(0, Math.min(TILE_H - 20, startPosY + dy));
-      setPositions(prev => ({ ...prev, [key]: { x: Math.round(newX), y: Math.round(newY) } }));
+      onDragPosition(key, { x: Math.round(newX), y: Math.round(newY) });
     };
     const onMouseUp = () => { dragging.current = null; };
     window.addEventListener('mousemove', onMouseMove);
@@ -882,6 +854,63 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [deploymentEndDate,    setDeploymentEndDate]    = useState(date);
   const [deploymentEndTime,    setDeploymentEndTime]    = useState('08:00');
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
+
+  // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
+  type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
+  const LAYOUT_ELEM_KEYS: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
+  const MODAL_DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
+    startTime: { x: 14,  y: 12 },
+    picName:   { x: 110, y: 14 },
+    coPilot:   { x: 110, y: 58 },
+    duration:  { x: 420, y: 10 },
+    event:     { x: 490, y: 10 },
+    area:      { x: 490, y: 62 },
+    aircraft:  { x: 420, y: 62 },
+    callsign:  { x: 530, y: 62 },
+  };
+  const LAYOUT_PREF_KEY = 'flightTileLayout_v1';
+
+  const [tileEditMode,      setTileEditMode]      = useState(false);
+  const [tileLayoutSaved,   setTileLayoutSaved]   = useState(false);
+  const [tilePositions,     setTilePositions]     = useState<Record<ElemKey, { x: number; y: number }>>(MODAL_DEFAULT_POSITIONS);
+  const [tileSavedPositions,setTileSavedPositions]= useState<Record<ElemKey, { x: number; y: number }>>(MODAL_DEFAULT_POSITIONS);
+
+  // Load persisted layout from DB once when userId is available
+  useEffect(() => {
+    if (!userId) return;
+    loadUserPreferences(userId).then(prefs => {
+      const stored = prefs[LAYOUT_PREF_KEY];
+      if (stored && typeof stored === 'object' && 'positions' in stored) {
+        const posData = stored.positions as Record<ElemKey, { x: number; y: number }>;
+        if (LAYOUT_ELEM_KEYS.every(k => posData[k] && typeof posData[k].x === 'number')) {
+          setTilePositions(posData);
+          setTileSavedPositions(posData);
+          setTileLayoutSaved(true);
+        }
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  // Handlers passed down to FlightTile
+  const handleEnterEditMode = () => setTileEditMode(true);
+
+  const handleExitEditMode = (save: boolean) => {
+    if (save) {
+      setTileSavedPositions({ ...tilePositions });
+      setTileLayoutSaved(true);
+      if (userId) {
+        saveUserPreference(userId, LAYOUT_PREF_KEY, { positions: tilePositions });
+      }
+    } else {
+      setTilePositions({ ...tileSavedPositions });
+    }
+    setTileEditMode(false);
+  };
+
+  const handleDragPosition = (key: string, pos: { x: number; y: number }) => {
+    setTilePositions(prev => ({ ...prev, [key]: pos }));
+  };
 
   // ── Determine the current location full name from school ──────────────────
   const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
@@ -1283,7 +1312,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   aircraftOptions={aircraftOptions}
                   callsignOptions={callsignOptions}
                   formationCallsigns={formationCallsigns}
-                  userId={userId}
+                  editMode={tileEditMode}
+                  layoutSaved={tileLayoutSaved}
+                  positions={tilePositions}
+                  savedPositions={tileSavedPositions}
+                  onEnterEditMode={handleEnterEditMode}
+                  onExitEditMode={handleExitEditMode}
+                  onDragPosition={handleDragPosition}
                   allUnits={allUnits}
                   getLayer2={getLayer2}
                   getNames={getNames}

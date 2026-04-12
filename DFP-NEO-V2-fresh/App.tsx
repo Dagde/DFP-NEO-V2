@@ -12544,7 +12544,7 @@ updates.forEach(update => {
                     scores={scores}
                     locationOpAreas={locationOpAreas}
                     formationCallsigns={formationCallsigns}
-                    userId={sessionUser?.userId}
+                    userId={getCurrentUserId() ?? undefined}
                 />
             )}
             {selectedEvent && !isAddingTile && (
