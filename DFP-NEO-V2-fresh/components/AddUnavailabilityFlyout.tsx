@@ -20,7 +20,7 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
     const [validation, setValidation] = useState<ValidationResult | null>(null);
     const [showErrors, setShowErrors] = useState(false);
 
-    const unavailabilityReasons: UnavailabilityReason[] = ['TMUF', 'TMUF - Ground Duties only', 'Leave', 'Appointment', 'Other'];
+    const unavailabilityReasons: UnavailabilityReason[] = ['TMUF', 'TMUF - Ground Duties only', 'Leave', 'Appointment', 'Deployed', 'Other'];
 
     const clearForm = () => {
         setStartDate('');

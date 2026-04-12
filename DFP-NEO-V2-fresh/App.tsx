@@ -32,7 +32,8 @@ import {
     Score, 
     PersonCurrencyStatus, 
     Pt051Assessment, 
-    UnavailabilityPeriod, 
+    UnavailabilityPeriod,
+    UnavailabilityReason,
     NeoProblemTile, 
     NeoRemedy, 
     NeoInstructorRemedy, 
@@ -9161,6 +9162,189 @@ useEffect(() => {
     };
 
 
+    // ─── Deployment-driven unavailability ──────────────────────────────────────
+    // When a flight tile is dragged onto (overlapping) a deployment tile, automatically
+    // insert a "Deployed" unavailability for the flight's personnel that spans from the
+    // flight's start time to the end of the deployment.
+    // When a tile is dragged away, the matching unavailability is removed.
+    // Each auto-inserted period uses notes = `__deploy__${eventId}` as an internal tag.
+
+    const handleDeploymentUnavailability = async (updatedSchedule: ScheduleEvent[]) => {
+        const deploymentTiles = updatedSchedule.filter(e => e.type === 'deployment');
+        if (deploymentTiles.length === 0) {
+            // No deployments — remove any lingering Deployed periods tagged to this schedule
+            const flightTiles = updatedSchedule.filter(e => e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground');
+            for (const flight of flightTiles) {
+                await removeDeployedUnavailability(flight.id);
+            }
+            return;
+        }
+
+        const flightTiles = updatedSchedule.filter(e =>
+            e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground'
+        );
+
+        for (const flight of flightTiles) {
+            // Check if this flight overlaps any deployment tile in time
+            const overlappingDeploy = deploymentTiles.find(dep => {
+                const flightEnd = flight.startTime + flight.duration;
+                const depEnd = dep.startTime + dep.duration;
+                return flight.startTime < depEnd && flightEnd > dep.startTime;
+            });
+
+            if (overlappingDeploy) {
+                await upsertDeployedUnavailability(flight, overlappingDeploy);
+            } else {
+                await removeDeployedUnavailability(flight.id);
+            }
+        }
+    };
+
+    const upsertDeployedUnavailability = async (flight: ScheduleEvent, deployment: ScheduleEvent) => {
+        // Calculate unavailability period: flight startTime on flight.date → deployment end
+        const flightDateStr = flight.date; // YYYY-MM-DD
+        const flightStartHour = Math.floor(flight.startTime);
+        const flightStartMin  = Math.round((flight.startTime % 1) * 60);
+        const startTime = `${String(flightStartHour).padStart(2, '0')}${String(flightStartMin).padStart(2, '0')}`;
+
+        // Deployment end: use deploymentEndDate/Time if available, else calculate from startTime+duration
+        let endDateStr: string;
+        let endTime: string;
+
+        if (deployment.deploymentEndDate && deployment.deploymentEndTime) {
+            endDateStr = deployment.deploymentEndDate;
+            endTime = deployment.deploymentEndTime.replace(':', '');
+        } else {
+            // Calculate from startTime + duration (duration may span days)
+            const totalEndHours = deployment.startTime + deployment.duration;
+            const daysOffset = Math.floor(totalEndHours / 24);
+            const endHour = Math.floor(totalEndHours % 24);
+            const endMin  = Math.round(((totalEndHours % 24) % 1) * 60);
+            const baseDate = new Date(deployment.date + 'T00:00:00Z');
+            baseDate.setUTCDate(baseDate.getUTCDate() + daysOffset);
+            endDateStr = baseDate.toISOString().slice(0, 10);
+            endTime = `${String(endHour).padStart(2, '0')}${String(endMin).padStart(2, '0')}`;
+        }
+
+        const tag = `__deploy__${flight.id}`;
+        const newPeriod: Omit<UnavailabilityPeriod, 'id'> & { id: string } = {
+            id: `deploy-${flight.id}`,
+            startDate: flightDateStr,
+            endDate: endDateStr,
+            startTime,
+            endTime,
+            allDay: false,
+            reason: 'Deployed' as UnavailabilityReason,
+            notes: tag,
+        };
+
+        // Collect personnel on this flight
+        const personnelNames: string[] = [];
+        if (flight.instructor) personnelNames.push(flight.instructor);
+        if (flight.student) {
+            const studentName = flight.student.split(' – ')[0] || flight.student;
+            personnelNames.push(studentName);
+        }
+        if (flight.pilot) personnelNames.push(flight.pilot);
+        if (flight.crew) personnelNames.push(flight.crew);
+
+        for (const personName of personnelNames) {
+            // Check instructors
+            const instructor = allInstructorsData.find(i => i.name === personName);
+            if (instructor) {
+                const existing = (instructor.unavailability || []);
+                const alreadyHas = existing.some(p => p.notes === tag);
+                if (!alreadyHas) {
+                    const updated = [...existing, newPeriod];
+                    const updatedInstructor = { ...instructor, unavailability: updated };
+                    setInstructorsData((prev: Instructor[]) => prev.map(i => i.name === personName ? updatedInstructor : i));
+                    // Persist to DB
+                    const dbId = (instructor as any).id;
+                    if (dbId && (instructor as any)._dataSource === 'database') {
+                        try {
+                            await fetch(`/api/personnel/${dbId}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ unavailability: updated }),
+                            });
+                        } catch (err) { console.error('Failed to persist Deployed unavailability for instructor:', personName, err); }
+                    }
+                }
+                continue;
+            }
+            // Check trainees
+            const trainee = allTraineesData.find(t => t.name === personName || t.fullName === personName);
+            if (trainee) {
+                const existing = (trainee.unavailability || []);
+                const alreadyHas = existing.some(p => p.notes === tag);
+                if (!alreadyHas) {
+                    const updated = [...existing, newPeriod];
+                    const updatedTrainee = { ...trainee, unavailability: updated };
+                    setTraineesData((prev: Trainee[]) => prev.map(t => (t.name === personName || t.fullName === personName) ? updatedTrainee : t));
+                    const dbId = (trainee as any).id;
+                    if (dbId && (trainee as any)._dataSource === 'database') {
+                        try {
+                            await fetch(`/api/trainees/${dbId}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ unavailability: updated }),
+                            });
+                        } catch (err) { console.error('Failed to persist Deployed unavailability for trainee:', personName, err); }
+                    }
+                }
+            }
+        }
+    };
+
+    const removeDeployedUnavailability = async (flightId: string) => {
+        const tag = `__deploy__${flightId}`;
+
+        // Instructors
+        const affectedInstructors = allInstructorsData.filter(i =>
+            (i.unavailability || []).some(p => p.notes === tag)
+        );
+        for (const instructor of affectedInstructors) {
+            const updated = (instructor.unavailability || []).filter(p => p.notes !== tag);
+            const updatedInstructor = { ...instructor, unavailability: updated };
+            setInstructorsData((prev: Instructor[]) => prev.map(i => i.name === instructor.name ? updatedInstructor : i));
+            const dbId = (instructor as any).id;
+            if (dbId && (instructor as any)._dataSource === 'database') {
+                try {
+                    await fetch(`/api/personnel/${dbId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ unavailability: updated }),
+                    });
+                } catch (err) { console.error('Failed to remove Deployed unavailability for instructor:', instructor.name, err); }
+            }
+        }
+
+        // Trainees
+        const affectedTrainees = allTraineesData.filter(t =>
+            (t.unavailability || []).some(p => p.notes === tag)
+        );
+        for (const trainee of affectedTrainees) {
+            const updated = (trainee.unavailability || []).filter(p => p.notes !== tag);
+            const updatedTrainee = { ...trainee, unavailability: updated };
+            setTraineesData((prev: Trainee[]) => prev.map(t => (t.name === trainee.name || t.fullName === trainee.fullName) ? updatedTrainee : t));
+            const dbId = (trainee as any).id;
+            if (dbId && (trainee as any)._dataSource === 'database') {
+                try {
+                    await fetch(`/api/trainees/${dbId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ unavailability: updated }),
+                    });
+                } catch (err) { console.error('Failed to remove Deployed unavailability for trainee:', trainee.name, err); }
+            }
+        }
+    };
+    // ───────────────────────────────────────────────────────────────────────────
+
     const handleScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
         if (!updates || updates.length === 0) return;
     
@@ -9190,6 +9374,8 @@ useEffect(() => {
         _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
             if (updatedEventsForDate.length > 0) {
                 persistScheduleForDate(date, updatedEventsForDate);
+                // Handle deployment-driven unavailability after drag settles
+                handleDeploymentUnavailability(updatedEventsForDate);
             }
         }, 500);
            

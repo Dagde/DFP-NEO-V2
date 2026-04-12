@@ -65,7 +65,7 @@ export type TraineeRank = 'OCDT' | 'MIDN' | 'PLTOFF' | 'FLGOFF' | 'SBLT' | '2LT'
 export type InstructorCategory = 'UnCat' | 'D' | 'C' | 'B' | 'A';
 export type SeatConfig = 'Normal' | 'FWD/SHORT' | 'REAR/SHORT' | 'FWD/LONG';
 
-export type UnavailabilityReason = 'TMUF' | 'TMUF - Ground Duties only' | 'Leave' | 'Appointment' | 'Other';
+export type UnavailabilityReason = 'TMUF' | 'TMUF - Ground Duties only' | 'Leave' | 'Appointment' | 'Deployed' | 'Other';
 
 export interface UnavailabilityPeriod {
   id: string;
