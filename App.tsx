@@ -513,6 +513,7 @@ const getEffectiveLastCompletedEvent = (
 ): string | null => {
     // Calculate yesterday's date
     const buildDateObj = safeParseDate(buildDate);
+    if (!buildDateObj) { return []; }
     buildDateObj.setDate(buildDateObj.getDate() - 1);
     const yesterdayStr = buildDateObj.toISOString().split('T')[0];
     
@@ -5935,6 +5936,7 @@ useEffect(() => {
         
         const segments: EventSegment[] = [];
         const todayDate = safeParseDate(buildDfpDate);
+        if (!todayDate) { return segments; }
         const todayStart = todayDate.getTime();
         const todayEnd = new Date(todayStart);
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
@@ -11967,6 +11969,7 @@ updates.forEach(update => {
                                                 
                                                 const validityDays = 'validityDays' in def ? def.validityDays : 365;
                                                 const expiryDate = safeParseDate(dateValue);
+                                                if (!expiryDate) { continue; }
                                                 expiryDate.setDate(expiryDate.getDate() + validityDays);
                                                 const expStr = expiryDate.toISOString().slice(0, 10);
                                                 const today = new Date();
