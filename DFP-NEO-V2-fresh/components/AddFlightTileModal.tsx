@@ -212,7 +212,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
           </div>
 
           {/* Col 2: STAFF / Courses */}
-          <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: 'rgba(0,0,0,0.1)' }}>
+          <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#16293f' }}>
             {hovUnit ? (
               getLayer2(hovUnit).map(opt => (
                 <div
@@ -239,7 +239,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
           </div>
 
           {/* Col 3: Names */}
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: '#122437' }}>
             {hovUnit && hovL2 ? (
               getNames(hovUnit, hovL2).map(person => (
                 <div
@@ -370,7 +370,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
           </div>
 
           {/* Col 2: Events */}
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: 'rgba(0,0,0,0.15)' }}>
+          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
             {hovCourse && hovCourse !== 'SCT' ? (
               getEventsForCourse(hovCourse).map(ev => {
                 const code = ev.code || ev.id || '';
@@ -700,23 +700,40 @@ const FlightTile: React.FC<TileProps> = ({
   );
 
   const callsignContent = (zOverride?: number) => (
-    callsignOptions.length > 1 ? (
-      <div style={{ position: 'relative' }}>
-        <span style={{ fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', lineHeight: 1 }}>
-          {callsign || 'CALLSGN'}
-        </span>
-        <select value={callsign} onChange={e => onCallsignChange(e.target.value)}
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
-          <option value="" style={{ background: '#1a2f4a' }}>—</option>
-          {callsignOptions.map(cs => <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>)}
-        </select>
-      </div>
-    ) : (
-      <input type="text" value={callsign} onChange={e => onCallsignChange(e.target.value)}
-        style={{ background: 'transparent', border: 'none', outline: 'none', fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', lineHeight: 1,
-          color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)', width: 80, padding: 0, cursor: 'text' }}
-        placeholder="CALLSGN" />
-    )
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+      {/* Editable text input — always visible and typeable */}
+      <input
+        type="text"
+        value={callsign}
+        onChange={e => onCallsignChange(e.target.value)}
+        placeholder="CALLSGN"
+        style={{
+          background: 'transparent', border: 'none', outline: 'none',
+          fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', lineHeight: 1,
+          color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
+          width: callsignOptions.length > 0 ? 70 : 80, padding: 0, cursor: 'text',
+        }}
+      />
+      {/* Dropdown arrow + overlay select — only when options are available */}
+      {callsignOptions.length > 0 && (
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.45)', pointerEvents: 'none', lineHeight: 1 }}>▼</span>
+          <select
+            value={callsign}
+            onChange={e => onCallsignChange(e.target.value)}
+            style={{
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10,
+            }}
+          >
+            <option value="" style={{ background: '#1a2f4a' }}>— select —</option>
+            {callsignOptions.map(cs => (
+              <option key={cs} value={cs} style={{ background: '#1a2f4a' }}>{cs}</option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
   );
 
   // ── Normal flex layout (before any save) ─────────────────────────────
